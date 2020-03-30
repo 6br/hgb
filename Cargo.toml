@@ -1,0 +1,22 @@
+[package]
+name = "rust_project"
+version = "0.1.0"
+authors = ["6br <tfdvrt@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+name = "rust_project"
+crate-type = ["staticlib", "cdylib"]
+
+[dependencies]
+bitpacking = "0.5" # Pfor
+deflate = "*"
+flate2 = "1.0" # A streaming compression/decompression library
+log = "*"
+numpress = "1.0"
+regex = "*" 
+serde = "*"
+serde_json = "*"
+serde_yaml = "*"
