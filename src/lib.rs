@@ -20,7 +20,7 @@ pub mod reader;
 use std::io;
 use range::InvertedRecord;
 use index::Index;
-use std::io::{Result, Write};
+use std::io::{Result, Write, Read};
 
 /// A trait for writing BAM/SAM records.
 pub trait InvertedRecordWriter {
@@ -32,6 +32,19 @@ pub trait InvertedRecordWriter {
 
     /// Flushes contents.
     fn flush(&mut self) -> io::Result<()>;
+}
+
+pub trait InvertedRecordReader: Iterator<Item = io::Result<InvertedRecord>> {
+    /// Writes the next record into `record`. It allows to skip excessive memory allocation.
+    /// If there are no more records to iterate over, the function returns `false`.
+    ///
+    /// If the function returns an error, the record is cleared.
+    fn read_into(&mut self, record: &mut InvertedRecord) -> io::Result<bool>;
+
+    /// Pauses multi-thread reader until the next read operation. Does nothing to a single-thread reader.
+    ///
+    /// Use with caution: pausing and unpausing takes some time.
+    fn pause(&mut self);
 }
 
 /// A trait for writing BAM/SAM records.
@@ -49,7 +62,7 @@ pub trait IndexWriter {
 pub trait ColumnarSet {
     fn to_stream<W: Write>(&self, stream: &mut W) -> Result<()>;
 
-    /*fn from_stream<R: Read>(mut stream: R) -> Result<InvertedRecord>;*/
+    //fn from_stream<R: Read>(stream: R) -> Result<Self>;
 }
 
 #[no_mangle]
