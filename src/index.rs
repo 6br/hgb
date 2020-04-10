@@ -411,13 +411,12 @@ pub fn region_to_bin_2(beg: u64, end: u64) -> u32 {
 pub fn region_to_bin_3(beg: u64, end: u64) -> u32 {
     let end = end - 1;
     let mut res = 0_i32;
-    let mut i = 14;
-    if beg >> i == end >> i {
-        res = ((1 << 29 - i) - 1) / 7 + ((beg >> i) << 1) as i32;
-        return res as i32
+
+    if beg >> 14 == end >> 14 {
+        return ((1 << 29 - 14) - 1) / 7 + ((beg >> 14) << 1) as i32;
     }
-    if  ((beg + (1 << 13)) >> i == (end + (1 << 13)) >> i) {
-        return 
+    if  ((beg + (1 << 13)) >> 14 == (end + (1 << 13)) >> 14) {
+        return ((1 << 29 - 14) - 1) / 7 + ((beg >> 14) << 1) + 1 as i32;
     }
 
     for i in (17..27).step_by(3) {
