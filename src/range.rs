@@ -52,7 +52,7 @@ impl InvertedRecordEntire {
 
     pub fn to_stream<W: Write>(&self, stream: &mut W) -> Result<Index> {
         /* Unimplemented */
-        let index = Index{references: vec![]};
+        let index = Index::new(); //Index{references: vec![]};
         for (_name, chromosome) in &self.chrom {
             for (_bin_id, bin) in &chromosome.bins {
                 for chunk in bin {

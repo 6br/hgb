@@ -7,7 +7,7 @@ use std::io::{Read};
 
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct InvertedRecordReference {
-    bins: HashMap<u32, InvertedRecordBuilder> // Mutex?
+    pub bins: HashMap<u32, InvertedRecordBuilder> // Mutex?
 }
 
 impl InvertedRecordReference {
@@ -21,9 +21,9 @@ impl InvertedRecordReference {
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Debug)]
 pub struct InvertedRecordBuilder {
-    start: RefCell<Vec<u64>>,
-    end: RefCell<Vec<u64>>,
-    name: RefCell<Vec<String>> //Just a tab-separated string here.
+    pub start: RefCell<Vec<u64>>,
+    pub end: RefCell<Vec<u64>>,
+    pub name: RefCell<Vec<String>> //Just a tab-separated string here.
 }
 
 impl InvertedRecordBuilder {
@@ -43,8 +43,8 @@ impl InvertedRecordBuilder {
 
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct InvertedRecordSet {
-    sample_id: u32,
-    chrom: HashMap<String, InvertedRecordReference> // Mutex? // Is it better to use u32 here?
+    pub sample_id: u32,
+    pub chrom: HashMap<String, InvertedRecordReference> // Mutex? // Is it better to use u32 here?
 }
 
 impl InvertedRecordSet {

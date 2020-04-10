@@ -15,15 +15,29 @@ pub mod alignment;
 pub mod writer;
 pub mod binary;
 pub mod builder;
+pub mod reader;
 
 use std::io;
 use range::InvertedRecord;
+use index::Index;
 use std::io::{Result, Write};
 
 /// A trait for writing BAM/SAM records.
 pub trait InvertedRecordWriter {
     /// Writes a single record.
     fn write(&mut self, record: &InvertedRecord) -> io::Result<()>;
+
+    /// Finishes the stream, same as `std::mem::drop(writer)`, but can return an error.
+    fn finish(&mut self) -> io::Result<()>;
+
+    /// Flushes contents.
+    fn flush(&mut self) -> io::Result<()>;
+}
+
+/// A trait for writing BAM/SAM records.
+pub trait IndexWriter {
+    /// Writes a single record.
+    fn write(&mut self, record: &Index) -> io::Result<()>;
 
     /// Finishes the stream, same as `std::mem::drop(writer)`, but can return an error.
     fn finish(&mut self) -> io::Result<()>;
@@ -48,6 +62,7 @@ pub extern "C" fn hello_rust() -> *const u8 {
 mod tests {
     #[test]
     fn it_works() {
+        
         assert_eq!(2 + 2, 4);
     }
 }

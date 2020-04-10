@@ -317,6 +317,10 @@ pub struct Index {
 
 
 impl Index {
+
+    pub fn new() -> Index {
+        Index{references: vec![]}
+    }
     /// Loads index from stream.
     pub fn from_stream<R: Read>(mut stream: R) -> Result<Index> {
         let mut magic = [0_u8; 4];

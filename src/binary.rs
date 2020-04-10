@@ -15,7 +15,7 @@
 use std::io::{Write, BufWriter, Result}; //, BufReader, BufRead};
 use std::fs::File;
 use std::path::Path;
-
+use crate::ColumnarSet;
 use bam::header::Header;
 //use crate::InvertedRecordWriter;
 use super::{InvertedRecordWriter, InvertedRecord};
@@ -85,7 +85,7 @@ pub struct GhbWriter<W: Write> {
     header: Header,
 }
 
-impl GhbWriter<GhbWriter<File>> {
+impl GhbWriter<BufWriter<File>> {
     /// Create a [builder](struct.SamWriterBuilder.html).
     pub fn build() -> GhbWriterBuilder {
         GhbWriterBuilder::new()
@@ -124,7 +124,7 @@ impl<W: Write> GhbWriter<W> {
 impl<W: Write> InvertedRecordWriter for GhbWriter<W> {
     /// Writes a single record in SAM format.
     fn write(&mut self, record: &InvertedRecord) -> Result<()> {
-        record.write_bam(&mut self.stream, &self.header)
+        record.to_stream(&mut self.stream) // , &self.header)
     }
 
     fn finish(&mut self) -> Result<()> {
