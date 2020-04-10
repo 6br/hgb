@@ -11,7 +11,10 @@ name = "rust_project"
 crate-type = ["staticlib", "cdylib"]
 
 [dependencies]
+bam = "*" 
+bio = { git = "https://github.com/rust-bio/rust-bio" }
 bitpacking = "0.5" # Pfor
+byteorder = "*"
 deflate = "*"
 flate2 = "1.0" # A streaming compression/decompression library
 log = "*"
