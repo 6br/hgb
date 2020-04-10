@@ -1,19 +1,28 @@
-use bio::io::bed;
 use std::io::{Result, Read, Write};
 use std::collections::HashMap;
-use std::cell::RefCell;
 use std::path::Path;
 use std::fs::File;
-use crate::index::region_to_bin_2;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
+use crate::index::Index;
+use crate::ColumnarSet;
+use crate::builder::{InvertedRecordBuilder, InvertedRecordSet};
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub struct Chunk<T> {
-    length: u32,
+pub struct Chunk<T: ColumnarSet> {
+    /*length: u32,*/
     sample_id: u32,
     sample_file_id: u32, // When we split files of inverted data structure
     // format_type: u32, // Enum
     data: T,
+}
+
+impl<T: ColumnarSet> Chunk<T> {
+    pub fn to_stream<W: Write>(&self, stream: &mut W) -> Result<()> {
+        stream.write_u32::<LittleEndian>(self.sample_id)?;
+        stream.write_u32::<LittleEndian>(self.sample_file_id)?;
+        self.data.to_stream(stream)?;
+        Ok(())
+    }
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -34,7 +43,7 @@ impl InvertedRecordEntire {
                 let chrom = inverted_record.entry(name.clone()).or_insert(InvertedRecordChromosome{bins: HashMap::new() }); // TODO() DO NOT USE CLONE
                 for (bin_id, bin) in &chromosome.bins {
                     let chunks = chrom.bins.entry(*bin_id).or_insert(Vec::new());
-                    chunks.push(Chunk::<InvertedRecord>{length: 0, sample_id: set.sample_id, sample_file_id: sample_file_id as u32, data: InvertedRecord::new(bin)})
+                    chunks.push(Chunk::<InvertedRecord>{sample_id: set.sample_id, sample_file_id: sample_file_id as u32, data: InvertedRecord::new(bin)})
                 }
             }    
         }
@@ -43,31 +52,18 @@ impl InvertedRecordEntire {
 
     pub fn to_stream<W: Write>(&self, stream: &mut W) -> Result<Index> {
         /* Unimplemented */
-        let index = Index::new();
-        for (name, chromosome) in &self.chrom　{
-            for (bin_id, bin) in &chromosome.bins {
-                
+        let index = Index{references: vec![]};
+        for (_name, chromosome) in &self.chrom {
+            for (_bin_id, bin) in &chromosome.bins {
+                for chunk in bin {
+                    chunk.to_stream(stream)?;
+                }
             }
         }
 
-        Ok(())
+        Ok(index)
     }
 }
-
-#[derive(Clone, PartialEq, Eq, Debug)]
-pub struct InvertedRecordReference {
-    bins: HashMap<u32, InvertedRecordBuilder> // Mutex?
-}
-
-impl InvertedRecordReference {
-    pub fn new() -> Self {
-        InvertedRecordReference{
-            bins:  HashMap::new()
-        }
-    }
-}
-
-
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Debug)]
 pub struct InvertedRecord {
@@ -77,16 +73,8 @@ pub struct InvertedRecord {
     // aux: Vec<String> // We should update better data format.
 }
 
-impl InvertedRecord {
-    pub fn new(builder: &InvertedRecordBuilder) -> InvertedRecord {
-        /* TODO() Use Bit packing for converting RefCell to Just vector, however now we just clone */
-        let start = builder.start.clone().into_inner();
-        let end = builder.end.clone().into_inner();
-        let name = builder.name.clone().into_inner();
-        InvertedRecord{start: start, end: end, name: name}
-    }
-
-    pub fn to_stream<W: Write>(&self, stream: &mut W) -> Result<()> {
+impl ColumnarSet for InvertedRecord {
+    fn to_stream<W: Write>(&self, stream: &mut W) -> Result<()> {
         stream.write_u64::<LittleEndian>(self.start.len() as u64)?;
         stream.write_u64::<LittleEndian>(3 as u64)?;
         stream.write_u16::<LittleEndian>(1 as u16)?; // u64
@@ -105,6 +93,16 @@ impl InvertedRecord {
         }
 
         Ok(())
+    }
+}
+
+impl InvertedRecord {
+    pub fn new(builder: &InvertedRecordBuilder) -> InvertedRecord {
+        /* TODO() Use Bit packing for converting RefCell to Just vector, however now we just clone */
+        let start = builder.start.clone().into_inner();
+        let end = builder.end.clone().into_inner();
+        let name = builder.name.clone().into_inner();
+        InvertedRecord{start: start, end: end, name: name}
     }
 
     pub fn from_stream<R: Read>(mut stream: R) -> Result<InvertedRecord> {
@@ -138,66 +136,4 @@ impl InvertedRecord {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, PartialOrd, Debug)]
-pub struct InvertedRecordBuilder {
-    start: RefCell<Vec<u64>>,
-    end: RefCell<Vec<u64>>,
-    name: RefCell<Vec<String>> //Just a tab-separated string here.
-}
 
-impl InvertedRecordBuilder {
-    pub fn new() -> Self {
-        InvertedRecordBuilder{
-            start: RefCell::new(Vec::new()),
-            end: RefCell::new(Vec::new()),
-            name: RefCell::new(Vec::new())
-        }
-    }
-    pub fn add(&self, start: u64, end: u64, name: String) {
-        self.start.borrow_mut().push(start);
-        self.end.borrow_mut().push(end);
-        self.name.borrow_mut().push(name);
-    }
-}
-
-#[derive(Clone, PartialEq, Eq, Debug)]
-pub struct InvertedRecordSet {
-    sample_id: u32,
-    chrom: HashMap<String, InvertedRecordReference> // Mutex? // Is it better to use u32 here?
-}
-
-impl InvertedRecordSet {
-    pub fn new<R:Read>(mut reader: bed::Reader<R>, sample_id: u32) -> Self {
-        let mut inverted_record_set = HashMap::new();
-        /*let mut start: Vec<u64> = vec![];
-        let mut end: Vec<u64> = vec![];
-        let mut aux: Vec<String> = vec![];*/
-        for record in reader.records() {
-            let rec = record.ok().expect("Error reading record.");
-            let chrom = inverted_record_set.entry(rec.chrom().to_string()).or_insert(InvertedRecordReference::new());
-            let stat = chrom.bins.entry(region_to_bin_2(rec.start(), rec.end())).or_insert(InvertedRecordBuilder::new());
-            // rec.chrom;
-            stat.add(rec.start(), rec.end(), rec.name().unwrap_or("").to_string())
-            //start.push(rec.start());
-            //end.push(rec.end());
-            //aux.push(rec.name().unwrap_or("").to_string());
-            // aux.push(rec.name().join("\t"));
-        }
-        return InvertedRecordSet{sample_id: sample_id, chrom: inverted_record_set} //{start: start, end: end, name: aux}
-    }
-}
-
-
-#[cfg(test)]
-mod tests {
-    use bio::io::bed;
-    use super::InvertedRecordSet;
-    #[test]
-    fn it_works() {
-        let example = b"1\t5\t5000\tname1\t0.5\n1\t5\t5000\tname1\t0.5";
-        let mut reader = bed::Reader::new(&example[..]);
-        let set = InvertedRecordSet::new(reader);
-        println!("{:?}", set);
-
-    }
-}

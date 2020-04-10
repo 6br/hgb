@@ -13,9 +13,12 @@ pub mod index;
 pub mod range;
 pub mod alignment;
 pub mod writer;
+pub mod binary;
+pub mod builder;
 
 use std::io;
 use range::InvertedRecord;
+use std::io::{Result, Write};
 
 /// A trait for writing BAM/SAM records.
 pub trait InvertedRecordWriter {
@@ -27,6 +30,12 @@ pub trait InvertedRecordWriter {
 
     /// Flushes contents.
     fn flush(&mut self) -> io::Result<()>;
+}
+
+pub trait ColumnarSet {
+    fn to_stream<W: Write>(&self, stream: &mut W) -> Result<()>;
+
+    /*fn from_stream<R: Read>(mut stream: R) -> Result<InvertedRecord>;*/
 }
 
 #[no_mangle]
