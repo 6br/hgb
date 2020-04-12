@@ -1,14 +1,16 @@
-use std::io::{Result, Read, Write};
+use std::io::{Result, Read, Write, Seek};
 use std::collections::HashMap;
 use std::path::Path;
 use std::fs::File;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
-use crate::index::Index;
+use crate::index::{Index, Reference, Bin};
 use crate::ColumnarSet;
+use crate::binary::GhbWriter;
 use crate::builder::{InvertedRecordBuilder, InvertedRecordSet};
+use crate::ChunkWriter;
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub struct Chunk<T: ColumnarSet> {
+pub struct Record<T: ColumnarSet> {
     /*length: u32,*/
     sample_id: u32,
     sample_file_id: u32, // When we split files of inverted data structure
@@ -16,7 +18,10 @@ pub struct Chunk<T: ColumnarSet> {
     data: T,
 }
 
-impl<T: ColumnarSet> Chunk<T> {
+impl<T: ColumnarSet> Record<T> {
+    pub fn sample_id(&self) -> u32 {
+        return self.sample_id;
+    }
     pub fn to_stream<W: Write>(&self, stream: &mut W) -> Result<()> {
         stream.write_u32::<LittleEndian>(self.sample_id)?;
         stream.write_u32::<LittleEndian>(self.sample_file_id)?;
@@ -27,7 +32,7 @@ impl<T: ColumnarSet> Chunk<T> {
 
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct InvertedRecordChromosome {
-    bins: HashMap<u32, Vec<Chunk<InvertedRecord>>> // Mutex?
+    bins: HashMap<u32, Vec<Record<InvertedRecord>>> // Mutex?
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -43,15 +48,14 @@ impl InvertedRecordEntire {
                 let chrom = inverted_record.entry(name.clone()).or_insert(InvertedRecordChromosome{bins: HashMap::new() }); // TODO() DO NOT USE CLONE
                 for (bin_id, bin) in &chromosome.bins {
                     let chunks = chrom.bins.entry(*bin_id).or_insert(Vec::new());
-                    chunks.push(Chunk::<InvertedRecord>{sample_id: set.sample_id, sample_file_id: sample_file_id as u32, data: InvertedRecord::new(bin)})
+                    chunks.push(Record::<InvertedRecord>{sample_id: set.sample_id, sample_file_id: sample_file_id as u32, data: InvertedRecord::new(bin)})
                 }
             }    
         }
         return InvertedRecordEntire{chrom: inverted_record}
     }
-
+/*
     pub fn to_stream<W: Write>(&self, stream: &mut W) -> Result<Index> {
-        /* Unimplemented */
         let index = Index::new(); //Index{references: vec![]};
         for (_name, chromosome) in &self.chrom {
             for (_bin_id, bin) in &chromosome.bins {
@@ -62,6 +66,22 @@ impl InvertedRecordEntire {
         }
 
         Ok(index)
+    }*/
+    pub fn write_binary<W: Write+Seek>(&self, writer: &mut GhbWriter<W>) -> Result<Index> {
+        let mut reference = vec![];
+        for (_name, chromosome) in &self.chrom {
+            let mut bins = HashMap::new();
+            for (bin_id, bin) in &chromosome.bins {
+                let mut records = vec![];
+                for chunk in bin {
+                    let record = writer.write(&chunk)?;
+                    records.push(record);
+                }
+                bins.insert(*bin_id, Bin::new(*bin_id, records));
+            }
+            reference.push(Reference::new(bins));
+        }
+        Ok(Index::new(reference))
     }
 }
 

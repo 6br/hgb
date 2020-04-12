@@ -12,13 +12,15 @@
 //! and the writer implements [RecordWriter](../trait.RecordWriter.html) trait. See them for
 //! more information.
 
-use std::io::{Write, BufWriter, Result}; //, BufReader, BufRead};
+use std::io::{Write, BufWriter, Result, Seek, SeekFrom, BufReader, BufRead};
 use std::fs::File;
 use std::path::Path;
 use crate::ColumnarSet;
 use bam::header::Header;
+use crate::index::{VirtualOffset, Chunk};
+use crate::range::Record;
 //use crate::InvertedRecordWriter;
-use super::{InvertedRecordWriter, InvertedRecord};
+use super::{InvertedRecordWriter, ChunkWriter, InvertedRecord};
 
 /// Builder of the [SamWriter](struct.SamWriter.html).
 pub struct GhbWriterBuilder {
@@ -121,10 +123,14 @@ impl<W: Write> GhbWriter<W> {
     }
 }
 
-impl<W: Write> InvertedRecordWriter for GhbWriter<W> {
+impl<W: Write+Seek, T: ColumnarSet> ChunkWriter<T> for GhbWriter<W> {
     /// Writes a single record in SAM format.
-    fn write(&mut self, record: &InvertedRecord) -> Result<()> {
-        record.to_stream(&mut self.stream) // , &self.header)
+    fn write(&mut self, record: &Record<T>) -> Result<Chunk> {
+        let start = self.stream.seek(SeekFrom::Current(0)).map(|a| VirtualOffset::from_raw(a))?;
+        record.to_stream(&mut self.stream)?;
+        let stop = self.stream.seek(SeekFrom::Current(0)).map(|a| VirtualOffset::from_raw(a))?;
+        // Ok(Chunk{start: start, end: stop, sample_id: record.sample_id(), file_id:0})
+        Ok(Chunk::new(record.sample_id(), 0, start, stop))
     }
 
     fn finish(&mut self) -> Result<()> {
@@ -134,7 +140,23 @@ impl<W: Write> InvertedRecordWriter for GhbWriter<W> {
     fn flush(&mut self) -> Result<()> {
         self.flush()
     }
-}/*
+}
+
+impl<W: Write+Seek> InvertedRecordWriter for GhbWriter<W> {
+    /// Writes a single record in SAM format.
+    fn write(&mut self, record: &InvertedRecord) -> Result<VirtualOffset> {
+        record.to_stream(&mut self.stream)?; // , &self.header)
+        self.stream.seek(SeekFrom::Current(0)).map(|a| VirtualOffset::from_raw(a))
+    }
+
+    fn finish(&mut self) -> Result<()> {
+        self.flush()
+    }
+
+    fn flush(&mut self) -> Result<()> {
+        self.flush()
+    }
+}
 
 /// Reads records from SAM format.
 ///
@@ -158,7 +180,7 @@ pub struct GhbReader<R: BufRead> {
     header: Header,
     buffer: String,
 }
-
+/*
 impl GhbReader<BufReader<File>> {
     /// Opens SAM reader from `path`.
     pub fn from_path<P: AsRef<Path>>(path: P) -> Result<Self> {

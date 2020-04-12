@@ -69,14 +69,24 @@ impl InvertedRecordSet {
 }
 #[cfg(test)]
 mod tests {
+    use bam::header::{Header, HeaderEntry};
     use bio::io::bed;
+    use std::io;
+    use crate::binary;
     use super::InvertedRecordSet;
+
     #[test]
     fn it_works() {
         let example = b"1\t5\t5000\tname1\t0.5\n1\t5\t5000\tname1\t0.5";
         let mut reader = bed::Reader::new(&example[..]);
         let set = InvertedRecordSet::new(reader, 0 as u32);
-        println!("{:?}", set);
+        let output = io::BufWriter::new(io::stdout());
+        let header = Header::new();
+        let mut writer = binary::GhbWriter::build()
+            .write_header(false)
+            .from_stream(output, header).unwrap();
+        let index = set.write_binary(writer).unwrap();
+        println!("{:?}", index);
 
     }
 }

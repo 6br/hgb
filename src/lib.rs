@@ -19,13 +19,26 @@ pub mod reader;
 
 use std::io;
 use range::InvertedRecord;
+use range::Record;
 use index::Index;
-use std::io::{Result, Write, Read};
+use std::io::{Result, Write};
+
+/// A trait for writing BAM/SAM records.
+pub trait ChunkWriter<T: ColumnarSet> {
+    /// Writes a single record.
+    fn write(&mut self, record: &Record<T>) -> io::Result<index::Chunk>;
+
+    /// Finishes the stream, same as `std::mem::drop(writer)`, but can return an error.
+    fn finish(&mut self) -> io::Result<()>;
+
+    /// Flushes contents.
+    fn flush(&mut self) -> io::Result<()>;
+}
 
 /// A trait for writing BAM/SAM records.
 pub trait InvertedRecordWriter {
     /// Writes a single record.
-    fn write(&mut self, record: &InvertedRecord) -> io::Result<()>;
+    fn write(&mut self, record: &InvertedRecord) -> io::Result<index::VirtualOffset>;
 
     /// Finishes the stream, same as `std::mem::drop(writer)`, but can return an error.
     fn finish(&mut self) -> io::Result<()>;

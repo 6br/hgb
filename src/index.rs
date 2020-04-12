@@ -214,6 +214,9 @@ pub struct Bin {
 }
 
 impl Bin {
+    pub fn new(bin_id: u32, chunks: Vec<Chunk>) -> Bin {
+        Bin{bin_id: bin_id, chunks: chunks}
+    }
     fn from_stream<R: Read>(stream: &mut R) -> Result<Self> {
         let bin_id = stream.read_u32::<LittleEndian>()?;
         let n_chunks = stream.read_i32::<LittleEndian>()? as usize;
@@ -268,6 +271,10 @@ pub struct Reference {
 }
 
 impl Reference {
+    pub fn new(bins: HashMap<u32, Bin> ) -> Reference {
+        return Reference {bins: bins}
+    }
+
     fn from_stream<R: Read>(stream: &mut R) -> Result<Self> {
         let n_bins = stream.read_i32::<LittleEndian>()? as usize;
         let mut bins = HashMap::with_capacity(n_bins);
@@ -317,9 +324,8 @@ pub struct Index {
 
 
 impl Index {
-
-    pub fn new() -> Index {
-        Index{references: vec![]}
+    pub fn new(references: Vec<Reference>) -> Index {
+        Index{references: references}
     }
     /// Loads index from stream.
     pub fn from_stream<R: Read>(mut stream: R) -> Result<Index> {

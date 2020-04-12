@@ -8,7 +8,7 @@ use bam::bgzip;
 use bam::header::Header;
 use super::IndexWriter;
 //use crate::range::InvertedRecord;
-use crate::ColumnarSet;
+//use crate::ColumnarSet;
 use crate::index::Index;
 
 /// Builder of the [GhbWriter](struct.GhbWriter.html).
