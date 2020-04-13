@@ -23,7 +23,7 @@ use std::io;
 use range::InvertedRecord;
 use range::Record;
 use index::Index;
-use std::io::{Result, Write};
+use std::io::{Result, Write, Read};
 
 /// A trait for writing BAM/SAM records.
 pub trait ChunkWriter<T: ColumnarSet> {
@@ -90,11 +90,12 @@ pub trait IndexWriter {
 }
 
 pub trait ColumnarSet {
-    //fn new() -> Self;
+    fn new() -> Self;
+
     //fn clear(&mut self);
     fn to_stream<W: Write>(&self, stream: &mut W) -> Result<()>;
 
-    //fn from_stream<R: Read>(stream: R) -> Result<Self>;
+    fn from_stream<R: Read>(&mut self, stream: &mut R) -> Result<bool>;
 }
 
 #[no_mangle]

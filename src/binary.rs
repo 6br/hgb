@@ -210,7 +210,7 @@ impl<R: Read, T: ColumnarSet> GhbReader<R, T> {
         self.stream
     }
 }
-
+/*
 impl<R: Read, T: ColumnarSet> ChunkReader<T> for GhbReader<R, T> {
     fn read_into(&mut self, record: &mut Record<T>) -> Result<bool> {
         let res = record.fill_from_bam(&mut self.stream);
@@ -239,3 +239,4 @@ impl<R: Read, T: ColumnarSet> Iterator for GhbReader<R, T> {
         }
     }
 }
+*/

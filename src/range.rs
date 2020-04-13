@@ -11,12 +11,26 @@ use crate::binary::GhbWriter;
 use crate::builder::{InvertedRecordBuilder, InvertedRecordSet};
 use crate::ChunkWriter;
 
+enum Format {
+    Default,
+    InvertedRecord
+}
+
+
+pub(crate) unsafe fn resize<T>(v: &mut Vec<T>, new_len: usize) {
+    if v.capacity() < new_len {
+        v.reserve(new_len - v.len());
+    }
+    v.set_len(new_len);
+}
+
 ///https://qiita.com/mhgp/items/41a75915413aec781fe0
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub struct Record<T: ColumnarSet> {
     /*length: u32,*/
     sample_id: u32,
     sample_file_id: u32, // When we split files of inverted data structure
+    format: u32,
     // format_type: u32, // Enum
     data: T // There is an argument on T or Box<T> //
 }
@@ -32,11 +46,12 @@ impl Record<Default> {
 }*/
 
 impl<T: ColumnarSet> Record<T> {
-/*    pub fn new() -> Self {
+    /*
+    pub fn new() -> Self {
         Record {
             sample_id: 0,
             sample_file_id: 0,
-            data: Box::new(Default{})
+            data: Default{}
         }
     }*/
     pub fn sample_id(&self) -> u32 {
@@ -48,14 +63,28 @@ impl<T: ColumnarSet> Record<T> {
     pub fn to_stream<W: Write>(&self, stream: &mut W) -> Result<()> {
         stream.write_u32::<LittleEndian>(self.sample_id)?;
         stream.write_u32::<LittleEndian>(self.sample_file_id)?;
+        stream.write_u32::<LittleEndian>(self.format)?;
         self.data.to_stream(stream)?;
         Ok(())
     }
-    pub(crate) fn fill_from_bam<R: Read>(&self, stream: &mut R) -> Result<bool> {
+    pub fn from_stream<R:Read>(&self, stream: &mut R) -> Result<Self> {
+        let sample_id = stream.read_u32::<LittleEndian>()?;
+        let sample_file_id = stream.read_u32::<LittleEndian>()?;
+        let format = stream.read_u32::<LittleEndian>()?;
+        let data = T::new();
+        /*
+        let data = match format {
+            0 => Default::from_stream(stream),
+            1 => InvertedRecord::from_stream(stream),
+            _ => panic!("Panic!")
+        };*/
+        return Ok(Record{sample_id, sample_file_id,format, data})
+    }
+/*    pub(crate) fn fill_from_bam<R: Read>(&self, stream: &mut R) -> Result<bool> {
         /* Unimplemented */
 
         return Ok(true);
-    }
+    }*/
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -76,7 +105,7 @@ impl InvertedRecordEntire {
                 let chrom = inverted_record.entry(name.clone()).or_insert(InvertedRecordChromosome{bins: HashMap::new() }); // TODO() DO NOT USE CLONE
                 for (bin_id, bin) in &chromosome.bins {
                     let chunks = chrom.bins.entry(*bin_id).or_insert(Vec::new());
-                    chunks.push(Record::<InvertedRecord>{sample_id: set.sample_id, sample_file_id: sample_file_id as u32, data: InvertedRecord::new(bin)})
+                    chunks.push(Record::<InvertedRecord>{sample_id: set.sample_id, sample_file_id: sample_file_id as u32, format: 1, data: InvertedRecord::new(bin)})
                 }
             }    
         }
@@ -118,7 +147,14 @@ pub struct Default {
 }
 
 impl ColumnarSet for Default {
+    fn new() -> Self {
+        Default{}
+    }
     fn to_stream<W: Write>(&self, stream: &mut W) -> Result<()> {
+        Err(Error::new(InvalidData, format!("No data.")))
+    }
+
+    fn from_stream<R: Read>(&mut self, stream: &mut R) -> Result<bool> {
         Err(Error::new(InvalidData, format!("No data.")))
     }
 }
@@ -132,6 +168,42 @@ pub struct InvertedRecord {
 }
 
 impl ColumnarSet for InvertedRecord {
+    fn new() -> InvertedRecord {
+        let start = vec![];
+        let end = vec![];
+        let name = vec![];
+        InvertedRecord{start: start, end: end, name: name}
+    }
+    
+    fn from_stream<R: Read>(&mut self, stream: &mut R) -> Result<bool> {
+        let n_header = stream.read_u64::<LittleEndian>()?;
+        let n_items = stream.read_u64::<LittleEndian>()?;
+        for _i in 0..n_header {
+            let _ = stream.read_u16::<LittleEndian>()?;
+        }
+        unsafe {
+            resize(&mut self.start, n_items as usize);
+            resize(&mut self.end, n_items as usize);
+            resize(&mut self.name, n_items as usize);
+        }
+/*        let mut start = Vec::with_capacity(n_items as usize);
+        let mut end = Vec::with_capacity(n_items as usize);
+        let mut name = Vec::with_capacity(n_items as usize);*/
+        for _i in 0..n_items {
+            self.start.push(stream.read_u64::<LittleEndian>()?);
+        }
+        for _i in 0..n_items {
+            self.end.push(stream.read_u64::<LittleEndian>()?);
+        }
+        for _i in 0..n_items {
+            let size = stream.read_u64::<LittleEndian>()?;
+            let mut raw = Vec::with_capacity(size as usize);
+            stream.read_exact(&mut raw)?;
+            self.name.push(String::from_utf8(raw).unwrap());
+        }
+        return Ok(true) //Ok(InvertedRecord{start: start, end: end, name: name})
+    }
+    
     fn to_stream<W: Write>(&self, stream: &mut W) -> Result<()> {
         stream.write_u64::<LittleEndian>(self.start.len() as u64)?;
         stream.write_u64::<LittleEndian>(3 as u64)?;
@@ -162,36 +234,15 @@ impl InvertedRecord {
         let name = builder.name.clone().into_inner();
         InvertedRecord{start: start, end: end, name: name}
     }
-
-    pub fn from_stream<R: Read>(mut stream: R) -> Result<InvertedRecord> {
-        let n_header = stream.read_u64::<LittleEndian>()?;
-        let n_items = stream.read_u64::<LittleEndian>()?;
-        for _i in 0..n_header {
-            let _ = stream.read_u16::<LittleEndian>()?;
-        }
-        let mut start = Vec::with_capacity(n_items as usize);
-        let mut end = Vec::with_capacity(n_items as usize);
-        let mut name = Vec::with_capacity(n_items as usize);
-        for _i in 0..n_items {
-            start.push(stream.read_u64::<LittleEndian>()?);
-        }
-        for _i in 0..n_items {
-            end.push(stream.read_u64::<LittleEndian>()?);
-        }
-        for _i in 0..n_items {
-            let size = stream.read_u64::<LittleEndian>()?;
-            let mut raw = Vec::with_capacity(size as usize);
-            stream.read_exact(&mut raw)?;
-            name.push(String::from_utf8(raw).unwrap());
-        }
-        return Ok(InvertedRecord{start: start, end: end, name: name})
-    }
+}
+    /*
 
     /// Loads index from path.
     pub fn from_path<P: AsRef<Path>>(path: P) -> Result<InvertedRecord> {
         let f = File::open(&path)?;
+        let record = 
         InvertedRecord::from_stream(f)
-    }
-}
+    }*/
+//}
 
 
