@@ -36,9 +36,9 @@ impl ModificationTime {
         match &self {
             ModificationTime::Ignore => {},
             ModificationTime::Error => return Err(Error::new(InvalidInput,
-                "the BAM file is younger than the BAI index")),
+                "the binary file is younger than the index")),
             ModificationTime::Warn(box_fun) =>
-                box_fun("the BAM file is younger than the BAI index"),
+                box_fun("the binary file is younger than the index index"),
         }
         Ok(())
     }
@@ -102,7 +102,7 @@ impl IndexedReaderBuilder {
     pub fn from_path<P: AsRef<Path>>(&self, bam_path: P) -> Result<IndexedReader<File>> {
         let bam_path = bam_path.as_ref();
         let bai_path = self.bai_path.as_ref().map(PathBuf::clone)
-            .unwrap_or_else(|| PathBuf::from(format!("{}.bai", bam_path.display())));
+            .unwrap_or_else(|| PathBuf::from(format!("{}.ghi", bam_path.display())));
         self.modification_time.check(&bam_path, &bai_path)?;
 
         let reader = bgzip::SeekReader::from_path(bam_path, self.additional_threads)

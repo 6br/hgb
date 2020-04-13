@@ -1,3 +1,4 @@
+#![feature(associated_type_bounds)]
 #![feature(rustc_private)]
 extern crate log;
 extern crate libc;
@@ -13,9 +14,10 @@ pub mod index;
 pub mod range;
 pub mod alignment;
 pub mod writer;
+pub mod reader;
 pub mod binary;
 pub mod builder;
-pub mod reader;
+
 
 use std::io;
 use range::InvertedRecord;
@@ -35,7 +37,22 @@ pub trait ChunkWriter<T: ColumnarSet> {
     fn flush(&mut self) -> io::Result<()>;
 }
 
-/// A trait for writing BAM/SAM records.
+/// A trait for reading BAM/SAM records.
+pub trait ChunkReader<T: ColumnarSet>: Iterator<Item = io::Result<Record<T>>> {
+    /// Writes the next record into `record`. It allows to skip excessive memory allocation.
+    /// If there are no more records to iterate over, the function returns `false`.
+    ///
+    /// If the function returns an error, the record is cleared.
+    fn read_into(&mut self, record: &mut Record<T>) -> io::Result<bool>;
+
+    /// Pauses multi-thread reader until the next read operation. Does nothing to a single-thread reader.
+    ///
+    /// Use with caution: pausing and unpausing takes some time.
+    fn pause(&mut self);
+}
+
+
+/// A trait for writing BAM/SAM records. (Deprecated.)
 pub trait InvertedRecordWriter {
     /// Writes a single record.
     fn write(&mut self, record: &InvertedRecord) -> io::Result<index::VirtualOffset>;
@@ -73,6 +90,8 @@ pub trait IndexWriter {
 }
 
 pub trait ColumnarSet {
+    //fn new() -> Self;
+    //fn clear(&mut self);
     fn to_stream<W: Write>(&self, stream: &mut W) -> Result<()>;
 
     //fn from_stream<R: Read>(stream: R) -> Result<Self>;

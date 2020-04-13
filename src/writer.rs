@@ -123,8 +123,8 @@ impl<W: Write> GhbWriter<W> {
 }
 
 impl<W: Write> IndexWriter for GhbWriter<W> {
-    fn write(&mut self, record: &Index) -> Result<()> {
-        record.to_stream(&mut self.writer)?;
+    fn write(&mut self, index: &Index) -> Result<()> {
+        index.to_stream(&mut self.writer)?;
         self.writer.end_context();
         Ok(())
     }

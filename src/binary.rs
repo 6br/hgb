@@ -12,7 +12,7 @@
 //! and the writer implements [RecordWriter](../trait.RecordWriter.html) trait. See them for
 //! more information.
 
-use std::io::{Write, BufWriter, Result, Seek, SeekFrom, BufReader, BufRead};
+use std::io::{Write, BufWriter, Result, Seek, SeekFrom, BufReader, Read};
 use std::fs::File;
 use std::path::Path;
 use crate::ColumnarSet;
@@ -20,7 +20,7 @@ use bam::header::Header;
 use crate::index::{VirtualOffset, Chunk};
 use crate::range::Record;
 //use crate::InvertedRecordWriter;
-use super::{InvertedRecordWriter, ChunkWriter, InvertedRecord};
+use super::{InvertedRecordWriter, ChunkWriter, InvertedRecord, ChunkReader};
 
 /// Builder of the [SamWriter](struct.SamWriter.html).
 pub struct GhbWriterBuilder {
@@ -158,6 +158,7 @@ impl<W: Write+Seek> InvertedRecordWriter for GhbWriter<W> {
     }
 }
 
+
 /// Reads records from SAM format.
 ///
 /// Can be opened as
@@ -175,37 +176,28 @@ impl<W: Write+Seek> InvertedRecordWriter for GhbWriter<W> {
 /// ```
 /// You can use [RecordReader](../trait.RecordReader.html) trait to read records without excess
 /// allocation.
-pub struct GhbReader<R: BufRead> {
+/// https://stackoverflow.com/questions/54791718/whats-the-difference-between-a-traits-generic-type-and-a-generic-associated-ty/54792178
+pub struct GhbReader<R: Read, T: ColumnarSet> {
+    _marker: std::marker::PhantomData<fn() -> T>, // https://in-neuro.hatenablog.com/entry/2019/01/22/220639
     stream: R,
     header: Header,
-    buffer: String,
+    // buffer: String, We do not need buffer because its not bgzip.
 }
-/*
-impl GhbReader<BufReader<File>> {
-    /// Opens SAM reader from `path`.
+
+impl<T: ColumnarSet> GhbReader<BufReader<File>, T> {
+    /// Opens GHB reader from `path`.
     pub fn from_path<P: AsRef<Path>>(path: P) -> Result<Self> {
         let stream = BufReader::new(File::open(path)?);
-        SamReader::from_stream(stream)
+        GhbReader::from_stream(stream)
     }
 }
 
-impl<R: BufRead> GhbReader<R> {
-    /// Opens SAM reader from a buffered stream.
+impl<R: Read, T: ColumnarSet> GhbReader<R, T> {
+    /// Opens GHB reader from a buffered stream.
     pub fn from_stream(mut stream: R) -> Result<Self> {
-        let mut header = Header::new();
-        let mut buffer = String::new();
-        loop {
-            buffer.clear();
-            if stream.read_line(&mut buffer)? == 0 {
-                break;
-            };
-            if buffer.starts_with('@') {
-                header.push_line(buffer.trim_end())?;
-            } else {
-                break;
-            }
-        }
-        Ok(SamReader { stream, header, buffer })
+        let header = Header::from_bam(&mut stream)?;
+        let _marker = std::marker::PhantomData;
+        Ok(GhbReader { _marker, stream, header })
     }
 
     /// Returns [header](../header/struct.Header.html).
@@ -219,32 +211,24 @@ impl<R: BufRead> GhbReader<R> {
     }
 }
 
-impl<R: BufRead> RecordReader for GhbReader<R> {
-    fn read_into(&mut self, record: &mut InvertedRecord) -> Result<bool> {
-        if self.buffer.is_empty() {
-            return Ok(false);
+impl<R: Read, T: ColumnarSet> ChunkReader<T> for GhbReader<R, T> {
+    fn read_into(&mut self, record: &mut Record<T>) -> Result<bool> {
+        let res = record.fill_from_bam(&mut self.stream);
+        if !res.as_ref().unwrap_or(&false) {
+            record.clear();
         }
-        let res = match record.fill_from_sam(self.buffer.trim(), &self.header) {
-            Ok(()) => Ok(true),
-            Err(e) => {
-                record.clear();
-                Err(e)
-            },
-        };
-        self.buffer.clear();
-        match self.stream.read_line(&mut self.buffer) {
-            Ok(_) => res,
-            Err(e) => res.or(Err(e)),
-        }
+        res
     }
 
     /// Does nothing, as SAM readers are single-thread.
-    fn pause(&mut self) {}
+    fn pause(&mut self) {
+
+    }
 }
 
 /// Iterator over records.
-impl<R: BufRead> Iterator for SamReader<R> {
-    type Item = Result<Record>;
+impl<R: Read, T: ColumnarSet> Iterator for GhbReader<R, T> {
+    type Item = Result<Record<T>>;
 
     fn next(&mut self) -> Option<Self::Item> {
         let mut record = Record::new();
@@ -255,4 +239,3 @@ impl<R: BufRead> Iterator for SamReader<R> {
         }
     }
 }
-*/

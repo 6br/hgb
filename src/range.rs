@@ -1,7 +1,9 @@
-use std::io::{Result, Read, Write, Seek};
+use std::io::{Result, Read, Write, Seek, Error};
+use std::io::ErrorKind::InvalidData;
 use std::collections::HashMap;
 use std::path::Path;
 use std::fs::File;
+// use std::marker::PhantomData;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use crate::index::{Index, Reference, Bin};
 use crate::ColumnarSet;
@@ -9,24 +11,50 @@ use crate::binary::GhbWriter;
 use crate::builder::{InvertedRecordBuilder, InvertedRecordSet};
 use crate::ChunkWriter;
 
+///https://qiita.com/mhgp/items/41a75915413aec781fe0
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub struct Record<T: ColumnarSet> {
     /*length: u32,*/
     sample_id: u32,
     sample_file_id: u32, // When we split files of inverted data structure
     // format_type: u32, // Enum
-    data: T,
+    data: T // There is an argument on T or Box<T> //
 }
+/*
+impl Record<Default> {
+    pub fn new() -> Self {
+        Record {
+            sample_id: 0,
+            sample_file_id: 0,
+            data: Default{}
+        }
+    }
+}*/
 
 impl<T: ColumnarSet> Record<T> {
+/*    pub fn new() -> Self {
+        Record {
+            sample_id: 0,
+            sample_file_id: 0,
+            data: Box::new(Default{})
+        }
+    }*/
     pub fn sample_id(&self) -> u32 {
         return self.sample_id;
+    }
+    pub fn sample_file_id(&self) -> u32 {
+        return self.sample_file_id;
     }
     pub fn to_stream<W: Write>(&self, stream: &mut W) -> Result<()> {
         stream.write_u32::<LittleEndian>(self.sample_id)?;
         stream.write_u32::<LittleEndian>(self.sample_file_id)?;
         self.data.to_stream(stream)?;
         Ok(())
+    }
+    pub(crate) fn fill_from_bam<R: Read>(&self, stream: &mut R) -> Result<bool> {
+        /* Unimplemented */
+
+        return Ok(true);
     }
 }
 
@@ -82,6 +110,16 @@ impl InvertedRecordEntire {
             reference.push(Reference::new(bins));
         }
         Ok(Index::new(reference))
+    }
+}
+#[derive(Clone, PartialEq, Eq, PartialOrd, Debug)]
+pub struct Default {
+
+}
+
+impl ColumnarSet for Default {
+    fn to_stream<W: Write>(&self, stream: &mut W) -> Result<()> {
+        Err(Error::new(InvalidData, format!("No data.")))
     }
 }
 
