@@ -78,6 +78,7 @@ mod tests {
     use crate::reader::IndexedReader;
     use crate::range::InvertedRecordEntire;
     use crate::IndexWriter;
+    use crate::reader;
     use super::InvertedRecordSet;
 
     #[test]
@@ -102,11 +103,11 @@ mod tests {
 
         let reader2 = IndexedReader::from_path("./test/test.ghb").unwrap();
         println!("{}", reader2.index());
-
-        for record in reader2.fetch(&bam::Region::new(1, 1_000, 1_500)).unwrap() {
+/*
+        for record in reader2.fetch(&reader::Region::new(1, 1_000, 1_500)).unwrap() {
             let record = record.unwrap();
             println!("{}", record);
-        }
-        assert_eq!(write!(index), write!(reader2.index()));
+        }*/
+        assert_eq!(format!("{}", index), format!("{}", reader2.index()));
     }
 }

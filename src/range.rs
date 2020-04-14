@@ -1,15 +1,14 @@
 use std::io::{Result, Read, Write, Seek, Error};
 use std::io::ErrorKind::InvalidData;
 use std::collections::HashMap;
-use std::path::Path;
-use std::fs::File;
+// use std::path::Path;
+// use std::fs::File;
 // use std::marker::PhantomData;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use crate::index::{Index, Reference, Bin};
-use crate::ColumnarSet;
+use crate::{ColumnarSet, ChunkWriter};
 use crate::binary::GhbWriter;
 use crate::builder::{InvertedRecordBuilder, InvertedRecordSet};
-use crate::ChunkWriter;
 
 enum Format {
     Default,
@@ -26,7 +25,7 @@ pub(crate) unsafe fn resize<T>(v: &mut Vec<T>, new_len: usize) {
 
 ///https://qiita.com/mhgp/items/41a75915413aec781fe0
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub struct Record<T: ColumnarSet> {
+pub struct Record<T: ColumnarSet + ?Sized> {
     /*length: u32,*/
     sample_id: u32,
     sample_file_id: u32, // When we split files of inverted data structure

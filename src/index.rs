@@ -373,6 +373,38 @@ impl Index {
         &self.references
     }
 
+    /// Fetches [chunks](struct.Chunk.html) of the BAM file that contain all records for a given region.
+    pub fn fetch_chunks(&self, ref_id: u32, start: i32, end: i32) -> Vec<&Chunk> {
+        let mut chunks = Vec::new();
+        let ref_id = ref_id as usize;
+
+        // let min_end_offset = self.references[ref_id].linear_index.min_end_offset(start);
+        for bin_id in region_to_bins(start, end) {
+            if let Some(bin) = self.references[ref_id].bins.get(&bin_id) {
+                chunks.extend(bin.chunks.iter());
+            }
+        }
+        chunks
+/*
+        let mut res = Vec::new();
+        if chunks.is_empty() {
+            return res;
+        }
+        chunks
+
+        chunks.sort();
+        let mut curr = chunks[0].clone();
+        for i in 1..chunks.len() {
+            if !curr.can_combine(&chunks[i]) {
+                res.push(curr);
+                curr = chunks[i].clone();
+            } else {
+                curr = curr.combine(&chunks[i]);
+            }
+        }
+        res.push(curr);
+        res*/
+    }
 }
 
 
@@ -386,6 +418,7 @@ impl Display for Index {
     }
 }
 
+/*
 /// Returns a BAI bin for the record with alignment `[beg-end)`.
 pub fn region_to_bin(beg: i32, end: i32) -> u32 {
     let end = end - 1;
@@ -415,6 +448,7 @@ pub fn region_to_bin_2(beg: u64, end: u64) -> u32 {
     }
     res as u32
 }
+*/
 
 /// Returns a BAI bin for the record with alignment `[beg-end)` for multiplex lower-level 
 /// Fixed version 
@@ -486,8 +520,43 @@ impl Iterator for BinsIter {
 impl std::iter::FusedIterator for BinsIter {}
 
 /// Maximal possible bin value.
-pub const MAX_BIN: u16 = 37448;
+pub const MAX_BIN: u32 = 70217;
 
+/// Returns a maximal region for a given bin.
+pub fn bin_to_region(bin: u32) -> (i32, i32) {
+    if bin == 0 {
+        return (std::i32::MIN, std::i32::MAX);
+    }
+    let mut left = 1;
+    for i in 1..6 {
+        let right = left + (1 << 3 * i);
+        if bin >= left && bin < right {
+            let beg = (bin - left) as i32;
+            return (beg << 29 - 3 * i, beg + 1 << 29 - 3 * i);
+        }
+        left = right;
+    }
+    panic!("Bin id should be not bigger than MAX_BIN ({} > {})", bin, MAX_BIN);
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::index::bin_to_region;
+    
+    #[test]
+    fn bin_to_region_works() {
+        assert_eq!(bin_to_region(1), (1, 1 << 26));        
+        assert_eq!(bin_to_region(9), (1, 1 << 23));
+        assert_eq!(bin_to_region(73), (1, 1 << 20));
+        assert_eq!(bin_to_region(585), (1, 1 << 17));
+        assert_eq!(bin_to_region(4681), (1, 16384));
+        assert_eq!(bin_to_region(4682), (8192, 16384 + 8192));
+
+    }
+}
+
+
+/*
 /// Returns a maximal region for a given bin.
 pub fn bin_to_region(bin: u16) -> (i32, i32) {
     if bin == 0 {
@@ -504,3 +573,4 @@ pub fn bin_to_region(bin: u16) -> (i32, i32) {
     }
     panic!("Bin id should be not bigger than MAX_BIN ({} > {})", bin, MAX_BIN);
 }
+*/
