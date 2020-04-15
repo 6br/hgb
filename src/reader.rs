@@ -2,7 +2,7 @@
 use std::path::{Path, PathBuf};
 use crate::index::Index;
 use bam::bgzip;
-use std::io::{Result, Error, Read, Seek};
+use std::io::{Result, Error, Read, Seek, BufReader};
 use std::fs::File;
 use std::io::ErrorKind::{InvalidInput};
 use bam::header::Header;
@@ -102,7 +102,7 @@ impl IndexedReaderBuilder {
 
     /// Creates a new [IndexedReader](struct.IndexedReader.html) from `bam_path`.
     /// If BAI path was not specified, the functions tries to open `{bam_path}.bai`.
-    pub fn from_path<P: AsRef<Path>, T: ColumnarSet, R: Read+ Seek>(&self, bam_path: P) -> Result<IndexedReader<BufReader<File>, T>> {
+    pub fn from_path<P: AsRef<Path>, T: ColumnarSet, R: Read + Seek>(&self, bam_path: P) -> Result<IndexedReader<BufReader<File>, T>> {
         let bam_path = bam_path.as_ref();
         let bai_path = self.bai_path.as_ref().map(PathBuf::clone)
             .unwrap_or_else(|| PathBuf::from(format!("{}.ghi", bam_path.display())));
@@ -111,7 +111,7 @@ impl IndexedReaderBuilder {
         let reader = GhbReader::from_path(bam_path)
             .map_err(|e| Error::new(e.kind(), format!("Failed to open BAM file: {}", e)))?;
 
-        let index_reader = bgzip::SeekReader::from_path(bai_path, self.additional_threads)
+        let mut index_reader = bgzip::SeekReader::from_path(bai_path, self.additional_threads)
             .map_err(|e| Error::new(e.kind(), format!("Failed to open BAI file: {}", e)))?;
         let index = Index::from_stream(&mut index_reader)?;
 
@@ -126,7 +126,7 @@ impl IndexedReaderBuilder {
         let reader = GhbReader::from_stream(bam_stream)
             .map_err(|e| Error::new(e.kind(), format!("Failed to read BAM stream: {}", e)))?;
 
-        let index_reader = bgzip::SeekReader::from_stream(bai_stream, self.additional_threads)
+        let mut index_reader = bgzip::SeekReader::from_stream(bai_stream, self.additional_threads)
             .map_err(|e| Error::new(e.kind(), format!("Failed to read BAI index: {}", e)))?;
 
         let index = Index::from_stream(&mut index_reader)?;
@@ -137,11 +137,10 @@ impl IndexedReaderBuilder {
 pub struct IndexedReader<R: Read + Seek, T: ColumnarSet> {
     _marker: std::marker::PhantomData<T>,
     reader: GhbReader<R, T>,
-    index: Index,
-    header: Header,
+    index: Index
 }
 
-impl<T: ColumnarSet> IndexedReader<File, T> {
+impl<T: ColumnarSet> IndexedReader<BufReader<File>, T> {
     /// Creates [IndexedReaderBuilder](struct.IndexedReaderBuilder.html).
     pub fn build() -> IndexedReaderBuilder {
         IndexedReaderBuilder::new()
@@ -151,7 +150,7 @@ impl<T: ColumnarSet> IndexedReader<File, T> {
     ///
     /// Same as `Self::build().from_path(path)`.
     pub fn from_path<P: AsRef<Path>>(path: P) -> Result<Self> {
-        IndexedReaderBuilder::new().from_path(path)
+        IndexedReaderBuilder::new().from_path::<P,T,BufReader<File>>(path)
     }
     
 }
@@ -160,9 +159,9 @@ impl<R: Read + Seek, T: ColumnarSet> IndexedReader<R, T> {
     fn new(mut reader: GhbReader<R, T>, index: Index) -> Result<Self> {
         // reader.make_consecutive();
         let _marker = std::marker::PhantomData;
-        let header = Header::from_bam(&mut index_reader)?;
-        
-        Ok(Self { _marker, reader, index, header })
+        // let header = reader.header()// Header::from_bam(&mut index_reader)?;
+        // let header = Header::from_bam(&mut reader)?
+        Ok(Self { _marker, reader, index })
     }
 
     pub fn index(&self) -> &Index {
@@ -170,7 +169,7 @@ impl<R: Read + Seek, T: ColumnarSet> IndexedReader<R, T> {
     }
 
     pub fn header(&self) -> &Header {
-        &self.header
+        &self.reader.header()
     }
 
 
@@ -183,7 +182,7 @@ impl<R: Read + Seek, T: ColumnarSet> IndexedReader<R, T> {
     where F: 'static + Fn(&Record<T>) -> bool
     {
 
-        match self.header.reference_len(region.ref_id()) {
+        match self.header().reference_len(region.ref_id()) {
             None => return Err(Error::new(InvalidInput,
                 format!("Failed to fetch records: out of bounds reference {}", region.ref_id()))),
             Some(len) if len < region.end() => return Err(Error::new(InvalidInput,

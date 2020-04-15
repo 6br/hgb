@@ -528,7 +528,7 @@ pub fn bin_to_region(bin: u32) -> (i32, i32) {
         return (std::i32::MIN, std::i32::MAX);
     }
     let mut left = 1;
-    for i in 1..6 {
+    for i in 1..5 {
         let right = left + (1 << 3 * i);
         if bin >= left && bin < right {
             let beg = (bin - left) as i32;
@@ -536,6 +536,17 @@ pub fn bin_to_region(bin: u32) -> (i32, i32) {
         }
         left = right;
     }
+    let i = 5;
+    let right = left + (1 << 3 * i);
+    if bin >= left && bin < right {
+        let beg = ((bin - left)/2u32) as i32;
+        if (bin % 2 == 0) {
+            return ((1 << 13) + (beg << 29 - 3 * i), (1 << 13) + (beg + 1 << 29 - 3 * i))
+        } else {
+            return (beg << 29 - 3 * i, beg + 1 << 29 - 3 * i);
+        }
+    }
+    left = right;
     panic!("Bin id should be not bigger than MAX_BIN ({} > {})", bin, MAX_BIN);
 }
 
@@ -545,11 +556,12 @@ mod tests {
     
     #[test]
     fn bin_to_region_works() {
-        assert_eq!(bin_to_region(1), (1, 1 << 26));        
-        assert_eq!(bin_to_region(9), (1, 1 << 23));
-        assert_eq!(bin_to_region(73), (1, 1 << 20));
-        assert_eq!(bin_to_region(585), (1, 1 << 17));
-        assert_eq!(bin_to_region(4681), (1, 16384));
+        assert_eq!(bin_to_region(1), (0, 1 << 26));        
+        assert_eq!(bin_to_region(9), (0, 1 << 23));
+        assert_eq!(bin_to_region(73), (0, 1 << 20));
+        assert_eq!(bin_to_region(585), (0, 1 << 17));
+        assert_eq!(bin_to_region(4681), (0, 16384));
+        assert_eq!(bin_to_region(4683), (16384, 16384*2));
         assert_eq!(bin_to_region(4682), (8192, 16384 + 8192));
 
     }
