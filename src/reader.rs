@@ -8,6 +8,7 @@ use std::io::ErrorKind::{InvalidInput};
 use bam::header::Header;
 use crate::range::Record;
 use crate::ColumnarSet;
+use crate::binary::GhbReader;
 
 /// Defines how to react to a BAI index being younger than BAM file.
 ///
@@ -101,39 +102,43 @@ impl IndexedReaderBuilder {
 
     /// Creates a new [IndexedReader](struct.IndexedReader.html) from `bam_path`.
     /// If BAI path was not specified, the functions tries to open `{bam_path}.bai`.
-    pub fn from_path<P: AsRef<Path>, T: ColumnarSet>(&self, bam_path: P) -> Result<IndexedReader<File, T>> {
+    pub fn from_path<P: AsRef<Path>, T: ColumnarSet, R: Read+ Seek>(&self, bam_path: P) -> Result<IndexedReader<BufReader<File>, T>> {
         let bam_path = bam_path.as_ref();
         let bai_path = self.bai_path.as_ref().map(PathBuf::clone)
             .unwrap_or_else(|| PathBuf::from(format!("{}.ghi", bam_path.display())));
         self.modification_time.check(&bam_path, &bai_path)?;
 
-        let reader = bgzip::SeekReader::from_path(bam_path, self.additional_threads)
+        let reader = GhbReader::from_path(bam_path)
             .map_err(|e| Error::new(e.kind(), format!("Failed to open BAM file: {}", e)))?;
 
-        let index = Index::from_path(bai_path)
-            .map_err(|e| Error::new(e.kind(), format!("Failed to open BAI index: {}", e)))?;
+        let index_reader = bgzip::SeekReader::from_path(bai_path, self.additional_threads)
+            .map_err(|e| Error::new(e.kind(), format!("Failed to open BAI file: {}", e)))?;
+        let index = Index::from_stream(&mut index_reader)?;
+
         IndexedReader::new(reader, index)
     }
 
     /// Creates a new [IndexedReader](struct.IndexedReader.html) from two streams.
     /// BAM stream should support random access, while BAI stream does not need to.
     /// `check_time` and `bai_path` values are ignored.
-    pub fn from_streams<R: Read + Seek, T: Read + ColumnarSet>(&self, bam_stream: R, bai_stream: T)
+    pub fn from_streams<R: Read + Seek, T: Read + ColumnarSet>(&self, bam_stream: R, bai_stream: R)
             -> Result<IndexedReader<R, T>> {
-        let reader = bgzip::SeekReader::from_stream(bam_stream, self.additional_threads)
+        let reader = GhbReader::from_stream(bam_stream)
             .map_err(|e| Error::new(e.kind(), format!("Failed to read BAM stream: {}", e)))?;
 
-        let index = Index::from_stream(bai_stream)
+        let index_reader = bgzip::SeekReader::from_stream(bai_stream, self.additional_threads)
             .map_err(|e| Error::new(e.kind(), format!("Failed to read BAI index: {}", e)))?;
+
+        let index = Index::from_stream(&mut index_reader)?;
         IndexedReader::new(reader, index)
     }
 }
 
 pub struct IndexedReader<R: Read + Seek, T: ColumnarSet> {
     _marker: std::marker::PhantomData<T>,
-    reader: bgzip::SeekReader<R>,
-    header: Header,
+    reader: GhbReader<R, T>,
     index: Index,
+    header: Header,
 }
 
 impl<T: ColumnarSet> IndexedReader<File, T> {
@@ -152,11 +157,12 @@ impl<T: ColumnarSet> IndexedReader<File, T> {
 }
 
 impl<R: Read + Seek, T: ColumnarSet> IndexedReader<R, T> {
-    fn new(mut reader: bgzip::SeekReader<R>, index: Index) -> Result<Self> {
+    fn new(mut reader: GhbReader<R, T>, index: Index) -> Result<Self> {
         // reader.make_consecutive();
         let _marker = std::marker::PhantomData;
-        let header = Header::from_bam(&mut reader)?;
-        Ok(Self { _marker, reader, header, index })
+        let header = Header::from_bam(&mut index_reader)?;
+        
+        Ok(Self { _marker, reader, index, header })
     }
 
     pub fn index(&self) -> &Index {
