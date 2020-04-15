@@ -70,7 +70,7 @@ impl InvertedRecordSet {
 }
 #[cfg(test)]
 mod tests {
-    use bam::header::{Header, HeaderEntry};
+    use bam::header::{Header};
     use bio::io::bed;
     use std::io;
     use crate::binary;
@@ -93,22 +93,26 @@ mod tests {
         // let output = io::BufWriter::new(io::stdout());
         let header = Header::new();
         let mut writer = binary::GhbWriter::build()
-            .write_header(false)
+            .write_header(true)
             .from_path("./test/test.ghb", header).unwrap();
         let index = entire.write_binary(&mut writer).unwrap();
+        writer.flush().unwrap();
         println!("{}", index);
         let header2 = Header::new();
-        let mut writer = writer::GhbWriter::build().write_header(false).from_path("./test/test.ghb.ghi", header2).unwrap();
-        writer.write(&index);
-        /*
+        let mut index_writer = writer::GhbWriter::build().write_header(false).from_path("./test/test.ghb.ghi", header2).unwrap();
+        index_writer.write(&index);
+        index_writer.flush();
 
-        let reader2 = IndexedReader::from_path("./test/test.ghb").unwrap();
+        let mut reader2 = IndexedReader::from_path("./test/test.ghb").unwrap();
         println!("{}", reader2.index());
-        assert_eq!(format!("{}", index), format!("{}", reader2.index()));
+        
+
+        //assert_eq!(format!("{}", index), format!("{}", reader2.index()));
+        // assert_eq!(&index, reader2.index());
         for record in reader2.fetch(&reader::Region::new(1, 1_000, 1_500)).unwrap() {
             let record = record.unwrap();
-            println!("{}", record);
-        }*/
+            println!("{:?}", record);
+        }
 
     }
 }

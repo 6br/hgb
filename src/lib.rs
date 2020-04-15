@@ -26,9 +26,9 @@ use index::Index;
 use std::io::{Result, Write, Read};
 
 /// A trait for writing BAM/SAM records.
-pub trait ChunkWriter<T: ColumnarSet> {
+pub trait ChunkWriter {
     /// Writes a single record.
-    fn write(&mut self, record: &Record<T>) -> io::Result<index::Chunk>;
+    fn write(&mut self, record: &Record) -> io::Result<index::Chunk>;
 
     /// Finishes the stream, same as `std::mem::drop(writer)`, but can return an error.
     fn finish(&mut self) -> io::Result<()>;
@@ -38,12 +38,12 @@ pub trait ChunkWriter<T: ColumnarSet> {
 }
 
 /// A trait for reading BAM/SAM records.
-pub trait ChunkReader<T: ColumnarSet>: Iterator<Item = io::Result<Record<T>>> {
+pub trait ChunkReader: Iterator<Item = io::Result<Record>> {
     /// Writes the next record into `record`. It allows to skip excessive memory allocation.
     /// If there are no more records to iterate over, the function returns `false`.
     ///
     /// If the function returns an error, the record is cleared.
-    fn read_into(&mut self, record: &mut Record<T>) -> io::Result<bool>;
+    fn read_into(&mut self, record: &mut Record) -> io::Result<bool>;
 
     /// Pauses multi-thread reader until the next read operation. Does nothing to a single-thread reader.
     ///

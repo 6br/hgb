@@ -207,7 +207,7 @@ impl Display for Chunk {
 }
 
 /// Single bin that stores chunks of 
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Bin {
     bin_id: u32,
     chunks: Vec<Chunk>, // chunks for each sample, each format type
@@ -264,7 +264,7 @@ impl Display for Bin {
 }
 
 /// Index for a single reference sequence. Contains [bins](struct.Bin.html).
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct Reference {
     bins: HashMap<u32, Bin>, // bin_id is not continuous.
     // linear_index: LinearIndex,
@@ -316,7 +316,7 @@ impl Display for Reference {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct Index {
     // samples: Vec<String>, // sample names, we expect sample id is continuous.
     references: Vec<Reference>, // the length is inherited from n_ref
@@ -352,8 +352,9 @@ impl Index {
     }
 
     pub fn to_stream<W: Write>(&self, mut stream: W) -> Result<()> {
-        let magic = [b'G', b'H', b'I', 1];
-        stream.write(&magic)?;
+        /*let magic = [b'G', b'H', b'I', 1];
+        stream.write(&magic)?;*/
+        stream.write_all(&[b'G', b'H', b'I', 1])?;
         let n_ref = self.references.len() as i32;
         stream.write_i32::<LittleEndian>(n_ref)?;
 
@@ -486,6 +487,8 @@ pub fn region_to_bins(start: i32, end: i32) -> BinsIter {
 }
 
 /// Iterator over bins.
+/// 
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub struct BinsIter {
     i: i32,
     t: i32,
@@ -493,6 +496,19 @@ pub struct BinsIter {
     end: i32,
     curr_bin: u32,
     bins_end: u32,
+}
+
+impl BinsIter {
+    fn new(    i: i32,
+        t: i32,
+        start: i32,
+        end: i32,
+        curr_bin: u32,
+        bins_end: u32) -> BinsIter {
+            return {
+                BinsIter{i,t,start,end,curr_bin,bins_end}
+            }
+        }
 }
 
 impl Iterator for BinsIter {
@@ -540,7 +556,7 @@ pub fn bin_to_region(bin: u32) -> (i32, i32) {
     let right = left + (1 << 3 * i);
     if bin >= left && bin < right {
         let beg = ((bin - left)/2u32) as i32;
-        if (bin % 2 == 0) {
+        if bin % 2 == 0 {
             return ((1 << 13) + (beg << 29 - 3 * i), (1 << 13) + (beg + 1 << 29 - 3 * i))
         } else {
             return (beg << 29 - 3 * i, beg + 1 << 29 - 3 * i);
@@ -553,6 +569,8 @@ pub fn bin_to_region(bin: u32) -> (i32, i32) {
 #[cfg(test)]
 mod tests {
     use crate::index::bin_to_region;
+    use crate::index::region_to_bins;
+    use crate::index::BinsIter;
     
     #[test]
     fn bin_to_region_works() {
@@ -564,6 +582,11 @@ mod tests {
         assert_eq!(bin_to_region(4683), (16384, 16384*2));
         assert_eq!(bin_to_region(4682), (8192, 16384 + 8192));
 
+    }
+
+    #[test] 
+    fn bin_iter() {
+        assert_eq!(region_to_bins(0, 16384), BinsIter::new(0,0,0,0,0,0))
     }
 }
 

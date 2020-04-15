@@ -4,10 +4,12 @@ use crate::index::Index;
 use bam::bgzip;
 use std::io::{Result, Error, Read, Seek, BufReader};
 use std::fs::File;
-use std::io::ErrorKind::{InvalidInput};
+use std::io::ErrorKind::{InvalidInput, InvalidData};
 use bam::header::Header;
 use crate::range::Record;
-use crate::ColumnarSet;
+// use crate::ColumnarSet;
+use crate::index;
+use crate::ChunkReader;
 use crate::binary::GhbReader;
 
 /// Defines how to react to a BAI index being younger than BAM file.
@@ -102,7 +104,7 @@ impl IndexedReaderBuilder {
 
     /// Creates a new [IndexedReader](struct.IndexedReader.html) from `bam_path`.
     /// If BAI path was not specified, the functions tries to open `{bam_path}.bai`.
-    pub fn from_path<P: AsRef<Path>, T: ColumnarSet, R: Read + Seek>(&self, bam_path: P) -> Result<IndexedReader<BufReader<File>, T>> {
+    pub fn from_path<P: AsRef<Path>, R: Read + Seek>(&self, bam_path: P) -> Result<IndexedReader<BufReader<File>>> {
         let bam_path = bam_path.as_ref();
         let bai_path = self.bai_path.as_ref().map(PathBuf::clone)
             .unwrap_or_else(|| PathBuf::from(format!("{}.ghi", bam_path.display())));
@@ -113,7 +115,9 @@ impl IndexedReaderBuilder {
 
         let mut index_reader = bgzip::SeekReader::from_path(bai_path, self.additional_threads)
             .map_err(|e| Error::new(e.kind(), format!("Failed to open BAI file: {}", e)))?;
-        let index = Index::from_stream(&mut index_reader)?;
+        index_reader.make_consecutive();
+        let index = Index::from_stream(&mut index_reader)
+        .map_err(|e| Error::new(e.kind(), format!("Failed to read BAI file: {}", e)))?;
 
         IndexedReader::new(reader, index)
     }
@@ -121,26 +125,26 @@ impl IndexedReaderBuilder {
     /// Creates a new [IndexedReader](struct.IndexedReader.html) from two streams.
     /// BAM stream should support random access, while BAI stream does not need to.
     /// `check_time` and `bai_path` values are ignored.
-    pub fn from_streams<R: Read + Seek, T: Read + ColumnarSet>(&self, bam_stream: R, bai_stream: R)
-            -> Result<IndexedReader<R, T>> {
+    pub fn from_streams<R: Read + Seek>(&self, bam_stream: R, bai_stream: R)
+            -> Result<IndexedReader<R>> {
         let reader = GhbReader::from_stream(bam_stream)
             .map_err(|e| Error::new(e.kind(), format!("Failed to read BAM stream: {}", e)))?;
 
         let mut index_reader = bgzip::SeekReader::from_stream(bai_stream, self.additional_threads)
             .map_err(|e| Error::new(e.kind(), format!("Failed to read BAI index: {}", e)))?;
-
+        index_reader.make_consecutive();
         let index = Index::from_stream(&mut index_reader)?;
         IndexedReader::new(reader, index)
     }
 }
 
-pub struct IndexedReader<R: Read + Seek, T: ColumnarSet> {
-    _marker: std::marker::PhantomData<T>,
-    reader: GhbReader<R, T>,
+pub struct IndexedReader<R: Read + Seek> {
+//    _marker: std::marker::PhantomData<T>,
+    reader: GhbReader<R>,
     index: Index
 }
 
-impl<T: ColumnarSet> IndexedReader<BufReader<File>, T> {
+impl IndexedReader<BufReader<File>> {
     /// Creates [IndexedReaderBuilder](struct.IndexedReaderBuilder.html).
     pub fn build() -> IndexedReaderBuilder {
         IndexedReaderBuilder::new()
@@ -150,18 +154,18 @@ impl<T: ColumnarSet> IndexedReader<BufReader<File>, T> {
     ///
     /// Same as `Self::build().from_path(path)`.
     pub fn from_path<P: AsRef<Path>>(path: P) -> Result<Self> {
-        IndexedReaderBuilder::new().from_path::<P,T,BufReader<File>>(path)
+        IndexedReaderBuilder::new().from_path::<P,BufReader<File>>(path)
     }
     
 }
 
-impl<R: Read + Seek, T: ColumnarSet> IndexedReader<R, T> {
-    fn new(mut reader: GhbReader<R, T>, index: Index) -> Result<Self> {
+impl<R: Read + Seek> IndexedReader<R> {
+    fn new(mut reader: GhbReader<R>, index: Index) -> Result<Self> {
         // reader.make_consecutive();
-        let _marker = std::marker::PhantomData;
+        // let _marker = std::marker::PhantomData;
         // let header = reader.header()// Header::from_bam(&mut index_reader)?;
         // let header = Header::from_bam(&mut reader)?
-        Ok(Self { _marker, reader, index })
+        Ok(Self { reader, index })
     }
 
     pub fn index(&self) -> &Index {
@@ -172,14 +176,18 @@ impl<R: Read + Seek, T: ColumnarSet> IndexedReader<R, T> {
         &self.reader.header()
     }
 
+    pub fn take_stream(self) -> R {
+        self.reader.take_stream()
+    }
+
 
     /// Returns an iterator over records aligned to the [reference region](struct.Region.html).
-    pub fn fetch<'a>(&'a mut self, region: &Region) -> Result<RegionViewer<'a, R, T>> {
+    pub fn fetch<'a>(&'a mut self, region: &Region) -> Result<RegionViewer<'a, R>> {
         self.fetch_by(region, |_| true)
     }
 
-    pub fn fetch_by<'a, F>(&'a mut self, region: &Region, predicate: F) -> Result<RegionViewer<'a, R, T>>
-    where F: 'static + Fn(&Record<T>) -> bool
+    pub fn fetch_by<'a, F>(&'a mut self, region: &Region, predicate: F) -> Result<RegionViewer<'a, R>>
+    where F: 'static + Fn(&Record) -> bool
     {
 
         match self.header().reference_len(region.ref_id()) {
@@ -194,6 +202,7 @@ impl<R: Read + Seek, T: ColumnarSet> IndexedReader<R, T> {
         // self.reader.set_chunks(chunks);
         Ok(RegionViewer {
             parent: self,
+            // parent_stream: &mut self.reader,
             start: region.start() as i32,
             end: region.end() as i32,
             predicate: Box::new(predicate),
@@ -208,14 +217,15 @@ impl<R: Read + Seek, T: ColumnarSet> IndexedReader<R, T> {
 /// If possible, create a single record using [Record::new](../record/struct.Record.html#method.new)
 /// and then use [read_into](../trait.RecordReader.html#method.read_into) instead of iterating,
 /// as it saves time on allocation.
-pub struct RegionViewer<'a, R: Read + Seek, T: ColumnarSet> {
-    parent: &'a mut IndexedReader<R, T>,
+pub struct RegionViewer<'a, R: Read + Seek> {
+    parent: &'a mut IndexedReader<R>,
+    // parent_stream: &'a mut GhbReader<R>,
     start: i32,
     end: i32,
-    predicate: Box<dyn Fn(&Record<T>) -> bool>,
+    predicate: Box<dyn Fn(&Record) -> bool>,
 }
 
-impl<'a, R: Read + Seek, T: ColumnarSet> RegionViewer<'a, R, T> {
+impl<'a, R: Read + Seek> RegionViewer<'a, R> {
     /// Returns [header](../header/struct.Header.html).
     pub fn header(&self) -> &Header {
         self.parent.header()
@@ -225,6 +235,10 @@ impl<'a, R: Read + Seek, T: ColumnarSet> RegionViewer<'a, R, T> {
     pub fn index(&self) -> &Index {
         self.parent.index()
     }
+/*
+    pub fn take_stream(self) -> R {
+        self.parent.take_stream()
+    }*/
 }
 
 
@@ -280,35 +294,39 @@ impl Region {
     }
 }
 
-/*
 
-impl<'a, R: Read + Seek, T: ColumnarSet> RecordReader for RegionViewer<'a, R, T> {
-    fn read_into(&mut self, record: &mut range::Record<T>) -> Result<bool> {
+impl<'a, R: Read + Seek> ChunkReader for RegionViewer<'a, R> {
+    fn read_into(&mut self, record: &mut Record) -> Result<bool> {
         loop {
-            let res = record.fill_from_bam(&mut self.parent.reader);
+            // let res = record.fill_from_bam(&mut self.parent.take_stream());
+            let res = self.parent.reader.fill_from_binary(record);
             if !res.as_ref().unwrap_or(&false) {
                 record.clear();
                 return res;
             }
             // Reads are sorted, so no more reads would be in the region.
+            /*
             if record.start() >= self.end {
                 record.clear();
                 return Ok(false);
             }
+            */
             if !(self.predicate)(&record) {
                 continue;
             }
-            let record_bin = record.calculate_bin();
+//            let record_bin = record.calculate_bin();
+            /*
             if record_bin > index::MAX_BIN {
                 record.clear();
                 return Err(Error::new(InvalidData, "Read has BAI bin bigger than max possible value"));
             }
+
             let (min_start, max_end) = index::bin_to_region(record_bin);
             if min_start >= self.start && max_end <= self.end {
                 return Ok(true);
             }
-
             let record_end = record.calculate_end();
+            
             if record.flag().is_mapped() && record_end < record.start() {
                 record.clear();
                 return Err(Error::new(InvalidData, "Corrupted record: aln_end < aln_start"));
@@ -319,21 +337,22 @@ impl<'a, R: Read + Seek, T: ColumnarSet> RecordReader for RegionViewer<'a, R, T>
                 }
             } else if record.start() >= self.start {
                 return Ok(true);
-            }
+            }*/
+            return Ok(true);
         }
     }
 
     fn pause(&mut self) {
-        self.parent.pause();
+        // self.parent.pause();
     }
 }
 
 /// Iterator over records.
-impl<'a, R: Read + Seek, T: ColumnSet> Iterator for RegionViewer<'a, R, T> {
-    type Item = Result<range::Record<T>>;
+impl<'a, R: Read + Seek> Iterator for RegionViewer<'a, R> {
+    type Item = Result<Record>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let mut record = record::Record::new();
+        let mut record = Record::new();
         match self.read_into(&mut record) {
             Ok(true) => Some(Ok(record)),
             Ok(false) => None,
@@ -341,4 +360,3 @@ impl<'a, R: Read + Seek, T: ColumnSet> Iterator for RegionViewer<'a, R, T> {
         }
     }
 }
-*/

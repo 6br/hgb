@@ -20,7 +20,7 @@ use bam::header::Header;
 use crate::index::{VirtualOffset, Chunk};
 use crate::range::Record;
 //use crate::InvertedRecordWriter;
-use super::{InvertedRecordWriter, ChunkWriter, InvertedRecord, ChunkReader};
+use super::{InvertedRecordWriter, ChunkWriter, InvertedRecord};
 
 /// Builder of the [SamWriter](struct.SamWriter.html).
 pub struct GhbWriterBuilder {
@@ -53,6 +53,7 @@ impl GhbWriterBuilder {
         if self.write_header {
             header.write_bam(&mut stream)?;
         }
+        stream.flush();
         Ok(GhbWriter { stream, header })
     }
 }
@@ -123,9 +124,9 @@ impl<W: Write> GhbWriter<W> {
     }
 }
 
-impl<W: Write+Seek, T: ColumnarSet> ChunkWriter<T> for GhbWriter<W> {
+impl<W: Write+Seek> ChunkWriter for GhbWriter<W> {
     /// Writes a single record in SAM format.
-    fn write(&mut self, record: &Record<T>) -> Result<Chunk> {
+    fn write(&mut self, record: &Record) -> Result<Chunk> {
         let start = self.stream.seek(SeekFrom::Current(0)).map(|a| VirtualOffset::from_raw(a))?;
         record.to_stream(&mut self.stream)?;
         let stop = self.stream.seek(SeekFrom::Current(0)).map(|a| VirtualOffset::from_raw(a))?;
@@ -177,14 +178,14 @@ impl<W: Write+Seek> InvertedRecordWriter for GhbWriter<W> {
 /// You can use [RecordReader](../trait.RecordReader.html) trait to read records without excess
 /// allocation.
 /// https://stackoverflow.com/questions/54791718/whats-the-difference-between-a-traits-generic-type-and-a-generic-associated-ty/54792178
-pub struct GhbReader<R: Read, T: ColumnarSet> {
-    _marker: std::marker::PhantomData<fn() -> T>, // https://in-neuro.hatenablog.com/entry/2019/01/22/220639
+pub struct GhbReader<R: Read + Seek> {
+    // _marker: std::marker::PhantomData<fn() -> T>, // https://in-neuro.hatenablog.com/entry/2019/01/22/220639
     stream: R,
     header: Header,
     // buffer: String, We do not need buffer because its not bgzip.
 }
 
-impl<T: ColumnarSet> GhbReader<BufReader<File>, T> {
+impl GhbReader<BufReader<File>> {
     /// Opens GHB reader from `path`.
     pub fn from_path<P: AsRef<Path>>(path: P) -> Result<Self> {
         let stream = BufReader::new(File::open(path)?);
@@ -192,12 +193,13 @@ impl<T: ColumnarSet> GhbReader<BufReader<File>, T> {
     }
 }
 
-impl<R: Read, T: ColumnarSet> GhbReader<R, T> {
+impl<R: Read + Seek> GhbReader<R> {
     /// Opens GHB reader from a buffered stream.
     pub fn from_stream(mut stream: R) -> Result<Self> {
         let header = Header::from_bam(&mut stream)?;
-        let _marker = std::marker::PhantomData;
-        Ok(GhbReader { _marker, stream, header })
+        // let header = Header::new();
+        // let _marker = std::marker::PhantomData;
+        Ok(GhbReader { stream, header })
     }
 
     /// Returns [header](../header/struct.Header.html).
@@ -209,10 +211,14 @@ impl<R: Read, T: ColumnarSet> GhbReader<R, T> {
     pub fn take_stream(self) -> R {
         self.stream
     }
+
+    pub fn fill_from_binary(&mut self, record: &mut Record) -> Result<bool> {
+        record.fill_from_bam(&mut self.stream)
+    }
 }
 /*
 impl<R: Read, T: ColumnarSet> ChunkReader<T> for GhbReader<R, T> {
-    fn read_into(&mut self, record: &mut Record<T>) -> Result<bool> {
+    fn read_into(&mut self, record: &mut Record) -> Result<bool> {
         let res = record.fill_from_bam(&mut self.stream);
         if !res.as_ref().unwrap_or(&false) {
             record.clear();
@@ -227,8 +233,8 @@ impl<R: Read, T: ColumnarSet> ChunkReader<T> for GhbReader<R, T> {
 }
 
 /// Iterator over records.
-impl<R: Read, T: ColumnarSet> Iterator for GhbReader<R, T> {
-    type Item = Result<Record<T>>;
+impl<R: Read> Iterator for GhbReader<R, T> {
+    type Item = Result<Record>;
 
     fn next(&mut self) -> Option<Self::Item> {
         let mut record = Record::new();

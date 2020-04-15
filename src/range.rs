@@ -8,13 +8,24 @@ use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use crate::index::{Index, Reference, Bin};
 use crate::{ColumnarSet, ChunkWriter};
 use crate::binary::GhbWriter;
+use crate::index;
 use crate::builder::{InvertedRecordBuilder, InvertedRecordSet};
 
+#[derive(Clone, PartialEq, Eq, Debug)]
 enum Format {
-    Default,
-    InvertedRecord
+    Default(Default),
+    Range(InvertedRecord)
 }
-
+/*
+impl Format {
+    pub fn start(&self) -> u32 {
+        match &self {
+            Default(default) -> default.start(),
+            Range(record) -> record.start()
+        }
+    }
+    
+}*/
 
 pub(crate) unsafe fn resize<T>(v: &mut Vec<T>, new_len: usize) {
     if v.capacity() < new_len {
@@ -24,14 +35,14 @@ pub(crate) unsafe fn resize<T>(v: &mut Vec<T>, new_len: usize) {
 }
 
 ///https://qiita.com/mhgp/items/41a75915413aec781fe0
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub struct Record<T: ColumnarSet + ?Sized> {
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct Record {
     /*length: u32,*/
     sample_id: u32,
     sample_file_id: u32, // When we split files of inverted data structure
     format: u32,
     // format_type: u32, // Enum
-    data: T // There is an argument on T or Box<T> //
+    data: Format // There is an argument on T or Box<T> //
 }
 /*
 impl Record<Default> {
@@ -44,15 +55,21 @@ impl Record<Default> {
     }
 }*/
 
-impl<T: ColumnarSet> Record<T> {
-    /*
+impl Record {
     pub fn new() -> Self {
         Record {
             sample_id: 0,
             sample_file_id: 0,
-            data: Default{}
+            format: 0,
+            data: Format::Default(Default{})
         }
-    }*/
+    }
+    pub fn clear(&mut self) {
+        self.sample_id = 0;
+        self.sample_file_id = 0;
+        self.format = 0;
+        self.data = Format::Default(Default{});
+    }
     pub fn sample_id(&self) -> u32 {
         return self.sample_id;
     }
@@ -63,32 +80,59 @@ impl<T: ColumnarSet> Record<T> {
         stream.write_u32::<LittleEndian>(self.sample_id)?;
         stream.write_u32::<LittleEndian>(self.sample_file_id)?;
         stream.write_u32::<LittleEndian>(self.format)?;
-        self.data.to_stream(stream)?;
+        // self.data.to_stream(stream)?;
+        match &self.data {
+            Format::Default(data) => data.to_stream(stream)?,
+            Format::Range(data) => data.to_stream(stream)?
+        }
         Ok(())
     }
-    pub fn from_stream<R:Read>(&self, stream: &mut R) -> Result<Self> {
+    pub fn from_stream<R: Read, T: ColumnarSet>(&self, stream: &mut R) -> Result<Self> {
         let sample_id = stream.read_u32::<LittleEndian>()?;
         let sample_file_id = stream.read_u32::<LittleEndian>()?;
         let format = stream.read_u32::<LittleEndian>()?;
-        let data = T::new();
-        /*
+        
         let data = match format {
-            0 => Default::from_stream(stream),
-            1 => InvertedRecord::from_stream(stream),
+            0 => {
+                let mut data = Default::new();
+                data.from_stream(stream)?;
+                Format::Default(data)
+            },
+            1 => {
+                let mut record = InvertedRecord::new();
+                record.from_stream(stream)?;
+                Format::Range(record)
+            },
             _ => panic!("Panic!")
-        };*/
+        };
         return Ok(Record{sample_id, sample_file_id,format, data})
     }
-/*    pub(crate) fn fill_from_bam<R: Read>(&self, stream: &mut R) -> Result<bool> {
+    pub(crate) fn fill_from_bam<R: Read>(&mut self, stream: &mut R) -> Result<bool> {
         /* Unimplemented */
-
+        self.sample_id = stream.read_u32::<LittleEndian>()?;
+        self.sample_file_id = stream.read_u32::<LittleEndian>()?;
+        self.format = stream.read_u32::<LittleEndian>()?;
+        let data = match self.format {
+            0 => {
+                let mut data = Default::new();
+                data.from_stream(stream)?;
+                Format::Default(data)
+            },
+            1 => {
+                let mut record = InvertedRecord::new();
+                record.from_stream(stream)?;
+                Format::Range(record)
+            },
+            _ => panic!("Panic!")
+        };
+        self.data = data;
         return Ok(true);
-    }*/
+    }
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct InvertedRecordChromosome {
-    bins: HashMap<u32, Vec<Record<InvertedRecord>>> // Mutex?
+    bins: HashMap<u32, Vec<Record>> // Mutex?
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -104,7 +148,7 @@ impl InvertedRecordEntire {
                 let chrom = inverted_record.entry(name.clone()).or_insert(InvertedRecordChromosome{bins: HashMap::new() }); // TODO() DO NOT USE CLONE
                 for (bin_id, bin) in &chromosome.bins {
                     let chunks = chrom.bins.entry(*bin_id).or_insert(Vec::new());
-                    chunks.push(Record::<InvertedRecord>{sample_id: set.sample_id, sample_file_id: sample_file_id as u32, format: 1, data: InvertedRecord::new(bin)})
+                    chunks.push(Record{sample_id: set.sample_id, sample_file_id: sample_file_id as u32, format: 1, data: Format::Range(InvertedRecord::from_builder(bin))})
                 }
             }    
         }
@@ -226,7 +270,7 @@ impl ColumnarSet for InvertedRecord {
 }
 
 impl InvertedRecord {
-    pub fn new(builder: &InvertedRecordBuilder) -> InvertedRecord {
+    pub fn from_builder(builder: &InvertedRecordBuilder) -> InvertedRecord {
         /* TODO() Use Bit packing for converting RefCell to Just vector, however now we just clone */
         let start = builder.start.clone().into_inner();
         let end = builder.end.clone().into_inner();
@@ -234,14 +278,4 @@ impl InvertedRecord {
         InvertedRecord{start: start, end: end, name: name}
     }
 }
-    /*
-
-    /// Loads index from path.
-    pub fn from_path<P: AsRef<Path>>(path: P) -> Result<InvertedRecord> {
-        let f = File::open(&path)?;
-        let record = 
-        InvertedRecord::from_stream(f)
-    }*/
-//}
-
 
