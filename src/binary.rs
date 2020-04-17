@@ -183,7 +183,8 @@ pub struct GhbReader<R: Read + Seek> {
     stream: R,
     header: Header,
     chunks: Vec<Chunk>,
-//     index: usize
+    index: usize
+    started: bool,
     // buffer: String, We do not need buffer because its not bgzip.
 }
 
@@ -219,8 +220,40 @@ impl<R: Read + Seek> GhbReader<R> {
         self.header = header;
     }
 
+    fn chunks(&self) -> &[Chunk] {
+        &self.chunks
+    }
+
     pub fn fill_from_binary(&mut self, record: &mut Record) -> Result<bool> {
-        record.fill_from_bam(&mut self.stream)
+        if let Some(new_offset) = self.next_offset() {
+            if new_offset != self.offset {
+                self.stream.seek(SeekFrom::Start(new_offset))?;
+                self.offset = new_offset;
+            }
+            record.fill_from_bam(&mut self.stream)
+        } else {
+            Err(BlockError::EndOfStream)
+        }
+    }
+
+    fn next_offset(&mut self) -> Option<u64> {
+        if self.index >= self.chunks.len() {
+            return None;
+        }
+        if !self.started {
+            self.started = true;
+            return Some(self.chunks[0].start().block_offset());
+        }
+
+        let curr_offset = VirtualOffset::new(self.offset, 0);
+        while self.index < self.chunks.len() && curr_offset >= self.chunks[self.index].end() {
+            self.index += 1;
+        }
+        if self.index >= self.chunks.len() {
+            None
+        } else {
+            Some(max(self.offset, self.chunks[self.index].start().block_offset()))
+        }
     }
 
     pub fn set_chunks<I: IntoIterator<Item = Chunk>>(&mut self, chunks: I) {
@@ -235,8 +268,8 @@ impl<R: Read + Seek> GhbReader<R> {
                     self.chunks[i - 1], self.chunks[i]);
             }
         }
-        // self.index = 0;
-        // self.started = false;
+        self.index = 0;
+        self.started = false;
     }
 }
 /*

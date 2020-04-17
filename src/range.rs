@@ -241,29 +241,40 @@ impl ColumnarSet for InvertedRecord {
         let n_header = stream.read_u64::<LittleEndian>()?;
         // println!("{} {}", n_header, n_items);
         for _i in 0..n_header {
-            let _ = stream.read_u16::<LittleEndian>()?;
-        }
+            let a = stream.read_u16::<LittleEndian>()?;
+            // print!("{}", a);
+        }/*
         unsafe {
             resize(&mut self.start, n_items as usize);
             resize(&mut self.end, n_items as usize);
             resize(&mut self.name, n_items as usize);
-        }
+        }*/
+        self.start = vec![];
+        self.end = vec![];
+        self.name = vec![];
         // println!("{}", n_items);
 /*        let mut start = Vec::with_capacity(n_items as usize);
         let mut end = Vec::with_capacity(n_items as usize);
         let mut name = Vec::with_capacity(n_items as usize);*/
         for _i in 0..n_items {
             self.start.push(stream.read_u64::<LittleEndian>()?);
+           // println!("{:?}, {:?}", self.start, self.end);
         }
         for _i in 0..n_items {
             self.end.push(stream.read_u64::<LittleEndian>()?);
+            // println!("{:?}, {:?}", self.start, self.end);
         }
+        // println!("{:?}, {:?}", self.start, self.end);
         for _i in 0..n_items {
             let size = stream.read_u64::<LittleEndian>()?;
-            println!("{}", size);
+            // println!("{}", size);
             let mut raw = Vec::with_capacity(size as usize);
-            stream.read_exact(&mut raw)?;
+            //let buf = [0; size as usize];
+            // stream.read_exact(&mut raw)?;
+            stream.take(size).read_to_end(&mut raw);
+            // println!("{:?}, {:?}", raw, self.name);
             self.name.push(String::from_utf8(raw).unwrap());
+
         }
         return Ok(true) //Ok(InvertedRecord{start: start, end: end, name: name})
     }

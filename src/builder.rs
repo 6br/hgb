@@ -117,7 +117,7 @@ mod tests {
         for record in viewer {
             // println!("A");
             let record = record.unwrap();
-            println!("{:?}", record);
+            println!("Record: {:?}", record);
         }
 
     }
