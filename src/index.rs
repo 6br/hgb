@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::io::{Result, Error, Read, Write};
 use std::io::ErrorKind::InvalidData;
 use std::path::Path;
@@ -266,18 +266,19 @@ impl Display for Bin {
 /// Index for a single reference sequence. Contains [bins](struct.Bin.html).
 #[derive(Clone, PartialEq, Eq)]
 pub struct Reference {
-    bins: HashMap<u32, Bin>, // bin_id is not continuous.
+    bins: BTreeMap<u32, Bin>, // bin_id is not continuous.
+    // Should we set `bins` as Btree-map?
     // linear_index: LinearIndex,
 }
 
 impl Reference {
-    pub fn new(bins: HashMap<u32, Bin> ) -> Reference {
+    pub fn new(bins: BTreeMap<u32, Bin> ) -> Reference {
         return Reference {bins: bins}
     }
 
     fn from_stream<R: Read>(stream: &mut R) -> Result<Self> {
         let n_bins = stream.read_i32::<LittleEndian>()? as usize;
-        let mut bins = HashMap::with_capacity(n_bins);
+        let mut bins = BTreeMap::new(); //with_capacity(n_bins);
         for _ in 0..n_bins {
             let bin = Bin::from_stream(stream)?;
             bins.insert(bin.bin_id, bin);
@@ -289,7 +290,7 @@ impl Reference {
     }
 
     /// Returns all bins for the reference.
-    pub fn bins(&self) -> &HashMap<u32, Bin> {
+    pub fn bins(&self) -> &BTreeMap<u32, Bin> {
         &self.bins
     }
 
@@ -611,7 +612,7 @@ mod tests {
     }
 
     #[test] 
-    fn bin_iter() {
+    fn bin_iter_middle() {
         // We don't care whether it works.
         let mut bin_iter = region_to_bins(16485, 16486);
         assert_eq!(bin_iter, BinsIter::new(-1,0,0,16384,0,0));

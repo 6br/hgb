@@ -1,6 +1,6 @@
 use std::io::{Result, Read, Write, Seek, Error};
 use std::io::ErrorKind::InvalidData;
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 // use std::path::Path;
 // use std::fs::File;
 // use std::marker::PhantomData;
@@ -136,7 +136,7 @@ impl Record {
 
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct InvertedRecordChromosome {
-    bins: HashMap<u32, Vec<Record>> // Mutex?
+    bins: BTreeMap<u32, Vec<Record>> // Mutex?
 }
 
 #[derive(Clone, Debug)]
@@ -159,7 +159,7 @@ impl InvertedRecordEntire {
         let mut chrom_table = vec![];
         for (sample_file_id, set)  in sample_file_list.iter().enumerate() {
             for (name, chromosome) in &set.chrom {
-                let mut chrom = InvertedRecordChromosome{bins: HashMap::new() };
+                let mut chrom = InvertedRecordChromosome{bins: BTreeMap::new() };
                 // let chrom = inverted_record.entry(name.clone()).or_insert(InvertedRecordChromosome{bins: HashMap::new() }); // TODO() DO NOT USE CLONE
                 let chrom_item = HeaderEntry::ref_sequence(name.clone(), i32::max_value() as u32);
                 chrom_table.push(chrom_item);
@@ -188,7 +188,7 @@ impl InvertedRecordEntire {
     pub fn write_binary<W: Write+Seek>(&self, writer: &mut GhbWriter<W>) -> Result<Index> {
         let mut reference = vec![];
         for chromosome in &self.chrom {
-            let mut bins = HashMap::new();
+            let mut bins = BTreeMap::new();
             for (bin_id, bin) in &chromosome.bins {
                 let mut records = vec![];
                 for chunk in bin {
