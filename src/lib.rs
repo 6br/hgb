@@ -92,7 +92,6 @@ pub trait IndexWriter {
 pub trait ColumnarSet {
     fn new() -> Self;
 
-    //fn clear(&mut self);
     fn to_stream<W: Write>(&self, stream: &mut W) -> Result<()>;
 
     fn from_stream<R: Read>(&mut self, stream: &mut R) -> Result<bool>;

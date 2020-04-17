@@ -375,7 +375,7 @@ impl Index {
     }
 
     /// Fetches [chunks](struct.Chunk.html) of the BAM file that contain all records for a given region.
-    pub fn fetch_chunks(&self, ref_id: u32, start: i32, end: i32) -> Vec<&Chunk> {
+    pub fn fetch_chunks(&self, ref_id: u32, start: i32, end: i32) -> Vec<Chunk> {
         let mut chunks = Vec::new();
         let ref_id = ref_id as usize;
 
@@ -385,7 +385,14 @@ impl Index {
                 chunks.extend(bin.chunks.iter());
             }
         }
-        chunks
+        chunks.sort();
+
+        let mut res = Vec::new();
+        for  i in 1..chunks.len() {
+            res.push(chunks[i].clone());
+        }
+        res
+        //chunks
 /*
         let mut res = Vec::new();
         if chunks.is_empty() {
@@ -586,7 +593,16 @@ mod tests {
 
     #[test] 
     fn bin_iter() {
-        assert_eq!(region_to_bins(0, 16384), BinsIter::new(0,0,0,0,0,0))
+        let mut bin_iter = region_to_bins(0, 16384);
+        assert_eq!(bin_iter, BinsIter::new(-1,0,0,16384,0,0));
+        bin_iter.next();
+        assert_eq!(bin_iter, BinsIter::new(0,1,0,16384,0,1));
+        bin_iter.next();
+        assert_eq!(bin_iter, BinsIter::new(0,1,0,16384,1,1));
+        bin_iter.next();
+        assert_eq!(bin_iter, BinsIter::new(1,9,0,16384,9,9));
+        bin_iter.next();
+        assert_eq!(bin_iter, BinsIter::new(0,1,0,16384,0,1));
     }
 }
 

@@ -182,24 +182,27 @@ pub struct GhbReader<R: Read + Seek> {
     // _marker: std::marker::PhantomData<fn() -> T>, // https://in-neuro.hatenablog.com/entry/2019/01/22/220639
     stream: R,
     header: Header,
+    chunks: Vec<Chunk>,
+//     index: usize
     // buffer: String, We do not need buffer because its not bgzip.
 }
 
 impl GhbReader<BufReader<File>> {
     /// Opens GHB reader from `path`.
-    pub fn from_path<P: AsRef<Path>>(path: P) -> Result<Self> {
+    pub fn from_path<P: AsRef<Path>>(path: P, header: Header) -> Result<Self> {
         let stream = BufReader::new(File::open(path)?);
-        GhbReader::from_stream(stream)
+        GhbReader::from_stream(stream, header)
     }
 }
 
 impl<R: Read + Seek> GhbReader<R> {
     /// Opens GHB reader from a buffered stream.
-    pub fn from_stream(mut stream: R) -> Result<Self> {
-        let header = Header::from_bam(&mut stream)?;
+    pub fn from_stream(mut stream: R, header: Header) -> Result<Self> {
+        // let header = Header::from_bam(&mut stream)?;
         // let header = Header::new();
         // let _marker = std::marker::PhantomData;
-        Ok(GhbReader { stream, header })
+        let chunks = Vec::new();
+        Ok(GhbReader { stream, header, chunks })
     }
 
     /// Returns [header](../header/struct.Header.html).
@@ -212,8 +215,28 @@ impl<R: Read + Seek> GhbReader<R> {
         self.stream
     }
 
+    pub fn set_header(mut self, header: Header) {
+        self.header = header;
+    }
+
     pub fn fill_from_binary(&mut self, record: &mut Record) -> Result<bool> {
         record.fill_from_bam(&mut self.stream)
+    }
+
+    pub fn set_chunks<I: IntoIterator<Item = Chunk>>(&mut self, chunks: I) {
+        self.chunks.clear();
+        self.chunks.extend(chunks);
+        for i in 1..self.chunks.len() {
+            if self.chunks[i - 1].intersect(&self.chunks[i]) {
+                panic!("Cannot set chunks: chunk {:?} intersects chunk {:?}",
+                    self.chunks[i - 1], self.chunks[i]);
+            } else if self.chunks[i - 1] >= self.chunks[i] {
+                panic!("Cannot set chunks: chunks are unordered: {:?} >= {:?}",
+                    self.chunks[i - 1], self.chunks[i]);
+            }
+        }
+        // self.index = 0;
+        // self.started = false;
     }
 }
 /*

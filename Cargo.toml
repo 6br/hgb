@@ -15,6 +15,7 @@ bam = "*"
 bio = { git = "https://github.com/rust-bio/rust-bio" }
 bitpacking = "0.5" # Pfor
 byteorder = "*"
+env_logger = "*"
 deflate = "*"
 flate2 = "1.0" # A streaming compression/decompression library
 log = "*"

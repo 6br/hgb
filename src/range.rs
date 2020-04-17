@@ -9,7 +9,11 @@ use crate::index::{Index, Reference, Bin};
 use crate::{ColumnarSet, ChunkWriter};
 use crate::binary::GhbWriter;
 use crate::index;
+use bam::header::HeaderEntry;
+use bam::header::Header;
 use crate::builder::{InvertedRecordBuilder, InvertedRecordSet};
+
+type Chromosome = Vec<HeaderEntry>;
 
 #[derive(Clone, PartialEq, Eq, Debug)]
 enum Format {
@@ -135,24 +139,38 @@ pub struct InvertedRecordChromosome {
     bins: HashMap<u32, Vec<Record>> // Mutex?
 }
 
-#[derive(Clone, PartialEq, Eq, Debug)]
+#[derive(Clone, Debug)]
 pub struct InvertedRecordEntire {
-    chrom: HashMap<String, InvertedRecordChromosome>, // Mutex?
+    chrom: Vec<InvertedRecordChromosome>, // Mutex?
+    chrom_table: Chromosome,
 }
 
 impl InvertedRecordEntire {
+    pub fn chrom_table(self) -> Chromosome {
+        self.chrom_table
+    }
+    pub fn write_header(self, header: &mut Header) {
+        for i in self.chrom_table {
+            header.push_entry(i).unwrap();
+        }
+    }
     pub fn new(sample_file_list: Vec<InvertedRecordSet>) -> InvertedRecordEntire {
-        let mut inverted_record = HashMap::new();
+        let mut inverted_record = vec![];
+        let mut chrom_table = vec![];
         for (sample_file_id, set)  in sample_file_list.iter().enumerate() {
             for (name, chromosome) in &set.chrom {
-                let chrom = inverted_record.entry(name.clone()).or_insert(InvertedRecordChromosome{bins: HashMap::new() }); // TODO() DO NOT USE CLONE
+                let mut chrom = InvertedRecordChromosome{bins: HashMap::new() };
+                // let chrom = inverted_record.entry(name.clone()).or_insert(InvertedRecordChromosome{bins: HashMap::new() }); // TODO() DO NOT USE CLONE
+                let chrom_item = HeaderEntry::ref_sequence(name.clone(), i32::max_value() as u32);
+                chrom_table.push(chrom_item);
                 for (bin_id, bin) in &chromosome.bins {
                     let chunks = chrom.bins.entry(*bin_id).or_insert(Vec::new());
                     chunks.push(Record{sample_id: set.sample_id, sample_file_id: sample_file_id as u32, format: 1, data: Format::Range(InvertedRecord::from_builder(bin))})
                 }
+                inverted_record.push(chrom);
             }    
         }
-        return InvertedRecordEntire{chrom: inverted_record}
+        return InvertedRecordEntire{chrom: inverted_record, chrom_table}
     }
 /*
     pub fn to_stream<W: Write>(&self, stream: &mut W) -> Result<Index> {
@@ -169,7 +187,7 @@ impl InvertedRecordEntire {
     }*/
     pub fn write_binary<W: Write+Seek>(&self, writer: &mut GhbWriter<W>) -> Result<Index> {
         let mut reference = vec![];
-        for (_name, chromosome) in &self.chrom {
+        for chromosome in &self.chrom {
             let mut bins = HashMap::new();
             for (bin_id, bin) in &chromosome.bins {
                 let mut records = vec![];
@@ -219,8 +237,9 @@ impl ColumnarSet for InvertedRecord {
     }
     
     fn from_stream<R: Read>(&mut self, stream: &mut R) -> Result<bool> {
-        let n_header = stream.read_u64::<LittleEndian>()?;
         let n_items = stream.read_u64::<LittleEndian>()?;
+        let n_header = stream.read_u64::<LittleEndian>()?;
+        // println!("{} {}", n_header, n_items);
         for _i in 0..n_header {
             let _ = stream.read_u16::<LittleEndian>()?;
         }
@@ -229,6 +248,7 @@ impl ColumnarSet for InvertedRecord {
             resize(&mut self.end, n_items as usize);
             resize(&mut self.name, n_items as usize);
         }
+        // println!("{}", n_items);
 /*        let mut start = Vec::with_capacity(n_items as usize);
         let mut end = Vec::with_capacity(n_items as usize);
         let mut name = Vec::with_capacity(n_items as usize);*/
@@ -240,6 +260,7 @@ impl ColumnarSet for InvertedRecord {
         }
         for _i in 0..n_items {
             let size = stream.read_u64::<LittleEndian>()?;
+            println!("{}", size);
             let mut raw = Vec::with_capacity(size as usize);
             stream.read_exact(&mut raw)?;
             self.name.push(String::from_utf8(raw).unwrap());
@@ -248,8 +269,8 @@ impl ColumnarSet for InvertedRecord {
     }
     
     fn to_stream<W: Write>(&self, stream: &mut W) -> Result<()> {
-        stream.write_u64::<LittleEndian>(self.start.len() as u64)?;
-        stream.write_u64::<LittleEndian>(3 as u64)?;
+        stream.write_u64::<LittleEndian>(self.start.len() as u64)?; //n_item
+        stream.write_u64::<LittleEndian>(3 as u64)?; // n_header
         stream.write_u16::<LittleEndian>(1 as u16)?; // u64
         stream.write_u16::<LittleEndian>(1 as u16)?; // u64 
         stream.write_u16::<LittleEndian>(0 as u16)?; // String

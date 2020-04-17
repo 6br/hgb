@@ -110,14 +110,18 @@ impl IndexedReaderBuilder {
             .unwrap_or_else(|| PathBuf::from(format!("{}.ghi", bam_path.display())));
         self.modification_time.check(&bam_path, &bai_path)?;
 
-        let reader = GhbReader::from_path(bam_path)
-            .map_err(|e| Error::new(e.kind(), format!("Failed to open BAM file: {}", e)))?;
-
         let mut index_reader = bgzip::SeekReader::from_path(bai_path, self.additional_threads)
             .map_err(|e| Error::new(e.kind(), format!("Failed to open BAI file: {}", e)))?;
         index_reader.make_consecutive();
+
+        let header = Header::from_bam(&mut index_reader).map_err(|e| Error::new(e.kind(), format!("Failed to read BAI header: {}", e)))?;
+
         let index = Index::from_stream(&mut index_reader)
         .map_err(|e| Error::new(e.kind(), format!("Failed to read BAI file: {}", e)))?;
+    
+        let reader = GhbReader::from_path(bam_path, header)
+        .map_err(|e| Error::new(e.kind(), format!("Failed to open BAM file: {}", e)))?;
+
 
         IndexedReader::new(reader, index)
     }
@@ -127,13 +131,19 @@ impl IndexedReaderBuilder {
     /// `check_time` and `bai_path` values are ignored.
     pub fn from_streams<R: Read + Seek>(&self, bam_stream: R, bai_stream: R)
             -> Result<IndexedReader<R>> {
-        let reader = GhbReader::from_stream(bam_stream)
-            .map_err(|e| Error::new(e.kind(), format!("Failed to read BAM stream: {}", e)))?;
 
         let mut index_reader = bgzip::SeekReader::from_stream(bai_stream, self.additional_threads)
             .map_err(|e| Error::new(e.kind(), format!("Failed to read BAI index: {}", e)))?;
         index_reader.make_consecutive();
+
+        let header = Header::from_bam(&mut index_reader).map_err(|e| Error::new(e.kind(), format!("Failed to read BAI header: {}", e)))?;
+
         let index = Index::from_stream(&mut index_reader)?;
+
+        let reader = GhbReader::from_stream(bam_stream, header)
+        .map_err(|e| Error::new(e.kind(), format!("Failed to read BAM stream: {}", e)))?;
+
+
         IndexedReader::new(reader, index)
     }
 }
@@ -164,7 +174,6 @@ impl<R: Read + Seek> IndexedReader<R> {
         // reader.make_consecutive();
         // let _marker = std::marker::PhantomData;
         // let header = reader.header()// Header::from_bam(&mut index_reader)?;
-        // let header = Header::from_bam(&mut reader)?
         Ok(Self { reader, index })
     }
 
@@ -199,10 +208,10 @@ impl<R: Read + Seek> IndexedReader<R> {
         }
 
         let chunks = self.index.fetch_chunks(region.ref_id(), region.start() as i32, region.end() as i32);
-        // self.reader.set_chunks(chunks);
+        self.reader.set_chunks(chunks);
+
         Ok(RegionViewer {
             parent: self,
-            // parent_stream: &mut self.reader,
             start: region.start() as i32,
             end: region.end() as i32,
             predicate: Box::new(predicate),
