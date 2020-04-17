@@ -12,13 +12,15 @@
 //! and the writer implements [RecordWriter](../trait.RecordWriter.html) trait. See them for
 //! more information.
 
-use std::io::{Write, BufWriter, Result, Seek, SeekFrom, BufReader, Read};
+use std::cmp::{min, max};
+use std::io::{Write, BufWriter, Result, Seek, SeekFrom, BufReader, Read, Error};
 use std::fs::File;
 use std::path::Path;
 use crate::ColumnarSet;
 use bam::header::Header;
 use crate::index::{VirtualOffset, Chunk};
 use crate::range::Record;
+use std::io::ErrorKind;
 //use crate::InvertedRecordWriter;
 use super::{InvertedRecordWriter, ChunkWriter, InvertedRecord};
 
@@ -183,8 +185,9 @@ pub struct GhbReader<R: Read + Seek> {
     stream: R,
     header: Header,
     chunks: Vec<Chunk>,
-    index: usize
+    index: usize,
     started: bool,
+    offset: u64,
     // buffer: String, We do not need buffer because its not bgzip.
 }
 
@@ -203,7 +206,8 @@ impl<R: Read + Seek> GhbReader<R> {
         // let header = Header::new();
         // let _marker = std::marker::PhantomData;
         let chunks = Vec::new();
-        Ok(GhbReader { stream, header, chunks })
+        let offset = stream.seek(SeekFrom::Current(0))?;
+        Ok(GhbReader { stream, header, chunks, index: 0 as usize, started: false, offset })
     }
 
     /// Returns [header](../header/struct.Header.html).
@@ -232,7 +236,7 @@ impl<R: Read + Seek> GhbReader<R> {
             }
             record.fill_from_bam(&mut self.stream)
         } else {
-            Err(BlockError::EndOfStream)
+            Err(Error::new(ErrorKind::Other, "The end of stream"))
         }
     }
 
