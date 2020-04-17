@@ -208,6 +208,7 @@ impl<R: Read + Seek> IndexedReader<R> {
         }
 
         let chunks = self.index.fetch_chunks(region.ref_id(), region.start() as i32, region.end() as i32);
+        println!("{:#?}", chunks);
         self.reader.set_chunks(chunks);
 
         Ok(RegionViewer {

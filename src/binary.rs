@@ -236,7 +236,8 @@ impl<R: Read + Seek> GhbReader<R> {
             }
             record.fill_from_bam(&mut self.stream)
         } else {
-            Err(Error::new(ErrorKind::Other, "The end of stream"))
+            Ok(false)
+            //Err(Error::new(ErrorKind::Other, "The end of stream"))
         }
     }
 
@@ -246,17 +247,17 @@ impl<R: Read + Seek> GhbReader<R> {
         }
         if !self.started {
             self.started = true;
-            return Some(self.chunks[0].start().block_offset());
+            return Some(self.chunks[0].start().raw());
         }
 
         let curr_offset = VirtualOffset::new(self.offset, 0);
-        while self.index < self.chunks.len() && curr_offset >= self.chunks[self.index].end() {
+        //while self.index < self.chunks.len() && curr_offset >= self.chunks[self.index].end() {
             self.index += 1;
-        }
+        //}
         if self.index >= self.chunks.len() {
             None
         } else {
-            Some(max(self.offset, self.chunks[self.index].start().block_offset()))
+            Some(max(self.offset, self.chunks[self.index].start().raw()))
         }
     }
 

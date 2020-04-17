@@ -609,6 +609,25 @@ mod tests {
         bin_iter.next();
         assert_eq!(bin_iter, BinsIter::new(4,4681,0,16384,4681,4682));
     }
+
+    #[test] 
+    fn bin_iter() {
+        // We don't care whether it works.
+        let mut bin_iter = region_to_bins(16485, 16486);
+        assert_eq!(bin_iter, BinsIter::new(-1,0,0,16384,0,0));
+        bin_iter.next();
+        assert_eq!(bin_iter, BinsIter::new(0,1,0,16384,0,1));
+        bin_iter.next();
+        assert_eq!(bin_iter, BinsIter::new(0,1,0,16384,1,1));
+        bin_iter.next();
+        assert_eq!(bin_iter, BinsIter::new(1,9,0,16384,9,9));
+        bin_iter.next();
+        assert_eq!(bin_iter, BinsIter::new(2,73,0,16384,73,73));
+        bin_iter.next();
+        assert_eq!(bin_iter, BinsIter::new(3,585,0,16384,585,585));
+        bin_iter.next();
+        assert_eq!(bin_iter, BinsIter::new(4,4681,0,16384,4681,4682));
+    }
 }
 
 

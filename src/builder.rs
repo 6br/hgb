@@ -120,5 +120,12 @@ mod tests {
             println!("Record: {:?}", record);
         }
 
+        let viewer = reader2.fetch(&reader::Region::new(0, 17_000, 17_500)).unwrap();
+        // println!("{}", viewer.index());
+        for record in viewer {
+            // println!("A");
+            let record = record.unwrap();
+            println!("Record: {:?}", record);
+        }
     }
 }
