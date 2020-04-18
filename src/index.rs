@@ -134,7 +134,7 @@ pub struct Chunk {
     file_id: u32, // When we split files of inverted data structure
     // format_type: u32, // Enum
     start: VirtualOffset,
-    end: VirtualOffset,
+    end: VirtualOffset, // We don't need "end"
 }
 
 impl Chunk {
@@ -529,9 +529,16 @@ impl Iterator for BinsIter {
             }
             self.i += 1;
             self.t += 1 << (self.i * 3);
-            self.curr_bin = (self.t + (self.start >> 26 - 3 * self.i)) as u32 - 1;
-            self.bins_end = (self.t + (self.end >> 26 - 3 * self.i)) as u32;
+            if self.i == 4 {
+                // when the last line
+                self.curr_bin = (self.t + (self.start >> 26 - 3 * self.i - 1)) as u32 - 1;
+                //(((1 << 29 - 14) - 1) / 7 + ((beg >> 14) << 1))
+                self.bins_end = (self.t + (self.end >> 26 - 3 * self.i - 1)) as u32;
 
+            } else {
+                self.curr_bin = (self.t + (self.start >> 26 - 3 * self.i)) as u32 - 1;
+                self.bins_end = (self.t + (self.end >> 26 - 3 * self.i)) as u32;
+            }
             if self.i == 0 {
                 return Some(0);
             }
@@ -593,6 +600,26 @@ mod tests {
     }
 
     #[test] 
+    fn bin_iter_small() {
+        // We don't care whether it works.
+        let mut bin_iter = region_to_bins(0, 8191);
+        assert_eq!(bin_iter, BinsIter::new(-1,0,0,8191,0,0));
+        bin_iter.next();
+        assert_eq!(bin_iter, BinsIter::new(0,1,0,8191,0,1));
+        bin_iter.next();
+        assert_eq!(bin_iter, BinsIter::new(0,1,0,8191,1,1));
+        bin_iter.next();
+        assert_eq!(bin_iter, BinsIter::new(1,9,0,8191,9,9));
+        bin_iter.next();
+        assert_eq!(bin_iter, BinsIter::new(2,73,0,8191,73,73));
+        bin_iter.next();
+        assert_eq!(bin_iter, BinsIter::new(3,585,0,8191,585,585));
+        bin_iter.next();
+        assert_eq!(bin_iter, BinsIter::new(4,4681,0,8191,4681,4681));
+        assert_eq!(bin_iter.next(), None);
+    }
+
+    #[test] 
     fn bin_iter() {
         // We don't care whether it works.
         let mut bin_iter = region_to_bins(0, 16384);
@@ -608,26 +635,68 @@ mod tests {
         bin_iter.next();
         assert_eq!(bin_iter, BinsIter::new(3,585,0,16384,585,585));
         bin_iter.next();
-        assert_eq!(bin_iter, BinsIter::new(4,4681,0,16384,4681,4682));
+        assert_eq!(bin_iter, BinsIter::new(4,4681,0,16384,4681,4683));
+        assert_eq!(bin_iter.next(), Some(4682));
     }
 
     #[test] 
     fn bin_iter_middle() {
         // We don't care whether it works.
         let mut bin_iter = region_to_bins(16485, 16486);
-        assert_eq!(bin_iter, BinsIter::new(-1,0,0,16384,0,0));
+        assert_eq!(bin_iter, BinsIter::new(-1,0,16485, 16486,0,0));
         bin_iter.next();
-        assert_eq!(bin_iter, BinsIter::new(0,1,0,16384,0,1));
+        assert_eq!(bin_iter, BinsIter::new(0,1,16485, 16486,0,1));
         bin_iter.next();
-        assert_eq!(bin_iter, BinsIter::new(0,1,0,16384,1,1));
+        assert_eq!(bin_iter, BinsIter::new(0,1,16485, 16486,1,1));
         bin_iter.next();
-        assert_eq!(bin_iter, BinsIter::new(1,9,0,16384,9,9));
+        assert_eq!(bin_iter, BinsIter::new(1,9,16485, 16486,9,9));
         bin_iter.next();
-        assert_eq!(bin_iter, BinsIter::new(2,73,0,16384,73,73));
+        assert_eq!(bin_iter, BinsIter::new(2,73,16485, 16486,73,73));
         bin_iter.next();
-        assert_eq!(bin_iter, BinsIter::new(3,585,0,16384,585,585));
+        assert_eq!(bin_iter, BinsIter::new(3,585,16485, 16486,585,585));
         bin_iter.next();
-        assert_eq!(bin_iter, BinsIter::new(4,4681,0,16384,4681,4682));
+        assert_eq!(bin_iter, BinsIter::new(4,4681,16485, 16486,4683,4683));
+        assert_eq!(bin_iter.next(), None);
+    }
+
+    #[test] 
+    fn bin_iter_next() {
+        // We don't care whether it works.
+        let mut bin_iter = region_to_bins(0, 16486);
+        assert_eq!(bin_iter, BinsIter::new(-1,0,0, 16486,0,0));
+        bin_iter.next();
+        assert_eq!(bin_iter, BinsIter::new(0,1,0, 16486,0,1));
+        bin_iter.next();
+        assert_eq!(bin_iter, BinsIter::new(0,1,0, 16486,1,1));
+        bin_iter.next();
+        assert_eq!(bin_iter, BinsIter::new(1,9,0, 16486,9,9));
+        bin_iter.next();
+        assert_eq!(bin_iter, BinsIter::new(2,73,0, 16486,73,73));
+        bin_iter.next();
+        assert_eq!(bin_iter, BinsIter::new(3,585,0, 16486,585,585));
+        bin_iter.next();
+        assert_eq!(bin_iter, BinsIter::new(4,4681,0, 16486,4681,4683));
+        assert_eq!(bin_iter.next(), Some(4682));
+    }
+
+    #[test] 
+    fn bin_iter_marginal() {
+        // We don't care whether it works.
+        let mut bin_iter = region_to_bins(8199, 16384);
+        assert_eq!(bin_iter, BinsIter::new(-1,0,8199, 16384,0,0));
+        bin_iter.next();
+        assert_eq!(bin_iter, BinsIter::new(0,1,8199, 16384,0,1));
+        bin_iter.next();
+        assert_eq!(bin_iter, BinsIter::new(0,1,8199, 16384,1,1));
+        bin_iter.next();
+        assert_eq!(bin_iter, BinsIter::new(1,9,8199, 16384,9,9));
+        bin_iter.next();
+        assert_eq!(bin_iter, BinsIter::new(2,73,8199, 16384,73,73));
+        bin_iter.next();
+        assert_eq!(bin_iter, BinsIter::new(3,585,8199, 16384,585,585));
+        bin_iter.next();
+        assert_eq!(bin_iter, BinsIter::new(4,4681,8199, 16384,4682,4683));
+        assert_eq!(bin_iter.next(), Some(4683));
     }
 }
 
