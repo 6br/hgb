@@ -309,5 +309,9 @@ impl InvertedRecord {
         let name = builder.name.clone().into_inner();
         InvertedRecord{start: start, end: end, name: name}
     }
+
+    /*pub fn to_record(&self) -> Record {
+
+    }*/
 }
 

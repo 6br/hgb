@@ -382,14 +382,16 @@ impl Index {
 
         // let min_end_offset = self.references[ref_id].linear_index.min_end_offset(start);
         for bin_id in region_to_bins(start, end) {
+            println!("bins: {:?}", bin_id);
             if let Some(bin) = self.references[ref_id].bins.get(&bin_id) {
+                println!("bin: {:?}", bin.bin_id);
                 chunks.extend(bin.chunks.iter());
             }
         }
         chunks.sort();
 
         let mut res = Vec::new();
-        for  i in 1..chunks.len() {
+        for  i in 0..chunks.len() {
             res.push(chunks[i].clone());
         }
         res
@@ -531,8 +533,10 @@ impl Iterator for BinsIter {
             self.t += 1 << (self.i * 3);
             if self.i == 4 {
                 // when the last line
-                self.curr_bin = (self.t + (self.start >> 26 - 3 * self.i - 1)) as u32 - 1;
-                //(((1 << 29 - 14) - 1) / 7 + ((beg >> 14) << 1))
+                self.curr_bin = (self.t + (self.start >> 26 - 3 * self.i - 1)) as u32 - 2;
+                if self.curr_bin < 4680 {
+                    self.curr_bin = 4680;
+                }
                 self.bins_end = (self.t + (self.end >> 26 - 3 * self.i - 1)) as u32;
 
             } else {
@@ -655,8 +659,8 @@ mod tests {
         bin_iter.next();
         assert_eq!(bin_iter, BinsIter::new(3,585,16485, 16486,585,585));
         bin_iter.next();
-        assert_eq!(bin_iter, BinsIter::new(4,4681,16485, 16486,4683,4683));
-        assert_eq!(bin_iter.next(), None);
+        assert_eq!(bin_iter, BinsIter::new(4,4681,16485, 16486,4682,4683));
+        assert_eq!(bin_iter.next(), Some(4683));
     }
 
     #[test] 
@@ -695,8 +699,28 @@ mod tests {
         bin_iter.next();
         assert_eq!(bin_iter, BinsIter::new(3,585,8199, 16384,585,585));
         bin_iter.next();
-        assert_eq!(bin_iter, BinsIter::new(4,4681,8199, 16384,4682,4683));
-        assert_eq!(bin_iter.next(), Some(4683));
+        assert_eq!(bin_iter, BinsIter::new(4,4681,8199, 16384,4681,4683));
+        assert_eq!(bin_iter.next(), Some(4682));
+    }
+
+    #[test] 
+    fn bin_iter_large() {
+        // We don't care whether it works.
+        let mut bin_iter = region_to_bins(24578, 24589);
+        assert_eq!(bin_iter, BinsIter::new(-1,0,24578, 24589,0,0));
+        bin_iter.next();
+        assert_eq!(bin_iter, BinsIter::new(0,1,24578, 24589,0,1));
+        bin_iter.next();
+        assert_eq!(bin_iter, BinsIter::new(0,1,24578, 24589,1,1));
+        bin_iter.next();
+        assert_eq!(bin_iter, BinsIter::new(1,9,24578, 24589,9,9));
+        bin_iter.next();
+        assert_eq!(bin_iter, BinsIter::new(2,73,24578, 24589,73,73));
+        bin_iter.next();
+        assert_eq!(bin_iter, BinsIter::new(3,585,24578, 24589,585,585));
+        bin_iter.next();
+        assert_eq!(bin_iter, BinsIter::new(4,4681,24578, 24589,4683,4684));
+        assert_eq!(bin_iter.next(), Some(4684));
     }
 }
 
