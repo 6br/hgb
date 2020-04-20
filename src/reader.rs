@@ -160,6 +160,10 @@ impl IndexedReader<BufReader<File>> {
         IndexedReaderBuilder::new()
     }
 
+    pub fn reference_id(&self, chrom: &str) -> Option<u32> {
+        self.reader.header().reference_id(chrom)
+    }
+
     /// Opens bam file from `path`. Bai index will be loaded from `{path}.bai`.
     ///
     /// Same as `Self::build().from_path(path)`.

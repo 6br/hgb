@@ -24,7 +24,7 @@ pub struct InvertedRecordBuilder {
     pub start: RefCell<Vec<u64>>,
     pub end: RefCell<Vec<u64>>,
     pub name: RefCell<Vec<String>>, //Just a tab-separated string here.
-    // pub aux: RefCell<Vec<Vec<String>>>
+    pub aux: RefCell<Vec<Vec<String>>>,
 }
 
 impl InvertedRecordBuilder {
@@ -32,13 +32,15 @@ impl InvertedRecordBuilder {
         InvertedRecordBuilder{
             start: RefCell::new(Vec::new()),
             end: RefCell::new(Vec::new()),
-            name: RefCell::new(Vec::new())
+            name: RefCell::new(Vec::new()),
+            aux: RefCell::new(Vec::new()),
         }
     }
-    pub fn add(&self, start: u64, end: u64, name: String) {
+    pub fn add(&self, start: u64, end: u64, name: String, aux: Vec<String>) {
         self.start.borrow_mut().push(start);
         self.end.borrow_mut().push(end);
         self.name.borrow_mut().push(name);
+        self.aux.borrow_mut().push(aux);
     }
 }
 
@@ -60,7 +62,13 @@ impl InvertedRecordSet {
             let chrom = inverted_record_set.entry(rec.chrom().to_string()).or_insert(InvertedRecordReference::new());
             let stat = chrom.bins.entry(region_to_bin_3(rec.start(), rec.end())).or_insert(InvertedRecordBuilder::new());
             // rec.chrom;
-            stat.add(rec.start(), rec.end(), rec.name().unwrap_or("").to_string())
+            let mut aux = vec![];
+            let mut n = 4; // Ignore name field
+            while let Some(item) = rec.aux(n){
+                aux.push(item.to_string());
+                n += 1;
+            }
+            stat.add(rec.start(), rec.end(), rec.name().unwrap_or("").to_string(), aux)
             //start.push(rec.start());
             //end.push(rec.end());
             //aux.push(rec.name().unwrap_or("").to_string());
@@ -77,9 +85,10 @@ mod tests {
     use crate::binary;
     use crate::writer;
     use crate::reader::IndexedReader;
-    use crate::range::InvertedRecordEntire;
+    use crate::range::{InvertedRecordEntire};
     use crate::IndexWriter;
     use crate::reader;
+    use crate::range::Format;
     use super::InvertedRecordSet;
 
     #[test]
@@ -113,21 +122,33 @@ mod tests {
 
         //assert_eq!(format!("{}", index), format!("{}", reader2.index()));
         // assert_eq!(&index, reader2.index());
-        let viewer = reader2.fetch(&reader::Region::new(0, 1_000, 1_500)).unwrap();
+        let chrom = "1";
+        let chrom_id = reader2.reference_id(&chrom).unwrap();
+        println!("{}", chrom_id);
+        let viewer = reader2.fetch(&reader::Region::new(chrom_id, 1_000, 1_500)).unwrap();
         // println!("{}", viewer.index());
+        /*
         for record in viewer {
             // println!("A");
             let record = record.unwrap();
             println!("Record: {:?}", record);
-        }
-        println!("skip");
+        }*/
+        let records = viewer.into_iter().flat_map(|t| t.map(|f| 
+            if let Format::Range(rec) = f.data() {
+                // println!("debug {:#?}", rec.to_record(chrom));
+                return rec.to_record(chrom)
+            } else {
+                return vec![]
+            }
+        ).unwrap()).collect::<Vec<bed::Record>>();
+        println!("Records: {:#?}", records);
 
         let viewer = reader2.fetch(&reader::Region::new(0, 17_000, 17_500)).unwrap();
         // println!("{}", viewer.index());
         for record in viewer {
             // println!("A");
             let record = record.unwrap();
-            println!("Record: {:?}", record);
+            // println!("Record: {:?}", record);
         }
 
         let viewer = reader2.fetch(&reader::Region::new(1, 1, 3)).unwrap();
@@ -135,7 +156,7 @@ mod tests {
         for record in viewer {
             // println!("A");
             let record = record.unwrap();
-            println!("Record: {:?}", record);
+            // println!("Record: {:?}", record);
         }
     }
 }

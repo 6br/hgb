@@ -17,19 +17,17 @@ use crate::builder::{InvertedRecordBuilder, InvertedRecordSet};
 type Chromosome = Vec<HeaderEntry>;
 
 #[derive(Clone, PartialEq, Eq, Debug)]
-enum Format {
+pub enum Format {
     Default(Default),
     Range(InvertedRecord)
 }
 /*
 impl Format {
-    pub fn start(&self) -> u32 {
+    pub fn start(&self) -> <> {
         match &self {
             Default(default) -> default.start(),
             Range(record) -> record.start()
         }
-    }
-    
 }*/
 
 pub(crate) unsafe fn resize<T>(v: &mut Vec<T>, new_len: usize) {
@@ -68,6 +66,9 @@ impl Record {
             format: 0,
             data: Format::Default(Default{})
         }
+    }
+    pub fn data(self) -> Format {
+        self.data
     }
     pub fn clear(&mut self) {
         self.sample_id = 0;
@@ -226,7 +227,7 @@ pub struct InvertedRecord {
     start: Vec<u64>,
     end: Vec<u64>,
     name: Vec<String>, 
-    // aux: Vec<String> // We should update better data format.
+    aux: Vec<String> // We should update better data format.
 }
 
 impl ColumnarSet for InvertedRecord {
@@ -234,7 +235,8 @@ impl ColumnarSet for InvertedRecord {
         let start = vec![];
         let end = vec![];
         let name = vec![];
-        InvertedRecord{start: start, end: end, name: name}
+        let aux = vec![];
+        InvertedRecord{start: start, end: end, name: name, aux: aux}
     }
     
     fn from_stream<R: Read>(&mut self, stream: &mut R) -> Result<bool> {
@@ -268,15 +270,17 @@ impl ColumnarSet for InvertedRecord {
         // println!("{:?}, {:?}", self.start, self.end);
         for _i in 0..n_items {
             let size = stream.read_u64::<LittleEndian>()?;
-            // println!("{}", size);
             let mut raw = Vec::with_capacity(size as usize);
-            //let buf = [0; size as usize];
-            // stream.read_exact(&mut raw)?;
             stream.take(size).read_to_end(&mut raw);
-            // println!("{:?}, {:?}", raw, self.name);
             self.name.push(String::from_utf8(raw).unwrap());
-
         }
+        for _i in 0..n_items {
+            let size = stream.read_u64::<LittleEndian>()?;
+            let mut raw = Vec::with_capacity(size as usize);
+            stream.take(size).read_to_end(&mut raw);
+            self.aux.push(String::from_utf8(raw).unwrap());
+        }
+
         return Ok(true) //Ok(InvertedRecord{start: start, end: end, name: name})
     }
     
@@ -297,6 +301,10 @@ impl ColumnarSet for InvertedRecord {
             stream.write_u64::<LittleEndian>(i.len() as u64)?;
             stream.write_all(i.as_bytes())?
         }
+        for i in &self.aux {
+            stream.write_u64::<LittleEndian>(i.len() as u64)?;
+            stream.write_all(i.as_bytes())?
+        }
 
         Ok(())
     }
@@ -308,19 +316,23 @@ impl InvertedRecord {
         let start = builder.start.clone().into_inner();
         let end = builder.end.clone().into_inner();
         let name = builder.name.clone().into_inner();
-        InvertedRecord{start: start, end: end, name: name}
+        let aux = builder.aux.clone().into_inner().into_iter().map(|t| t.join("\t").to_owned()).collect();
+        InvertedRecord{start: start, end: end, name: name, aux: aux}
     }
 
-    pub fn to_record(&self, chromosome: String) -> Vec<bed::Record> {
+    pub fn to_record(&self, chromosome: &str) -> Vec<bed::Record> {
         /* TODO() Use Bit unpacking */
-
-        let records = vec![];
+        let mut records = vec![];
         for i in 0..self.start.len() {
             let mut rec = bed::Record::new();
-            rec.set_chrom(&chromosome);
+            rec.set_chrom(chromosome);
             rec.set_start(self.start[i]);
             rec.set_end(self.end[i]);
             rec.set_name(&self.name[i]);
+            for aux in self.aux[i].split("\t") {
+                rec.push_aux(aux);
+            }
+            records.push(rec)
         }
         records
     }

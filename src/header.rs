@@ -51,6 +51,12 @@ impl Header {
     pub fn reference_len(&self, id: u32) -> Option<u32> {
         self.global_header.reference_len(id)
     }
+    pub fn reference_id(&self, ref_name: &str) -> Option<u32> {
+        self.global_header.reference_id(ref_name)
+    }
+    pub fn reference_name(&self, ref_id: u32) -> Option<&str> {
+        self.global_header.reference_name(ref_id)
+    }
     pub fn push_entry(&mut self, header_entry: header::HeaderEntry) -> std::result::Result<(), String> {
         self.global_header.push_entry(header_entry)
     }
