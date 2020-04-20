@@ -93,7 +93,7 @@ mod tests {
 
     #[test]
     fn it_works() {
-        let _example = b"1\t5\t5000\tname1\t0.5\n1\t5\t5000\tname1\t0.5";
+        // let _example = b"1\t5\t5000\tname1\t0.5\n1\t5\t5000\tname1\t0.5";
         let path = "./test/test.bed";
         let mut reader = bed::Reader::from_file(path).unwrap();
         let set = InvertedRecordSet::new(reader, 0 as u32);
@@ -122,10 +122,10 @@ mod tests {
 
         //assert_eq!(format!("{}", index), format!("{}", reader2.index()));
         // assert_eq!(&index, reader2.index());
-        let chrom = "1";
+        let chrom = "2";
         let chrom_id = reader2.reference_id(&chrom).unwrap();
         println!("{}", chrom_id);
-        let viewer = reader2.fetch(&reader::Region::new(chrom_id, 1_000, 1_500)).unwrap();
+        let viewer = reader2.fetch(&reader::Region::new(chrom_id, 17_000, 17_500)).unwrap();
         // println!("{}", viewer.index());
         /*
         for record in viewer {
@@ -141,7 +141,26 @@ mod tests {
                 return vec![]
             }
         ).unwrap()).collect::<Vec<bed::Record>>();
-        println!("Records: {:#?}", records);
+        println!("Records: {:?}", records);
+
+        let example = "2\t16382\t16385\tbin4682\t20\t-\n2\t16388\t31768\tbin4683\t20\t-\n";
+        // let mut test_reader = bed::Reader::new(&example[..]);
+        let mut buf = Vec::new();
+        {
+            let mut writer = bed::Writer::new(&mut buf);
+            for  i in records {
+                println!("{:?}", i);
+                writer.write(&i).ok().unwrap();
+            } 
+        }
+        assert_eq!(
+            example,
+            String::from_utf8(buf).unwrap().as_str()
+        );
+        // let records_from = reader.records().into_iter().flat_map(|t| t).collect::<Vec<bed::Record>>();
+        //assert_eq!(records[0], records_from[0]);
+        //assert_eq!(records[1], records_from[1]);
+        //assert_eq!(records.len(), records_from.len());
 
         let viewer = reader2.fetch(&reader::Region::new(0, 17_000, 17_500)).unwrap();
         // println!("{}", viewer.index());
