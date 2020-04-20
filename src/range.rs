@@ -11,7 +11,7 @@ use crate::{ColumnarSet, ChunkWriter};
 use crate::binary::GhbWriter;
 use crate::index;
 use bam::header::HeaderEntry;
-use bam::header::Header;
+use crate::header::Header;
 use crate::builder::{InvertedRecordBuilder, InvertedRecordSet};
 
 type Chromosome = Vec<HeaderEntry>;

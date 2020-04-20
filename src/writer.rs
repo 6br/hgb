@@ -5,7 +5,7 @@ use std::fs::File;
 use std::path::Path;
 
 use bam::bgzip;
-use bam::header::Header;
+use crate::header::Header;
 use super::IndexWriter;
 //use crate::range::InvertedRecord;
 //use crate::ColumnarSet;
@@ -65,7 +65,7 @@ impl GhbWriterBuilder {
             .compression_level(self.level)
             .from_stream(stream);
         if self.write_header {
-            header.write_bam(&mut writer)?;
+            header.to_stream(&mut writer)?;
         }
         writer.flush_contents()?;
         Ok(GhbWriter { writer, header })

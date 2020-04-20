@@ -71,7 +71,7 @@ impl InvertedRecordSet {
 }
 #[cfg(test)]
 mod tests {
-    use bam::header::{Header};
+    use crate::header::{Header};
     use bio::io::bed;
     use std::io;
     use crate::binary;

@@ -5,7 +5,7 @@ use bam::bgzip;
 use std::io::{Result, Error, Read, Seek, BufReader};
 use std::fs::File;
 use std::io::ErrorKind::{InvalidInput, InvalidData};
-use bam::header::Header;
+use crate::header::Header;
 use crate::range::Record;
 // use crate::ColumnarSet;
 use crate::index;
@@ -114,7 +114,7 @@ impl IndexedReaderBuilder {
             .map_err(|e| Error::new(e.kind(), format!("Failed to open BAI file: {}", e)))?;
         index_reader.make_consecutive();
 
-        let header = Header::from_bam(&mut index_reader).map_err(|e| Error::new(e.kind(), format!("Failed to read BAI header: {}", e)))?;
+        let header = Header::new_from_stream(&mut index_reader).map_err(|e| Error::new(e.kind(), format!("Failed to read BAI header: {}", e)))?;
 
         let index = Index::from_stream(&mut index_reader)
         .map_err(|e| Error::new(e.kind(), format!("Failed to read BAI file: {}", e)))?;
@@ -136,7 +136,7 @@ impl IndexedReaderBuilder {
             .map_err(|e| Error::new(e.kind(), format!("Failed to read BAI index: {}", e)))?;
         index_reader.make_consecutive();
 
-        let header = Header::from_bam(&mut index_reader).map_err(|e| Error::new(e.kind(), format!("Failed to read BAI header: {}", e)))?;
+        let header = Header::new_from_stream(&mut index_reader).map_err(|e| Error::new(e.kind(), format!("Failed to read BAI header: {}", e)))?;
 
         let index = Index::from_stream(&mut index_reader)?;
 

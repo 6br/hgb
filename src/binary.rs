@@ -17,7 +17,7 @@ use std::io::{Write, BufWriter, Result, Seek, SeekFrom, BufReader, Read, Error};
 use std::fs::File;
 use std::path::Path;
 use crate::ColumnarSet;
-use bam::header::Header;
+use crate::header::Header;
 use crate::index::{VirtualOffset, Chunk};
 use crate::range::Record;
 use std::io::ErrorKind;
@@ -53,7 +53,7 @@ impl GhbWriterBuilder {
     /// in a buffer writer, such as `BufWriter`.
     pub fn from_stream<W: Write>(&mut self, mut stream: W, header: Header) -> Result<GhbWriter<W>> {
         if self.write_header {
-            header.write_bam(&mut stream)?;
+            header.to_stream(&mut stream)?;
         }
         stream.flush();
         Ok(GhbWriter { stream, header })

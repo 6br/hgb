@@ -4,7 +4,6 @@ use bam::header;
 use std::io::{Result, Read, Write, Seek, Error, ErrorKind};
 use std::io::ErrorKind::InvalidData;
 use std::collections::BTreeMap;
-
 // use std::path::Path;
 // use std::fs::File;
 // use std::marker::PhantomData;
@@ -44,7 +43,18 @@ pub struct Header {
 }
 
 impl Header {
-    pub fn new(global_header: header::Header) -> Self {
+    pub fn new_from_stream<R: Read>(stream: &mut R) -> Result<Self> {
+        let mut header = Header::new();
+        header.from_stream(stream)?;
+        Ok(header)
+    }
+    pub fn reference_len(&self, id: u32) -> Option<u32> {
+        self.global_header.reference_len(id)
+    }
+    pub fn push_entry(&mut self, header_entry: header::HeaderEntry) -> std::result::Result<(), String> {
+        self.global_header.push_entry(header_entry)
+    }
+    pub fn new() -> Self {
         Header{global_header: header::Header::new(), headers:vec![]}
     }
 
