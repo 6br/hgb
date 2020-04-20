@@ -23,7 +23,8 @@ impl InvertedRecordReference {
 pub struct InvertedRecordBuilder {
     pub start: RefCell<Vec<u64>>,
     pub end: RefCell<Vec<u64>>,
-    pub name: RefCell<Vec<String>> //Just a tab-separated string here.
+    pub name: RefCell<Vec<String>>, //Just a tab-separated string here.
+    // pub aux: RefCell<Vec<Vec<String>>>
 }
 
 impl InvertedRecordBuilder {

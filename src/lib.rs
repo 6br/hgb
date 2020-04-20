@@ -17,7 +17,7 @@ pub mod writer;
 pub mod reader;
 pub mod binary;
 pub mod builder;
-
+pub mod header;
 
 use std::io;
 use range::InvertedRecord;
