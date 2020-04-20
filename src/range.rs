@@ -1,6 +1,7 @@
 use std::io::{Result, Read, Write, Seek, Error};
 use std::io::ErrorKind::InvalidData;
 use std::collections::BTreeMap;
+use bio::io::bed;
 // use std::path::Path;
 // use std::fs::File;
 // use std::marker::PhantomData;
@@ -310,8 +311,18 @@ impl InvertedRecord {
         InvertedRecord{start: start, end: end, name: name}
     }
 
-    /*pub fn to_record(&self) -> Record {
+    pub fn to_record(&self, chromosome: String) -> Vec<bed::Record> {
+        /* TODO() Use Bit unpacking */
 
-    }*/
+        let records = vec![];
+        for i in 0..self.start.len() {
+            let mut rec = bed::Record::new();
+            rec.set_chrom(&chromosome);
+            rec.set_start(self.start[i]);
+            rec.set_end(self.end[i]);
+            rec.set_name(&self.name[i]);
+        }
+        records
+    }
 }
 
