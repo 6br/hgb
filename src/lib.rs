@@ -10,14 +10,16 @@ extern crate byteorder;
 extern crate bam;
 
 #[no_mangle]
-pub mod index;
-pub mod range;
 pub mod alignment;
-pub mod writer;
-pub mod reader;
 pub mod binary;
 pub mod builder;
+pub mod compression;
 pub mod header;
+pub mod index;
+pub mod range;
+pub mod reader;
+pub mod writer;
+
 
 use std::io;
 use range::InvertedRecord;

@@ -310,6 +310,7 @@ impl ColumnarSet for InvertedRecord {
     }
 }
 
+
 impl InvertedRecord {
     pub fn from_builder(builder: &InvertedRecordBuilder) -> InvertedRecord {
         /* TODO() Use Bit packing for converting RefCell to Just vector, however now we just clone */
@@ -319,6 +320,23 @@ impl InvertedRecord {
         let aux = builder.aux.clone().into_inner().into_iter().map(|t| t.join("\t").to_owned()).collect();
         InvertedRecord{start: start, end: end, name: name, aux: aux}
     }
+/*
+    pub fn from_builder_packing(builder: &InvertedRecordBuilder) -> InvertedRecord {
+        /* TODO() Use Bit packing for converting RefCell to Just vector, however now we just clone */
+        // let start = 
+        let bitpacker = BitPacker4x::new();
+        let num_bits: u8 = bitpacker.num_bits(&builder.start.into_inner());
+        let mut start = vec![0u8; 4 * BitPacker4x::BLOCK_LEN];
+        let _compressed_len = bitpacker.compress(&builder.start.into_inner(), &mut start[..], num_bits);
+        // assert_eq!((num_bits as usize) *  BitPacker4x::BLOCK_LEN / 8, compressed_len);
+
+        let start = builder.start.clone().into_inner();
+        let end = builder.end.clone().into_inner();
+        let name = builder.name.clone().into_inner();
+        let aux = builder.aux.clone().into_inner().into_iter().map(|t| t.join("\t").to_owned()).collect();
+        InvertedRecord{start: start, end: end, name: name, aux: aux}
+    }
+*/
 
     pub fn to_record(&self, chromosome: &str) -> Vec<bed::Record> {
         /* TODO() Use Bit unpacking */
