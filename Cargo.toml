@@ -16,11 +16,12 @@ bio = { git = "https://github.com/rust-bio/rust-bio" }
 bitpacking = "0.5" # Pfor
 byteorder = "*"
 env_logger = "*"
-deflate = "*"
 flate2 = "1.0" # A streaming compression/decompression library
+libflate = "0.1"
 log = "*"
 numpress = "1.0"
 regex = "*" 
 serde = "*"
 serde_json = "*"
 serde_yaml = "*"
+vbyte = { git = "https://github.com/6br/vbyte" }
