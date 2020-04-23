@@ -11,6 +11,7 @@ use crate::range::Record;
 use crate::index::Region;
 use crate::ChunkReader;
 use crate::binary::GhbReader;
+use crate::index;
 
 /// Defines how to react to a BAI index being younger than BAM file.
 ///
@@ -181,10 +182,12 @@ impl<R: Read + Seek> IndexedReader<R> {
         Ok(Self { reader, index })
     }
 
+    /// Returns [index](../index/struct.Index.html).
     pub fn index(&self) -> &Index {
         &self.index
     }
 
+    /// Returns [header](../header/struct.Header.html).
     pub fn header(&self) -> &Header {
         &self.reader.header()
     }
@@ -193,12 +196,16 @@ impl<R: Read + Seek> IndexedReader<R> {
         self.reader.take_stream()
     }
 
-
     /// Returns an iterator over records aligned to the [reference region](struct.Region.html).
     pub fn fetch<'a>(&'a mut self, region: &Region) -> Result<RegionViewer<'a, R>> {
         self.fetch_by(region, |_| true)
     }
 
+    /// Returns an iterator over records aligned to the [reference region](struct.Region.html).
+    ///
+    /// Records will be filtered by `predicate`. It helps to slightly reduce fetching time,
+    /// as some records will be removed without allocating new memory and without calculating
+    /// alignment length.
     pub fn fetch_by<'a, F>(&'a mut self, region: &Region, predicate: F) -> Result<RegionViewer<'a, R>>
     where F: 'static + Fn(&Record) -> bool
     {
@@ -223,6 +230,29 @@ impl<R: Read + Seek> IndexedReader<R> {
         })
     }
 
+        /// Returns an iterator over all records from the start of the BAM file.
+        pub fn full<'a>(&'a mut self) -> RegionViewer<'a, R> {
+            self.full_by(|_| true)
+        }
+    
+        /// Returns an iterator over all records from the start of the BAM file.
+        ///
+        /// Records will be filtered by `predicate`, which allows to skip some records without allocating new memory.
+        pub fn full_by<'a, F>(&'a mut self, predicate: F) -> RegionViewer<'a, R>
+        where F: 'static + Fn(&Record) -> bool
+        {
+            //if let Some(offset) = self.index.start_offset() {
+            self.reader.set_chunks(vec![index::Chunk::new(0,0,index::VirtualOffset::new(0, 0), index::VirtualOffset::MAX)]);
+            // self.index.references.map(|ref| ref.bins.len() ).sum()
+            //}
+            RegionViewer {
+                parent: self,
+                start: std::i32::MIN,
+                end: std::i32::MAX,
+                predicate: Box::new(predicate),
+            }
+        }
+
 }
 
 /// Iterator over records in a specific region.
@@ -245,14 +275,11 @@ impl<'a, R: Read + Seek> RegionViewer<'a, R> {
         self.parent.header()
     }
 
-    /// Returns [BAI index](../index/struct.Index.html).
+    /// Returns [index](../index/struct.Index.html).
     pub fn index(&self) -> &Index {
         self.parent.index()
     }
-/*
-    pub fn take_stream(self) -> R {
-        self.parent.take_stream()
-    }*/
+
 }
 
 impl<'a, R: Read + Seek> ChunkReader for RegionViewer<'a, R> {

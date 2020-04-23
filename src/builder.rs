@@ -85,12 +85,46 @@ mod tests {
     use crate::binary;
     use crate::writer;
     use crate::reader::IndexedReader;
-    use crate::range::{InvertedRecordEntire};
+    use crate::range::{InvertedRecordEntire, InvertedRecord, Format, Record};
     use crate::IndexWriter;
     use crate::reader;
     use crate::index::Region;
-    use crate::range::Format;
     use super::InvertedRecordSet;
+
+    #[test]
+    fn full_works() {
+        let path = "./test/test.bed";
+        let mut reader = bed::Reader::from_file(path).unwrap();
+        let set = InvertedRecordSet::new(reader, 0 as u64);
+
+        let set_vec = vec![set];
+        let entire = InvertedRecordEntire::new(set_vec);
+        let header = Header::new();
+        let mut writer = binary::GhbWriter::build()
+            .write_header(false)
+            .from_path("./test/test2.ghb", header).unwrap();
+        let index = entire.write_binary(&mut writer).unwrap();
+        writer.flush().unwrap();
+        println!("{}", index);
+
+
+        let mut header2 = Header::new();
+        entire.write_header(&mut header2);
+        let mut index_writer = writer::GhbWriter::build().write_header(true).from_path("./test/test2.ghb.ghi", header2).unwrap();
+        index_writer.write(&index);
+        index_writer.flush();
+
+        let mut reader2 = IndexedReader::from_path("./test/test2.ghb").unwrap();
+        println!("{}", reader2.index());
+
+        let chrom = "1";
+        let chrom_id = reader2.reference_id(&chrom).unwrap();
+        let viewer = reader2.full();
+        let records = viewer.into_iter().scan((), |_,x| x.ok()).collect::<Vec<Record>>();
+        println!("Records: {:?}", records);
+
+        assert_eq!(records.len(), 10);
+    }
 
     #[test]
     fn it_works() {
@@ -109,7 +143,6 @@ mod tests {
         let index = entire.write_binary(&mut writer).unwrap();
         writer.flush().unwrap();
         println!("{}", index);
-
 
         let mut header2 = Header::new();
         entire.write_header(&mut header2);
@@ -150,7 +183,6 @@ mod tests {
         {
             let mut writer = bed::Writer::new(&mut buf);
             for  i in records {
-                println!("{:?}", i);
                 writer.write(&i).ok().unwrap();
             } 
         }
