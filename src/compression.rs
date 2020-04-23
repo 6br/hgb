@@ -3,43 +3,64 @@ use vbyte::{VByteEncoded, VByteDecoder};
 //use bitpacking::{BitPacker4x, BitPacker};
 use libflate::deflate::{Encoder, Decoder};
 
+pub type VByte = Vec<u8>;
+pub type DeltaVByte = Vec<u8>;
+pub type Pfor = Vec<u8>;
+pub type Deflate = Vec<u8>;
 
+#[derive(Clone, PartialEq, Eq, PartialOrd, Debug)]
 pub enum IntegerEncode {
     Uncoded(Vec<u64>),
     Delta(Vec<u64>),
-    VByte(Vec<u8>),
-    DeltaVByte(Vec<u8>),
-    Pfor(Vec<u32>)
+    VByte(VByte), // If not sorted
+    DeltaVByte(DeltaVByte), // If sorted
+    Pfor(Pfor) // Preserved but not used
 }
 
 enum FloatEncode {
     Uncoded(Vec<f64>)
 }
 
+#[derive(Clone, PartialEq, Eq, PartialOrd, Debug)]
 pub enum StringEncode {
     Uncoded(Vec<String>),
-    Deflate(Vec<u8>)
+    Deflate(Deflate)
 }
 
 /// Returns an encoded array of u64.
-pub fn integer_encode(input: Vec<u64>, sorted: bool) -> IntegerEncode {
+pub fn integer_encode(input: &Vec<u64>, sorted: bool) -> IntegerEncode {
     let mut vec = Vec::with_capacity(input.len());
     VByteEncoded::new(input[0]).write_to(&mut vec);
 
     // Delta-encoding
     if (sorted) {
-        for i in 0..input.len()-1 {
-            // vec.push(input[i+1] - input[i]);
-            assert!(input[i+1] > input[i]);
-            VByteEncoded::new(input[i+1] - input[i]).write_to(&mut vec);
+        if (input.len() > 1) {
+            for i in 0..input.len()-1 {
+                // vec.push(input[i+1] - input[i]);
+                assert!(input[i+1] > input[i]);
+                VByteEncoded::new(input[i+1] - input[i]).write_to(&mut vec);
+            }
         }
         IntegerEncode::DeltaVByte(vec)
+        //vec
     } else {
-        for i in 1..input.len() {
-            // vec.push(input[i+1] - input[i]);
-            VByteEncoded::new(input[i]).write_to(&mut vec);
+        if (input.len() > 1) {
+            for i in 1..input.len() {
+                // vec.push(input[i+1] - input[i]);
+                VByteEncoded::new(input[i]).write_to(&mut vec);
+            }
         }
         IntegerEncode::VByte(vec)
+        //vec
+    }
+}
+
+/// TODO() Remove this: everytime returns vec<u8>
+pub fn integer_encode_wrapper(input: &Vec<u64>, sorted: bool) -> Vec<u8> {
+    match integer_encode(input, sorted) {
+        IntegerEncode::DeltaVByte(vec) => {vec}
+        IntegerEncode::VByte(vec) => {vec}
+        _ => {panic!("Invalid encoding")}
     }
 }
 
@@ -53,10 +74,11 @@ pub fn integer_decode(input: IntegerEncode) -> Vec<u64> {
             let mut vec = Vec::with_capacity(decoded.len());
             let mut previous_value = decoded[0];
             vec.push(previous_value);
-            
-            for i in 1..decoded.len() {
-                vec.push(decoded[i] + previous_value);
-                previous_value = decoded[i];
+            if (decoded.len() > 1) {
+                for i in 1..decoded.len() {
+                    vec.push(decoded[i] + previous_value);
+                    previous_value = decoded[i];
+                }
             }
             vec
         },
@@ -68,17 +90,19 @@ pub fn integer_decode(input: IntegerEncode) -> Vec<u64> {
     }
 }
 
-pub fn string_encode(input: Vec<String>) -> StringEncode {
+pub fn string_encode(input: &Vec<String>) -> Vec<u8> {
     let mut concatenate_string = input.join("\0");
+    // println!("str: {}", concatenate_string);
     let mut encoder = Encoder::new(Vec::new());
     io::copy(&mut concatenate_string.as_bytes(), &mut encoder).unwrap();
     let encoded_data = encoder.finish().into_result().unwrap();
-    StringEncode::Deflate(encoded_data)
+    //StringEncode::Deflate(
+    encoded_data
 }
 
-pub fn string_decode(input: StringEncode) -> Vec<String> {
+pub fn string_decode(input: &StringEncode) -> Vec<String> {
     match input {
-        StringEncode::Uncoded(vec) => vec,
+        StringEncode::Uncoded(vec) => vec.clone(),
         StringEncode::Deflate(vec) => {
             let mut decoder = Decoder::new(&vec[..]);
             let mut decoded_data = Vec::new();

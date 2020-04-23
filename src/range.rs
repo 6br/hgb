@@ -10,6 +10,7 @@ use crate::index::{Index, Reference, Bin};
 use crate::{ColumnarSet, ChunkWriter};
 use crate::binary::GhbWriter;
 use crate::index;
+use crate::compression::{IntegerEncode, StringEncode, DeltaVByte, VByte, Deflate, integer_encode_wrapper, string_encode, integer_decode, string_decode};
 use bam::header::HeaderEntry;
 use crate::header::Header;
 use crate::builder::{InvertedRecordBuilder, InvertedRecordSet};
@@ -224,10 +225,10 @@ impl ColumnarSet for Default {
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Debug)]
 pub struct InvertedRecord {
-    start: Vec<u64>,
-    end: Vec<u64>,
-    name: Vec<String>, 
-    aux: Vec<String> // We should update better data format.
+    start: DeltaVByte, //Vec<u8>, //IntegerEncode::DeltaVByte // Vec<u64>,
+    end: VByte, //Vec<u8>, //IntegerEncode::VByte,　// Vec<u64>
+    name: Deflate, //Vec<u8>, //StringEncode::Deflate,  // Vec<String>
+    aux: Deflate //Vec<u8>, //StringEncode::Deflate // We should update better data format.
 }
 
 impl ColumnarSet for InvertedRecord {
@@ -240,7 +241,7 @@ impl ColumnarSet for InvertedRecord {
     }
     
     fn from_stream<R: Read>(&mut self, stream: &mut R) -> Result<bool> {
-        let n_items = stream.read_u64::<LittleEndian>()?;
+        let mut n_items = stream.read_u64::<LittleEndian>()?;
         let n_header = stream.read_u64::<LittleEndian>()?;
         // println!("{} {}", n_header, n_items);
         for _i in 0..n_header {
@@ -259,26 +260,31 @@ impl ColumnarSet for InvertedRecord {
 /*        let mut start = Vec::with_capacity(n_items as usize);
         let mut end = Vec::with_capacity(n_items as usize);
         let mut name = Vec::with_capacity(n_items as usize);*/
+        n_items = stream.read_u64::<LittleEndian>()?;
         for _i in 0..n_items {
-            self.start.push(stream.read_u64::<LittleEndian>()?);
-           // println!("{:?}, {:?}", self.start, self.end);
+//            self.start.push(stream.read_u64::<LittleEndian>()?);
+            self.start.push(stream.read_u8()?);
         }
+        n_items = stream.read_u64::<LittleEndian>()?;
         for _i in 0..n_items {
-            self.end.push(stream.read_u64::<LittleEndian>()?);
-            // println!("{:?}, {:?}", self.start, self.end);
+//            self.end.push(stream.read_u64::<LittleEndian>()?);
+            self.end.push(stream.read_u8()?);
         }
-        // println!("{:?}, {:?}", self.start, self.end);
+        n_items = stream.read_u64::<LittleEndian>()?;
         for _i in 0..n_items {
-            let size = stream.read_u64::<LittleEndian>()?;
-            let mut raw = Vec::with_capacity(size as usize);
-            stream.take(size).read_to_end(&mut raw);
-            self.name.push(String::from_utf8(raw).unwrap());
+//            let size = stream.read_u64::<LittleEndian>()?;
+//            let mut raw = Vec::with_capacity(size as usize);
+//            stream.take(size).read_to_end(&mut raw);
+//            self.name.push(String::from_utf8(raw).unwrap());
+            self.name.push(stream.read_u8()?);
         }
+        n_items = stream.read_u64::<LittleEndian>()?;
         for _i in 0..n_items {
-            let size = stream.read_u64::<LittleEndian>()?;
-            let mut raw = Vec::with_capacity(size as usize);
-            stream.take(size).read_to_end(&mut raw);
-            self.aux.push(String::from_utf8(raw).unwrap());
+//            let size = stream.read_u64::<LittleEndian>()?;
+//            let mut raw = Vec::with_capacity(size as usize);
+//            stream.take(size).read_to_end(&mut raw);
+//            self.aux.push(String::from_utf8(raw).unwrap());
+            self.aux.push(stream.read_u8()?);
         }
 
         return Ok(true) //Ok(InvertedRecord{start: start, end: end, name: name})
@@ -290,21 +296,33 @@ impl ColumnarSet for InvertedRecord {
         stream.write_u16::<LittleEndian>(1 as u16)?; // u64
         stream.write_u16::<LittleEndian>(1 as u16)?; // u64 
         stream.write_u16::<LittleEndian>(0 as u16)?; // String
-
+/*
+        self.start.to_stream(stream)?;
+        self.stop.to_stream(stream)?;
+        self.name.to_stream(stream)?;
+        self.aux.to_stream(stream)?;
+*/
+        stream.write_u64::<LittleEndian>(self.start.len() as u64)?;
         for i in &self.start {
-            stream.write_u64::<LittleEndian>(*i)?;
+            stream.write_u8(*i)?;
         }
+        stream.write_u64::<LittleEndian>(self.end.len() as u64)?;
         for i in &self.end {
-            stream.write_u64::<LittleEndian>(*i)?;
+            stream.write_u8(*i)?;
         }
+        stream.write_u64::<LittleEndian>(self.name.len() as u64)?;
         for i in &self.name {
-            stream.write_u64::<LittleEndian>(i.len() as u64)?;
-            stream.write_all(i.as_bytes())?
+//            stream.write_u64::<LittleEndian>(i.len() as u64)?;
+//            stream.write_all(i.as_bytes())?
+            stream.write_u8(*i)?;
         }
+        stream.write_u64::<LittleEndian>(self.aux.len() as u64)?;
         for i in &self.aux {
-            stream.write_u64::<LittleEndian>(i.len() as u64)?;
-            stream.write_all(i.as_bytes())?
+//            stream.write_u64::<LittleEndian>(i.len() as u64)?;
+//            stream.write_all(i.as_bytes())?
+            stream.write_u8(*i)?;
         }
+        
 
         Ok(())
     }
@@ -314,13 +332,23 @@ impl ColumnarSet for InvertedRecord {
 impl InvertedRecord {
     pub fn from_builder(builder: &InvertedRecordBuilder) -> InvertedRecord {
         /* TODO() Use Bit packing for converting RefCell to Just vector, however now we just clone */
+        let start = integer_encode_wrapper(&builder.start.borrow(), true);
+        let end = integer_encode_wrapper(&builder.end.borrow(), false);
+        let name = string_encode(&builder.name.borrow());
+        let aux_raw = builder.aux.clone().into_inner().into_iter().map(|t| t.join("\t").to_owned()).collect();
+        let aux = string_encode(&aux_raw);
+        InvertedRecord{start: start, end: end, name: name, aux: aux}
+    }
+/*
+    pub fn from_builder(builder: &InvertedRecordBuilder) -> InvertedRecord {
+        /* TODO() Use Bit packing for converting RefCell to Just vector, however now we just clone */
         let start = builder.start.clone().into_inner();
         let end = builder.end.clone().into_inner();
         let name = builder.name.clone().into_inner();
         let aux = builder.aux.clone().into_inner().into_iter().map(|t| t.join("\t").to_owned()).collect();
         InvertedRecord{start: start, end: end, name: name, aux: aux}
     }
-/*
+
     pub fn from_builder_packing(builder: &InvertedRecordBuilder) -> InvertedRecord {
         /* TODO() Use Bit packing for converting RefCell to Just vector, however now we just clone */
         // let start = 
@@ -338,16 +366,21 @@ impl InvertedRecord {
     }
 */
 
-    pub fn to_record(&self, chromosome: &str) -> Vec<bed::Record> {
+    pub fn to_record(self, chromosome: &str) -> Vec<bed::Record> {
         /* TODO() Use Bit unpacking */
         let mut records = vec![];
-        for i in 0..self.start.len() {
+        let start = integer_decode(IntegerEncode::DeltaVByte(self.start));
+        let end = integer_decode(IntegerEncode::VByte(self.end));
+        let name = string_decode(&StringEncode::Deflate(self.name));
+        let aux = string_decode(&StringEncode::Deflate(self.aux));
+        let len = start.len();
+        for i in 0..len {
             let mut rec = bed::Record::new();
             rec.set_chrom(chromosome);
-            rec.set_start(self.start[i]);
-            rec.set_end(self.end[i]);
-            rec.set_name(&self.name[i]);
-            for aux in self.aux[i].split("\t") {
+            rec.set_start(start[i]);
+            rec.set_end(end[i]);
+            rec.set_name(&name[i]);
+            for aux in aux[i].split("\t") {
                 rec.push_aux(aux);
             }
             records.push(rec)
