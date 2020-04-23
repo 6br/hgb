@@ -24,7 +24,7 @@ use std::io::ErrorKind;
 //use crate::InvertedRecordWriter;
 use super::{InvertedRecordWriter, ChunkWriter, InvertedRecord};
 
-/// Builder of the [SamWriter](struct.SamWriter.html).
+/// Builder of the [GhbWriter](struct.GhbWriter.html).
 pub struct GhbWriterBuilder {
     write_header: bool,
 }
@@ -36,13 +36,13 @@ impl GhbWriterBuilder {
         }
     }
 
-    /// The option to write or skip header when creating the SAM writer (writing by default).
+    /// The option to write or skip header when creating the GHB writer (writing by default).
     pub fn write_header(&mut self, write: bool) -> &mut Self {
         self.write_header = write;
         self
     }
 
-    /// Creates a SAM writer from a file and a header.
+    /// Creates a GHB writer from a file and a header.
     pub fn from_path<P: AsRef<Path>>(&mut self, path: P, header: Header)
             -> Result<GhbWriter<BufWriter<File>>> {
         let stream = BufWriter::new(File::create(path)?);
