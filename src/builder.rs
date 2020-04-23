@@ -46,12 +46,12 @@ impl InvertedRecordBuilder {
 
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct InvertedRecordSet {
-    pub sample_id: u32,
+    pub sample_id: u64,
     pub chrom: BTreeMap<String, InvertedRecordReference> // Mutex?
 }
 
 impl InvertedRecordSet {
-    pub fn new<R:Read>(mut reader: bed::Reader<R>, sample_id: u32) -> Self {
+    pub fn new<R:Read>(mut reader: bed::Reader<R>, sample_id: u64) -> Self {
         let mut inverted_record_set = BTreeMap::new();
         /*let mut start: Vec<u64> = vec![];
         let mut end: Vec<u64> = vec![];
@@ -88,6 +88,7 @@ mod tests {
     use crate::range::{InvertedRecordEntire};
     use crate::IndexWriter;
     use crate::reader;
+    use crate::index::Region;
     use crate::range::Format;
     use super::InvertedRecordSet;
 
@@ -96,7 +97,7 @@ mod tests {
         // let _example = b"1\t5\t5000\tname1\t0.5\n1\t5\t5000\tname1\t0.5";
         let path = "./test/test.bed";
         let mut reader = bed::Reader::from_file(path).unwrap();
-        let set = InvertedRecordSet::new(reader, 0 as u32);
+        let set = InvertedRecordSet::new(reader, 0 as u64);
         // println!("{:?}", set);
         let set_vec = vec![set];
         let entire = InvertedRecordEntire::new(set_vec);
@@ -125,7 +126,7 @@ mod tests {
         let chrom = "2";
         let chrom_id = reader2.reference_id(&chrom).unwrap();
         println!("{}", chrom_id);
-        let viewer = reader2.fetch(&reader::Region::new(chrom_id, 17_000, 17_500)).unwrap();
+        let viewer = reader2.fetch(&Region::new(chrom_id, 17_000, 17_500)).unwrap();
         // println!("{}", viewer.index());
         /*
         for record in viewer {
@@ -162,7 +163,7 @@ mod tests {
         //assert_eq!(records[1], records_from[1]);
         //assert_eq!(records.len(), records_from.len());
 
-        let viewer = reader2.fetch(&reader::Region::new(0, 17_000, 17_500)).unwrap();
+        let viewer = reader2.fetch(&Region::new(0, 17_000, 17_500)).unwrap();
         // println!("{}", viewer.index());
         for record in viewer {
             // println!("A");
@@ -170,7 +171,7 @@ mod tests {
             // println!("Record: {:?}", record);
         }
 
-        let viewer = reader2.fetch(&reader::Region::new(1, 1, 3)).unwrap();
+        let viewer = reader2.fetch(&Region::new(1, 1, 3)).unwrap();
         // println!("{}", viewer.index());
         for record in viewer {
             // println!("A");

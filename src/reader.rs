@@ -8,7 +8,7 @@ use std::io::ErrorKind::{InvalidInput, InvalidData};
 use crate::header::Header;
 use crate::range::Record;
 // use crate::ColumnarSet;
-use crate::index;
+use crate::index::Region;
 use crate::ChunkReader;
 use crate::binary::GhbReader;
 
@@ -160,7 +160,7 @@ impl IndexedReader<BufReader<File>> {
         IndexedReaderBuilder::new()
     }
 
-    pub fn reference_id(&self, chrom: &str) -> Option<u32> {
+    pub fn reference_id(&self, chrom: &str) -> Option<u64> {
         self.reader.header().reference_id(chrom)
     }
 
@@ -211,7 +211,7 @@ impl<R: Read + Seek> IndexedReader<R> {
             _ => {},
         }
 
-        let chunks = self.index.fetch_chunks(region.ref_id(), region.start() as i32, region.end() as i32);
+        let chunks = self.index.fetch_chunks(region.ref_id(), region.start(), region.end());
         println!("{:#?}", chunks);
         self.reader.set_chunks(chunks);
 
@@ -254,60 +254,6 @@ impl<'a, R: Read + Seek> RegionViewer<'a, R> {
         self.parent.take_stream()
     }*/
 }
-
-
-
-/// Genomic coordinates, used in [struct.IndexedReader.html#method.fetch] and [struct.IndexedReader.html#method.pileup].
-/// `ref_id` is 0-based, `start-end` is 0-based half-open interval.
-#[derive(Clone, Debug)]
-pub struct Region {
-    ref_id: u32,
-    start: u32,
-    end: u32,
-}
-
-impl Region {
-    /// Creates new region. `ref_id` is 0-based, `start-end` is 0-based half-open interval.
-    pub fn new(ref_id: u32, start: u32, end: u32) -> Region {
-        assert!(start <= end, "Region: start should not be greater than end ({} > {})", start, end);
-        Region { ref_id, start, end }
-    }
-
-    pub fn ref_id(&self) -> u32 {
-        self.ref_id
-    }
-
-    pub fn start(&self) -> u32 {
-        self.start
-    }
-
-    pub fn end(&self) -> u32 {
-        self.end
-    }
-
-    pub fn len(&self) -> u32 {
-        self.end - self.start
-    }
-
-    pub fn set_ref_id(&mut self, ref_id: u32) {
-        self.ref_id = ref_id;
-    }
-
-    pub fn set_start(&mut self, start: u32) {
-        assert!(start <= self.end, "Region: start should not be greater than end ({} > {})", start, self.end);
-        self.start = start;
-    }
-
-    pub fn set_end(&mut self, end: u32) {
-        assert!(self.start <= end, "Region: start should not be greater than end ({} > {})", self.start, end);
-        self.end = end;
-    }
-
-    pub fn contains(&self, ref_id: u32, pos: u32) -> bool {
-        self.ref_id == ref_id && self.start <= pos && pos < self.end
-    }
-}
-
 
 impl<'a, R: Read + Seek> ChunkReader for RegionViewer<'a, R> {
     fn read_into(&mut self, record: &mut Record) -> Result<bool> {

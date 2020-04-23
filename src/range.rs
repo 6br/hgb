@@ -41,8 +41,7 @@ pub(crate) unsafe fn resize<T>(v: &mut Vec<T>, new_len: usize) {
 ///https://qiita.com/mhgp/items/41a75915413aec781fe0
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct Record {
-    /*length: u32,*/
-    sample_id: u32,
+    sample_id: u64,
     sample_file_id: u32, // When we split files of inverted data structure
     format: u32,
     // format_type: u32, // Enum
@@ -77,14 +76,14 @@ impl Record {
         self.format = 0;
         self.data = Format::Default(Default{});
     }
-    pub fn sample_id(&self) -> u32 {
+    pub fn sample_id(&self) -> u64 {
         return self.sample_id;
     }
     pub fn sample_file_id(&self) -> u32 {
         return self.sample_file_id;
     }
     pub fn to_stream<W: Write>(&self, stream: &mut W) -> Result<()> {
-        stream.write_u32::<LittleEndian>(self.sample_id)?;
+        stream.write_u64::<LittleEndian>(self.sample_id)?;
         stream.write_u32::<LittleEndian>(self.sample_file_id)?;
         stream.write_u32::<LittleEndian>(self.format)?;
         // self.data.to_stream(stream)?;
@@ -95,7 +94,7 @@ impl Record {
         Ok(())
     }
     pub fn from_stream<R: Read, T: ColumnarSet>(&self, stream: &mut R) -> Result<Self> {
-        let sample_id = stream.read_u32::<LittleEndian>()?;
+        let sample_id = stream.read_u64::<LittleEndian>()?;
         let sample_file_id = stream.read_u32::<LittleEndian>()?;
         let format = stream.read_u32::<LittleEndian>()?;
         
@@ -116,7 +115,7 @@ impl Record {
     }
     pub(crate) fn fill_from_bam<R: Read>(&mut self, stream: &mut R) -> Result<bool> {
         /* Unimplemented */
-        self.sample_id = stream.read_u32::<LittleEndian>()?;
+        self.sample_id = stream.read_u64::<LittleEndian>()?;
         self.sample_file_id = stream.read_u32::<LittleEndian>()?;
         self.format = stream.read_u32::<LittleEndian>()?;
         let data = match self.format {

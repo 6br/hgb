@@ -4,17 +4,17 @@ use bam::header;
 use std::io::{Result, Read, Write, Seek, Error, ErrorKind};
 use std::io::ErrorKind::InvalidData;
 use std::collections::BTreeMap;
-// use std::path::Path;
-// use std::fs::File;
-// use std::marker::PhantomData;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
+/// Local headers are categorized as types. 
+#[derive(Clone)]
 pub enum HeaderType {
     None,
     BAM(header::Header)
 }
 
 impl HeaderType {
+    /// Save to stream.
     pub fn to_stream<W: Write>(&self, stream: &mut W) -> Result<()> {
         match self {
             HeaderType::None => stream.write_i32::<LittleEndian>(0 as i32),
@@ -24,6 +24,7 @@ impl HeaderType {
             }
         }
     }
+    /// Load from stream.
     pub fn from_stream<R: Read>(stream: &mut R) -> Result<HeaderType> {
         let header_type = stream.read_i32::<LittleEndian>()?;
         match header_type {
@@ -37,25 +38,42 @@ impl HeaderType {
     }
 }
 
+/// GHB/GHI Header.
+/// 
+/// You can modify it by pushing new entry using [push_entry](#method.push_entry),
+/// You cannot remove lines.
+#[derive(Clone)]
 pub struct Header {
     global_header : header::Header, // Need to be replaced.
     headers: Vec<HeaderType>
 }
 
 impl Header {
+    /// Create header from stream
     pub fn new_from_stream<R: Read>(stream: &mut R) -> Result<Self> {
         let mut header = Header::new();
         header.from_stream(stream)?;
         Ok(header)
     }
-    pub fn reference_len(&self, id: u32) -> Option<u32> {
-        self.global_header.reference_len(id)
+    /// Returns the length of the reference with `ref_id` (0-based). as u64.
+    /// TODO() Support u64; now raise errors when you pass u32.
+    /// Returns None if there is no such reference
+    pub fn reference_len(&self, id: u64) -> Option<u64> {
+        self.global_header.reference_len(id as u32).map(|e| e as u64)
     }
-    pub fn reference_id(&self, ref_name: &str) -> Option<u32> {
-        self.global_header.reference_id(ref_name)
+    /// Returns reference id from its name, if possible.
+    pub fn reference_id(&self, ref_name: &str) -> Option<u64> {
+        self.global_header.reference_id(ref_name).map(|e| e as u64)
     }
-    pub fn reference_name(&self, ref_id: u32) -> Option<&str> {
-        self.global_header.reference_name(ref_id)
+    /// Returns the name of the reference with `ref_id` (0-based).
+    /// TODO() Support u64; now raise errors when you pass u32.
+    /// Returns None if there is no such reference
+    pub fn reference_name(&self, ref_id: u64) -> Option<&str> {
+        self.global_header.reference_name(ref_id as u32)
+    }
+    /// Returns the number of reference sequences in the BAM file.
+    pub fn n_references(&self) -> usize {
+        self.global_header.n_references()
     }
     pub fn push_entry(&mut self, header_entry: header::HeaderEntry) -> std::result::Result<(), String> {
         self.global_header.push_entry(header_entry)

@@ -16,49 +16,49 @@ const SUMMARY_BIN: u32 = 37450;
 /// `ref_id` is 0-based, `start-end` is 0-based half-open interval.
 #[derive(Clone, Debug)]
 pub struct Region {
-    ref_id: u32,
-    start: u32,
-    end: u32,
+    ref_id: u64,
+    start: u64,
+    end: u64,
 }
 
 impl Region {
     /// Creates new region. `ref_id` is 0-based, `start-end` is 0-based half-open interval.
-    pub fn new(ref_id: u32, start: u32, end: u32) -> Region {
+    pub fn new(ref_id: u64, start: u64, end: u64) -> Region {
         assert!(start <= end, "Region: start should not be greater than end ({} > {})", start, end);
         Region { ref_id, start, end }
     }
 
-    pub fn ref_id(&self) -> u32 {
+    pub fn ref_id(&self) -> u64 {
         self.ref_id
     }
 
-    pub fn start(&self) -> u32 {
+    pub fn start(&self) -> u64 {
         self.start
     }
 
-    pub fn end(&self) -> u32 {
+    pub fn end(&self) -> u64 {
         self.end
     }
 
-    pub fn len(&self) -> u32 {
+    pub fn len(&self) -> u64 {
         self.end - self.start
     }
 
-    pub fn set_ref_id(&mut self, ref_id: u32) {
+    pub fn set_ref_id(&mut self, ref_id: u64) {
         self.ref_id = ref_id;
     }
 
-    pub fn set_start(&mut self, start: u32) {
+    pub fn set_start(&mut self, start: u64) {
         assert!(start <= self.end, "Region: start should not be greater than end ({} > {})", start, self.end);
         self.start = start;
     }
 
-    pub fn set_end(&mut self, end: u32) {
+    pub fn set_end(&mut self, end: u64) {
         assert!(self.start <= end, "Region: start should not be greater than end ({} > {})", self.start, end);
         self.end = end;
     }
 
-    pub fn contains(&self, ref_id: u32, pos: u32) -> bool {
+    pub fn contains(&self, ref_id: u64, pos: u64) -> bool {
         self.ref_id == ref_id && self.start <= pos && pos < self.end
     }
 }
@@ -130,7 +130,7 @@ impl Display for VirtualOffset {
 /// Chunk `[start-end)`, where `start` and `end` are [virtual offsets](struct.VirtualOffset.html).
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Chunk {
-    sample_id: u32,
+    sample_id: u64,
     file_id: u32, // When we split files of inverted data structure
     // format_type: u32, // Enum
     start: VirtualOffset,
@@ -139,12 +139,12 @@ pub struct Chunk {
 
 impl Chunk {
     /// Constructs a `Chunk` from two virtual offsets.
-    pub fn new(sample_id: u32, file_id: u32, start: VirtualOffset, end: VirtualOffset) -> Self {
+    pub fn new(sample_id: u64, file_id: u32, start: VirtualOffset, end: VirtualOffset) -> Self {
         Chunk { sample_id, file_id, start, end }
     }
 
     fn from_stream<R: Read>(stream: &mut R, check: bool) -> Result<Self> {
-        let sample_id = stream.read_u32::<LittleEndian>()?;
+        let sample_id = stream.read_u64::<LittleEndian>()?;
         let file_id = stream.read_u32::<LittleEndian>()?;
         let start = VirtualOffset::from_stream(stream)?;
         let end = VirtualOffset::from_stream(stream)?;
@@ -156,7 +156,7 @@ impl Chunk {
     }
 
     fn to_stream<W: Write>(&self, stream: &mut W) -> Result<()> {
-        stream.write_u32::<LittleEndian>(self.sample_id)?;
+        stream.write_u64::<LittleEndian>(self.sample_id)?;
         stream.write_u32::<LittleEndian>(self.file_id)?;
         self.start.to_stream(stream)?;
         self.end.to_stream(stream)?;
@@ -376,7 +376,7 @@ impl Index {
     }
 
     /// Fetches [chunks](struct.Chunk.html) of the BAM file that contain all records for a given region.
-    pub fn fetch_chunks(&self, ref_id: u32, start: i32, end: i32) -> Vec<Chunk> {
+    pub fn fetch_chunks(&self, ref_id: u64, start: u64, end: u64) -> Vec<Chunk> {
         let mut chunks = Vec::new();
         let ref_id = ref_id as usize;
 
@@ -485,15 +485,16 @@ pub fn region_to_bin_3(beg: u64, end: u64) -> u32 {
 
 
 /// Returns all possible BAI bins for the region `[beg-end)`.
-pub fn region_to_bins(start: i32, end: i32) -> BinsIter {
-    BinsIter {
+pub fn region_to_bins(start: u64, end: u64) -> BinsIter {
+    BinsIter::new(-1,0,start,end,0,0)
+/*    BinsIter {
         i: -1,
         t: 0,
         start,
         end,
         curr_bin: 0,
         bins_end: 0,
-    }
+    }*/
 }
 
 /// Iterator over bins.
@@ -511,11 +512,13 @@ pub struct BinsIter {
 impl BinsIter {
     fn new(    i: i32,
         t: i32,
-        start: i32,
-        end: i32,
+        start: u64,
+        end: u64,
         curr_bin: u32,
         bins_end: u32) -> BinsIter {
             return {
+                let start = start as i32;
+                let end = end as i32;
                 BinsIter{i,t,start,end,curr_bin,bins_end}
             }
         }
