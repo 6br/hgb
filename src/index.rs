@@ -374,7 +374,11 @@ impl Index {
     pub fn references(&self) -> &[Reference] {
         &self.references
     }
-
+/*
+    pub fn chunks(self) -> Vec<Chunk> {
+        self.references.into_iter().map(|chr| chr.bins.values().into_iter().map(|bin| bin.chunks).flatten().collect::<Vec<Chunk>>()).flatten().collect()
+    }
+*/
     /// Fetches [chunks](struct.Chunk.html) of the BAM file that contain all records for a given region.
     pub fn fetch_chunks(&self, ref_id: u64, start: u64, end: u64) -> Vec<Chunk> {
         let mut chunks = Vec::new();

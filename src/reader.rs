@@ -219,7 +219,7 @@ impl<R: Read + Seek> IndexedReader<R> {
         }
 
         let chunks = self.index.fetch_chunks(region.ref_id(), region.start(), region.end());
-        println!("{:#?}", chunks);
+
         self.reader.set_chunks(chunks);
 
         Ok(RegionViewer {
@@ -243,7 +243,7 @@ impl<R: Read + Seek> IndexedReader<R> {
         {
             //if let Some(offset) = self.index.start_offset() {
             self.reader.set_chunks(vec![index::Chunk::new(0,0,index::VirtualOffset::new(0, 0), index::VirtualOffset::MAX)]);
-            // self.index.references.map(|ref| ref.bins.len() ).sum()
+            //self.reader.set_chunks(self.index.chunks());
             //}
             RegionViewer {
                 parent: self,

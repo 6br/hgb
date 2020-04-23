@@ -252,8 +252,8 @@ impl<R: Read + Seek> GhbReader<R> {
         }
 
         let curr_offset = VirtualOffset::new(self.offset, 0);
-        //while self.index < self.chunks.len() && curr_offset >= self.chunks[self.index].end() {
-        if (curr_offset > self.chunks[self.index].end() ) {
+        // When not full query:
+        if (curr_offset > self.chunks[self.index].end() || VirtualOffset::MAX != self.chunks[self.index].end()) {
             self.index += 1;
         }
         //}
