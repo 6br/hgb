@@ -384,11 +384,8 @@ impl Index {
         let mut chunks = Vec::new();
         let ref_id = ref_id as usize;
 
-        // let min_end_offset = self.references[ref_id].linear_index.min_end_offset(start);
         for bin_id in region_to_bins(start, end) {
-            println!("bins: {:?}", bin_id);
             if let Some(bin) = self.references[ref_id].bins.get(&bin_id) {
-                println!("bin: {:?}", bin.bin_id);
                 chunks.extend(bin.chunks.iter());
             }
         }
@@ -433,38 +430,6 @@ impl Display for Index {
     }
 }
 
-/*
-/// Returns a BAI bin for the record with alignment `[beg-end)`.
-pub fn region_to_bin(beg: i32, end: i32) -> u32 {
-    let end = end - 1;
-    let mut res = 0_i32;
-    for i in (14..27).step_by(3) {
-        if beg >> i == end >> i {
-            res = ((1 << 29 - i) - 1) / 7 + (beg >> i);
-            break;
-        }
-    }
-    res as u32
-}
-
-/// Returns a BAI bin for the record with alignment `[beg-end)` for multiplex lower-level 
-pub fn region_to_bin_2(beg: u64, end: u64) -> u32 {
-    let end = end - 1;
-    let mut res = 0_i32;
-    for i in (14..27).step_by(3) {
-        if beg >> i == end >> i {
-            res = ((1 << 29 - i) - 1) / 7 + (beg >> i) as i32;
-            break;
-        }
-        if i == 14 && ((beg + (1 << 13)) >> i == (end + (1 << 13)) >> i) {
-            res = ((1 << 29 - 11) - 1) / 7 + (beg >> i) as i32;
-            break;
-        }
-    }
-    res as u32
-}
-*/
-
 /// Returns a BAI bin for the record with alignment `[beg-end)` for multiplex lower-level 
 /// Fixed version 
 pub fn region_to_bin_3(beg: u64, end: u64) -> u32 {
@@ -502,7 +467,6 @@ pub fn region_to_bins(start: u64, end: u64) -> BinsIter {
 }
 
 /// Iterator over bins.
-/// 
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct BinsIter {
     i: i32,
@@ -648,8 +612,7 @@ mod tests {
     }
 
     #[test] 
-    fn bin_iter_middle() {
-        // We don't care whether it works.
+    fn bin_iter_4682_4683() {
         let mut bin_iter = region_to_bins(16485, 16486);
         assert_eq!(bin_iter, BinsIter::new(-1,0,16485, 16486,0,0));
         bin_iter.next();
@@ -668,8 +631,7 @@ mod tests {
     }
 
     #[test] 
-    fn bin_iter_next() {
-        // We don't care whether it works.
+    fn bin_iter_4681_4683() {
         let mut bin_iter = region_to_bins(0, 16486);
         assert_eq!(bin_iter, BinsIter::new(-1,0,0, 16486,0,0));
         bin_iter.next();
@@ -688,8 +650,7 @@ mod tests {
     }
 
     #[test] 
-    fn bin_iter_marginal() {
-        // We don't care whether it works.
+    fn bin_iter_4681_4683() {
         let mut bin_iter = region_to_bins(8199, 16384);
         assert_eq!(bin_iter, BinsIter::new(-1,0,8199, 16384,0,0));
         bin_iter.next();
@@ -708,8 +669,7 @@ mod tests {
     }
 
     #[test] 
-    fn bin_iter_large() {
-        // We don't care whether it works.
+    fn bin_iter_4683_4684() {
         let mut bin_iter = region_to_bins(24578, 24589);
         assert_eq!(bin_iter, BinsIter::new(-1,0,24578, 24589,0,0));
         bin_iter.next();
@@ -727,23 +687,3 @@ mod tests {
         assert_eq!(bin_iter.next(), Some(4684));
     }
 }
-
-
-/*
-/// Returns a maximal region for a given bin.
-pub fn bin_to_region(bin: u16) -> (i32, i32) {
-    if bin == 0 {
-        return (std::i32::MIN, std::i32::MAX);
-    }
-    let mut left = 1;
-    for i in 1..6 {
-        let right = left + (1 << 3 * i);
-        if bin >= left && bin < right {
-            let beg = (bin - left) as i32;
-            return (beg << 29 - 3 * i, beg + 1 << 29 - 3 * i);
-        }
-        left = right;
-    }
-    panic!("Bin id should be not bigger than MAX_BIN ({} > {})", bin, MAX_BIN);
-}
-*/

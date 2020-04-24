@@ -73,19 +73,27 @@ impl Header {
     pub fn n_references(&self) -> usize {
         self.global_header.n_references()
     }
+    /// Pushes a new header entry.
+    ///
+    /// Returns an error if the same reference appears twice or @SQ line has an incorrect format.
     pub fn push_entry(&mut self, header_entry: header::HeaderEntry) -> std::result::Result<(), String> {
         self.global_header.push_entry(header_entry)
     }
+    /// Creates an empty header.
     pub fn new() -> Self {
         Header{global_header: header::Header::new(), headers:vec![]}
     }
 
+    /// Pushes a new header entry.
+    ///
+    /// Do not insert if the same reference appears twice or @SQ line has an incorrect format.
     pub fn set_entry(&mut self, entries: Vec<header::HeaderEntry>) {
         for i in entries {
             self.global_header.push_entry(i).unwrap();
         }
     }
 
+    /// Writes header in an uncompressed binary format.
     pub fn to_stream<W: Write>(&self, stream: &mut W) -> Result<()> {
         self.global_header.write_bam(stream)?;
         let n_samples = self.headers.len() as i32;
@@ -96,8 +104,9 @@ impl Header {
         Ok(())
     }
 
+    /// Parse uncompressed header.
     pub fn from_stream<R: Read>(&mut self, stream: &mut R) -> Result<bool> {
-        let global_header = header::Header::from_bam(stream).map_err(|e| Error::new(e.kind(), format!("Failed to read BAI header: {}", e)))?;
+        let global_header = header::Header::from_bam(stream).map_err(|e| Error::new(e.kind(), format!("Failed to read global header: {}", e)))?;
         let n_samples = stream.read_i32::<LittleEndian>()? as usize;
         let mut headers = Vec::with_capacity(n_samples);
         for _i in 0..n_samples {

@@ -134,7 +134,7 @@ mod tests {
     }
 
     #[test]
-    fn it_works() {
+    fn fetch_works() {
         // let _example = b"1\t5\t5000\tname1\t0.5\n1\t5\t5000\tname1\t0.5";
         let path = "./test/test.bed";
         let reader = bed::Reader::from_file(path).unwrap();
@@ -160,21 +160,15 @@ mod tests {
 
         let mut reader2 = IndexedReader::from_path("./test/test.ghb").unwrap();
         println!("{}", reader2.index());
-        
 
-        //assert_eq!(format!("{}", index), format!("{}", reader2.index()));
+
+        // assert_eq!(format!("{}", index), format!("{}", reader2.index()));
         // assert_eq!(&index, reader2.index());
         let chrom = "2";
         let chrom_id = reader2.reference_id(&chrom).unwrap();
-        println!("{}", chrom_id);
+
         let viewer = reader2.fetch(&Region::new(chrom_id, 17_000, 17_500)).unwrap();
-        // println!("{}", viewer.index());
-        /*
-        for record in viewer {
-            // println!("A");
-            let record = record.unwrap();
-            println!("Record: {:?}", record);
-        }*/
+
         let records = viewer.into_iter().flat_map(|t| t.map(|f| 
             if let Format::Range(rec) = f.data() {
                 // println!("debug {:#?}", rec.to_record(chrom));
@@ -186,7 +180,7 @@ mod tests {
         println!("Records: {:?}", records);
 
         let example = "2\t16382\t16385\tbin4682\t20\t-\n2\t16388\t31768\tbin4683\t20\t-\n";
-        // let mut test_reader = bed::Reader::new(&example[..]);
+
         let mut buf = Vec::new();
         {
             let mut writer = bed::Writer::new(&mut buf);

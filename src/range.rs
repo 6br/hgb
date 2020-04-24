@@ -31,6 +31,7 @@ pub struct Record {
 }
 
 impl Record {
+    /// Creates an empty record.
     pub fn new() -> Self {
         Record {
             sample_id: 0,
@@ -42,18 +43,23 @@ impl Record {
     pub fn data(self) -> Format {
         self.data
     }
+    /// Clears the record.
     pub fn clear(&mut self) {
         self.sample_id = 0;
         self.sample_file_id = 0;
         self.format = 0;
         self.data = Format::Default(Default{});
     }
+    /// Returns 0-based sample id.
     pub fn sample_id(&self) -> u64 {
         return self.sample_id;
     }
+    /// Returns 0-based sample file id.
     pub fn sample_file_id(&self) -> u32 {
         return self.sample_file_id;
     }
+
+    /// Writes a record in binary format.
     pub fn to_stream<W: Write>(&self, stream: &mut W) -> Result<()> {
         stream.write_u64::<LittleEndian>(self.sample_id)?;
         stream.write_u32::<LittleEndian>(self.sample_file_id)?;
@@ -65,6 +71,8 @@ impl Record {
         }
         Ok(())
     }
+
+    /// Fills the record from a `stream` of uncompressed binary contents.
     pub fn from_stream<R: Read, T: ColumnarSet>(&self, stream: &mut R) -> Result<Self> {
         let sample_id = stream.read_u64::<LittleEndian>()?;
         let sample_file_id = stream.read_u32::<LittleEndian>()?;
@@ -85,6 +93,8 @@ impl Record {
         };
         return Ok(Record{sample_id, sample_file_id,format, data})
     }
+
+    /// Fills the record from a `stream` of uncompressed BAM contents.
     pub(crate) fn fill_from_bam<R: Read>(&mut self, stream: &mut R) -> Result<bool> {
         self.sample_id = stream.read_u64::<LittleEndian>()?;
         self.sample_file_id = stream.read_u32::<LittleEndian>()?;
@@ -269,8 +279,6 @@ impl ColumnarSet for InvertedRecord {
 //            stream.write_all(i.as_bytes())?
             stream.write_u8(*i)?;
         }
-        
-
         Ok(())
     }
 }

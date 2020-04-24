@@ -163,7 +163,7 @@ impl IndexedReader<BufReader<File>> {
         self.reader.header().reference_id(chrom)
     }
 
-    /// Opens bam file from `path`. Bai index will be loaded from `{path}.bai`.
+    /// Opens GHB file from `path`. Ghi index will be loaded from `{path}.ghi`.
     ///
     /// Same as `Self::build().from_path(path)`.
     pub fn from_path<P: AsRef<Path>>(path: P) -> Result<Self> {
@@ -228,12 +228,12 @@ impl<R: Read + Seek> IndexedReader<R> {
         })
     }
 
-        /// Returns an iterator over all records from the start of the BAM file.
+        /// Returns an iterator over all records from the start of the GHB file.
         pub fn full<'a>(&'a mut self) -> RegionViewer<'a, R> {
             self.full_by(|_| true)
         }
     
-        /// Returns an iterator over all records from the start of the BAM file.
+        /// Returns an iterator over all records from the start of the GHB file.
         ///
         /// Records will be filtered by `predicate`, which allows to skip some records without allocating new memory.
         pub fn full_by<'a, F>(&'a mut self, predicate: F) -> RegionViewer<'a, R>
