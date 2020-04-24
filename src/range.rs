@@ -9,7 +9,7 @@ use crate::binary::GhbWriter;
 use crate::compression::{IntegerEncode, StringEncode, DeltaVByte, VByte, Deflate, integer_encode_wrapper, string_encode, integer_decode, string_decode};
 use bam::header::HeaderEntry;
 use crate::header::Header;
-use crate::builder::{InvertedRecordBuilder, InvertedRecordSet};
+use crate::builder::{InvertedRecordBuilder, InvertedRecordBuilderSet};
 
 type Chromosome = Vec<HeaderEntry>;
 
@@ -18,42 +18,17 @@ pub enum Format {
     Default(Default),
     Range(InvertedRecord)
 }
-/*
-impl Format {
-    pub fn start(&self) -> <> {
-        match &self {
-            Default(default) -> default.start(),
-            Range(record) -> record.start()
-        }
-}
 
-pub(crate) unsafe fn resize<T>(v: &mut Vec<T>, new_len: usize) {
-    if v.capacity() < new_len {
-        v.reserve(new_len - v.len());
-    }
-    v.set_len(new_len);
-}
-*/
-
+/// GHB Record.
+///
 ///https://qiita.com/mhgp/items/41a75915413aec781fe0
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct Record {
     sample_id: u64,
     sample_file_id: u32, // When we split files of inverted data structure
-    format: u32,
-    // format_type: u32, // Enum
-    data: Format // There is an argument on T or Box<T> //
+    format: u32, // Enum
+    data: Format,
 }
-/*
-impl Record<Default> {
-    pub fn new() -> Self {
-        Record {
-            sample_id: 0,
-            sample_file_id: 0,
-            data: Default{}
-        }
-    }
-}*/
 
 impl Record {
     pub fn new() -> Self {
@@ -83,7 +58,7 @@ impl Record {
         stream.write_u64::<LittleEndian>(self.sample_id)?;
         stream.write_u32::<LittleEndian>(self.sample_file_id)?;
         stream.write_u32::<LittleEndian>(self.format)?;
-        // self.data.to_stream(stream)?;
+
         match &self.data {
             Format::Default(data) => data.to_stream(stream)?,
             Format::Range(data) => data.to_stream(stream)?
@@ -111,7 +86,6 @@ impl Record {
         return Ok(Record{sample_id, sample_file_id,format, data})
     }
     pub(crate) fn fill_from_bam<R: Read>(&mut self, stream: &mut R) -> Result<bool> {
-        /* Unimplemented */
         self.sample_id = stream.read_u64::<LittleEndian>()?;
         self.sample_file_id = stream.read_u32::<LittleEndian>()?;
         self.format = stream.read_u32::<LittleEndian>()?;
@@ -153,13 +127,13 @@ impl InvertedRecordEntire {
             header.push_entry(i).unwrap();
         }
     }
-    pub fn new(sample_file_list: Vec<InvertedRecordSet>) -> InvertedRecordEntire {
+    pub fn new(sample_file_list: Vec<InvertedRecordBuilderSet>) -> InvertedRecordEntire {
         let mut inverted_record = vec![];
         let mut chrom_table = vec![];
         for (sample_file_id, set)  in sample_file_list.iter().enumerate() {
             for (name, chromosome) in &set.chrom {
                 let mut chrom = InvertedRecordChromosome{bins: BTreeMap::new() };
-                // let chrom = inverted_record.entry(name.clone()).or_insert(InvertedRecordChromosome{bins: HashMap::new() }); // TODO() DO NOT USE CLONE
+
                 let chrom_item = HeaderEntry::ref_sequence(name.clone(), i32::max_value() as u32);
                 chrom_table.push(chrom_item);
                 for (bin_id, bin) in &chromosome.bins {
@@ -171,19 +145,7 @@ impl InvertedRecordEntire {
         }
         return InvertedRecordEntire{chrom: inverted_record, chrom_table}
     }
-/*
-    pub fn to_stream<W: Write>(&self, stream: &mut W) -> Result<Index> {
-        let index = Index::new(); //Index{references: vec![]};
-        for (_name, chromosome) in &self.chrom {
-            for (_bin_id, bin) in &chromosome.bins {
-                for chunk in bin {
-                    chunk.to_stream(stream)?;
-                }
-            }
-        }
 
-        Ok(index)
-    }*/
     pub fn write_binary<W: Write+Seek>(&self, writer: &mut GhbWriter<W>) -> Result<Index> {
         let mut reference = vec![];
         for chromosome in &self.chrom {
@@ -201,6 +163,7 @@ impl InvertedRecordEntire {
         Ok(Index::new(reference))
     }
 }
+
 #[derive(Clone, PartialEq, Eq, PartialOrd, Debug)]
 pub struct Default {
 
@@ -239,20 +202,13 @@ impl ColumnarSet for InvertedRecord {
     fn from_stream<R: Read>(&mut self, stream: &mut R) -> Result<bool> {
         let _n_items = stream.read_u64::<LittleEndian>()?;
         let n_header = stream.read_u64::<LittleEndian>()?;
-        // println!("{} {}", n_header, n_items);
         for _i in 0..n_header {
             let _a = stream.read_u16::<LittleEndian>()?;
-            // print!("{}", a);
-        }/*
-        unsafe {
-            resize(&mut self.start, n_items as usize);
-            resize(&mut self.end, n_items as usize);
-            resize(&mut self.name, n_items as usize);
-        }*/
+        }
         self.start = vec![];
         self.end = vec![];
         self.name = vec![];
-        // println!("{}", n_items);
+
 /*        let mut start = Vec::with_capacity(n_items as usize);
         let mut end = Vec::with_capacity(n_items as usize);
         let mut name = Vec::with_capacity(n_items as usize);*/
@@ -292,12 +248,7 @@ impl ColumnarSet for InvertedRecord {
         stream.write_u16::<LittleEndian>(1 as u16)?; // u64
         stream.write_u16::<LittleEndian>(1 as u16)?; // u64 
         stream.write_u16::<LittleEndian>(0 as u16)?; // String
-/*
-        self.start.to_stream(stream)?;
-        self.stop.to_stream(stream)?;
-        self.name.to_stream(stream)?;
-        self.aux.to_stream(stream)?;
-*/
+
         stream.write_u64::<LittleEndian>(self.start.len() as u64)?;
         for i in &self.start {
             stream.write_u8(*i)?;
@@ -326,8 +277,8 @@ impl ColumnarSet for InvertedRecord {
 
 
 impl InvertedRecord {
+    /// Construct from InvertedRecordBuilder.
     pub fn from_builder(builder: &InvertedRecordBuilder) -> InvertedRecord {
-        /* TODO() Use Bit packing for converting RefCell to Just vector, however now we just clone */
         let start = integer_encode_wrapper(&builder.start.borrow(), true);
         let end = integer_encode_wrapper(&builder.end.borrow(), false);
         let name = string_encode(&builder.name.borrow());
@@ -362,8 +313,8 @@ impl InvertedRecord {
     }
 */
 
+    /// Output as Record.
     pub fn to_record(self, chromosome: &str) -> Vec<bed::Record> {
-        /* TODO() Use Bit unpacking */
         let mut records = vec![];
         let start = integer_decode(IntegerEncode::DeltaVByte(self.start));
         let end = integer_decode(IntegerEncode::VByte(self.end));

@@ -7,19 +7,16 @@ use std::path::Path;
 use bam::bgzip;
 use crate::header::Header;
 use super::IndexWriter;
-//use crate::range::InvertedRecord;
-//use crate::ColumnarSet;
 use crate::index::Index;
 
-/// Builder of the [GhbWriter](struct.GhbWriter.html).
-pub struct GhbWriterBuilder {
+/// Builder of the [GhiWriter](struct.GhiWriter.html).
+pub struct GhiWriterBuilder {
     write_header: bool,
     level: u8,
     additional_threads: u16,
 }
 
-
-impl GhbWriterBuilder {
+impl GhiWriterBuilder {
     pub fn new() -> Self {
         Self {
             write_header: true,
@@ -28,7 +25,7 @@ impl GhbWriterBuilder {
         }
     }
 
-    /// The option to write or skip header when creating the BAM writer (writing by default).
+    /// The option to write or skip header when creating the GHI writer (writing by default).
     pub fn write_header(&mut self, write: bool) -> &mut Self {
         self.write_header = write;
         self
@@ -51,15 +48,15 @@ impl GhbWriterBuilder {
         self
     }
 
-    /// Creates a BAM writer from a file and a header.
+    /// Creates a GHI writer from a file and a header.
     pub fn from_path<P: AsRef<Path>>(&mut self, path: P, header: Header)
-            -> Result<GhbWriter<File>> {
+            -> Result<GhiWriter<File>> {
         let stream = File::create(path)?;
         self.from_stream(stream, header)
     }
 
-    /// Creates a BAM writer from a stream and a header.
-    pub fn from_stream<W: Write>(&mut self, stream: W, header: Header) -> Result<GhbWriter<W>> {
+    /// Creates a GHB writer from a stream and a header.
+    pub fn from_stream<W: Write>(&mut self, stream: W, header: Header) -> Result<GhiWriter<W>> {
         let mut writer = bgzip::Writer::build()
             .additional_threads(self.additional_threads)
             .compression_level(self.level)
@@ -68,38 +65,38 @@ impl GhbWriterBuilder {
             header.to_stream(&mut writer)?;
         }
         writer.flush_contents()?;
-        Ok(GhbWriter { writer, header })
+        Ok(GhiWriter { writer, header })
     }
 }
 
-/// Bam writer. Can be created using [from_path](#method.from_path) or using
-/// [GhbWriterBuilder](struct.GhbWriterBuilder.html).
+/// Ghi writer. Can be created using [from_path](#method.from_path) or using
+/// [GhiWriterBuilder](struct.GhiWriterBuilder.html).
 ///
 /// Use [RecordWriter](../trait.RecordWriter.html) trait to write records.
-pub struct GhbWriter<W: Write> {
+pub struct GhiWriter<W: Write> {
     writer: bgzip::Writer<W>,
     header: Header,
 }
 
-impl GhbWriter<File> {
-    /// Creates a [GhbWriterBuilder](struct.GhbWriterBuilder.html).
-    pub fn build() -> GhbWriterBuilder {
-        GhbWriterBuilder::new()
+impl GhiWriter<File> {
+    /// Creates a [GhiWriterBuilder](struct.GhiWriterBuilder.html).
+    pub fn build() -> GhiWriterBuilder {
+        GhiWriterBuilder::new()
     }
 
-    /// Creates a new `GhbWriter` from a path and header.
+    /// Creates a new `GhiWriter` from a path and header.
     pub fn from_path<P: AsRef<Path>>(path: P, header: Header) -> Result<Self> {
-        GhbWriterBuilder::new().from_path(path, header)
+        GhiWriterBuilder::new().from_path(path, header)
     }
 }
 
-impl<W: Write> GhbWriter<W> {
-    /// Creates a new `GhbWriter` from a stream and header.
+impl<W: Write> GhiWriter<W> {
+    /// Creates a new `GhiWriter` from a stream and header.
     pub fn from_stream(stream: W, header: Header) -> Result<Self> {
-        GhbWriterBuilder::new().from_stream(stream, header)
+        GhiWriterBuilder::new().from_stream(stream, header)
     }
 
-    /// Returns BAM header.
+    /// Returns GHB header.
     pub fn header(&self) -> &Header {
         &self.header
     }
@@ -122,7 +119,7 @@ impl<W: Write> GhbWriter<W> {
     }
 }
 
-impl<W: Write> IndexWriter for GhbWriter<W> {
+impl<W: Write> IndexWriter for GhiWriter<W> {
     fn write(&mut self, index: &Index) -> Result<()> {
         index.to_stream(&mut self.writer)?;
         self.writer.end_context();

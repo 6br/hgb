@@ -44,7 +44,7 @@ impl GhbWriterBuilder {
         self.from_stream(stream, header)
     }
 
-    /// Creates a SAM writer from a stream and a header. Preferably the stream should be wrapped
+    /// Creates a GHB writer from a stream and a header. Preferably the stream should be wrapped
     /// in a buffer writer, such as `BufWriter`.
     pub fn from_stream<W: Write>(&mut self, mut stream: W, header: Header) -> Result<GhbWriter<W>> {
         if self.write_header {
@@ -55,50 +55,40 @@ impl GhbWriterBuilder {
     }
 }
 
-/// Writes records in G format.
+/// Writes records in GHB format.
 ///
 /// Can be created as
 /// ```rust
-/// let writer = SamWriter::from_path("out.sam", header).unwrap();
+/// let writer = GhbWriter::from_path("out.ghb", header).unwrap();
 /// ```
-/// or using a [builder](struct.SamWriterBuilder.html)
+/// or using a [builder](struct.GhbWriterBuilder.html)
 /// ```rust
-/// let writer = SamWriter::build()
+/// let writer = GhbWriter::build()
 ///     .write_header(false)
-///     .from_path("out.sam", header).unwrap();
+///     .from_path("out.ghb", header).unwrap();
 /// ```
 ///
-/// You can clone a [header](../header/struct.Header.html) from SAM/BAM reader or
+/// You can clone a [header](../header/struct.Header.html) from GHB/GHI reader or
 /// create one yourself.
-///
-/// You need to import [RecordWriter](../trait.RecordWriter.html)
-/// to write [records](../record/struct.Record.html):
-/// ```rust
-/// use bam::RecordWriter;
-/// let mut writer = bam::SamWriter::from_path("out.sam", header).unwrap();
-/// let mut record = bam::Record::new();
-/// // Filling the record.
-/// writer.write(&record).unwrap();
-/// ```
 pub struct GhbWriter<W: Write> {
     stream: W,
     header: Header,
 }
 
 impl GhbWriter<BufWriter<File>> {
-    /// Create a [builder](struct.SamWriterBuilder.html).
+    /// Create a [builder](struct.GhbWriterBuilder.html).
     pub fn build() -> GhbWriterBuilder {
         GhbWriterBuilder::new()
     }
 
-    /// Creates a SAM writer from a path and a header.
+    /// Creates a GHB writer from a path and a header.
     pub fn from_path<P: AsRef<Path>>(path: P, header: Header) -> Result<Self> {
         GhbWriterBuilder::new().from_path(path, header)
     }
 }
 
 impl<W: Write> GhbWriter<W> {
-    /// Creates a SAM writer from a stream and a header. Preferably the stream should be wrapped
+    /// Creates a GHB writer from a stream and a header. Preferably the stream should be wrapped
     /// in a buffer writer, such as `BufWriter`.
     pub fn from_stream(stream: W, header: Header) -> Result<Self> {
         GhbWriterBuilder::new().from_stream(stream, header)
@@ -122,12 +112,11 @@ impl<W: Write> GhbWriter<W> {
 }
 
 impl<W: Write+Seek> ChunkWriter for GhbWriter<W> {
-    /// Writes a single record in SAM format.
+    /// Writes a single record in GHB format.
     fn write(&mut self, record: &Record) -> Result<Chunk> {
         let start = self.stream.seek(SeekFrom::Current(0)).map(|a| VirtualOffset::from_raw(a))?;
         record.to_stream(&mut self.stream)?;
         let stop = self.stream.seek(SeekFrom::Current(0)).map(|a| VirtualOffset::from_raw(a))?;
-        // Ok(Chunk{start: start, end: stop, sample_id: record.sample_id(), file_id:0})
         Ok(Chunk::new(record.sample_id(), 0, start, stop))
     }
 
@@ -141,9 +130,9 @@ impl<W: Write+Seek> ChunkWriter for GhbWriter<W> {
 }
 
 impl<W: Write+Seek> InvertedRecordWriter for GhbWriter<W> {
-    /// Writes a single record in SAM format.
+    /// Writes a single record in GHB format.
     fn write(&mut self, record: &InvertedRecord) -> Result<VirtualOffset> {
-        record.to_stream(&mut self.stream)?; // , &self.header)
+        record.to_stream(&mut self.stream)?;
         self.stream.seek(SeekFrom::Current(0)).map(|a| VirtualOffset::from_raw(a))
     }
 
@@ -157,16 +146,16 @@ impl<W: Write+Seek> InvertedRecordWriter for GhbWriter<W> {
 }
 
 
-/// Reads records from SAM format.
+/// Reads records from GHB format.
 ///
 /// Can be opened as
 /// ```rust
-/// let reader = SamReader::from_path("in.sam").unwrap();
+/// let reader = GhbReader::from_path("in.ghb").unwrap();
 /// ```
 ///
 /// You can iterate over records:
 /// ```rust
-/// let mut reader = bam::SamReader::from_path("in.sam").unwrap();
+/// let mut reader = binary::GhbReader::from_path("in.ghb").unwrap();
 /// for record in reader {
 ///     let record = record.unwrap();
 ///     // Do something.
@@ -174,7 +163,7 @@ impl<W: Write+Seek> InvertedRecordWriter for GhbWriter<W> {
 /// ```
 /// You can use [RecordReader](../trait.RecordReader.html) trait to read records without excess
 /// allocation.
-/// https://stackoverflow.com/questions/54791718/whats-the-difference-between-a-traits-generic-type-and-a-generic-associated-ty/54792178
+/// See: https://stackoverflow.com/questions/54791718/whats-the-difference-between-a-traits-generic-type-and-a-generic-associated-ty/54792178
 pub struct GhbReader<R: Read + Seek> {
     // _marker: std::marker::PhantomData<fn() -> T>, // https://in-neuro.hatenablog.com/entry/2019/01/22/220639
     stream: R,
@@ -183,7 +172,6 @@ pub struct GhbReader<R: Read + Seek> {
     index: usize,
     started: bool,
     offset: u64,
-    // buffer: String, We do not need buffer because its not bgzip.
 }
 
 impl GhbReader<BufReader<File>> {
@@ -230,7 +218,7 @@ impl<R: Read + Seek> GhbReader<R> {
                 self.offset = new_offset;
             }
             record.fill_from_bam(&mut self.stream)
-            // self.offset = SeekFrom::Start(new_offset)
+            // self.offset = TODO(offset should be updated, but how?)
         } else {
             Ok(false)
             //Err(Error::new(ErrorKind::Other, "The end of stream"))
@@ -275,33 +263,3 @@ impl<R: Read + Seek> GhbReader<R> {
         self.started = false;
     }
 }
-/*
-impl<R: Read, T: ColumnarSet> ChunkReader<T> for GhbReader<R, T> {
-    fn read_into(&mut self, record: &mut Record) -> Result<bool> {
-        let res = record.fill_from_bam(&mut self.stream);
-        if !res.as_ref().unwrap_or(&false) {
-            record.clear();
-        }
-        res
-    }
-
-    /// Does nothing, as SAM readers are single-thread.
-    fn pause(&mut self) {
-
-    }
-}
-
-/// Iterator over records.
-impl<R: Read> Iterator for GhbReader<R, T> {
-    type Item = Result<Record>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let mut record = Record::new();
-        match self.read_into(&mut record) {
-            Ok(true) => Some(Ok(record)),
-            Ok(false) => None,
-            Err(e) => Some(Err(e)),
-        }
-    }
-}
-*/

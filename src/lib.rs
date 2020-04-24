@@ -27,7 +27,7 @@ use range::Record;
 use index::Index;
 use std::io::{Result, Write, Read};
 
-/// A trait for writing BAM/SAM records.
+/// A trait for writing records.
 pub trait ChunkWriter {
     /// Writes a single record.
     fn write(&mut self, record: &Record) -> io::Result<index::Chunk>;
@@ -39,7 +39,7 @@ pub trait ChunkWriter {
     fn flush(&mut self) -> io::Result<()>;
 }
 
-/// A trait for reading BAM/SAM records.
+/// A trait for reading records.
 pub trait ChunkReader: Iterator<Item = io::Result<Record>> {
     /// Writes the next record into `record`. It allows to skip excessive memory allocation.
     /// If there are no more records to iterate over, the function returns `false`.
@@ -54,7 +54,7 @@ pub trait ChunkReader: Iterator<Item = io::Result<Record>> {
 }
 
 
-/// A trait for writing BAM/SAM records. (Deprecated.)
+/// A trait for writing records. (Deprecated.)
 pub trait InvertedRecordWriter {
     /// Writes a single record.
     fn write(&mut self, record: &InvertedRecord) -> io::Result<index::VirtualOffset>;
@@ -66,20 +66,7 @@ pub trait InvertedRecordWriter {
     fn flush(&mut self) -> io::Result<()>;
 }
 
-pub trait InvertedRecordReader: Iterator<Item = io::Result<InvertedRecord>> {
-    /// Writes the next record into `record`. It allows to skip excessive memory allocation.
-    /// If there are no more records to iterate over, the function returns `false`.
-    ///
-    /// If the function returns an error, the record is cleared.
-    fn read_into(&mut self, record: &mut InvertedRecord) -> io::Result<bool>;
-
-    /// Pauses multi-thread reader until the next read operation. Does nothing to a single-thread reader.
-    ///
-    /// Use with caution: pausing and unpausing takes some time.
-    fn pause(&mut self);
-}
-
-/// A trait for writing BAM/SAM records.
+/// A trait for writing records.
 pub trait IndexWriter {
     /// Writes a single record.
     fn write(&mut self, record: &Index) -> io::Result<()>;
@@ -91,6 +78,7 @@ pub trait IndexWriter {
     fn flush(&mut self) -> io::Result<()>;
 }
 
+/// A trait for Column-convertable dataset.
 pub trait ColumnarSet {
     fn new() -> Self;
 
@@ -105,18 +93,18 @@ mod tests {
     use crate::header::{Header};
     use bio::io::bed;
     use crate::binary;
-    use crate::writer;
+    use crate::writer::GhiWriter;
     use crate::reader::IndexedReader;
     use crate::range::{InvertedRecordEntire, Format, Record};
     use crate::IndexWriter;
-    use crate::builder::InvertedRecordSet;
+    use crate::builder::InvertedRecordBuilderSet;
     use crate::index::Region;
 
     #[test]
     fn full_works() {
         let path = "./test/test.bed";
         let reader = bed::Reader::from_file(path).unwrap();
-        let set = InvertedRecordSet::new(reader, 0 as u64);
+        let set = InvertedRecordBuilderSet::new(reader, 0 as u64);
 
         let set_vec = vec![set];
         let entire = InvertedRecordEntire::new(set_vec);
@@ -131,7 +119,7 @@ mod tests {
 
         let mut header2 = Header::new();
         entire.write_header(&mut header2);
-        let mut index_writer = writer::GhbWriter::build().write_header(true).from_path("./test/test2.ghb.ghi", header2).unwrap();
+        let mut index_writer = GhiWriter::build().write_header(true).from_path("./test/test2.ghb.ghi", header2).unwrap();
         let _result = index_writer.write(&index);
         let _result = index_writer.flush();
 
@@ -150,22 +138,22 @@ mod tests {
         // let _example = b"1\t5\t5000\tname1\t0.5\n1\t5\t5000\tname1\t0.5";
         let path = "./test/test.bed";
         let reader = bed::Reader::from_file(path).unwrap();
-        let set = InvertedRecordSet::new(reader, 0 as u64);
-        // println!("{:?}", set);
+        let set = InvertedRecordBuilderSet::new(reader, 0 as u64);
+
         let set_vec = vec![set];
         let entire = InvertedRecordEntire::new(set_vec);
-        // let output = io::BufWriter::new(io::stdout());
+
         let header = Header::new();
         let mut writer = binary::GhbWriter::build()
             .write_header(false)
             .from_path("./test/test.ghb", header).unwrap();
         let index = entire.write_binary(&mut writer).unwrap();
         writer.flush().unwrap();
-        println!("{}", index);
+
 
         let mut header2 = Header::new();
         entire.write_header(&mut header2);
-        let mut index_writer = writer::GhbWriter::build().write_header(true).from_path("./test/test.ghb.ghi", header2).unwrap();
+        let mut index_writer = GhiWriter::build().write_header(true).from_path("./test/test.ghb.ghi", header2).unwrap();
         let _result = index_writer.write(&index);
         assert_eq!(_result.ok(), Some(()));
         let _result = index_writer.flush();

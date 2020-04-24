@@ -610,8 +610,7 @@ mod tests {
     }
 
     #[test] 
-    fn bin_iter_small() {
-        // We don't care whether it works.
+    fn bin_iter_4681() {
         let mut bin_iter = region_to_bins(0, 8191);
         assert_eq!(bin_iter, BinsIter::new(-1,0,0,8191,0,0));
         bin_iter.next();
@@ -630,8 +629,7 @@ mod tests {
     }
 
     #[test] 
-    fn bin_iter() {
-        // We don't care whether it works.
+    fn bin_iter_4681_4683() {
         let mut bin_iter = region_to_bins(0, 16384);
         assert_eq!(bin_iter, BinsIter::new(-1,0,0,16384,0,0));
         bin_iter.next();

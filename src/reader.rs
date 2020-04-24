@@ -1,24 +1,22 @@
 
 use std::path::{Path, PathBuf};
-use crate::index::Index;
 use bam::bgzip;
 use std::io::{Result, Error, Read, Seek, BufReader};
 use std::fs::File;
 use std::io::ErrorKind::{InvalidInput};
 use crate::header::Header;
 use crate::range::Record;
-// use crate::ColumnarSet;
-use crate::index::Region;
+use crate::index::{Index, Region};
 use crate::ChunkReader;
 use crate::binary::GhbReader;
 use crate::index;
 
-/// Defines how to react to a BAI index being younger than BAM file.
+/// Defines how to react to a GHI index being younger than GHB file.
 ///
 /// # Variants
-/// * `Error` - [IndexedReader](struct.IndexedReader.html) will not be constructed if the BAI
-/// index is was modified earlier than the BAM file. `io::Error` will be raised.
-/// * `Ignore` - does nothing if the index is younger than the BAM file.
+/// * `Error` - [IndexedReader](struct.IndexedReader.html) will not be constructed if the GHI
+/// index is was modified earlier than the GHB file. `io::Error` will be raised.
+/// * `Ignore` - does nothing if the index is younger than the GHB file.
 /// * `Warn` - calls a function `Fn(&str)` and continues constructing
 /// [IndexedReader](struct.IndexedReader.html);
 pub enum ModificationTime {
@@ -28,14 +26,14 @@ pub enum ModificationTime {
 }
 
 impl ModificationTime {
-    fn check<T: AsRef<Path>, U: AsRef<Path>>(&self, bam_path: T, bai_path: U) -> Result<()> {
-        let bam_modified = bam_path.as_ref().metadata().and_then(|metadata| metadata.modified());
-        let bai_modified = bai_path.as_ref().metadata().and_then(|metadata| metadata.modified());
-        let bam_younger = match (bam_modified, bai_modified) {
-            (Ok(bam_time), Ok(bai_time)) => bai_time < bam_time,
+    fn check<T: AsRef<Path>, U: AsRef<Path>>(&self, ghb_path: T, ghi_path: U) -> Result<()> {
+        let ghb_modified = ghb_path.as_ref().metadata().and_then(|metadata| metadata.modified());
+        let ghi_modified = ghi_path.as_ref().metadata().and_then(|metadata| metadata.modified());
+        let ghb_younger = match (ghb_modified, ghi_modified) {
+            (Ok(ghb_time), Ok(ghi_time)) => ghi_time < ghb_time,
             _ => false, // Modification time not available.
         };
-        if !bam_younger {
+        if !ghb_younger {
             return Ok(());
         }
 
@@ -55,11 +53,11 @@ impl ModificationTime {
     }
 }
 
-/// [IndexedReader](struct.IndexedReader.html) builder. Allows to specify paths to BAM and BAI
+/// [IndexedReader](struct.IndexedReader.html) builder. Allows to specify paths to GHB and GHI
 /// files, as well as the number of threads
-/// and an option to ignore or warn BAI modification time check.
+/// and an option to ignore or warn GHI modification time check.
 pub struct IndexedReaderBuilder {
-    bai_path: Option<PathBuf>,
+    ghi_path: Option<PathBuf>,
     modification_time: ModificationTime,
     additional_threads: u16,
 }
@@ -68,23 +66,23 @@ impl IndexedReaderBuilder {
     /// Creates a new [IndexedReader](struct.IndexedReader.html) builder.
     pub fn new() -> Self {
         Self {
-            bai_path: None,
+            ghi_path: None,
             modification_time: ModificationTime::Error,
             additional_threads: 0,
         }
     }
 
-    /// Sets a path to a BAI index. By default, it is `{bam_path}.bai`.
+    /// Sets a path to GHI index. By default, it is `{ghb_path}.ghi`.
     /// Overwrites the last value, if any.
-    pub fn bai_path<P: AsRef<Path>>(&mut self, path: P) -> &mut Self {
-        self.bai_path = Some(path.as_ref().to_path_buf());
+    pub fn ghi_path<P: AsRef<Path>>(&mut self, path: P) -> &mut Self {
+        self.ghi_path = Some(path.as_ref().to_path_buf());
         self
     }
 
     /// By default, [IndexedReader::from_path](struct.IndexedReader.html#method.from_path) and
     /// [IndexedReaderBuilder::from_path](struct.IndexedReaderBuilder.html#method.from_path)
-    /// returns an `io::Error` if the last modification of the BAI index was earlier
-    /// than the last modification of the BAM file.
+    /// returns an `io::Error` if the last modification of the GHI index was earlier
+    /// than the last modification of the GHB file.
     ///
     /// Enum [ModificationTime](enum.ModificationTime.html) contains options to skip
     /// this check or raise a warning instead of returning an error.
@@ -103,46 +101,46 @@ impl IndexedReaderBuilder {
         self
     }
 
-    /// Creates a new [IndexedReader](struct.IndexedReader.html) from `bam_path`.
-    /// If BAI path was not specified, the functions tries to open `{bam_path}.bai`.
-    pub fn from_path<P: AsRef<Path>, R: Read + Seek>(&self, bam_path: P) -> Result<IndexedReader<BufReader<File>>> {
-        let bam_path = bam_path.as_ref();
-        let bai_path = self.bai_path.as_ref().map(PathBuf::clone)
-            .unwrap_or_else(|| PathBuf::from(format!("{}.ghi", bam_path.display())));
-        self.modification_time.check(&bam_path, &bai_path)?;
+    /// Creates a new [IndexedReader](struct.IndexedReader.html) from `ghb_path`.
+    /// If GHI path was not specified, the functions tries to open `{ghb_path}.ghi`.
+    pub fn from_path<P: AsRef<Path>, R: Read + Seek>(&self, ghb_path: P) -> Result<IndexedReader<BufReader<File>>> {
+        let ghb_path = ghb_path.as_ref();
+        let ghi_path = self.ghi_path.as_ref().map(PathBuf::clone)
+            .unwrap_or_else(|| PathBuf::from(format!("{}.ghi", ghb_path.display())));
+        self.modification_time.check(&ghb_path, &ghi_path)?;
 
-        let mut index_reader = bgzip::SeekReader::from_path(bai_path, self.additional_threads)
-            .map_err(|e| Error::new(e.kind(), format!("Failed to open BAI file: {}", e)))?;
+        let mut index_reader = bgzip::SeekReader::from_path(ghi_path, self.additional_threads)
+            .map_err(|e| Error::new(e.kind(), format!("Failed to open GHI file: {}", e)))?;
         index_reader.make_consecutive();
 
-        let header = Header::new_from_stream(&mut index_reader).map_err(|e| Error::new(e.kind(), format!("Failed to read BAI header: {}", e)))?;
+        let header = Header::new_from_stream(&mut index_reader).map_err(|e| Error::new(e.kind(), format!("Failed to read GHI header: {}", e)))?;
 
         let index = Index::from_stream(&mut index_reader)
-        .map_err(|e| Error::new(e.kind(), format!("Failed to read BAI file: {}", e)))?;
+        .map_err(|e| Error::new(e.kind(), format!("Failed to read GHI file: {}", e)))?;
     
-        let reader = GhbReader::from_path(bam_path, header)
-        .map_err(|e| Error::new(e.kind(), format!("Failed to open BAM file: {}", e)))?;
+        let reader = GhbReader::from_path(ghb_path, header)
+        .map_err(|e| Error::new(e.kind(), format!("Failed to open GHB file: {}", e)))?;
 
 
         IndexedReader::new(reader, index)
     }
 
     /// Creates a new [IndexedReader](struct.IndexedReader.html) from two streams.
-    /// BAM stream should support random access, while BAI stream does not need to.
-    /// `check_time` and `bai_path` values are ignored.
+    /// GHB stream should support random access, while GHI stream does not need to.
+    /// `check_time` and `ghi_path` values are ignored.
     pub fn from_streams<R: Read + Seek>(&self, bam_stream: R, bai_stream: R)
             -> Result<IndexedReader<R>> {
 
         let mut index_reader = bgzip::SeekReader::from_stream(bai_stream, self.additional_threads)
-            .map_err(|e| Error::new(e.kind(), format!("Failed to read BAI index: {}", e)))?;
+            .map_err(|e| Error::new(e.kind(), format!("Failed to read GHI index: {}", e)))?;
         index_reader.make_consecutive();
 
-        let header = Header::new_from_stream(&mut index_reader).map_err(|e| Error::new(e.kind(), format!("Failed to read BAI header: {}", e)))?;
+        let header = Header::new_from_stream(&mut index_reader).map_err(|e| Error::new(e.kind(), format!("Failed to read GHI header: {}", e)))?;
 
         let index = Index::from_stream(&mut index_reader)?;
 
         let reader = GhbReader::from_stream(bam_stream, header)
-        .map_err(|e| Error::new(e.kind(), format!("Failed to read BAM stream: {}", e)))?;
+        .map_err(|e| Error::new(e.kind(), format!("Failed to read GHB stream: {}", e)))?;
 
 
         IndexedReader::new(reader, index)
@@ -284,46 +282,14 @@ impl<'a, R: Read + Seek> RegionViewer<'a, R> {
 impl<'a, R: Read + Seek> ChunkReader for RegionViewer<'a, R> {
     fn read_into(&mut self, record: &mut Record) -> Result<bool> {
         loop {
-            // let res = record.fill_from_bam(&mut self.parent.take_stream());
             let res = self.parent.reader.fill_from_binary(record);
             if !res.as_ref().unwrap_or(&false) {
                 record.clear();
                 return res;
             }
-            // Reads are sorted, so no more reads would be in the region.
-            /*
-            if record.start() >= self.end {
-                record.clear();
-                return Ok(false);
-            }
-            */
             if !(self.predicate)(&record) {
                 continue;
             }
-//            let record_bin = record.calculate_bin();
-            /*
-            if record_bin > index::MAX_BIN {
-                record.clear();
-                return Err(Error::new(InvalidData, "Read has BAI bin bigger than max possible value"));
-            }
-
-            let (min_start, max_end) = index::bin_to_region(record_bin);
-            if min_start >= self.start && max_end <= self.end {
-                return Ok(true);
-            }
-            let record_end = record.calculate_end();
-            
-            if record.flag().is_mapped() && record_end < record.start() {
-                record.clear();
-                return Err(Error::new(InvalidData, "Corrupted record: aln_end < aln_start"));
-            }
-            if record.flag().is_mapped() {
-                if record_end > self.start {
-                    return Ok(true);
-                }
-            } else if record.start() >= self.start {
-                return Ok(true);
-            }*/
             return Ok(true);
         }
     }
