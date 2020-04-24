@@ -4,7 +4,7 @@ use crate::index::Index;
 use bam::bgzip;
 use std::io::{Result, Error, Read, Seek, BufReader};
 use std::fs::File;
-use std::io::ErrorKind::{InvalidInput, InvalidData};
+use std::io::ErrorKind::{InvalidInput};
 use crate::header::Header;
 use crate::range::Record;
 // use crate::ColumnarSet;
@@ -175,7 +175,7 @@ impl IndexedReader<BufReader<File>> {
 }
 
 impl<R: Read + Seek> IndexedReader<R> {
-    fn new(mut reader: GhbReader<R>, index: Index) -> Result<Self> {
+    fn new(reader: GhbReader<R>, index: Index) -> Result<Self> {
         // reader.make_consecutive();
         // let _marker = std::marker::PhantomData;
         // let header = reader.header()// Header::from_bam(&mut index_reader)?;
@@ -224,8 +224,8 @@ impl<R: Read + Seek> IndexedReader<R> {
 
         Ok(RegionViewer {
             parent: self,
-            start: region.start() as i32,
-            end: region.end() as i32,
+//            start: region.start() as i32,
+//            end: region.end() as i32,
             predicate: Box::new(predicate),
         })
     }
@@ -247,8 +247,8 @@ impl<R: Read + Seek> IndexedReader<R> {
             //}
             RegionViewer {
                 parent: self,
-                start: std::i32::MIN,
-                end: std::i32::MAX,
+//                start: std::i32::MIN,
+//                end: std::i32::MAX,
                 predicate: Box::new(predicate),
             }
         }
@@ -263,9 +263,8 @@ impl<R: Read + Seek> IndexedReader<R> {
 /// as it saves time on allocation.
 pub struct RegionViewer<'a, R: Read + Seek> {
     parent: &'a mut IndexedReader<R>,
-    // parent_stream: &'a mut GhbReader<R>,
-    start: i32,
-    end: i32,
+    // start: u64,
+    // end: u64,
     predicate: Box<dyn Fn(&Record) -> bool>,
 }
 

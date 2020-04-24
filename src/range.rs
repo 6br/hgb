@@ -2,14 +2,10 @@ use std::io::{Result, Read, Write, Seek, Error};
 use std::io::ErrorKind::InvalidData;
 use std::collections::BTreeMap;
 use bio::io::bed;
-// use std::path::Path;
-// use std::fs::File;
-// use std::marker::PhantomData;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use crate::index::{Index, Reference, Bin};
 use crate::{ColumnarSet, ChunkWriter};
 use crate::binary::GhbWriter;
-use crate::index;
 use crate::compression::{IntegerEncode, StringEncode, DeltaVByte, VByte, Deflate, integer_encode_wrapper, string_encode, integer_decode, string_decode};
 use bam::header::HeaderEntry;
 use crate::header::Header;
@@ -29,7 +25,7 @@ impl Format {
             Default(default) -> default.start(),
             Range(record) -> record.start()
         }
-}*/
+}
 
 pub(crate) unsafe fn resize<T>(v: &mut Vec<T>, new_len: usize) {
     if v.capacity() < new_len {
@@ -37,6 +33,7 @@ pub(crate) unsafe fn resize<T>(v: &mut Vec<T>, new_len: usize) {
     }
     v.set_len(new_len);
 }
+*/
 
 ///https://qiita.com/mhgp/items/41a75915413aec781fe0
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -213,11 +210,11 @@ impl ColumnarSet for Default {
     fn new() -> Self {
         Default{}
     }
-    fn to_stream<W: Write>(&self, stream: &mut W) -> Result<()> {
+    fn to_stream<W: Write>(&self, _stream: &mut W) -> Result<()> {
         Err(Error::new(InvalidData, format!("No data.")))
     }
 
-    fn from_stream<R: Read>(&mut self, stream: &mut R) -> Result<bool> {
+    fn from_stream<R: Read>(&mut self, _stream: &mut R) -> Result<bool> {
         Err(Error::new(InvalidData, format!("No data.")))
     }
 }
@@ -240,11 +237,11 @@ impl ColumnarSet for InvertedRecord {
     }
     
     fn from_stream<R: Read>(&mut self, stream: &mut R) -> Result<bool> {
-        let mut n_items = stream.read_u64::<LittleEndian>()?;
+        let _n_items = stream.read_u64::<LittleEndian>()?;
         let n_header = stream.read_u64::<LittleEndian>()?;
         // println!("{} {}", n_header, n_items);
         for _i in 0..n_header {
-            let a = stream.read_u16::<LittleEndian>()?;
+            let _a = stream.read_u16::<LittleEndian>()?;
             // print!("{}", a);
         }/*
         unsafe {
@@ -259,7 +256,7 @@ impl ColumnarSet for InvertedRecord {
 /*        let mut start = Vec::with_capacity(n_items as usize);
         let mut end = Vec::with_capacity(n_items as usize);
         let mut name = Vec::with_capacity(n_items as usize);*/
-        n_items = stream.read_u64::<LittleEndian>()?;
+        let mut n_items = stream.read_u64::<LittleEndian>()?;
         for _i in 0..n_items {
 //            self.start.push(stream.read_u64::<LittleEndian>()?);
             self.start.push(stream.read_u8()?);

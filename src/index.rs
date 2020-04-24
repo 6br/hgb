@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, HashMap};
+use std::collections::BTreeMap;
 use std::io::{Result, Error, Read, Write};
 use std::io::ErrorKind::InvalidData;
 use std::path::Path;
@@ -588,7 +588,6 @@ pub fn bin_to_region(bin: u32) -> (i32, i32) {
             return (beg << 29 - 3 * i, beg + 1 << 29 - 3 * i);
         }
     }
-    left = right;
     panic!("Bin id should be not bigger than MAX_BIN ({} > {})", bin, MAX_BIN);
 }
 

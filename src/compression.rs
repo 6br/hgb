@@ -1,4 +1,4 @@
-use std::io::{self, Read};
+use std::io::{self, Read, Result};
 use vbyte::{VByteEncoded, VByteDecoder};
 //use bitpacking::{BitPacker4x, BitPacker};
 use libflate::deflate::{Encoder, Decoder};
@@ -17,7 +17,7 @@ pub enum IntegerEncode {
     Pfor(Pfor) // Preserved but not used
 }
 
-enum FloatEncode {
+pub enum FloatEncode {
     Uncoded(Vec<f64>)
 }
 
@@ -28,36 +28,36 @@ pub enum StringEncode {
 }
 
 /// Returns an encoded array of u64.
-pub fn integer_encode(input: &Vec<u64>, sorted: bool) -> IntegerEncode {
+pub fn integer_encode(input: &Vec<u64>, sorted: bool) -> Result<IntegerEncode> {
     let mut vec = Vec::with_capacity(input.len());
-    VByteEncoded::new(input[0]).write_to(&mut vec);
+    VByteEncoded::new(input[0]).write_to(&mut vec)?;
 
     // Delta-encoding
-    if (sorted) {
-        if (input.len() > 1) {
+    if sorted {
+        if input.len() > 1 {
             for i in 0..input.len()-1 {
                 // vec.push(input[i+1] - input[i]);
                 assert!(input[i+1] > input[i]);
-                VByteEncoded::new(input[i+1] - input[i]).write_to(&mut vec);
+                VByteEncoded::new(input[i+1] - input[i]).write_to(&mut vec)?;
             }
         }
-        IntegerEncode::DeltaVByte(vec)
+        Ok(IntegerEncode::DeltaVByte(vec))
         //vec
     } else {
-        if (input.len() > 1) {
+        if input.len() > 1 {
             for i in 1..input.len() {
                 // vec.push(input[i+1] - input[i]);
-                VByteEncoded::new(input[i]).write_to(&mut vec);
+                VByteEncoded::new(input[i]).write_to(&mut vec)?;
             }
         }
-        IntegerEncode::VByte(vec)
+        Ok(IntegerEncode::VByte(vec))
         //vec
     }
 }
 
 /// TODO() Remove this: everytime returns vec<u8>
 pub fn integer_encode_wrapper(input: &Vec<u64>, sorted: bool) -> Vec<u8> {
-    match integer_encode(input, sorted) {
+    match integer_encode(input, sorted).unwrap() {
         IntegerEncode::DeltaVByte(vec) => {vec}
         IntegerEncode::VByte(vec) => {vec}
         _ => {panic!("Invalid encoding")}
@@ -74,7 +74,7 @@ pub fn integer_decode(input: IntegerEncode) -> Vec<u64> {
             let mut vec = Vec::with_capacity(decoded.len());
             let mut previous_value = decoded[0];
             vec.push(previous_value);
-            if (decoded.len() > 1) {
+            if decoded.len() > 1 {
                 for i in 1..decoded.len() {
                     vec.push(decoded[i] + previous_value);
                     previous_value = decoded[i];
@@ -91,7 +91,7 @@ pub fn integer_decode(input: IntegerEncode) -> Vec<u64> {
 }
 
 pub fn string_encode(input: &Vec<String>) -> Vec<u8> {
-    let mut concatenate_string = input.join("\0");
+    let concatenate_string = input.join("\0");
     // println!("str: {}", concatenate_string);
     let mut encoder = Encoder::new(Vec::new());
     io::copy(&mut concatenate_string.as_bytes(), &mut encoder).unwrap();

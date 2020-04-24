@@ -8,20 +8,15 @@
 //! let writer = GhbWriter::from_path("out.ghb", reader.header().clone()).unwrap();
 //! ```
 //!
-//! The reader implements [RecordReader](../trait.RecordReader.html) trait,
-//! and the writer implements [RecordWriter](../trait.RecordWriter.html) trait. See them for
-//! more information.
 
-use std::cmp::{min, max};
-use std::io::{Write, BufWriter, Result, Seek, SeekFrom, BufReader, Read, Error};
+use std::cmp::max;
+use std::io::{Write, BufWriter, Result, Seek, SeekFrom, BufReader, Read};
 use std::fs::File;
 use std::path::Path;
 use crate::ColumnarSet;
 use crate::header::Header;
 use crate::index::{VirtualOffset, Chunk};
 use crate::range::Record;
-use std::io::ErrorKind;
-//use crate::InvertedRecordWriter;
 use super::{InvertedRecordWriter, ChunkWriter, InvertedRecord};
 
 /// Builder of the [GhbWriter](struct.GhbWriter.html).
@@ -55,7 +50,7 @@ impl GhbWriterBuilder {
         if self.write_header {
             header.to_stream(&mut stream)?;
         }
-        stream.flush();
+        stream.flush()?;
         Ok(GhbWriter { stream, header })
     }
 }
@@ -224,7 +219,7 @@ impl<R: Read + Seek> GhbReader<R> {
         self.header = header;
     }
 
-    fn chunks(&self) -> &[Chunk] {
+    pub fn chunks(&self) -> &[Chunk] {
         &self.chunks
     }
 
@@ -253,7 +248,7 @@ impl<R: Read + Seek> GhbReader<R> {
 
         let curr_offset = VirtualOffset::new(self.offset, 0);
         // When not full query:
-        if (curr_offset > self.chunks[self.index].end() || VirtualOffset::MAX != self.chunks[self.index].end()) {
+        if curr_offset > self.chunks[self.index].end() || VirtualOffset::MAX != self.chunks[self.index].end() {
             self.index += 1;
         }
         //}

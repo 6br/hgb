@@ -1,9 +1,7 @@
 /* Making it possible to store any types of header including bam */
 
 use bam::header;
-use std::io::{Result, Read, Write, Seek, Error, ErrorKind};
-use std::io::ErrorKind::InvalidData;
-use std::collections::BTreeMap;
+use std::io::{Result, Read, Write, Error, ErrorKind};
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
 /// Local headers are categorized as types. 
@@ -102,7 +100,7 @@ impl Header {
         let global_header = header::Header::from_bam(stream).map_err(|e| Error::new(e.kind(), format!("Failed to read BAI header: {}", e)))?;
         let n_samples = stream.read_i32::<LittleEndian>()? as usize;
         let mut headers = Vec::with_capacity(n_samples);
-        for i in 0..n_samples {
+        for _i in 0..n_samples {
             headers.push(HeaderType::from_stream(stream)?);
         }
         self.global_header = global_header;
