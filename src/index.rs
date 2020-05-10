@@ -9,7 +9,7 @@ use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
 
 /// Per BAM specification, bin with `bin_id == SUMMARY_BIN` contains summary over the reference.
-const SUMMARY_BIN: u32 = 37450;
+const SUMMARY_BIN: u32 = 37450; // TODO(FIXME)
 
 
 /// Genomic coordinates, used in [struct.IndexedReader.html#method.fetch] and [struct.IndexedReader.html#method.pileup].
@@ -631,7 +631,7 @@ mod tests {
     }
 
     #[test] 
-    fn bin_iter_4681_4683() {
+    fn bin_iter_4681_4683_2() {
         let mut bin_iter = region_to_bins(0, 16486);
         assert_eq!(bin_iter, BinsIter::new(-1,0,0, 16486,0,0));
         bin_iter.next();
@@ -650,7 +650,7 @@ mod tests {
     }
 
     #[test] 
-    fn bin_iter_4681_4683() {
+    fn bin_iter_4681_4683_3() {
         let mut bin_iter = region_to_bins(8199, 16384);
         assert_eq!(bin_iter, BinsIter::new(-1,0,8199, 16384,0,0));
         bin_iter.next();

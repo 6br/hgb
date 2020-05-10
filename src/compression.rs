@@ -14,7 +14,7 @@ pub enum IntegerEncode {
     Delta(Vec<u64>),
     VByte(VByte), // If not sorted
     DeltaVByte(DeltaVByte), // If sorted
-    Pfor(Pfor) // Preserved but not used
+    DeltaPfor(Pfor) // Preserved but not used so far
 }
 
 pub enum FloatEncode {
