@@ -9,6 +9,7 @@ use crate::binary::GhbWriter;
 use crate::compression::{IntegerEncode, StringEncode, DeltaVByte, VByte, Deflate, integer_encode_wrapper, string_encode, integer_decode, string_decode};
 use bam::header::HeaderEntry;
 use crate::header::Header;
+use crate::alignment::Alignment;
 use crate::builder::{InvertedRecordBuilder, InvertedRecordBuilderSet};
 
 type Chromosome = Vec<HeaderEntry>;
@@ -16,7 +17,8 @@ type Chromosome = Vec<HeaderEntry>;
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum Format {
     Default(Default),
-    Range(InvertedRecord)
+    Range(InvertedRecord),
+    Alignment(Alignment),
 }
 
 /// GHB Record.
@@ -67,7 +69,8 @@ impl Record {
 
         match &self.data {
             Format::Default(data) => data.to_stream(stream)?,
-            Format::Range(data) => data.to_stream(stream)?
+            Format::Range(data) => data.to_stream(stream)?,
+            Format::Alignment(data) => data.to_stream(stream)?
         }
         Ok(())
     }
@@ -89,6 +92,11 @@ impl Record {
                 record.from_stream(stream)?;
                 Format::Range(record)
             },
+            2 => {
+                let mut record = Alignment::new();
+                record.from_stream(stream)?;
+                Format::Alignment(record)
+            }
             _ => panic!("Panic!")
         };
         return Ok(Record{sample_id, sample_file_id,format, data})
@@ -110,6 +118,11 @@ impl Record {
                 record.from_stream(stream)?;
                 Format::Range(record)
             },
+            2 => {
+                let mut record = Alignment::new();
+                record.from_stream(stream)?;
+                Format::Alignment(record)
+            }
             _ => panic!("Panic!")
         };
         self.data = data;
@@ -249,7 +262,7 @@ impl ColumnarSet for InvertedRecord {
             self.aux.push(stream.read_u8()?);
         }
 
-        return Ok(true) //Ok(InvertedRecord{start: start, end: end, name: name})
+        Ok(true) //Ok(InvertedRecord{start: start, end: end, name: name})
     }
     
     fn to_stream<W: Write>(&self, stream: &mut W) -> Result<()> {
