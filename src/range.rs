@@ -9,8 +9,8 @@ use crate::binary::GhbWriter;
 use crate::compression::{IntegerEncode, StringEncode, DeltaVByte, VByte, Deflate, integer_encode_wrapper, string_encode, integer_decode, string_decode};
 use bam::header::HeaderEntry;
 use crate::header::Header;
-use crate::alignment::Alignment;
-use crate::builder::{InvertedRecordBuilder, InvertedRecordBuilderSet};
+use crate::alignment::{Set, Alignment};
+use crate::{Builder, builder::{InvertedRecordBuilder, InvertedRecordBuilderSet}};
 
 type Chromosome = Vec<HeaderEntry>;
 
@@ -19,6 +19,16 @@ pub enum Format {
     Default(Default),
     Range(InvertedRecord),
     Alignment(Alignment),
+}
+
+impl Format {
+    pub fn id(format: &Format) -> u32 {
+        match format {
+            Format::Default(_) => 0,
+            Format::Range(_) => 1,
+            Format::Alignment(_) => 2
+        }
+    } 
 }
 
 /// GHB Record.
@@ -138,10 +148,33 @@ pub struct InvertedRecordChromosome {
 #[derive(Clone, Debug)]
 pub struct InvertedRecordEntire {
     chrom: Vec<InvertedRecordChromosome>, // Mutex?
+    unmapped: Vec<Record>,
     chrom_table: Chromosome,
 }
 
+
 impl InvertedRecordEntire {
+    pub fn new_from_set<T: Builder>(sample_file_list: Vec<Set<T>>) -> Self {
+        let mut inverted_record = vec![];
+        let chrom_table = vec![];
+        for (sample_file_id, set) in sample_file_list.iter().enumerate() {
+            for (_name, chromosome) in &set.chrom {
+                let mut chrom = InvertedRecordChromosome{bins: BTreeMap::new() };
+
+                for (bin_id, bin) in &chromosome.bins {
+                    let chunks = chrom.bins.entry(*bin_id).or_insert(Vec::new());
+                    let data = bin.to_format();
+                    chunks.push(
+                        Record{
+                            sample_id: set.sample_id, sample_file_id: sample_file_id as u32, 
+                            format: Format::id(&data), data: data
+                        })
+                }
+                inverted_record.push(chrom);
+            }    
+        }
+        return InvertedRecordEntire{chrom: inverted_record, unmapped: vec![], chrom_table}
+    }
     pub fn chrom_table(self) -> Chromosome {
         self.chrom_table
     }
@@ -153,7 +186,7 @@ impl InvertedRecordEntire {
     pub fn new(sample_file_list: Vec<InvertedRecordBuilderSet>) -> InvertedRecordEntire {
         let mut inverted_record = vec![];
         let mut chrom_table = vec![];
-        for (sample_file_id, set)  in sample_file_list.iter().enumerate() {
+        for (sample_file_id, set) in sample_file_list.iter().enumerate() {
             for (name, chromosome) in &set.chrom {
                 let mut chrom = InvertedRecordChromosome{bins: BTreeMap::new() };
 
@@ -166,7 +199,7 @@ impl InvertedRecordEntire {
                 inverted_record.push(chrom);
             }    
         }
-        return InvertedRecordEntire{chrom: inverted_record, chrom_table}
+        return InvertedRecordEntire{chrom: inverted_record, unmapped: vec![], chrom_table}
     }
 
     pub fn write_binary<W: Write+Seek>(&self, writer: &mut GhbWriter<W>) -> Result<Index> {

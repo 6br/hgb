@@ -23,7 +23,7 @@ pub mod writer;
 
 use std::io;
 use range::InvertedRecord;
-use range::Record;
+use range::{Format, Record};
 use index::Index;
 use std::io::{Result, Write, Read};
 
@@ -85,6 +85,11 @@ pub trait ColumnarSet {
     fn to_stream<W: Write>(&self, stream: &mut W) -> Result<()>;
 
     fn from_stream<R: Read>(&mut self, stream: &mut R) -> Result<bool>;
+}
+
+/// A trait for Formattable data structure.
+pub trait Builder {
+    fn to_format(&self) -> Format;
 }
 
 
