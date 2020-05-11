@@ -1,4 +1,4 @@
-use std::cell::RefCell;
+use std::cell::Cell;
 use bam::RecordWriter;
 use bam::RecordReader;
 use bam::record::Record;
@@ -8,26 +8,51 @@ use byteorder::ByteOrder;
 use crate::{index::region_to_bin_3, ColumnarSet, range::Format, Builder};
 
 /// BAM-Compatible Alignment Inverted-Record
-#[derive(Clone, PartialEq, Eq, PartialOrd, Debug)]
+#[derive(Clone, Debug)]
 pub struct Alignment {
-   data: Vec<u8> //bgzip compressed records
+    data: Vec<Record> //bgzip compressed records
+}
+
+impl PartialEq for Alignment {
+    fn eq(&self, other: &Self) -> bool {
+        if self.data.len() != other.data.len() {
+            return false
+        }
+        for i in 0..self.data.len() {
+            if self.data[i].name() != other.data[i].name() {
+                return false
+            }
+        }
+        true
+    }
+}
+
+impl Eq for Alignment {
 
 }
 
+#[derive(Clone, PartialEq, Eq, PartialOrd, Debug)]
+pub struct AlignmentOld {
+    data: Vec<u8> //bgzip compressed records
+}
 /// BAM-Compatible Alignment Record
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct AlignmentBuilder {
-    alignments: RefCell<Vec<Record>>,
+    alignments: Cell<Vec<Record>>,
 }
 
 impl AlignmentBuilder {
     pub fn new() -> Self {
         AlignmentBuilder{ 
-            alignments: RefCell::new(vec![])
+            alignments: Cell::new(vec![])
         }
     }
     pub fn add(&self, alignment: Record) {
         self.alignments.borrow_mut().push(alignment);
+    }
+
+    pub fn take(self) -> Vec<Record> {
+        self.alignments.into_inner()
     }
 }
 
@@ -80,7 +105,7 @@ impl AlignmentBuilder {
         //let mut aln = Alignment::new();
         //aln.from_builder(self).unwrap();
         //aln
-        Alignment::new_from_builder(self).unwrap()
+        Alignment { data: self.take() }
     }
 }
 impl Builder for AlignmentBuilder {
@@ -89,9 +114,8 @@ impl Builder for AlignmentBuilder {
     }
 }
 
-impl Alignment {
-    
-    pub fn new_from_builder(builder: &AlignmentBuilder) -> Result<Alignment> {
+impl AlignmentOld { 
+    pub fn new_from_builder(builder: &AlignmentBuilder) -> Result<AlignmentOld> {
         let mut binary = vec![];
         binary.write_u64::<LittleEndian>(builder.alignments.borrow_mut().len() as u64)?;
         let header = bam::Header::new();
@@ -105,7 +129,7 @@ impl Alignment {
         writer.finish()?;
         let inner = writer.take_stream().into_inner()?;
 
-        Ok(Alignment {data: inner})
+        Ok(AlignmentOld{data: inner})
         
     }
     
@@ -139,7 +163,38 @@ impl Alignment {
 
 impl ColumnarSet for Alignment {
     fn new() -> Alignment {
-        Alignment { data: vec![] }
+        Alignment {data: vec![]}
+    }
+    fn to_stream<W: std::io::Write>(&self, stream: &mut W) -> Result<()> {
+        stream.write_u64::<LittleEndian>(self.data.len() as u64)?;
+        let header = bam::Header::new();
+        let mut writer = bam::bam_writer::BamWriterBuilder::new().write_header(false).from_stream(stream, header)?;
+        for i in self.data.iter() {
+            // i.write_bam(&mut binary)?;
+            writer.write(&i)?;
+        }
+        writer.flush()?;
+        writer.finish()?;
+        Ok(())
+    }
+    fn from_stream<R: Read>(&mut self, stream: &mut R) -> Result<bool> {
+        let len = stream.read_u64::<LittleEndian>()?;
+        // let records = Vec::with_capacity(len as usize);
+        let mut reader = bam::BamReader::from_stream(stream, 4).unwrap();
+        for _i in 0..len as usize {
+            let mut record = Record::new();
+            // record.fill_from_bam(&mut self.data)?;
+            reader.read_into(&mut record)?;
+            self.data.push(record);
+        }
+        Ok(true)
+    }
+    
+}
+
+impl ColumnarSet for AlignmentOld {
+    fn new() -> AlignmentOld {
+        AlignmentOld { data: vec![] }
     }
     fn to_stream<W: std::io::Write>(&self, stream: &mut W) -> Result<()> {
         stream.write_u64::<LittleEndian>(self.data.len() as u64)?;
