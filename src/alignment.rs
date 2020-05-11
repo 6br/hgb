@@ -10,7 +10,8 @@ use crate::{index::region_to_bin_3, ColumnarSet, range::Format, Builder};
 /// BAM-Compatible Alignment Inverted-Record
 #[derive(Clone, PartialEq, Eq, PartialOrd, Debug)]
 pub struct Alignment {
-    data: Vec<u8> //bgzip compressed records
+   data: Vec<u8> //bgzip compressed records
+
 }
 
 /// BAM-Compatible Alignment Record
@@ -100,6 +101,7 @@ impl Alignment {
             // i.write_bam(&mut binary)?;
             writer.write(&i)?;
         }
+        writer.flush()?;
         writer.finish()?;
         let inner = writer.take_stream().into_inner()?;
 
@@ -161,16 +163,23 @@ mod tests {
     use crate::binary;
     use crate::writer::GhiWriter;
     use crate::reader::IndexedReader;
-    use crate::range::{InvertedRecordEntire, Format, Record};
-    use crate::alignment::Set;
+    use crate::range::{InvertedRecordEntire};
+    use crate::{builder::InvertedRecordBuilderSet, alignment::Set};
+    use bio::io::bed;
     #[test]
     fn bam_works() {
         let bam_path = "./test/index_test.bam";
-        let mut reader = bam::BamReader::from_path(bam_path, 4).unwrap();
+        let reader = bam::BamReader::from_path(bam_path, 4).unwrap();
         let set = Set::new(reader, 0 as u64);
+        
+        let path = "./test/test.bed";
+        let reader = bed::Reader::from_file(path).unwrap();
+        let _set2 = InvertedRecordBuilderSet::new(reader, 0 as u64);
 
+
+        //let set_vec = vec![set, set2];
         let set_vec = vec![set];
-        let entire = InvertedRecordEntire::new(set_vec);
+        let entire = InvertedRecordEntire::new_from_set(set_vec);
         let header = Header::new();
         let mut writer = binary::GhbWriter::build()
             .write_header(false)
