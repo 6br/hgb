@@ -1,4 +1,3 @@
-use std::cell::Cell;
 use bam::RecordWriter;
 use bam::RecordReader;
 use bam::record::Record;
@@ -38,21 +37,21 @@ pub struct AlignmentOld {
 /// BAM-Compatible Alignment Record
 #[derive(Debug)]
 pub struct AlignmentBuilder {
-    alignments: Cell<Vec<Record>>,
+    alignments: Vec<Record>,
 }
 
 impl AlignmentBuilder {
     pub fn new() -> Self {
         AlignmentBuilder{ 
-            alignments: Cell::new(vec![])
+            alignments: vec![]
         }
     }
-    pub fn add(&self, alignment: Record) {
-        self.alignments.borrow_mut().push(alignment);
+    pub fn add(mut self, alignment: Record) {
+        self.alignments.push(alignment);
     }
 
     pub fn take(self) -> Vec<Record> {
-        self.alignments.into_inner()
+        self.alignments
     }
 }
 
@@ -79,14 +78,14 @@ pub struct Set<T> {
 impl Set<AlignmentBuilder> {
     pub fn new<R: Read>(reader: bam::BamReader<R>, sample_id: u64) -> Self {
         let mut chrom = BTreeMap::new();
-        let unmapped = AlignmentBuilder::new();
+        let mut unmapped = AlignmentBuilder::new();
 
         for record in reader {
             let rec = record.ok().expect("Error reading record.");
             if rec.ref_id() >= 0 {
                 let bin = chrom.entry(rec.ref_id() as u64).or_insert(Bins::<AlignmentBuilder>::new());
                 if rec.start() > 0 && rec.calculate_end() > 0 {                
-                    let stat = bin.bins.entry(region_to_bin_3(rec.start() as u64, rec.calculate_end() as u64)).or_insert(AlignmentBuilder::new());
+                    let mut stat = bin.bins.entry(region_to_bin_3(rec.start() as u64, rec.calculate_end() as u64)).or_insert(AlignmentBuilder::new());
                     stat.add(rec);
                 }
             } else if rec.ref_id() == -1 {
@@ -113,7 +112,7 @@ impl Builder for AlignmentBuilder {
         Format::Alignment(self.to_record())
     }
 }
-
+/*
 impl AlignmentOld { 
     pub fn new_from_builder(builder: &AlignmentBuilder) -> Result<AlignmentOld> {
         let mut binary = vec![];
@@ -160,7 +159,7 @@ impl AlignmentOld {
         Ok(records)
     }
 }
-
+*/
 impl ColumnarSet for Alignment {
     fn new() -> Alignment {
         Alignment {data: vec![]}
