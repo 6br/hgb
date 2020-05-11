@@ -1,7 +1,7 @@
 use bam::RecordWriter;
 use bam::RecordReader;
 use bam::record::Record;
-use std::{collections::{BTreeMap, HashMap}, io::{Read, Result, BufWriter}};
+use std::{collections::{BTreeMap, HashMap}, io::{Read, Result, BufWriter}, cell::Cell};
 use byteorder::{LittleEndian, WriteBytesExt, ReadBytesExt};
 use byteorder::ByteOrder;
 use crate::{index::region_to_bin_3, ColumnarSet, range::Format, Builder};
@@ -37,7 +37,7 @@ pub struct AlignmentOld {
 /// BAM-Compatible Alignment Record
 #[derive(Debug)]
 pub struct AlignmentBuilder {
-    alignments: Vec<Record>,
+    alignments: Cell<Vec<Record>>,
 }
 
 impl AlignmentBuilder {
