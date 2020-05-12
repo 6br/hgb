@@ -89,7 +89,7 @@ pub trait ColumnarSet {
 
 /// A trait for Formattable data structure.
 pub trait Builder {
-    fn to_format(&self) -> Format;
+    fn to_format(self) -> Format;
 }
 
 
@@ -171,6 +171,7 @@ mod tests {
         // assert_eq!(&index, reader2.index());
         let chrom = "2";
         let chrom_id = reader2.reference_id(&chrom).unwrap();
+        assert_eq!(chrom_id, 1);
 
         let viewer = reader2.fetch(&Region::new(chrom_id, 17_000, 17_500)).unwrap();
 
@@ -189,7 +190,7 @@ mod tests {
         let mut buf = Vec::new();
         {
             let mut writer = bed::Writer::new(&mut buf);
-            for  i in records {
+            for i in records {
                 writer.write(&i).ok().unwrap();
             } 
         }

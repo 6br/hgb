@@ -30,6 +30,15 @@ pub enum StringEncode {
 /// Returns an encoded array of u64.
 pub fn integer_encode(input: &Vec<u64>, sorted: bool) -> Result<IntegerEncode> {
     let mut vec = Vec::with_capacity(input.len());
+
+    if input.len() == 0 {
+        if sorted {
+            return Ok(IntegerEncode::DeltaVByte(vec))
+        } else {
+            return Ok(IntegerEncode::VByte(vec))
+        }
+    }
+
     VByteEncoded::new(input[0]).write_to(&mut vec)?;
 
     // Delta-encoding
