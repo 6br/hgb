@@ -121,6 +121,5 @@ impl Builder for InvertedRecordBuilder {
 impl InvertedRecordBuilder {
     pub fn to_record(self) -> InvertedRecord {
         InvertedRecord::from_builder(&self)
-        //InvertedRecord { data: self.take() }
     }
 }

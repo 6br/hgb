@@ -353,8 +353,6 @@ impl Index {
     }
 
     pub fn to_stream<W: Write>(&self, mut stream: W) -> Result<()> {
-        /*let magic = [b'G', b'H', b'I', 1];
-        stream.write(&magic)?;*/
         stream.write_all(&[b'G', b'H', b'I', 1])?;
         let n_ref = self.references.len() as i32;
         stream.write_i32::<LittleEndian>(n_ref)?;

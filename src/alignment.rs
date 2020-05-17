@@ -106,55 +106,6 @@ impl Builder for AlignmentBuilder {
         Format::Alignment(self.to_record())
     }
 }
-/*
-impl AlignmentOld { 
-    pub fn new_from_builder(builder: &AlignmentBuilder) -> Result<AlignmentOld> {
-        let mut binary = vec![];
-        binary.write_u64::<LittleEndian>(builder.alignments.borrow_mut().len() as u64)?;
-        let header = bam::Header::new();
-        let output = BufWriter::new(binary);
-        let mut writer = bam::bam_writer::BamWriterBuilder::new().write_header(false).from_stream(output, header)?;
-        for i in builder.alignments.borrow().iter() {
-            // i.write_bam(&mut binary)?;
-            writer.write(&i)?;
-        }
-        writer.flush()?;
-        writer.finish()?;
-        let inner = writer.take_stream().into_inner()?;
-
-        Ok(AlignmentOld{data: inner})
-        
-    }
-    
-
-    pub fn from_builder(mut self, builder: &AlignmentBuilder) -> Result<()> {
-        self.data.write_u64::<LittleEndian>(builder.alignments.borrow_mut().len() as u64)?;
-        let header = bam::Header::new();
-        let mut writer = bam::bam_writer::BamWriterBuilder::new().write_header(false).from_stream(&mut self.data, header)?;
-        for i in builder.alignments.borrow().iter() {
-            // i.write_bam(&mut binary)?;
-            writer.write(&i)?;
-        }
-        Ok(())
-    }
-*/
-/*
-impl Alignment {
-    pub fn to_record(self) -> Result<Vec<Record>> {
-        // let len = (&mut self.data).read_u64::<LittleEndian>()?;
-        // let len = LittleEndian::read_u64(self.data.as_ref();
-        // let records = Vec::with_capacity(len as usize);
-        let mut reader = bam::BamReader::from_stream(self.data.as_ref() as &[u8], 4).unwrap();
-        for _i in 0..len as usize {
-            let mut record = Record::new();
-            // record.fill_from_bam(&mut self.data)?;
-            reader.read_into(&mut record)?;
-            // records.push(record);
-        }
-        Ok(records)
-    }
-}
-*/
 impl ColumnarSet for Alignment {
     fn new() -> Alignment {
         Alignment {data: vec![]}
@@ -164,7 +115,6 @@ impl ColumnarSet for Alignment {
         let header = bam::Header::new();
         let mut writer = bam::bam_writer::BamWriterBuilder::new().additional_threads(4).write_header(false).from_stream(stream, header)?;
         for i in self.data.iter() {
-            // i.write_bam(&mut binary)?;
             writer.write(i)?;
         }
         writer.finish()?;
@@ -172,66 +122,30 @@ impl ColumnarSet for Alignment {
     }
     fn from_stream<R: Read>(&mut self, stream: &mut R) -> Result<bool> {
         let len = stream.read_u64::<LittleEndian>()?;
-        // let records = Vec::with_capacity(len as usize);
+        
         let mut reader = bam::BamReader::from_stream_no_header(stream, bam::Header::new(), 0).unwrap();
-        // let mut reader = bam::BamReader::from_stream(stream, 4).unwrap();
-        /*
-        let mut bgzip_reader: SeekReader::from_stream(stream, 4).unwrap();
-        let reader = bgzip::SeekReader::from_stream(stream, 4)
-            .map_err(|e| Error::new(e.kind(), format!("Failed to read BAM stream: {}", e)))?;
-            reader.make_consecutive();*/
+
         for _i in 0..len as usize {
             let mut record = Record::new();
-            // record.fill_from_bam(&mut self.data)?;
-            let k = reader.read_into(&mut record);
-            // println!("{}, {}, {:?}", len, _i, k);
-            k?;
+            reader.read_into(&mut record)?;
             self.data.push(record);
-        }/*
-        for record in reader {
-            println!("{}, {:?}", len, record);
-            self.data.push(record?);
-        }*/
+        }
         let mut _record = Record::new();
-        // record.fill_from_bam(&mut self.data)?;
-        // let k = reader.read_into(&mut record);
-        //println!("{:?} {:?}", k, record);
+        // For consuming all bgzip blocks.
         let _ = reader.next();
         let _ = reader.next();
 
-        //println!("{:?}", k);
-        
         Ok(true)
     }
     
 }
-/*
-impl ColumnarSet for AlignmentOld {
-    fn new() -> AlignmentOld {
-        AlignmentOld { data: vec![] }
-    }
-    fn to_stream<W: std::io::Write>(&self, stream: &mut W) -> Result<()> {
-        stream.write_u64::<LittleEndian>(self.data.len() as u64)?;
-        stream.write_all(&self.data)?;
-        Ok(())
-    }
-    fn from_stream<R: std::io::Read>(&mut self, stream: &mut R) -> Result<bool> {
-        let n_vec = stream.read_u64::<LittleEndian>()?;
-        self.data = vec![];
-        for _i in 0..n_vec {
-            self.data.push(stream.read_u8()?);
-        }
-        Ok(true)
-    }
-}
-*/
+
 #[cfg(test)]
 mod tests {
     use crate::header::Header;
     use crate::index::Region;
     use crate::binary;
     use crate::writer::GhiWriter;
-    //use crate::writer::GhiWriter;
     use crate::reader::IndexedReader;
     use crate::range::{InvertedRecordEntire, Format};
     use crate::{builder::InvertedRecordBuilder, alignment::Set};
@@ -252,17 +166,14 @@ mod tests {
         {
         let set = Set::<AlignmentBuilder>::new(reader, 0 as u64);
 
-        //let path = "./test/test.bed";
         let example = b"chr2\t16382\t16385\tbin4682\t20\t-\nchr2\t16388\t31768\tbin4683\t20\t-\n";
         let reader = bed::Reader::new(&example[..]);
-        // let reader = bed::Reader::from_stream(example).unwrap();
         let set2: Set<InvertedRecordBuilder> = Set::<InvertedRecordBuilder>::new(reader, 1 as u64, &mut header).unwrap();
         assert_eq!(None, header.reference_id("1"));
         assert_eq!(Some(1), header.reference_id("chr1"));
         assert_eq!(Some(2), header.reference_id("chr2"));
-        //println!("a: {:?}", set2);
 
-        //let set_vec = vec![set, set2];
+
         let dummy_header = Header::new();
         let set_vec = vec![set2];
         let mut entire = InvertedRecordEntire::new_from_set(set_vec);
@@ -273,7 +184,6 @@ mod tests {
             .from_path("./test/test_bam.ghb", dummy_header).unwrap();
         let index = entire.write_binary(&mut writer).unwrap();
         writer.flush().unwrap();
-        // println!("b: {}", index);
 
         entire.write_header(&mut header);
         let mut index_writer = GhiWriter::build().write_header(true).from_path("./test/test_bam.ghb.ghi", header).unwrap();
@@ -283,7 +193,6 @@ mod tests {
         }
 
         let mut reader2 = IndexedReader::from_path("./test/test_bam.ghb").unwrap();
-        // println!("c: {}", reader2.index());
 
         let chrom = "chr2";
         let chrom_id = reader2.reference_id(&chrom).unwrap();
@@ -295,14 +204,13 @@ mod tests {
         let viewer = reader2.fetch(&Region::new(chrom_id, 17_000, 17_500)).unwrap();
         let example = "chr2\t16382\t16385\tbin4682\t20\t-\nchr2\t16388\t31768\tbin4683\t20\t-\n";
         let records = viewer.into_iter().flat_map(|t| t.map(|f| 
-            // println!("debug {:#?}", t.to_record(chrom));
+
             if let Format::Range(rec) = f.data() {
                 return rec.to_record(chrom)
             } else {
                 return vec![]
             }
         ).unwrap()).collect::<Vec<bed::Record>>();
-        // println!("Records: {:?}", records);
         let mut buf = Vec::new();
         {
             let mut writer = bed::Writer::new(&mut buf);
