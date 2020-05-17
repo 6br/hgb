@@ -133,7 +133,7 @@ impl Record {
                 record.from_stream(stream)?;
                 Format::Alignment(record)
             }
-            _ => panic!("Panic!")
+            _ => return Err(Error::new(InvalidData, "Invalid format record"))
         };
         self.data = data;
         return Ok(true);
@@ -199,7 +199,10 @@ impl InvertedRecordEntire {
                             format: Format::id(&data), data: data
                         })
                 }
-                inverted_record.push(chrom);
+                if let None = inverted_record.get(_name as usize) {
+                    inverted_record.resize((_name + 1) as usize, InvertedRecordChromosome{bins: BTreeMap::new() });
+                }
+                inverted_record[_name as usize] = chrom;
             }    
             let data = set.unmapped.to_format();
             let unmapped =

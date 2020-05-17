@@ -3,6 +3,7 @@
 use bam::header;
 use std::io::{Result, Read, Write, Error, ErrorKind};
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
+use header::HeaderLine;
 
 /// Local headers are categorized as types. 
 #[derive(Clone)]
@@ -53,6 +54,7 @@ impl Header {
         header.from_stream(stream)?;
         Ok(header)
     }
+
     /// Returns the length of the reference with `ref_id` (0-based). as u64.
     /// TODO() Support u64; now raise errors when you pass u32.
     /// Returns None if there is no such reference
@@ -73,11 +75,42 @@ impl Header {
     pub fn n_references(&self) -> usize {
         self.global_header.n_references()
     }
+    /// Returns reference names.
+    pub fn reference_names(&self) -> &[String] {
+        &self.global_header.reference_names()
+    }
     /// Pushes a new header entry.
     ///
     /// Returns an error if the same reference appears twice or @SQ line has an incorrect format.
     pub fn push_entry(&mut self, header_entry: header::HeaderEntry) -> std::result::Result<(), String> {
         self.global_header.push_entry(header_entry)
+    }
+    /// Keep a bam Header  on the local header
+    pub fn set_local_header(&mut self, header: &bam::Header, index: usize) -> () {
+        if let None = self.headers.get(index) {
+            self.headers.resize(index + 1, HeaderType::None)
+        }
+        self.headers[index] = HeaderType::BAM(header.clone());
+        // self.headers.
+    }
+    pub fn get_local_header(&self, index: usize) -> Option<&HeaderType> {
+        self.headers.get(index)
+    }
+    pub fn get_local_bam_header(&self, index: usize) -> Option<&bam::Header> {
+        self.headers.get(index).and_then(|f| match &f {
+            HeaderType::None => {None}
+            HeaderType::BAM(a) => {Some(a)}
+        })
+    }
+    /// Transfer the reference into global header.
+    pub fn transfer(&mut self, header: &bam::Header) -> std::result::Result<(), String>{
+        for i in header.lines() {
+            match i {
+                HeaderLine::Entry(a) => self.global_header.push_entry(a.clone())?,
+                HeaderLine::Comment(_) => {}
+            }
+        }
+        Ok(())
     }
     /// Creates an empty header.
     pub fn new() -> Self {

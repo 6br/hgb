@@ -25,7 +25,6 @@ impl Bins<InvertedRecordBuilder> {
     }
 }
 
-
 /// Builder of the [InvertedRecord](struct.InvertedRecord.html).
 impl InvertedRecordBuilder {
     pub fn new() -> Self {

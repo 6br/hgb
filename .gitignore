@@ -2,3 +2,5 @@
 Cargo.lock
 *.ghb
 *.ghi
+*.log
+*.sam

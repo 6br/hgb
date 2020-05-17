@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 use bam::bgzip;
 use std::io::{Result, Error, Read, Seek, BufReader};
 use std::fs::File;
-use std::io::ErrorKind::{InvalidInput};
+use std::io::ErrorKind::{InvalidInput, self};
 use crate::header::Header;
 use crate::range::Record;
 use crate::index::{Index, Region};
@@ -163,6 +163,10 @@ impl IndexedReader<BufReader<File>> {
         self.reader.header().reference_id(chrom)
     }
 
+    pub fn reference_name(&self, chrom: u64) -> Option<&str> {
+        self.reader.header().reference_name(chrom)
+    }
+
     /// Opens GHB file from `path`. Ghi index will be loaded from `{path}.ghi`.
     ///
     /// Same as `Self::build().from_path(path)`.
@@ -308,7 +312,10 @@ impl<'a, R: Read + Seek> Iterator for RegionViewer<'a, R> {
         match self.read_into(&mut record) {
             Ok(true) => Some(Ok(record)),
             Ok(false) => None,
-            Err(e) => Some(Err(e)),
+            Err(e) => match e.kind() {
+                ErrorKind::UnexpectedEof => None, // The end of file; normal.
+                _ => Some(Err(e))
+            } // Some(Err(e)),
         }
     }
 }

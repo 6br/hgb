@@ -11,7 +11,9 @@ name = "rust_project"
 crate-type = ["staticlib", "cdylib"]
 
 [dependencies]
-bam = "*" 
+#bam = "*" 
+#bam = { git = "https://bitbucket.org/6br/bam" }
+bam = { path = "../../../gitlab.com/tprodanov/bam" }
 bio = { git = "https://github.com/rust-bio/rust-bio" }
 bitpacking = "0.5" # Pfor
 byteorder = "*"
