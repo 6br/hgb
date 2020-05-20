@@ -5,7 +5,7 @@ use std::io::{Write, Read, Result, Error};
 use std::io::ErrorKind::InvalidData;
 use std::mem::MaybeUninit;
 use std::fmt;
-use std::{path::Path, fmt::{Display, Formatter}, result};
+use std::{path::Path, fmt::{Display, Formatter}, result, ops::Range};
 /*
 fn get_file_as_byte_vec(filename: &String) -> Vec<u8> {
     let mut f = File::open(&filename).expect("no file found");
@@ -35,12 +35,12 @@ impl Reference {
     /// The reference length is at most 512Mbp.
     pub fn new_with_bai_half_overlapping() -> Reference {
         let mut bin_pitch_indices = [0;64];
-        bin_pitch_indices[63] = 29;
-        bin_pitch_indices[62] = 26;
-        bin_pitch_indices[61] = 23;
-        bin_pitch_indices[60] = 20;
-        bin_pitch_indices[59] = 17;
-        bin_pitch_indices[58] = 14;
+        bin_pitch_indices[0] = 28;
+        bin_pitch_indices[1] = 25;
+        bin_pitch_indices[2] = 22;
+        bin_pitch_indices[3] = 19;
+        bin_pitch_indices[4] = 16;
+        bin_pitch_indices[5] = 13;
         Reference {
             bin_count_mask: 0b10010010010010001,
             bin_pitch_indices, //: [0,..,14,17,20,23,26,29],
@@ -92,19 +92,52 @@ impl Reference {
 
         Ok(())
     }
-
+    /*
     pub fn region_to_bin(&self, range: Region) -> usize {
-        let mut iter = self.region_to_bins(range);
-        let mut prev = iter.next().unwrap();
+        let range_middle = (range.start() + range.end()) / 2;
+        let middle = Region::new(range.ref_id(), range_middle, range_middle + 1);
+        println!("Range: {:?} {:?}", range, range_middle);
+        let mut iter = self.region_to_bins(middle);
+        let mut prev = 0_usize; //iter.next().unwrap();
         loop {
             let next = iter.next();
             match next {
-                None => { return prev.bin_disp_start }
+                None => { return prev }
                 Some(slice) => {
-                    if slice.bin_size > 1 {
-                        return slice.bin_disp_start
+                    println!("{:?} {:?} {}", slice.bin_disp_range, slice.range,  (slice.bin_size as u64));
+                    println!("{} {}", !slice.range.include(&range), (slice.bin_size as u64) < range.len() );
+                    if !slice.range.include(&range) || (slice.bin_size as u64) < range.len() {
+                        return prev
                     } else {
-                        prev = slice;
+                        prev = slice.bin_disp_range.start;
+                    }
+                }
+            }
+        }
+    }
+*/
+    pub fn region_to_bin(&self, range: Region) -> usize {
+        println!("Range: {:?}", range);
+        let len = range.len();
+        let start = range.start();
+        let mut iter = self.region_to_bins(range);
+        // let mut prev = iter.next().unwrap();
+        let mut prev = 0;
+        loop {
+            let next = iter.next();
+            match next {
+                None => { return prev } //v.bin_disp_range.start }
+                Some(slice) => {
+                    println!("{:?} {:?} {}", slice.bin_disp_range, slice.range,  (slice.bin_size as u64));
+                    if (slice.bin_size as u64) < len {
+                        return prev //.bin_disp_range.start
+                    } else {
+                        prev = slice.bin_disp_range.start;
+                        let mut pos = slice.range.start();
+                        while pos < start {
+                            prev += 1;
+                            pos += slice.bin_size as u64;
+                        }
                     }
                 }
             }
@@ -189,15 +222,16 @@ impl Index {
     }
     /// Fetches [chunks](struct.Chunk.html) of the BAM file that contain all records for a given region.
     ///pub fn fetch_chunks(&self, ref_id: u64, start: u64, end: u64) -> Vec<Chunk> {
-        pub fn fetch_chunks(&self, region: Region) -> Vec<Chunk> {
-        let mut chunks = Vec::new();
+    pub fn fetch_chunks(&self, region: Region) -> Vec<Chunk> {
+        let mut chunks: Vec<&Chunk> = Vec::new();
         let ref_id = region.ref_id() as usize;
         let ref_container = &self.references[ref_id];
 
         for slice in ref_container.region_to_bins(region) {
-            for bin in slice.slice {
-//            if let Some(bin) = self.references[ref_id].bins.get(&bin_id) {
-                chunks.extend(bin.chunks().iter());
+            if let Some(bin) = slice.slice {
+                for chunk in bin {
+                    chunks.extend(chunk.chunks());
+                }
             }
         }
         chunks.sort();
@@ -228,10 +262,11 @@ pub struct BinsIter<'a> {
 }
 
 pub struct Slice<'a> {
-    slice: &'a [Bin], // or Chunk
+    slice: Option<&'a [Bin]>, // or Chunk
     bin_size: usize,
-    bin_disp_start: usize, // For debugging and 
-    range: Region,
+    //bin_disp_start: usize, // For debugging and 
+    bin_disp_range: Range<usize>,
+    range: Region, // The entire range the slice covers.
 }
 
 impl<'a> Iterator for BinsIter<'a> {
@@ -286,14 +321,16 @@ impl<'a> Iterator for BinsIter<'a> {
 
         /* done; compute bin pointer */
         Some(Slice{
-            slice: &self.header.bins[bin_disp_start..bin_disp_end],
+            //slice: &self.header.bins[bin_disp_start..bin_disp_end],
+            slice: self.header.bins.get(bin_disp_start..bin_disp_end),
             bin_size,
             range: Region::new(self.range.ref_id(), bin_range_start, bin_range_end),
-            bin_disp_start, //Region{start: bin_range_start, end: bin_range_end, ref_id: self.ref_id},
+            bin_disp_range: bin_disp_start..bin_disp_end, //Region{start: bin_range_start, end: bin_range_end, ref_id: self.ref_id},
         })
     }
 }
 
+#[cfg(test)]
 mod tests {
     use super::Reference;
     use crate::index::Region;
@@ -301,23 +338,83 @@ mod tests {
     #[test]
     fn iterator_works() {
         let bai = Reference::new_with_bai_half_overlapping();
-        assert_eq!(bai.bin_pitch_indices[63], 29);
+        //assert_eq!(bai.bin_pitch_indices[0], 28);
+        let mut iter = bai.region_to_bins(Region::new(0,0,8191));
+        let slice = iter.next().unwrap();
+        /* Because we adopt half-overlapping, the most  */
+        assert_eq!(slice.bin_size, 2_usize.pow(29));
+        assert_eq!(slice.range, Region::new(0,0,2_u64.pow(29)));
+        assert_eq!(slice.bin_disp_range, 0..1); //1 is not included.
+        let slice = iter.next().unwrap();
+        assert_eq!(slice.bin_size, 2_usize.pow(26));
+        assert_eq!(slice.range, Region::new(0,0,2_u64.pow(26)));
+        assert_eq!(slice.bin_disp_range, 1..2); //2 is not included.
+        let slice = iter.next().unwrap();
+        assert_eq!(slice.bin_size, 2_usize.pow(23));
+        assert_eq!(slice.range, Region::new(0,0,2_u64.pow(23)));
+        assert_eq!(slice.bin_disp_range, 17..18); //18 is not included.
+        let slice = iter.next().unwrap();
+        assert_eq!(slice.bin_size, 2_usize.pow(20));
+        assert_eq!(slice.range, Region::new(0,0,2_u64.pow(20)));
+        assert_eq!(slice.bin_disp_range, 145..146); //2 is not included
+        let slice = iter.next().unwrap();
+        assert_eq!(slice.bin_size, 2_usize.pow(17));
+        assert_eq!(slice.range, Region::new(0,0,2_u64.pow(17)));
+        assert_eq!(slice.bin_disp_range, 1169..1170); //2 is not included
+        let slice = iter.next().unwrap();
+        assert_eq!(slice.bin_size, 2_usize.pow(14));
+        assert_eq!(slice.range, Region::new(0,0,2_u64.pow(14)));
+        assert_eq!(slice.bin_disp_range, 9361..9362); //2 is not included
+    }
+    #[test]
+    fn iterator_2_works() {
+        let bai = Reference::new_with_bai_half_overlapping();
+        //assert_eq!(bai.bin_pitch_indices[0], 28);
         let mut iter = bai.region_to_bins(Region::new(0,0,8192));
         let slice = iter.next().unwrap();
-        assert_eq!(slice.bin_size, 2);
-        assert_eq!(slice.range, Region::new(0,0,0));
-        assert_eq!(slice.bin_disp_start, 0);
-
+        /* Because we adopt half-overlapping, the most  */
+        assert_eq!(slice.bin_size, 2_usize.pow(29));
+        assert_eq!(slice.range, Region::new(0,0,2_u64.pow(29)));
+        assert_eq!(slice.bin_disp_range, 0..1); //1 is not included.
+        let slice = iter.next().unwrap();
+        assert_eq!(slice.bin_size, 2_usize.pow(26));
+        assert_eq!(slice.range, Region::new(0,0,2_u64.pow(26)));
+        assert_eq!(slice.bin_disp_range, 1..2); //2 is not included.
+        let slice = iter.next().unwrap();
+        assert_eq!(slice.bin_size, 2_usize.pow(23));
+        assert_eq!(slice.range, Region::new(0,0,2_u64.pow(23)));
+        assert_eq!(slice.bin_disp_range, 17..18); //18 is not included.
+        let slice = iter.next().unwrap();
+        assert_eq!(slice.bin_size, 2_usize.pow(20));
+        assert_eq!(slice.range, Region::new(0,0,2_u64.pow(20)));
+        assert_eq!(slice.bin_disp_range, 145..146); //2 is not included
+        let slice = iter.next().unwrap();
+        assert_eq!(slice.bin_size, 2_usize.pow(17));
+        assert_eq!(slice.range, Region::new(0,0,2_u64.pow(17)));
+        assert_eq!(slice.bin_disp_range, 1169..1170); //2 is not included
+        let slice = iter.next().unwrap();
+        assert_eq!(slice.bin_size, 2_usize.pow(14));
+        assert_eq!(slice.range, Region::new(0,0,2_u64.pow(14) + 2_u64.pow(13)));
+        assert_eq!(slice.bin_disp_range, 9361..9363); //2 is not included
     }
-
     #[test]
     fn region_to_bin_works() {
         let bai = Reference::new_with_bai_half_overlapping();
         let bin = bai.region_to_bin(Region::new(0, 0, 100_000_000));
         assert_eq!(bin, 0);
-        let bin = bai.region_to_bin(Region::new(0, 0, 58_000_000));
+        let bin = bai.region_to_bin(Region::new(0, 0, 2_u64.pow(25)-1));
         assert_eq!(bin, 1);
-        let bin = bai.region_to_bin(Region::new(0, 58_000_000, 112_000_000));
+        let bin = bai.region_to_bin(Region::new(0, 66_000_000, 112_000_000));
         assert_eq!(bin, 2);
+        let bin = bai.region_to_bin(Region::new(0, 0, 1<<17));
+        assert_eq!(bin, 1169);
+        let bin = bai.region_to_bin(Region::new(0, 0, 16384));
+        assert_eq!(bin, 9361);
+        let bin = bai.region_to_bin(Region::new(0, 0, 8191));
+        assert_eq!(bin, 9361);
+        let bin = bai.region_to_bin(Region::new(0, 8192, 8192+16384));
+        assert_eq!(bin, 9362);
+        let bin = bai.region_to_bin(Region::new(0, 16384, 16384*2));
+        assert_eq!(bin, 9363);
     }
 }

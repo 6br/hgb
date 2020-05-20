@@ -61,6 +61,10 @@ impl Region {
     pub fn contains(&self, ref_id: u64, pos: u64) -> bool {
         self.ref_id == ref_id && self.start <= pos && pos < self.end
     }
+    
+    pub fn include(&self, range: &Region) -> bool {
+        self.ref_id == range.ref_id && self.start <= range.start && range.end < self.end
+    }
 }
 
 
