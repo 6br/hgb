@@ -14,7 +14,7 @@ const SUMMARY_BIN: u32 = 37450; // TODO(FIXME)
 
 /// Genomic coordinates, used in [struct.IndexedReader.html#method.fetch] and [struct.IndexedReader.html#method.pileup].
 /// `ref_id` is 0-based, `start-end` is 0-based half-open interval.
-#[derive(Clone, Debug)]
+#[derive(Clone, PartialEq, Debug)]
 pub struct Region {
     ref_id: u64,
     start: u64,
@@ -143,7 +143,7 @@ impl Chunk {
         Chunk { sample_id, file_id, start, end }
     }
 
-    fn from_stream<R: Read>(stream: &mut R, check: bool) -> Result<Self> {
+    pub fn from_stream<R: Read>(stream: &mut R, check: bool) -> Result<Self> {
         let sample_id = stream.read_u64::<LittleEndian>()?;
         let file_id = stream.read_u32::<LittleEndian>()?;
         let start = VirtualOffset::from_stream(stream)?;
@@ -155,7 +155,7 @@ impl Chunk {
         }
     }
 
-    fn to_stream<W: Write>(&self, stream: &mut W) -> Result<()> {
+    pub fn to_stream<W: Write>(&self, stream: &mut W) -> Result<()> {
         stream.write_u64::<LittleEndian>(self.sample_id)?;
         stream.write_u32::<LittleEndian>(self.file_id)?;
         self.start.to_stream(stream)?;
@@ -217,7 +217,7 @@ impl Bin {
     pub fn new(bin_id: u32, chunks: Vec<Chunk>) -> Bin {
         Bin{bin_id: bin_id, chunks: chunks}
     }
-    fn from_stream<R: Read>(stream: &mut R) -> Result<Self> {
+    pub fn from_stream<R: Read>(stream: &mut R) -> Result<Self> {
         let bin_id = stream.read_u32::<LittleEndian>()?;
         let n_chunks = stream.read_i32::<LittleEndian>()? as usize;
         let check_chunks = bin_id != SUMMARY_BIN;
@@ -231,7 +231,7 @@ impl Bin {
         Ok(Bin { bin_id, chunks })
     }
 
-    fn to_stream<W: Write>(&self, stream: &mut W) -> Result<()> {
+    pub fn to_stream<W: Write>(&self, stream: &mut W) -> Result<()> {
         stream.write_u32::<LittleEndian>(self.bin_id)?;
         let n_chunks = self.chunks.len() as i32;
         stream.write_i32::<LittleEndian>(n_chunks)?;
@@ -390,7 +390,7 @@ impl Index {
         chunks.sort();
 
         let mut res = Vec::new();
-        for  i in 0..chunks.len() {
+        for i in 0..chunks.len() {
             res.push(chunks[i].clone());
         }
         res

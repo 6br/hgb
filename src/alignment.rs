@@ -198,8 +198,8 @@ mod tests {
         let chrom_id = reader2.reference_id(&chrom).unwrap();
         assert_eq!(chrom_id, 2);
         {
-            let chrom = reader2.reference_name(0).unwrap();
-            assert_eq!(chrom, "chrM");
+            let chrom_name = reader2.reference_name(0).unwrap();
+            assert_eq!(chrom_name, "chrM");
         }
         let viewer = reader2.fetch(&Region::new(chrom_id, 17_000, 17_500)).unwrap();
         let example = "chr2\t16382\t16385\tbin4682\t20\t-\nchr2\t16388\t31768\tbin4683\t20\t-\n";

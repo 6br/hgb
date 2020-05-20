@@ -15,22 +15,22 @@
 
 typedef struct {
 	size_t start, end;			/* [start, end) */
-} genomic_range_t;
+} genomic_range_t; // Region
 
 typedef struct {
 	size_t ofs;
 	size_t len;
-} bin_header_t;
+} bin_header_t; // Chunk
 
 typedef struct {
 	bin_header_t const *ptr;
 	size_t cnt;
-} bin_slice_t;
+} bin_slice_t; // Bin
 
 typedef struct {
 	genomic_range_t range;		/* (start pos of the first bin, and what?) */
 	size_t bin_size;
-} bin_slice_info_t;
+} bin_slice_info_t; // Region + bin_size
 
 typedef struct {
 	/*
