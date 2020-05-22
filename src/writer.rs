@@ -7,7 +7,7 @@ use std::path::Path;
 use bam::bgzip;
 use crate::header::Header;
 use super::IndexWriter;
-use crate::index::Index;
+use crate::checker_index::Index;
 
 /// Builder of the [GhiWriter](struct.GhiWriter.html).
 pub struct GhiWriterBuilder {

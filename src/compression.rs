@@ -46,7 +46,7 @@ pub fn integer_encode(input: &Vec<u64>, sorted: bool) -> Result<IntegerEncode> {
         if input.len() > 1 {
             for i in 0..input.len()-1 {
                 // vec.push(input[i+1] - input[i]);
-                assert!(input[i+1] > input[i]);
+                assert!(input[i+1] >= input[i]);
                 VByteEncoded::new(input[i+1] - input[i]).write_to(&mut vec)?;
             }
         }

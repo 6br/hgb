@@ -6,6 +6,8 @@ use std::io::ErrorKind::InvalidData;
 use std::mem::MaybeUninit;
 use std::fmt;
 use std::{path::Path, fmt::{Display, Formatter}, result, ops::Range};
+use bam::header::HeaderEntry;
+use fmt::Debug;
 /*
 fn get_file_as_byte_vec(filename: &String) -> Vec<u8> {
     let mut f = File::open(&filename).expect("no file found");
@@ -23,6 +25,12 @@ pub struct Reference {
     bins: Vec<Bin> // or bins: Vec<Chunk>,
 }
 
+impl Debug for Reference {
+    fn fmt(&self, f: &mut Formatter) -> result::Result<(), fmt::Error> {
+        write!(f, "Mask: {}", self.bin_count_mask)
+    }
+}
+
 impl Reference {
     pub fn new(bin_count_mask: u64, bin_pitch_indices: [u8;64], bins: Vec<Bin>) -> Reference {
         Reference {
@@ -30,6 +38,23 @@ impl Reference {
             bin_pitch_indices,
             bins
         }
+    }
+
+    pub fn new_from_len(len: u64) -> Reference {
+        if len > 2_u64.pow(32) {
+            panic!("Unsupported reference size");
+        } else {
+            return Reference::new_with_bai_half_overlapping()
+        }
+    }
+
+    pub fn new_from_reference(reference: &HeaderEntry) -> Reference {
+        if let Some(len) = reference.get(b"LN") {
+            if let Some(len) = len.parse::<u64>().ok() {
+                return Reference::new_from_len(len)
+            }
+        }
+        return Reference::new_with_bai_half_overlapping()
     }
 
     /// The reference length is at most 512Mbp.
@@ -46,6 +71,14 @@ impl Reference {
             bin_pitch_indices, //: [0,..,14,17,20,23,26,29],
             bins: vec![]
         }
+    }
+
+    pub fn bins(&mut self) -> &Vec<Bin> {
+        return &self.bins
+    }
+
+    pub fn update(&mut self, bin_id: usize, bin: Bin) {
+        self.bins[bin_id] = bin;
     }
 
     fn from_stream<R: Read>(stream: &mut R) -> Result<Self> {
@@ -83,8 +116,8 @@ impl Reference {
             stream.write_u8(*i)?;
         }
         //stream.write_all(self.bins.as_ref());
-        let n_chunks = self.bins.len() as i32;
-        stream.write_i32::<LittleEndian>(n_chunks)?;
+        let n_chunks = self.bins.len() as u64;
+        stream.write_u64::<LittleEndian>(n_chunks)?;
 
         for chunk in &self.bins {
             chunk.to_stream(stream)?;
@@ -117,7 +150,7 @@ impl Reference {
     }
 */
     pub fn region_to_bin(&self, range: Region) -> usize {
-        println!("Range: {:?}", range);
+        // println!("Range: {:?}", range);
         let len = range.len();
         let start = range.start();
         let mut iter = self.region_to_bins(range);
@@ -128,7 +161,7 @@ impl Reference {
             match next {
                 None => { return prev } //v.bin_disp_range.start }
                 Some(slice) => {
-                    println!("{:?} {:?} {}", slice.bin_disp_range, slice.range,  (slice.bin_size as u64));
+                    // println!("{:?} {:?} {}", slice.bin_disp_range, slice.range,  (slice.bin_size as u64));
                     if (slice.bin_size as u64) < len {
                         return prev //.bin_disp_range.start
                     } else {
@@ -221,12 +254,14 @@ impl Index {
         &self.references
     }
     /// Fetches [chunks](struct.Chunk.html) of the BAM file that contain all records for a given region.
-    ///pub fn fetch_chunks(&self, ref_id: u64, start: u64, end: u64) -> Vec<Chunk> {
-    pub fn fetch_chunks(&self, region: Region) -> Vec<Chunk> {
+    pub fn fetch_chunks(&self, ref_id: u64, start: u64, end: u64) -> Vec<Chunk> {
+    //pub fn fetch_chunks(&self, region: Region) -> Vec<Chunk> {
         let mut chunks: Vec<&Chunk> = Vec::new();
-        let ref_id = region.ref_id() as usize;
+        //let ref_id = region.ref_id() as usize;
+        let region = Region::new(ref_id, start, end);
+        let ref_id = ref_id as usize;
         let ref_container = &self.references[ref_id];
-
+        // println!("{:?}", region);
         for slice in ref_container.region_to_bins(region) {
             if let Some(bin) = slice.slice {
                 for chunk in bin {
@@ -237,7 +272,7 @@ impl Index {
         chunks.sort();
 
         let mut res = Vec::new();
-        for  i in 0..chunks.len() {
+        for i in 0..chunks.len() {
             res.push(chunks[i].clone());
         }
         res
@@ -249,7 +284,8 @@ impl Display for Index {
     fn fmt(&self, f: &mut Formatter) -> result::Result<(), fmt::Error> {
         for (i, reference) in self.references.iter().enumerate() {
             writeln!(f, "Reference {}:", i)?;
-            reference.fmt(f)?;
+            //reference.fmt::<dyn Display>(f)?;
+            Display::fmt(&reference, f)?
         }
         Ok(())
     }
@@ -305,19 +341,23 @@ impl<'a> Iterator for BinsIter<'a> {
 
         let bin_ofs_disp_end = {
             let mut t = self.range.end() >> bin_pitch_index;
-            if t > finished { t = finished; }
+            //if t > finished { t = finished; }
+            if t > remaining ^ (remaining - 1) { t = remaining ^ (remaining - 1); }
             /* previous finished (not new one) is <bin count for this depth> - 1 */
             t + 1									/* make the range margined (tail margin) */
         };
 
         /* compute bin range */
         let bin_range_start = bin_ofs_disp_start << bin_pitch_index;
+        //let bin_range_end = (bin_ofs_disp_start + bin_ofs_disp_end + 1) << bin_pitch_index;
         let bin_range_end = (bin_ofs_disp_end + 1) << bin_pitch_index;
         let bin_disp_start: usize = bin_ofs_base + bin_ofs_disp_start as usize;
-        let bin_disp_end: usize = bin_ofs_disp_end as usize + bin_disp_start;
+        let bin_disp_end: usize = bin_ofs_disp_end as usize + bin_ofs_base;
 
         /* update finished mask; find least significant set bit to locate the next unfinished bit, then xor to squish further remaining bits out */
         self.finished = remaining ^ (remaining - 1);
+
+        println!("{:?} {} {} {} {} {:?} {:?} {} {}", self.range, bin_range_start, bin_range_end, bin_size, finished, bin_disp_start..bin_disp_end, bin_ofs_disp_start..bin_ofs_disp_end, iterations_done, bin_pitch_index);
 
         /* done; compute bin pointer */
         Some(Slice{
@@ -398,6 +438,37 @@ mod tests {
         assert_eq!(slice.bin_disp_range, 9361..9363); //2 is not included
     }
     #[test]
+    fn iterator3_works() {
+        let bai = Reference::new_with_bai_half_overlapping();
+        //assert_eq!(bai.bin_pitch_indices[0], 28);
+        let mut iter = bai.region_to_bins(Region::new(0,17000,17500));
+        let slice = iter.next().unwrap();
+        /* Because we adopt half-overlapping, the most  */
+        assert_eq!(slice.bin_size, 2_usize.pow(29));
+        assert_eq!(slice.range, Region::new(0,0,2_u64.pow(29)));
+        assert_eq!(slice.bin_disp_range, 0..1); //1 is not included.
+        let slice = iter.next().unwrap();
+        assert_eq!(slice.bin_size, 2_usize.pow(26));
+        assert_eq!(slice.range, Region::new(0,0,2_u64.pow(26)));
+        assert_eq!(slice.bin_disp_range, 1..2); //2 is not included.
+        let slice = iter.next().unwrap();
+        assert_eq!(slice.bin_size, 2_usize.pow(23));
+        assert_eq!(slice.range, Region::new(0,0,2_u64.pow(23)));
+        assert_eq!(slice.bin_disp_range, 17..18); //18 is not included.
+        let slice = iter.next().unwrap();
+        assert_eq!(slice.bin_size, 2_usize.pow(20));
+        assert_eq!(slice.range, Region::new(0,0,2_u64.pow(20)));
+        assert_eq!(slice.bin_disp_range, 145..146); //2 is not included
+        let slice = iter.next().unwrap();
+        assert_eq!(slice.bin_size, 2_usize.pow(17));
+        assert_eq!(slice.range, Region::new(0,0,2_u64.pow(17)));
+        assert_eq!(slice.bin_disp_range, 1169..1170); //2 is not included
+        let slice = iter.next().unwrap();
+        assert_eq!(slice.bin_size, 2_usize.pow(14));
+        assert_eq!(slice.range, Region::new(0,2_u64.pow(13),2_u64.pow(14)+2_u64.pow(14)));
+        assert_eq!(slice.bin_disp_range, 9362..9364); //2 is not included
+    }
+    #[test]
     fn region_to_bin_works() {
         let bai = Reference::new_with_bai_half_overlapping();
         let bin = bai.region_to_bin(Region::new(0, 0, 100_000_000));
@@ -416,5 +487,7 @@ mod tests {
         assert_eq!(bin, 9362);
         let bin = bai.region_to_bin(Region::new(0, 16384, 16384*2));
         assert_eq!(bin, 9363);
+        let bin = bai.region_to_bin(Region::new(0, 16382, 16385));
+        assert_eq!(bin, 9362);
     }
 }

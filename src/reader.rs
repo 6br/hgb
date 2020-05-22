@@ -6,10 +6,10 @@ use std::fs::File;
 use std::io::ErrorKind::{InvalidInput, self};
 use crate::header::Header;
 use crate::range::Record;
-use crate::index::{Index, Region};
+use crate::index::{VirtualOffset, Region, Chunk};
+use crate::checker_index::Index;
 use crate::ChunkReader;
 use crate::binary::GhbReader;
-use crate::index;
 
 /// Defines how to react to a GHI index being younger than GHB file.
 ///
@@ -244,7 +244,7 @@ impl<R: Read + Seek> IndexedReader<R> {
         where F: 'static + Fn(&Record) -> bool
         {
             //if let Some(offset) = self.index.start_offset() {
-            self.reader.set_chunks(vec![index::Chunk::new(0,0,index::VirtualOffset::new(0, 0), index::VirtualOffset::MAX)]);
+            self.reader.set_chunks(vec![Chunk::new(0,0,VirtualOffset::new(0, 0), VirtualOffset::MAX)]);
             //self.reader.set_chunks(self.index.chunks());
             //}
             RegionViewer {

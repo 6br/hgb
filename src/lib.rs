@@ -25,7 +25,7 @@ pub mod checker_index;
 use std::io;
 use range::InvertedRecord;
 use range::{Format, Record};
-use index::Index;
+use checker_index::Index;
 use std::io::{Result, Write, Read};
 
 /// A trait for writing records.
@@ -101,19 +101,26 @@ mod tests {
     use crate::binary;
     use crate::writer::GhiWriter;
     use crate::reader::IndexedReader;
-    use crate::range::{InvertedRecordEntire, Format, Record};
+    use crate::range::{InvertedRecordEntire, Format};
     use crate::IndexWriter;
-    use crate::builder::InvertedRecordBuilderSet;
-    use crate::index::Region;
+    use crate::builder::InvertedRecordBuilder;
+    use crate::{range::Set, index::Region};
 
     #[test]
     fn full_works() {
         let path = "./test/test.bed";
         let reader = bed::Reader::from_file(path).unwrap();
-        let set = InvertedRecordBuilderSet::new(reader, 0 as u64);
+        //let set = InvertedRecordBuilderSet::new(reader, 0 as u64);
+        let mut header_2 = Header::new();
+        let set: Set<InvertedRecordBuilder> = Set::<InvertedRecordBuilder>::new(reader, 1 as u64, &mut header_2).unwrap();
+
+//        let set_vec = vec![set];
+        // println!("{:?}", set);
 
         let set_vec = vec![set];
-        let entire = InvertedRecordEntire::new(set_vec);
+//        let entire = InvertedRecordEntire::new(set_vec);
+        let entire = InvertedRecordEntire::new_from_set(set_vec);
+
         let header = Header::new();
         let mut writer = binary::GhbWriter::build()
             .write_header(false)
@@ -133,10 +140,20 @@ mod tests {
         println!("{}", reader2.index());
 
         let viewer = reader2.full();
-        let records = viewer.into_iter().scan((), |_,x| x.ok()).collect::<Vec<Record>>();
+        /*let records = viewer.into_iter().scan((), |_,x| x.ok()).collect::<Vec<Record>>();
         println!("Records: {:?}", records);
 
-        assert_eq!(records.len(), 10);
+        assert_eq!(records.len(), 10); // The number of the
+        */
+        let bed_records = viewer.into_iter().flat_map(|t| t.map(|f| 
+            if let Format::Range(rec) = f.data() {
+                // println!("debug {:#?}", rec.to_record(chrom));
+                return rec.to_record("null")
+            } else {
+                return vec![]
+            }
+        ).unwrap()).collect::<Vec<bed::Record>>();
+        assert_eq!(bed_records.len(), 10);
     }
 
     #[test]
@@ -144,10 +161,12 @@ mod tests {
         // let _example = b"1\t5\t5000\tname1\t0.5\n1\t5\t5000\tname1\t0.5";
         let path = "./test/test.bed";
         let reader = bed::Reader::from_file(path).unwrap();
-        let set = InvertedRecordBuilderSet::new(reader, 0 as u64);
+        // let set = InvertedRecordBuilderSet::new(reader, 0 as u64);
+        let mut header2 = Header::new();
+        let set: Set<InvertedRecordBuilder> = Set::<InvertedRecordBuilder>::new(reader, 1 as u64, &mut header2).unwrap();
 
         let set_vec = vec![set];
-        let entire = InvertedRecordEntire::new(set_vec);
+        let entire = InvertedRecordEntire::new_from_set(set_vec);
 
         let header = Header::new();
         let mut writer = binary::GhbWriter::build()
@@ -157,8 +176,8 @@ mod tests {
         writer.flush().unwrap();
 
 
-        let mut header2 = Header::new();
-        entire.write_header(&mut header2);
+        // let mut header2 = Header::new();
+        // entire.write_header(&mut header2);
         let mut index_writer = GhiWriter::build().write_header(true).from_path("./test/test.ghb.ghi", header2).unwrap();
         let _result = index_writer.write(&index);
         assert_eq!(_result.ok(), Some(()));
@@ -178,7 +197,7 @@ mod tests {
 
         let records = viewer.into_iter().flat_map(|t| t.map(|f| 
             if let Format::Range(rec) = f.data() {
-                // println!("debug {:#?}", rec.to_record(chrom));
+                println!("debug {:#?}", rec);
                 return rec.to_record(chrom)
             } else {
                 return vec![]

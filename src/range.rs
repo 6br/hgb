@@ -1,16 +1,17 @@
 use std::io::{Result, Read, Write, Seek, Error};
 use std::io::ErrorKind::InvalidData;
-use std::collections::BTreeMap;
+use std::collections::{HashMap, BTreeMap};
 use bio::io::bed;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
-use crate::index::{Index, Reference, Bin};
+use crate::index::{Bin};
+use crate::checker_index::{Index, Reference};
 use crate::{ColumnarSet, ChunkWriter};
 use crate::binary::GhbWriter;
 use crate::compression::{IntegerEncode, StringEncode, DeltaVByte, VByte, Deflate, integer_encode_wrapper, string_encode, integer_decode, string_decode};
 use bam::header::HeaderEntry;
 use crate::header::Header;
-use crate::alignment::{Set, Alignment};
-use crate::{Builder, builder::{InvertedRecordBuilder, InvertedRecordBuilderSet}};
+use crate::alignment::Alignment;
+use crate::{Builder, builder::InvertedRecordBuilder};
 
 type Chromosome = Vec<HeaderEntry>;
 
@@ -140,9 +141,10 @@ impl Record {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Debug)]
+#[derive(Clone, Debug)]
 pub struct InvertedRecordChromosome {
-    bins: BTreeMap<u32, Vec<Record>> // Mutex?
+    bins: BTreeMap<u32, Vec<Record>>, // Mutex?,
+    reference: Reference
 }
 
 #[derive(Clone, Debug)]
@@ -151,6 +153,22 @@ pub struct InvertedRecordEntire {
     unmapped: Vec<Record>,
     chrom_table: Chromosome,
     sample_file_id_max: usize,
+}
+
+#[derive(Clone, Debug)]
+pub struct Bins<T> {
+    pub bins: HashMap<u32, T>, // Bin id is regarded as u32 now.
+    pub reference: Reference,
+}
+
+
+
+/// Set is a data structure for storing entire inverted data structure typed T.
+#[derive(Clone, Debug)]
+pub struct Set<T> {
+    pub sample_id: u64,
+    pub chrom: BTreeMap<u64, Bins<T>>, // Mutex?
+    pub unmapped: T,
 }
 
 
@@ -162,7 +180,7 @@ impl InvertedRecordEntire {
         for (id, chromosome) in sample_file.chrom {
             for (bin_id, bin) in chromosome.bins {
                 if let None = self.chrom.get(id as usize) {
-                    self.chrom.resize((id + 1) as usize,  InvertedRecordChromosome{bins: BTreeMap::new() });
+                    self.chrom.resize((id + 1) as usize,  InvertedRecordChromosome{bins: BTreeMap::new(), reference: chromosome.reference });
                 }
                 let chunks = self.chrom[id as usize].bins.entry(bin_id).or_insert(Vec::new());
                 let data = bin.to_format();
@@ -190,7 +208,7 @@ impl InvertedRecordEntire {
         let mut unmapped_list = Vec::with_capacity(sample_len);
         for (sample_file_id, set) in sample_file_list.into_iter().enumerate() {
             for (_name, chromosome) in set.chrom {
-                let mut chrom = InvertedRecordChromosome{bins: BTreeMap::new() };
+                let mut chrom = InvertedRecordChromosome{bins: BTreeMap::new(), reference: chromosome.reference };
 
                 for (bin_id, bin) in chromosome.bins {
                     let chunks = chrom.bins.entry(bin_id).or_insert(Vec::new());
@@ -202,7 +220,7 @@ impl InvertedRecordEntire {
                         })
                 }
                 if let None = inverted_record.get(_name as usize) {
-                    inverted_record.resize((_name + 1) as usize, InvertedRecordChromosome{bins: BTreeMap::new() });
+                    inverted_record.resize((_name + 1) as usize, InvertedRecordChromosome{bins: BTreeMap::new(), reference: Reference::new_with_bai_half_overlapping() });
                 }
                 inverted_record[_name as usize] = chrom;
             }    
@@ -225,6 +243,7 @@ impl InvertedRecordEntire {
             header.push_entry(i).unwrap();
         }
     }
+    /*
     pub fn new(sample_file_list: Vec<InvertedRecordBuilderSet>) -> InvertedRecordEntire {
         let mut inverted_record = vec![];
         let mut chrom_table = vec![];
@@ -243,22 +262,26 @@ impl InvertedRecordEntire {
         }
         return InvertedRecordEntire{chrom: inverted_record, unmapped: vec![], chrom_table,sample_file_id_max: sample_file_list.len()}
     }
+    */
 
     pub fn write_binary<W: Write+Seek>(&self, writer: &mut GhbWriter<W>) -> Result<Index> {
-        let mut reference = vec![];
+        let mut references = vec![];
         for chromosome in &self.chrom {
-            let mut bins = BTreeMap::new();
+            let mut reference = chromosome.reference.clone();
+            // let mut bins = BTreeMap::new();
             for (bin_id, bin) in &chromosome.bins {
                 let mut records = vec![];
                 for chunk in bin {
                     let record = writer.write(&chunk)?;
                     records.push(record);
                 }
-                bins.insert(*bin_id, Bin::new(*bin_id, records));
+                // bins.insert(*bin_id, Bin::new(*bin_id, records));
+                //reference.bins()[*bin_id as usize] = Bin::new(*bin_id, records);
+                reference.update(*bin_id as usize, Bin::new(*bin_id, records));
             }
-            reference.push(Reference::new(bins));
+            references.push(reference);
         }
-        Ok(Index::new(reference))
+        Ok(Index::new(references))
     }
 }
 

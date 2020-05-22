@@ -3,7 +3,8 @@ use bam::RecordReader;
 use bam::record::Record;
 use std::{collections::{BTreeMap, HashMap}, io::{Read, Result}};
 use byteorder::{LittleEndian, WriteBytesExt, ReadBytesExt};
-use crate::{index::region_to_bin_3, ColumnarSet, range::Format, Builder};
+use crate::{checker_index::Reference, ColumnarSet, range::Format, Builder};
+use crate::{header::Header, range::{Bins, Set}, index::Region};
 
 /// BAM-Compatible Alignment Inverted-Record
 #[derive(Clone, Debug)]
@@ -50,39 +51,35 @@ impl AlignmentBuilder {
 
 }
 
-/// Bins for each inverted record to store.
-#[derive(Clone, PartialEq, Eq, Debug)]
-pub struct Bins<T> {
-    pub bins: HashMap<u32, T> // Bin id is regarded as u32 now.
-}
-
 impl Bins<AlignmentBuilder> {
     pub fn new() -> Self {
         Bins {
-            bins: HashMap::new()
+            bins: HashMap::new(),
+            reference: Reference::new_with_bai_half_overlapping(),
+        }
+    }
+    pub fn new_from_reference(reference: Reference) -> Self {
+        Bins {
+            bins: HashMap::new(),
+            reference
         }
     }
 }
 
-/// Set is a data structure for storing entire inverted data structure typed T.
-#[derive(Clone, PartialEq, Eq, Debug)]
-pub struct Set<T> {
-    pub sample_id: u64,
-    pub chrom: BTreeMap<u64, Bins<T>>, // Mutex?
-    pub unmapped: T,
-}
-
 impl Set<AlignmentBuilder> {
-    pub fn new<R: Read>(reader: bam::BamReader<R>, sample_id: u64) -> Self {
+    pub fn new<R: Read>(reader: bam::BamReader<R>, sample_id: u64, header: &mut Header) -> Self {
         let mut chrom = BTreeMap::new();
         let mut unmapped = AlignmentBuilder::new();
 
         for record in reader {
             let rec = record.ok().expect("Error reading record.");
             if rec.ref_id() >= 0 {
-                let bin = chrom.entry(rec.ref_id() as u64).or_insert(Bins::<AlignmentBuilder>::new());
-                if rec.start() > 0 && rec.calculate_end() > 0 {                
-                    let stat = bin.bins.entry(region_to_bin_3(rec.start() as u64, rec.calculate_end() as u64)).or_insert(AlignmentBuilder::new());
+                let chrom_len = header.reference_len(rec.ref_id() as u64).unwrap(); // region_to_bin_3(rec.start(), rec.end())
+                let reference = Reference::new_from_len(chrom_len);
+                let bin = chrom.entry(rec.ref_id() as u64).or_insert(Bins::<AlignmentBuilder>::new_from_reference(reference));
+                if rec.start() > 0 && rec.calculate_end() > 0 {
+                    let bin_id = bin.reference.region_to_bin(Region::new(rec.ref_id() as u64,rec.start() as u64, rec.calculate_end() as u64));
+                    let stat = bin.bins.entry(bin_id as u32).or_insert(AlignmentBuilder::new());
                     stat.add(rec);
                 }
             } else if rec.ref_id() == -1 {
@@ -164,11 +161,12 @@ mod tests {
         header.transfer(bam_header).unwrap();
         header.set_local_header(bam_header, 0);
         {
-        let set = Set::<AlignmentBuilder>::new(reader, 0 as u64);
+        let set = Set::<AlignmentBuilder>::new(reader, 0 as u64, &mut header);
 
         let example = b"chr2\t16382\t16385\tbin4682\t20\t-\nchr2\t16388\t31768\tbin4683\t20\t-\n";
         let reader = bed::Reader::new(&example[..]);
         let set2: Set<InvertedRecordBuilder> = Set::<InvertedRecordBuilder>::new(reader, 1 as u64, &mut header).unwrap();
+
         assert_eq!(None, header.reference_id("1"));
         assert_eq!(Some(1), header.reference_id("chr1"));
         assert_eq!(Some(2), header.reference_id("chr2"));
@@ -177,7 +175,7 @@ mod tests {
         let dummy_header = Header::new();
         let set_vec = vec![set2];
         let mut entire = InvertedRecordEntire::new_from_set(set_vec);
-        println!("{:?}", entire);
+        // println!("{:?}", entire);
         entire.add(set);
         let mut writer = binary::GhbWriter::build()
             .write_header(false)
@@ -193,6 +191,7 @@ mod tests {
         }
 
         let mut reader2 = IndexedReader::from_path("./test/test_bam.ghb").unwrap();
+        println!("{}", reader2.index().references()[2]);
 
         let chrom = "chr2";
         let chrom_id = reader2.reference_id(&chrom).unwrap();

@@ -2,12 +2,12 @@ use bio::io::bed;
 use std::cell::RefCell;
 use std::collections::{HashMap, BTreeMap};
 use std::io::Read;
-use crate::{alignment::Set, index::region_to_bin_3, header::Header};
+use crate::{range::Set, checker_index::Reference, header::Header};
 use bam::header::HeaderEntry;
 use crate::range::InvertedRecord;
-use crate::alignment::Bins;
+use crate::range::Bins;
 use crate::range::Format;
-use crate::Builder;
+use crate::{index::Region, Builder};
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Debug)]
 pub struct InvertedRecordBuilder {
@@ -20,7 +20,15 @@ pub struct InvertedRecordBuilder {
 impl Bins<InvertedRecordBuilder> {
     pub fn new() -> Self {
         Bins {
-            bins: HashMap::new()
+            bins: HashMap::new(),
+            reference: Reference::new_with_bai_half_overlapping()
+        }
+    }
+
+    pub fn new_from_reference(reference: Reference) -> Self {
+        Bins {
+            bins: HashMap::new(),
+            reference
         }
     }
 }
@@ -51,35 +59,8 @@ pub struct InvertedRecordReference {
 impl InvertedRecordReference {
     pub fn new() -> Self {
         InvertedRecordReference{
-            bins:  HashMap::new()
+            bins: HashMap::new()
         }
-    }
-}
-
-#[derive(Clone, PartialEq, Eq, Debug)]
-pub struct InvertedRecordBuilderSet {
-    pub sample_id: u64,
-    pub chrom: BTreeMap<String, InvertedRecordReference> // Mutex?
-}
-
-impl InvertedRecordBuilderSet {
-    pub fn new<R:Read>(mut reader: bed::Reader<R>, sample_id: u64) -> Self {
-        let mut inverted_record_set = BTreeMap::new();
-
-        for record in reader.records() {
-            let rec = record.ok().expect("Error reading record.");
-            let chrom = inverted_record_set.entry(rec.chrom().to_string()).or_insert(InvertedRecordReference::new());
-            let stat = chrom.bins.entry(region_to_bin_3(rec.start(), rec.end())).or_insert(InvertedRecordBuilder::new());
-
-            let mut aux = vec![];
-            let mut n = 4; // Ignore name field
-            while let Some(item) = rec.aux(n){
-                aux.push(item.to_string());
-                n += 1;
-            }
-            stat.add(rec.start(), rec.end(), rec.name().unwrap_or("").to_string(), aux)
-        }
-        return InvertedRecordBuilderSet{sample_id: sample_id, chrom: inverted_record_set}
     }
 }
 
@@ -91,13 +72,15 @@ impl Set<InvertedRecordBuilder> {
             let rec = record.ok().expect("Error reading record.");
             let mut chrom_id = header.reference_id(rec.chrom());
             if let None = chrom_id {
-                let chrom_item = HeaderEntry::ref_sequence(rec.chrom().to_string(), u32::max_value());
+                let chrom_item = HeaderEntry::ref_sequence(rec.chrom().to_string(), i32::max_value() as u32);
                 header.push_entry(chrom_item)?;
                 chrom_id = header.reference_id(rec.chrom());
             }
-            
-            let chrom = inverted_record_set.entry(chrom_id.unwrap()).or_insert(Bins::<InvertedRecordBuilder>::new());
-            let stat = chrom.bins.entry(region_to_bin_3(rec.start(), rec.end())).or_insert(InvertedRecordBuilder::new());
+            let chrom_len = header.reference_len(chrom_id.unwrap()).unwrap(); // region_to_bin_3(rec.start(), rec.end())
+            let reference = Reference::new_from_len(chrom_len);
+            let bin = reference.region_to_bin(Region::new(chrom_id.unwrap(),rec.start(), rec.end()));
+            let chrom = inverted_record_set.entry(chrom_id.unwrap()).or_insert(Bins::<InvertedRecordBuilder>::new_from_reference(reference));
+            let stat = chrom.bins.entry(bin as u32).or_insert(InvertedRecordBuilder::new());
 
 
             let mut aux = vec![];
