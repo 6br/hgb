@@ -78,6 +78,19 @@ impl Reference {
     }
 
     pub fn update(&mut self, bin_id: usize, bin: Bin) {
+        let new_len = bin_id + 1;
+        /*
+        if self.bins.capacity() < new_len {
+            self.bins.reserve(new_len - self.bins.len());
+        }
+        unsafe {
+            self.bins.set_len(new_len);
+        }*/
+        
+        if self.bins.len() < new_len {
+            // Bins will be filled with dummy data.
+            self.bins.resize(bin_id + 1, Bin::dummy());
+        }
         self.bins[bin_id] = bin;
     }
 
@@ -92,7 +105,7 @@ impl Reference {
         }
         let mut array: [u8; LEN] = unsafe { std::mem::transmute::<_, [u8; LEN]>(array) };
 
-        for i in 0..63 {
+        for i in 0..64 {
             array[i] = stream.read_u8()?;
         }
 
@@ -152,7 +165,8 @@ impl Reference {
     pub fn region_to_bin(&self, range: Region) -> usize {
         // println!("Range: {:?}", range);
         let len = range.len();
-        let start = range.start();
+        // let start = range.start();
+        let end = range.end();
         let mut iter = self.region_to_bins(range);
         // let mut prev = iter.next().unwrap();
         let mut prev = 0;
@@ -161,15 +175,21 @@ impl Reference {
             match next {
                 None => { return prev } //v.bin_disp_range.start }
                 Some(slice) => {
-                    // println!("{:?} {:?} {}", slice.bin_disp_range, slice.range,  (slice.bin_size as u64));
+                    // println!("Here: {:?} {:?} {} {}", slice.bin_disp_range, slice.range,  (slice.bin_size as u64), prev);
                     if (slice.bin_size as u64) < len {
                         return prev //.bin_disp_range.start
                     } else {
                         prev = slice.bin_disp_range.start;
-                        let mut pos = slice.range.start();
-                        while pos < start {
+                        //let mut pos = slice.range.start();
+                        let mut slice_end = slice.range.start() + slice.bin_size as u64;
+
+                        // println!("Loop: {:?}, {}, {}", slice.range, start, end);
+                        //while pos < start {
+                        while slice_end < end {
+                            // println!("Inside: {:?}, {}, {}, {}", slice.range, start, end);
                             prev += 1;
-                            pos += slice.bin_size as u64;
+                            // pos += slice.bin_size as u64 / 2;
+                            slice_end += slice.bin_size as u64 / 2;
                         }
                     }
                 }
@@ -352,12 +372,12 @@ impl<'a> Iterator for BinsIter<'a> {
         //let bin_range_end = (bin_ofs_disp_start + bin_ofs_disp_end + 1) << bin_pitch_index;
         let bin_range_end = (bin_ofs_disp_end + 1) << bin_pitch_index;
         let bin_disp_start: usize = bin_ofs_base + bin_ofs_disp_start as usize;
-        let bin_disp_end: usize = bin_ofs_disp_end as usize + bin_ofs_base;
+        let bin_disp_end: usize = bin_ofs_base + bin_ofs_disp_end as usize ;
 
         /* update finished mask; find least significant set bit to locate the next unfinished bit, then xor to squish further remaining bits out */
         self.finished = remaining ^ (remaining - 1);
 
-        println!("{:?} {} {} {} {} {:?} {:?} {} {}", self.range, bin_range_start, bin_range_end, bin_size, finished, bin_disp_start..bin_disp_end, bin_ofs_disp_start..bin_ofs_disp_end, iterations_done, bin_pitch_index);
+        // println!("{:?} {} {} {} {} {:?} {:?} {} {}", self.range, bin_range_start, bin_range_end, bin_size, finished, bin_disp_start..bin_disp_end, bin_ofs_disp_start..bin_ofs_disp_end, iterations_done, bin_pitch_index);
 
         /* done; compute bin pointer */
         Some(Slice{
@@ -476,7 +496,7 @@ mod tests {
         let bin = bai.region_to_bin(Region::new(0, 0, 2_u64.pow(25)-1));
         assert_eq!(bin, 1);
         let bin = bai.region_to_bin(Region::new(0, 66_000_000, 112_000_000));
-        assert_eq!(bin, 2);
+        assert_eq!(bin, 3);
         let bin = bai.region_to_bin(Region::new(0, 0, 1<<17));
         assert_eq!(bin, 1169);
         let bin = bai.region_to_bin(Region::new(0, 0, 16384));
@@ -489,5 +509,13 @@ mod tests {
         assert_eq!(bin, 9363);
         let bin = bai.region_to_bin(Region::new(0, 16382, 16385));
         assert_eq!(bin, 9362);
+        let bin = bai.region_to_bin(Region::new(0, 0, 1));
+        assert_eq!(bin, 9361);
+        let bin = bai.region_to_bin(Region::new(0, 0, 2));
+        assert_eq!(bin, 9361);
+        let bin = bai.region_to_bin(Region::new(0, 1, 2));
+        assert_eq!(bin, 9361);
+        let bin = bai.region_to_bin(Region::new(0, 16388, 31768));
+        assert_eq!(bin, 9363);
     }
 }

@@ -180,7 +180,7 @@ impl InvertedRecordEntire {
         for (id, chromosome) in sample_file.chrom {
             for (bin_id, bin) in chromosome.bins {
                 if let None = self.chrom.get(id as usize) {
-                    self.chrom.resize((id + 1) as usize,  InvertedRecordChromosome{bins: BTreeMap::new(), reference: chromosome.reference });
+                    self.chrom.resize((id + 1) as usize, InvertedRecordChromosome{bins: BTreeMap::new(), reference: Reference::new_with_bai_half_overlapping() });
                 }
                 let chunks = self.chrom[id as usize].bins.entry(bin_id).or_insert(Vec::new());
                 let data = bin.to_format();

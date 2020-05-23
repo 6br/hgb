@@ -153,7 +153,7 @@ impl Chunk {
         let start = VirtualOffset::from_stream(stream)?;
         let end = VirtualOffset::from_stream(stream)?;
         if check && end <= start {
-            Err(Error::new(InvalidData, format!("BAI chunk end < start ({}  <  {})", end, start)))
+            Err(Error::new(InvalidData, format!("GHI chunk end < start ({}  <  {})", end, start)))
         } else {
             Ok(Chunk { sample_id, file_id, start, end })
         }
@@ -221,10 +221,14 @@ impl Bin {
     pub fn new(bin_id: u32, chunks: Vec<Chunk>) -> Bin {
         Bin{bin_id: bin_id, chunks: chunks}
     }
+    pub fn dummy() -> Bin {
+        Bin{bin_id: 0, chunks: vec![]}
+    }
     pub fn from_stream<R: Read>(stream: &mut R) -> Result<Self> {
         let bin_id = stream.read_u32::<LittleEndian>()?;
         let n_chunks = stream.read_i32::<LittleEndian>()? as usize;
-        let check_chunks = bin_id != SUMMARY_BIN;
+        // let check_chunks = bin_id != SUMMARY_BIN;
+        let check_chunks = false;
         let mut chunks = Vec::with_capacity(n_chunks);
         for i in 0..n_chunks {
             chunks.push(Chunk::from_stream(stream, check_chunks)?);

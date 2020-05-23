@@ -127,7 +127,7 @@ mod tests {
             .from_path("./test/test2.ghb", header).unwrap();
         let index = entire.write_binary(&mut writer).unwrap();
         writer.flush().unwrap();
-        println!("{}", index);
+        // println!("{}", index);
 
 
         let mut header2 = Header::new();
@@ -164,6 +164,7 @@ mod tests {
         // let set = InvertedRecordBuilderSet::new(reader, 0 as u64);
         let mut header2 = Header::new();
         let set: Set<InvertedRecordBuilder> = Set::<InvertedRecordBuilder>::new(reader, 1 as u64, &mut header2).unwrap();
+        println!("{:?}", set);
 
         let set_vec = vec![set];
         let entire = InvertedRecordEntire::new_from_set(set_vec);
@@ -184,7 +185,7 @@ mod tests {
         let _result = index_writer.flush();
 
         let mut reader2 = IndexedReader::from_path("./test/test.ghb").unwrap();
-        println!("{}", reader2.index());
+        // println!("{}", reader2.index());
 
 
         // assert_eq!(format!("{}", index), format!("{}", reader2.index()));
@@ -197,7 +198,7 @@ mod tests {
 
         let records = viewer.into_iter().flat_map(|t| t.map(|f| 
             if let Format::Range(rec) = f.data() {
-                println!("debug {:#?}", rec);
+                // println!("debug {:#?}", rec);
                 return rec.to_record(chrom)
             } else {
                 return vec![]
