@@ -2,6 +2,7 @@
 #![feature(rustc_private)]
 extern crate log;
 extern crate libc;
+extern crate csv;
 
 extern crate serde_json;
 extern crate bitpacking;

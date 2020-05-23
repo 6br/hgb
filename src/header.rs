@@ -4,6 +4,7 @@ use bam::header;
 use std::io::{Result, Read, Write, Error, ErrorKind};
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use header::HeaderLine;
+use csv::Reader;
 
 /// Local headers are categorized as types. 
 #[derive(Clone)]
@@ -91,7 +92,14 @@ impl Header {
             self.headers.resize(index + 1, HeaderType::None)
         }
         self.headers[index] = HeaderType::BAM(header.clone());
-        // self.headers.
+    }
+    /// Load chromosome from chrom.sizes.
+    pub fn set_header_from_sizes<R: Read>(&mut self, reader: &mut Reader<R>) -> std::result::Result<(), Box<dyn std::error::Error>> {
+        for result in reader.records() {
+            let record = result?;
+            self.global_header.push_entry(header::HeaderEntry::ref_sequence(record[0].to_string(), record[1].parse::<u32>()?))?;
+        }
+        Ok(())
     }
     pub fn get_local_header(&self, index: usize) -> Option<&HeaderType> {
         self.headers.get(index)
@@ -148,5 +156,22 @@ impl Header {
         self.global_header = global_header;
         self.headers = headers;
         Ok(true)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Header;
+    use std::fs::File;
+
+    #[test]
+    fn chrom_sizes() {
+        let mut header = Header::new();
+        let file = File::open(r#"test/hg38.chrom.sizes"#).unwrap();
+        let mut rdr = csv::ReaderBuilder::new()
+        .delimiter(b'\t').from_reader(file);
+        let _result = header.set_header_from_sizes(&mut rdr).unwrap();
+        assert_eq!(header.reference_names().len(), 454);
+        assert_eq!(header.reference_len(0).unwrap(), 242_193_529);
     }
 }

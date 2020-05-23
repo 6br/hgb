@@ -15,6 +15,7 @@ crate-type = ["staticlib", "cdylib"]
 #bam = { git = "https://bitbucket.org/6br/bam" }
 bam = { path = "../../../gitlab.com/tprodanov/bam" }
 bio = { git = "https://github.com/rust-bio/rust-bio" }
+csv = "1.1"
 bitpacking = "0.5" # Pfor
 byteorder = "*"
 env_logger = "*"
