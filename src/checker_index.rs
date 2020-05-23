@@ -8,16 +8,8 @@ use std::fmt;
 use std::{path::Path, fmt::{Display, Formatter}, result, ops::Range};
 use bam::header::HeaderEntry;
 use fmt::Debug;
-/*
-fn get_file_as_byte_vec(filename: &String) -> Vec<u8> {
-    let mut f = File::open(&filename).expect("no file found");
-    let metadata = fs::metadata(&filename).expect("unable to read metadata");
-    let mut buffer = vec![0; metadata.len() as usize];
-    f.read(&mut buffer).expect("buffer overflow");
 
-    buffer
-}
-*/
+/// Index for a single reference sequence. Contains [bins](struct.Bin.html).
 #[derive(Clone)]
 pub struct Reference {
     bin_count_mask: u64,
@@ -68,7 +60,7 @@ impl Reference {
         bin_pitch_indices[5] = 13;
         Reference {
             bin_count_mask: 0b10010010010010001,
-            bin_pitch_indices, //: [0,..,14,17,20,23,26,29],
+            bin_pitch_indices,
             bins: vec![]
         }
     }
@@ -77,15 +69,9 @@ impl Reference {
         return &self.bins
     }
 
+    // Update the item of bin list by given Bin.
     pub fn update(&mut self, bin_id: usize, bin: Bin) {
         let new_len = bin_id + 1;
-        /*
-        if self.bins.capacity() < new_len {
-            self.bins.reserve(new_len - self.bins.len());
-        }
-        unsafe {
-            self.bins.set_len(new_len);
-        }*/
         
         if self.bins.len() < new_len {
             // Bins will be filled with dummy data.
@@ -115,9 +101,6 @@ impl Reference {
         let mut chunks = Vec::with_capacity(n_chunks);
         for _i in 0..n_chunks {
             chunks.push(Bin::from_stream(stream)?);
-            /*if check_chunks && i > 0 && chunks[i].start() < chunks[i - 1].end() {
-                return Err(Error::new(InvalidData, format!("Invalid index: chunks are not sorted")));
-            }*/
         }
 
         Ok(Reference{bin_count_mask, bin_pitch_indices: array, bins: chunks})
@@ -138,49 +121,23 @@ impl Reference {
 
         Ok(())
     }
-    /*
+
+    /// Returns a bin for the record with alignment `[beg-end)` for multiplex lower-level 
     pub fn region_to_bin(&self, range: Region) -> usize {
-        let range_middle = (range.start() + range.end()) / 2;
-        let middle = Region::new(range.ref_id(), range_middle, range_middle + 1);
-        println!("Range: {:?} {:?}", range, range_middle);
-        let mut iter = self.region_to_bins(middle);
-        let mut prev = 0_usize; //iter.next().unwrap();
+        let len = range.len();
+        let end = range.end();
+        let mut iter = self.region_to_bins(range);
+        let mut prev = 0;
         loop {
             let next = iter.next();
             match next {
                 None => { return prev }
                 Some(slice) => {
-                    println!("{:?} {:?} {}", slice.bin_disp_range, slice.range,  (slice.bin_size as u64));
-                    println!("{} {}", !slice.range.include(&range), (slice.bin_size as u64) < range.len() );
-                    if !slice.range.include(&range) || (slice.bin_size as u64) < range.len() {
+                    // println!("Here: {:?} {:?} {} {}", slice.bin_disp_range, slice.range,  (slice.bin_size as u64), prev);
+                    if (slice.bin_size as u64) < len {
                         return prev
                     } else {
                         prev = slice.bin_disp_range.start;
-                    }
-                }
-            }
-        }
-    }
-*/
-    pub fn region_to_bin(&self, range: Region) -> usize {
-        // println!("Range: {:?}", range);
-        let len = range.len();
-        // let start = range.start();
-        let end = range.end();
-        let mut iter = self.region_to_bins(range);
-        // let mut prev = iter.next().unwrap();
-        let mut prev = 0;
-        loop {
-            let next = iter.next();
-            match next {
-                None => { return prev } //v.bin_disp_range.start }
-                Some(slice) => {
-                    // println!("Here: {:?} {:?} {} {}", slice.bin_disp_range, slice.range,  (slice.bin_size as u64), prev);
-                    if (slice.bin_size as u64) < len {
-                        return prev //.bin_disp_range.start
-                    } else {
-                        prev = slice.bin_disp_range.start;
-                        //let mut pos = slice.range.start();
                         let mut slice_end = slice.range.start() + slice.bin_size as u64;
 
                         // println!("Loop: {:?}, {}, {}", slice.range, start, end);
@@ -188,8 +145,7 @@ impl Reference {
                         while slice_end < end {
                             // println!("Inside: {:?}, {}, {}, {}", slice.range, start, end);
                             prev += 1;
-                            // pos += slice.bin_size as u64 / 2;
-                            slice_end += slice.bin_size as u64 / 2;
+                            slice_end += slice.bin_size as u64 / 2; // Since it is half-overlapping. 
                         }
                     }
                 }
@@ -197,6 +153,7 @@ impl Reference {
         }
     }
 
+    /// Returns all possible BAI bins for the region `[beg-end)`.
     pub fn region_to_bins(&self, range: Region) -> BinsIter {
         BinsIter{
             range,
@@ -298,7 +255,6 @@ impl Index {
         res
     }
 }
-
 
 impl Display for Index {
     fn fmt(&self, f: &mut Formatter) -> result::Result<(), fmt::Error> {

@@ -243,26 +243,6 @@ impl InvertedRecordEntire {
             header.push_entry(i).unwrap();
         }
     }
-    /*
-    pub fn new(sample_file_list: Vec<InvertedRecordBuilderSet>) -> InvertedRecordEntire {
-        let mut inverted_record = vec![];
-        let mut chrom_table = vec![];
-        for (sample_file_id, set) in sample_file_list.iter().enumerate() {
-            for (name, chromosome) in &set.chrom {
-                let mut chrom = InvertedRecordChromosome{bins: BTreeMap::new() };
-
-                let chrom_item = HeaderEntry::ref_sequence(name.clone(), i32::max_value() as u32);
-                chrom_table.push(chrom_item);
-                for (bin_id, bin) in &chromosome.bins {
-                    let chunks = chrom.bins.entry(*bin_id).or_insert(Vec::new());
-                    chunks.push(Record{sample_id: set.sample_id, sample_file_id: sample_file_id as u32, format: 1, data: Format::Range(InvertedRecord::from_builder(bin))})
-                }
-                inverted_record.push(chrom);
-            }    
-        }
-        return InvertedRecordEntire{chrom: inverted_record, unmapped: vec![], chrom_table,sample_file_id_max: sample_file_list.len()}
-    }
-    */
 
     pub fn write_binary<W: Write+Seek>(&self, writer: &mut GhbWriter<W>) -> Result<Index> {
         let mut references = vec![];
@@ -275,8 +255,6 @@ impl InvertedRecordEntire {
                     let record = writer.write(&chunk)?;
                     records.push(record);
                 }
-                // bins.insert(*bin_id, Bin::new(*bin_id, records));
-                //reference.bins()[*bin_id as usize] = Bin::new(*bin_id, records);
                 reference.update(*bin_id as usize, Bin::new(*bin_id, records));
             }
             references.push(reference);
@@ -376,7 +354,6 @@ impl ColumnarSet for InvertedRecord {
         Ok(())
     }
 }
-
 
 impl InvertedRecord {
     /// Construct from InvertedRecordBuilder.

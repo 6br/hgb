@@ -74,7 +74,7 @@ impl Set<AlignmentBuilder> {
         for record in reader {
             let rec = record.ok().expect("Error reading record.");
             if rec.ref_id() >= 0 {
-                let chrom_len = header.reference_len(rec.ref_id() as u64).unwrap(); // region_to_bin_3(rec.start(), rec.end())
+                let chrom_len = header.reference_len(rec.ref_id() as u64).unwrap();
                 let reference = Reference::new_from_len(chrom_len);
                 let bin = chrom.entry(rec.ref_id() as u64).or_insert(Bins::<AlignmentBuilder>::new_from_reference(reference));
                 if rec.start() > 0 && rec.calculate_end() > 0 {

@@ -9,7 +9,7 @@ use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
 
 /// Per BAM specification, bin with `bin_id == SUMMARY_BIN` contains summary over the reference.
-const SUMMARY_BIN: u32 = 37450; // TODO(FIXME)
+// const SUMMARY_BIN: u32 = 37450; // TODO(FIXME)
 
 
 /// Genomic coordinates, used in [struct.IndexedReader.html#method.fetch] and [struct.IndexedReader.html#method.pileup].
@@ -167,7 +167,6 @@ impl Chunk {
         Ok(())
     }
 
-
     /// Checks if two chunks intersect.
     pub fn intersect(&self, other: &Chunk) -> bool {
         self.start < other.end && other.start < self.end
@@ -177,15 +176,6 @@ impl Chunk {
     pub fn can_combine(&self, other: &Chunk) -> bool {
         self.start <= other.end && other.start <= self.end
     }
-
-    /// Combines two intersecting chunks. Panics if chunks do not intersect.
-    /*
-    pub fn combine(&self, other: &Chunk) -> Chunk {
-        Chunk {
-            start: min(self.start, other.start),
-            end: max(self.end, other.end),
-        }
-    } */
 
     /// Returns the start of the chunk.
     pub fn start(&self) -> VirtualOffset {
@@ -436,7 +426,7 @@ impl Display for Index {
     }
 }
 
-/// Returns a BAI bin for the record with alignment `[beg-end)` for multiplex lower-level 
+/// Returns a bin for the record with alignment `[beg-end)` for multiplex lower-level 
 /// Fixed version 
 pub fn region_to_bin_3(beg: u64, end: u64) -> u32 {
     let end = end - 1;
