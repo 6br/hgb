@@ -191,7 +191,7 @@ mod tests {
         }
 
         let mut reader2 = IndexedReader::from_path("./test/test_bam.ghb").unwrap();
-        println!("{}", reader2.index().references()[2]);
+        // println!("{}", reader2.index().references()[2]);
 
         let chrom = "chr2";
         let chrom_id = reader2.reference_id(&chrom).unwrap();
