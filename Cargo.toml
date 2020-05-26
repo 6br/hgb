@@ -7,8 +7,12 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [lib]
-name = "rust_project"
-crate-type = ["staticlib", "cdylib"]
+name = "ghi"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[[bin]]
+name = "ghi"
+path = "src/main.rs"
 
 [dependencies]
 #bam = "*" 
@@ -28,3 +32,11 @@ serde = "*"
 serde_json = "*"
 serde_yaml = "*"
 vbyte = { git = "https://github.com/6br/vbyte" }
+
+[dependencies.clap]
+git = "https://github.com/clap-rs/clap"
+#version = "3.0.0-beta.1"
+default-features = false
+
+# Cherry-pick the features you'd like to use
+features = [ "suggestions", "color", "std" ]

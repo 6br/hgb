@@ -6,6 +6,7 @@ use std::fs::File;
 use std::fmt::{self, Debug, Display, Formatter};
 use std::result;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
+use regex::Regex;
 
 
 /// Per BAM specification, bin with `bin_id == SUMMARY_BIN` contains summary over the reference.
@@ -26,6 +27,18 @@ impl Region {
     pub fn new(ref_id: u64, start: u64, end: u64) -> Region {
         assert!(start <= end, "Region: start should not be greater than end ({} > {})", start, end);
         Region { ref_id, start, end }
+    }
+
+    pub fn parse<F>(path: &str, to_id: F) -> //Result<Self> 
+    std::result::Result<Self, Box<dyn std::error::Error>> 
+    where F: Fn(&str) -> Option<u64> {
+        let re = Regex::new(r"^(.+):(\d*)-?(\d*)$").unwrap();
+        let caps = re.captures(path).ok_or("Parse Error")?;
+        let path = caps.get(1).and_then(|t| Some(t.as_str())).ok_or("Parse Path Error")?;
+        let start = caps.get(2).and_then(|t| t.as_str().parse::<u64>().ok()).ok_or("Error: the reference start is not recognized.")?;
+        let stop = caps.get(3).and_then(|t| t.as_str().parse::<u64>().ok()).ok_or("Error: the reference end is not recognized.")?;
+
+        return Ok(Region{ref_id: to_id(path).ok_or("Error: the reference id is not recognized.")?, start: start, end: stop})
     }
 
     pub fn ref_id(&self) -> u64 {

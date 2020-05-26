@@ -5,7 +5,6 @@ use std::io::{Result, Read, Write, Error, ErrorKind};
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use header::HeaderLine;
 use csv::Reader;
-
 /// Local headers are categorized as types. 
 #[derive(Clone)]
 pub enum HeaderType {

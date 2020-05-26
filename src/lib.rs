@@ -22,7 +22,6 @@ pub mod reader;
 pub mod writer;
 pub mod checker_index;
 
-
 use std::io;
 use range::InvertedRecord;
 use range::{Format, Record};
