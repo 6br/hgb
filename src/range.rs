@@ -1,17 +1,21 @@
-use std::io::{Result, Read, Write, Seek, Error};
-use std::io::ErrorKind::InvalidData;
-use std::collections::{HashMap, BTreeMap};
+use crate::alignment::Alignment;
+use crate::binary::GhbWriter;
+use crate::checker_index::{Index, Reference};
+use crate::compression::{
+    integer_decode, integer_encode_wrapper, string_decode, string_encode, Deflate, DeltaVByte,
+    IntegerEncode, StringEncode, VByte,
+};
+use crate::header::Header;
+use crate::index::Bin;
+use crate::{builder::InvertedRecordBuilder, Builder};
+use crate::{ChunkWriter, ColumnarSet};
+use bam::header::HeaderEntry;
 use bio::io::bed;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
-use crate::index::{Bin};
-use crate::checker_index::{Index, Reference};
-use crate::{ColumnarSet, ChunkWriter};
-use crate::binary::GhbWriter;
-use crate::compression::{IntegerEncode, StringEncode, DeltaVByte, VByte, Deflate, integer_encode_wrapper, string_encode, integer_decode, string_decode};
-use bam::header::HeaderEntry;
-use crate::header::Header;
-use crate::alignment::Alignment;
-use crate::{Builder, builder::InvertedRecordBuilder};
+use std::collections::{BTreeMap, HashMap};
+use std::io::ErrorKind::InvalidData;
+use std::io::{Error, Read, Result, Seek, Write};
+use std::str::FromStr;
 
 type Chromosome = Vec<HeaderEntry>;
 
@@ -27,9 +31,28 @@ impl Format {
         match format {
             Format::Default(_) => 0,
             Format::Range(_) => 1,
-            Format::Alignment(_) => 2
+            Format::Alignment(_) => 2,
         }
-    } 
+    }
+}
+
+// Implement the trait
+impl FromStr for Format {
+    type Err = &'static str;
+
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        match s {
+            "default" => Ok(Format::Default(Default {})),
+            "alignment" => Ok(Format::Alignment(Alignment { data: vec![] })),
+            "range" => Ok(Format::Range(InvertedRecord {
+                aux: vec![],
+                end: vec![],
+                start: vec![],
+                name: vec![],
+            })),
+            _ => Err("no match"),
+        }
+    }
 }
 
 /// GHB Record.
@@ -39,7 +62,7 @@ impl Format {
 pub struct Record {
     sample_id: u64,
     sample_file_id: u32, // When we split files of inverted data structure
-    format: u32, // Enum
+    format: u32,         // Enum
     data: Format,
 }
 
@@ -50,7 +73,7 @@ impl Record {
             sample_id: 0,
             sample_file_id: 0,
             format: 0,
-            data: Format::Default(Default{})
+            data: Format::Default(Default {}),
         }
     }
     pub fn data(self) -> Format {
@@ -61,7 +84,7 @@ impl Record {
         self.sample_id = 0;
         self.sample_file_id = 0;
         self.format = 0;
-        self.data = Format::Default(Default{});
+        self.data = Format::Default(Default {});
     }
     /// Returns 0-based sample id.
     pub fn sample_id(&self) -> u64 {
@@ -81,7 +104,7 @@ impl Record {
         match &self.data {
             Format::Default(data) => data.to_stream(stream)?,
             Format::Range(data) => data.to_stream(stream)?,
-            Format::Alignment(data) => data.to_stream(stream)?
+            Format::Alignment(data) => data.to_stream(stream)?,
         }
         Ok(())
     }
@@ -91,26 +114,31 @@ impl Record {
         let sample_id = stream.read_u64::<LittleEndian>()?;
         let sample_file_id = stream.read_u32::<LittleEndian>()?;
         let format = stream.read_u32::<LittleEndian>()?;
-        
+
         let data = match format {
             0 => {
                 let mut data = Default::new();
                 data.from_stream(stream)?;
                 Format::Default(data)
-            },
+            }
             1 => {
                 let mut record = InvertedRecord::new();
                 record.from_stream(stream)?;
                 Format::Range(record)
-            },
+            }
             2 => {
                 let mut record = Alignment::new();
                 record.from_stream(stream)?;
                 Format::Alignment(record)
             }
-            _ => panic!("Panic!")
+            _ => panic!("Panic!"),
         };
-        return Ok(Record{sample_id, sample_file_id,format, data})
+        return Ok(Record {
+            sample_id,
+            sample_file_id,
+            format,
+            data,
+        });
     }
 
     /// Fills the record from a `stream` of uncompressed BAM contents.
@@ -123,18 +151,18 @@ impl Record {
                 let mut data = Default::new();
                 data.from_stream(stream)?;
                 Format::Default(data)
-            },
+            }
             1 => {
                 let mut record = InvertedRecord::new();
                 record.from_stream(stream)?;
                 Format::Range(record)
-            },
+            }
             2 => {
                 let mut record = Alignment::new();
                 record.from_stream(stream)?;
                 Format::Alignment(record)
             }
-            _ => return Err(Error::new(InvalidData, "Invalid format record"))
+            _ => return Err(Error::new(InvalidData, "Invalid format record")),
         };
         self.data = data;
         return Ok(true);
@@ -144,7 +172,7 @@ impl Record {
 #[derive(Clone, Debug)]
 pub struct InvertedRecordChromosome {
     bins: BTreeMap<u32, Vec<Record>>, // Mutex?,
-    reference: Reference
+    reference: Reference,
 }
 
 #[derive(Clone, Debug)]
@@ -161,8 +189,6 @@ pub struct Bins<T> {
     pub reference: Reference,
 }
 
-
-
 /// Set is a data structure for storing entire inverted data structure typed T.
 #[derive(Clone, Debug)]
 pub struct Set<T> {
@@ -170,7 +196,6 @@ pub struct Set<T> {
     pub chrom: BTreeMap<u64, Bins<T>>, // Mutex?
     pub unmapped: T,
 }
-
 
 impl InvertedRecordEntire {
     /// Add new inverted record from Set.
@@ -180,24 +205,34 @@ impl InvertedRecordEntire {
         for (id, chromosome) in sample_file.chrom {
             for (bin_id, bin) in chromosome.bins {
                 if let None = self.chrom.get(id as usize) {
-                    self.chrom.resize((id + 1) as usize, InvertedRecordChromosome{bins: BTreeMap::new(), reference: Reference::new_with_bai_half_overlapping() });
+                    self.chrom.resize(
+                        (id + 1) as usize,
+                        InvertedRecordChromosome {
+                            bins: BTreeMap::new(),
+                            reference: Reference::new_with_bai_half_overlapping(),
+                        },
+                    );
                 }
-                let chunks = self.chrom[id as usize].bins.entry(bin_id).or_insert(Vec::new());
+                let chunks = self.chrom[id as usize]
+                    .bins
+                    .entry(bin_id)
+                    .or_insert(Vec::new());
                 let data = bin.to_format();
-                chunks.push(
-                    Record{
-                        sample_id: sample_file.sample_id, sample_file_id: sample_file_id as u32, 
-                        format: Format::id(&data), data: data
-                    }
-                )
+                chunks.push(Record {
+                    sample_id: sample_file.sample_id,
+                    sample_file_id: sample_file_id as u32,
+                    format: Format::id(&data),
+                    data: data,
+                })
             }
         }
         let data = sample_file.unmapped.to_format();
-        let unmapped =
-            Record{
-                sample_id: sample_file.sample_id, sample_file_id: sample_file_id as u32, 
-                format: Format::id(&data), data: data
-            };
+        let unmapped = Record {
+            sample_id: sample_file.sample_id,
+            sample_file_id: sample_file_id as u32,
+            format: Format::id(&data),
+            data: data,
+        };
         self.unmapped.push(unmapped);
     }
     /// Create an initial inverted record from Set.
@@ -208,32 +243,48 @@ impl InvertedRecordEntire {
         let mut unmapped_list = Vec::with_capacity(sample_len);
         for (sample_file_id, set) in sample_file_list.into_iter().enumerate() {
             for (_name, chromosome) in set.chrom {
-                let mut chrom = InvertedRecordChromosome{bins: BTreeMap::new(), reference: chromosome.reference };
+                let mut chrom = InvertedRecordChromosome {
+                    bins: BTreeMap::new(),
+                    reference: chromosome.reference,
+                };
 
                 for (bin_id, bin) in chromosome.bins {
                     let chunks = chrom.bins.entry(bin_id).or_insert(Vec::new());
                     let data = bin.to_format();
-                    chunks.push(
-                        Record{
-                            sample_id: set.sample_id, sample_file_id: sample_file_id as u32, 
-                            format: Format::id(&data), data: data
-                        })
+                    chunks.push(Record {
+                        sample_id: set.sample_id,
+                        sample_file_id: sample_file_id as u32,
+                        format: Format::id(&data),
+                        data: data,
+                    })
                 }
                 if let None = inverted_record.get(_name as usize) {
-                    inverted_record.resize((_name + 1) as usize, InvertedRecordChromosome{bins: BTreeMap::new(), reference: Reference::new_with_bai_half_overlapping() });
+                    inverted_record.resize(
+                        (_name + 1) as usize,
+                        InvertedRecordChromosome {
+                            bins: BTreeMap::new(),
+                            reference: Reference::new_with_bai_half_overlapping(),
+                        },
+                    );
                 }
                 inverted_record[_name as usize] = chrom;
-            }    
+            }
             let data = set.unmapped.to_format();
-            let unmapped =
-                Record{
-                    sample_id: set.sample_id, sample_file_id: sample_file_id as u32, 
-                    format: Format::id(&data), data: data
-                };
-                unmapped_list.push(unmapped);
+            let unmapped = Record {
+                sample_id: set.sample_id,
+                sample_file_id: sample_file_id as u32,
+                format: Format::id(&data),
+                data: data,
+            };
+            unmapped_list.push(unmapped);
         }
 
-        InvertedRecordEntire{chrom: inverted_record, unmapped: unmapped_list, chrom_table, sample_file_id_max: sample_len}
+        InvertedRecordEntire {
+            chrom: inverted_record,
+            unmapped: unmapped_list,
+            chrom_table,
+            sample_file_id_max: sample_len,
+        }
     }
     pub fn chrom_table(self) -> Chromosome {
         self.chrom_table
@@ -244,7 +295,7 @@ impl InvertedRecordEntire {
         }
     }
 
-    pub fn write_binary<W: Write+Seek>(&self, writer: &mut GhbWriter<W>) -> Result<Index> {
+    pub fn write_binary<W: Write + Seek>(&self, writer: &mut GhbWriter<W>) -> Result<Index> {
         let mut references = vec![];
         for chromosome in &self.chrom {
             let mut reference = chromosome.reference.clone();
@@ -264,13 +315,11 @@ impl InvertedRecordEntire {
 }
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Debug)]
-pub struct Default {
-
-}
+pub struct Default {}
 
 impl ColumnarSet for Default {
     fn new() -> Self {
-        Default{}
+        Default {}
     }
     fn to_stream<W: Write>(&self, _stream: &mut W) -> Result<()> {
         Err(Error::new(InvalidData, format!("No data.")))
@@ -284,9 +333,9 @@ impl ColumnarSet for Default {
 #[derive(Clone, PartialEq, Eq, PartialOrd, Debug)]
 pub struct InvertedRecord {
     start: DeltaVByte, //Vec<u8>, //IntegerEncode::DeltaVByte // Vec<u64>,
-    end: VByte, //Vec<u8>, //IntegerEncode::VByte,　// Vec<u64>
-    name: Deflate, //Vec<u8>, //StringEncode::Deflate,  // Vec<String>
-    aux: Deflate //Vec<u8>, //StringEncode::Deflate // We should update better data format.
+    end: VByte,        //Vec<u8>, //IntegerEncode::VByte,　// Vec<u64>
+    name: Deflate,     //Vec<u8>, //StringEncode::Deflate,  // Vec<String>
+    aux: Deflate,      //Vec<u8>, //StringEncode::Deflate // We should update better data format.
 }
 
 impl ColumnarSet for InvertedRecord {
@@ -295,9 +344,14 @@ impl ColumnarSet for InvertedRecord {
         let end = vec![];
         let name = vec![];
         let aux = vec![];
-        InvertedRecord{start: start, end: end, name: name, aux: aux}
+        InvertedRecord {
+            start: start,
+            end: end,
+            name: name,
+            aux: aux,
+        }
     }
-    
+
     fn from_stream<R: Read>(&mut self, stream: &mut R) -> Result<bool> {
         let _n_items = stream.read_u64::<LittleEndian>()?;
         let n_header = stream.read_u64::<LittleEndian>()?;
@@ -327,12 +381,12 @@ impl ColumnarSet for InvertedRecord {
 
         Ok(true)
     }
-    
+
     fn to_stream<W: Write>(&self, stream: &mut W) -> Result<()> {
         stream.write_u64::<LittleEndian>(self.start.len() as u64)?; //n_item
         stream.write_u64::<LittleEndian>(3 as u64)?; // n_header
         stream.write_u16::<LittleEndian>(1 as u16)?; // u64
-        stream.write_u16::<LittleEndian>(1 as u16)?; // u64 
+        stream.write_u16::<LittleEndian>(1 as u16)?; // u64
         stream.write_u16::<LittleEndian>(0 as u16)?; // String
 
         stream.write_u64::<LittleEndian>(self.start.len() as u64)?;
@@ -361,9 +415,20 @@ impl InvertedRecord {
         let start = integer_encode_wrapper(&builder.start.borrow(), true);
         let end = integer_encode_wrapper(&builder.end.borrow(), false);
         let name = string_encode(&builder.name.borrow());
-        let aux_raw = builder.aux.clone().into_inner().into_iter().map(|t| t.join("\t").to_owned()).collect();
+        let aux_raw = builder
+            .aux
+            .clone()
+            .into_inner()
+            .into_iter()
+            .map(|t| t.join("\t").to_owned())
+            .collect();
         let aux = string_encode(&aux_raw);
-        InvertedRecord{start: start, end: end, name: name, aux: aux}
+        InvertedRecord {
+            start: start,
+            end: end,
+            name: name,
+            aux: aux,
+        }
     }
 
     /// Output as Record.
@@ -388,4 +453,3 @@ impl InvertedRecord {
         records
     }
 }
-

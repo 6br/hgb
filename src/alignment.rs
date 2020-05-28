@@ -1,34 +1,39 @@
-use bam::RecordWriter;
-use bam::RecordReader;
+use crate::{checker_index::Reference, range::Format, Builder, ColumnarSet};
+use crate::{
+    header::Header,
+    index::Region,
+    range::{Bins, Set},
+};
 use bam::record::Record;
-use std::{collections::{BTreeMap, HashMap}, io::{Read, Result}};
-use byteorder::{LittleEndian, WriteBytesExt, ReadBytesExt};
-use crate::{checker_index::Reference, ColumnarSet, range::Format, Builder};
-use crate::{header::Header, range::{Bins, Set}, index::Region};
+use bam::RecordReader;
+use bam::RecordWriter;
+use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
+use std::{
+    collections::{BTreeMap, HashMap},
+    io::{Read, Result},
+};
 
 /// BAM-Compatible Alignment Inverted-Record
 #[derive(Clone, Debug)]
 pub struct Alignment {
-    data: Vec<Record> //bgzip compressed records
+    pub data: Vec<Record>, //bgzip compressed records
 }
 
 impl PartialEq for Alignment {
     fn eq(&self, other: &Self) -> bool {
         if self.data.len() != other.data.len() {
-            return false
+            return false;
         }
         for i in 0..self.data.len() {
             if self.data[i].name() != other.data[i].name() {
-                return false
+                return false;
             }
         }
         true
     }
 }
 
-impl Eq for Alignment {
-
-}
+impl Eq for Alignment {}
 
 /// BAM-Compatible Alignment Record
 pub struct AlignmentBuilder {
@@ -37,9 +42,7 @@ pub struct AlignmentBuilder {
 
 impl AlignmentBuilder {
     pub fn new() -> Self {
-        AlignmentBuilder{ 
-            alignments: vec![]
-        }
+        AlignmentBuilder { alignments: vec![] }
     }
     pub fn add(&mut self, alignment: Record) {
         self.alignments.push(alignment);
@@ -48,7 +51,6 @@ impl AlignmentBuilder {
     pub fn take(self) -> Vec<Record> {
         self.alignments
     }
-
 }
 
 impl Bins<AlignmentBuilder> {
@@ -61,7 +63,7 @@ impl Bins<AlignmentBuilder> {
     pub fn new_from_reference(reference: Reference) -> Self {
         Bins {
             bins: HashMap::new(),
-            reference
+            reference,
         }
     }
 }
@@ -76,10 +78,19 @@ impl Set<AlignmentBuilder> {
             if rec.ref_id() >= 0 {
                 let chrom_len = header.reference_len(rec.ref_id() as u64).unwrap();
                 let reference = Reference::new_from_len(chrom_len);
-                let bin = chrom.entry(rec.ref_id() as u64).or_insert(Bins::<AlignmentBuilder>::new_from_reference(reference));
+                let bin = chrom
+                    .entry(rec.ref_id() as u64)
+                    .or_insert(Bins::<AlignmentBuilder>::new_from_reference(reference));
                 if rec.start() > 0 && rec.calculate_end() > 0 {
-                    let bin_id = bin.reference.region_to_bin(Region::new(rec.ref_id() as u64,rec.start() as u64, rec.calculate_end() as u64));
-                    let stat = bin.bins.entry(bin_id as u32).or_insert(AlignmentBuilder::new());
+                    let bin_id = bin.reference.region_to_bin(Region::new(
+                        rec.ref_id() as u64,
+                        rec.start() as u64,
+                        rec.calculate_end() as u64,
+                    ));
+                    let stat = bin
+                        .bins
+                        .entry(bin_id as u32)
+                        .or_insert(AlignmentBuilder::new());
                     stat.add(rec);
                 }
             } else if rec.ref_id() == -1 {
@@ -89,7 +100,11 @@ impl Set<AlignmentBuilder> {
                 panic!("Reference id < -1");
             }
         }
-        Set::<AlignmentBuilder> { sample_id, chrom, unmapped}
+        Set::<AlignmentBuilder> {
+            sample_id,
+            chrom,
+            unmapped,
+        }
     }
 }
 
@@ -105,12 +120,15 @@ impl Builder for AlignmentBuilder {
 }
 impl ColumnarSet for Alignment {
     fn new() -> Alignment {
-        Alignment {data: vec![]}
+        Alignment { data: vec![] }
     }
     fn to_stream<W: std::io::Write>(&self, stream: &mut W) -> Result<()> {
         stream.write_u64::<LittleEndian>(self.data.len() as u64)?;
         let header = bam::Header::new();
-        let mut writer = bam::bam_writer::BamWriterBuilder::new().additional_threads(4).write_header(false).from_stream(stream, header)?;
+        let mut writer = bam::bam_writer::BamWriterBuilder::new()
+            .additional_threads(4)
+            .write_header(false)
+            .from_stream(stream, header)?;
         for i in self.data.iter() {
             writer.write(i)?;
         }
@@ -119,8 +137,9 @@ impl ColumnarSet for Alignment {
     }
     fn from_stream<R: Read>(&mut self, stream: &mut R) -> Result<bool> {
         let len = stream.read_u64::<LittleEndian>()?;
-        
-        let mut reader = bam::BamReader::from_stream_no_header(stream, bam::Header::new(), 0).unwrap();
+
+        let mut reader =
+            bam::BamReader::from_stream_no_header(stream, bam::Header::new(), 0).unwrap();
 
         for _i in 0..len as usize {
             let mut record = Record::new();
@@ -134,24 +153,29 @@ impl ColumnarSet for Alignment {
 
         Ok(true)
     }
-    
 }
 
 #[cfg(test)]
 mod tests {
+    use super::AlignmentBuilder;
+    use crate::bam::RecordWriter;
+    use crate::binary;
     use crate::header::Header;
     use crate::index::Region;
-    use crate::binary;
-    use crate::writer::GhiWriter;
+    use crate::range::{Format, InvertedRecordEntire};
     use crate::reader::IndexedReader;
-    use crate::range::{InvertedRecordEntire, Format};
-    use crate::{builder::InvertedRecordBuilder, alignment::Set};
-    use bio::io::bed;
-    use bam::record::Record;
-    use super::AlignmentBuilder;
+    use crate::writer::GhiWriter;
     use crate::IndexWriter;
-    use crate::bam::RecordWriter;
-    use std::{process::Command, time::Instant, fs::File, path::Path, io::{BufReader, Write, BufRead}};
+    use crate::{alignment::Set, builder::InvertedRecordBuilder};
+    use bam::record::Record;
+    use bio::io::bed;
+    use std::{
+        fs::File,
+        io::{BufRead, BufReader, Write},
+        path::Path,
+        process::Command,
+        time::Instant,
+    };
     #[test]
     fn bam_works() {
         let bam_path = "./test/index_test.bam";
@@ -161,33 +185,38 @@ mod tests {
         header.transfer(bam_header).unwrap();
         header.set_local_header(bam_header, 0);
         {
-        let set = Set::<AlignmentBuilder>::new(reader, 0 as u64, &mut header);
+            let set = Set::<AlignmentBuilder>::new(reader, 0 as u64, &mut header);
 
-        let example = b"chr2\t16382\t16385\tbin4682\t20\t-\nchr2\t16388\t31768\tbin4683\t20\t-\n";
-        let reader = bed::Reader::new(&example[..]);
-        let set2: Set<InvertedRecordBuilder> = Set::<InvertedRecordBuilder>::new(reader, 1 as u64, &mut header).unwrap();
+            let example =
+                b"chr2\t16382\t16385\tbin4682\t20\t-\nchr2\t16388\t31768\tbin4683\t20\t-\n";
+            let reader = bed::Reader::new(&example[..]);
+            let set2: Set<InvertedRecordBuilder> =
+                Set::<InvertedRecordBuilder>::new(reader, 1 as u64, &mut header).unwrap();
 
-        assert_eq!(None, header.reference_id("1"));
-        assert_eq!(Some(1), header.reference_id("chr1"));
-        assert_eq!(Some(2), header.reference_id("chr2"));
+            assert_eq!(None, header.reference_id("1"));
+            assert_eq!(Some(1), header.reference_id("chr1"));
+            assert_eq!(Some(2), header.reference_id("chr2"));
 
+            let dummy_header = Header::new();
+            let set_vec = vec![set2];
+            let mut entire = InvertedRecordEntire::new_from_set(set_vec);
+            // println!("{:?}", entire);
+            entire.add(set);
+            let mut writer = binary::GhbWriter::build()
+                .write_header(false)
+                .from_path("./test/test_bam.ghb", dummy_header)
+                .unwrap();
+            let index = entire.write_binary(&mut writer).unwrap();
+            writer.flush().unwrap();
 
-        let dummy_header = Header::new();
-        let set_vec = vec![set2];
-        let mut entire = InvertedRecordEntire::new_from_set(set_vec);
-        // println!("{:?}", entire);
-        entire.add(set);
-        let mut writer = binary::GhbWriter::build()
-            .write_header(false)
-            .from_path("./test/test_bam.ghb", dummy_header).unwrap();
-        let index = entire.write_binary(&mut writer).unwrap();
-        writer.flush().unwrap();
-
-        entire.write_header(&mut header);
-        let mut index_writer = GhiWriter::build().write_header(true).from_path("./test/test_bam.ghb.ghi", header).unwrap();
-        let _result = index_writer.write(&index);
-        assert_eq!(_result.ok(), Some(()));
-        let _result = index_writer.flush();
+            entire.write_header(&mut header);
+            let mut index_writer = GhiWriter::build()
+                .write_header(true)
+                .from_path("./test/test_bam.ghb.ghi", header)
+                .unwrap();
+            let _result = index_writer.write(&index);
+            assert_eq!(_result.ok(), Some(()));
+            let _result = index_writer.flush();
         }
 
         let mut reader2 = IndexedReader::from_path("./test/test_bam.ghb").unwrap();
@@ -200,43 +229,51 @@ mod tests {
             let chrom_name = reader2.reference_name(0).unwrap();
             assert_eq!(chrom_name, "chrM");
         }
-        let viewer = reader2.fetch(&Region::new(chrom_id, 17_000, 17_500)).unwrap();
+        let viewer = reader2
+            .fetch(&Region::new(chrom_id, 17_000, 17_500))
+            .unwrap();
         let example = "chr2\t16382\t16385\tbin4682\t20\t-\nchr2\t16388\t31768\tbin4683\t20\t-\n";
-        let records = viewer.into_iter().flat_map(|t| t.map(|f| 
-
-            if let Format::Range(rec) = f.data() {
-                return rec.to_record(chrom)
-            } else {
-                return vec![]
-            }
-        ).unwrap()).collect::<Vec<bed::Record>>();
+        let records = viewer
+            .into_iter()
+            .flat_map(|t| {
+                t.map(|f| {
+                    if let Format::Range(rec) = f.data() {
+                        return rec.to_record(chrom);
+                    } else {
+                        return vec![];
+                    }
+                })
+                .unwrap()
+            })
+            .collect::<Vec<bed::Record>>();
         let mut buf = Vec::new();
         {
             let mut writer = bed::Writer::new(&mut buf);
             for i in records {
                 writer.write(&i).ok().unwrap();
-            } 
+            }
         }
-        assert_eq!(
-            example,
-            String::from_utf8(buf).unwrap().as_str()
-        );
+        assert_eq!(example, String::from_utf8(buf).unwrap().as_str());
 
         /* check if chr1 paired end read is rescued */
         let chrom_1 = reader2.reference_id("chr1").unwrap();
-        let viewer = reader2.fetch(&Region::new(chrom_1, 470_000, 471_500)).unwrap();
-        let records = viewer.into_iter().flat_map(|t| t.map(|f| 
+        let viewer = reader2
+            .fetch(&Region::new(chrom_1, 470_000, 471_500))
+            .unwrap();
+        let records = viewer
+            .into_iter()
+            .flat_map(|t| {
+                t.map(|f| 
             // println!("debug {:#?}", t.to_record(chrom));
             if let Format::Alignment(rec) = f.data() {
                 return rec.data
             } else {
                 return vec![]
             }
-        ).unwrap()).collect::<Vec<Record>>();
-        assert_eq!(
-            records.len(),
-            2
-        );
+        ).unwrap()
+            })
+            .collect::<Vec<Record>>();
+        assert_eq!(records.len(), 2);
 
         /* Check if bam can reconstruct, except for unmapped reads */
         let sam_output = format!("./test/index_output.sam");
@@ -246,32 +283,31 @@ mod tests {
         // let mut writer = bam::BamWriter::from_path(bam_output, header).unwrap();
         let mut writer = bam::SamWriter::from_path(&sam_output, header).unwrap();
         let viewer2 = reader2.full();
-        viewer2.into_iter().for_each(|t| 
-            t.map(|f| 
-            match f.data() {
+        viewer2.into_iter().for_each(|t| {
+            t.map(|f| match f.data() {
                 Format::Alignment(record) => {
-                            for i in record.data {
-                                writer.write(&i).unwrap();
-                                count += 1;
-                            }
-                            // return rec.to_record(c)
-                            ()
-                        }
+                    for i in record.data {
+                        writer.write(&i).unwrap();
+                        count += 1;
+                    }
+                    // return rec.to_record(c)
+                    ()
+                }
                 _ => (),
-        }
-            ).unwrap()
-        );
+            })
+            .unwrap()
+        });
         writer.finish().unwrap();
 
         let mut log = File::create("./test/compare_alignment.log").unwrap();
 
         let timer = Instant::now();
         let mut child = Command::new("samtools")
-        .args(&["view", "-h", "--no-PG", "-F", "4"])
-        .arg(&bam_path)
-        .args(&["-o", &output1])
-        .spawn()
-        .expect("Failed to run samtools view");
+            .args(&["view", "-h", "--no-PG", "-F", "4"])
+            .arg(&bam_path)
+            .args(&["-o", &output1])
+            .spawn()
+            .expect("Failed to run samtools view");
         let ecode = child.wait().expect("Failed to wait on samtools view");
         assert!(ecode.success());
         writeln!(log, "        samtools view:  {:?}", timer.elapsed()).unwrap();
@@ -283,7 +319,11 @@ mod tests {
         /* unimplemented*/
     }
 
-    fn compare_sam_files<P: AsRef<Path>, T: AsRef<Path>, W: Write>(filename1: P, filename2: T, log: &mut W) {
+    fn compare_sam_files<P: AsRef<Path>, T: AsRef<Path>, W: Write>(
+        filename1: P,
+        filename2: T,
+        log: &mut W,
+    ) {
         let filename1 = filename1.as_ref();
         let filename2 = filename2.as_ref();
         let mut file1 = BufReader::new(File::open(&filename1).unwrap());
@@ -297,25 +337,43 @@ mod tests {
             match (file1.read_line(&mut line1), file2.read_line(&mut line2)) {
                 (Ok(x), Ok(y)) => {
                     if x == 0 && y != 0 {
-                        writeln!(log, "Comparing files {} and {}", filename1.display(), filename2.display()).unwrap();
+                        writeln!(
+                            log,
+                            "Comparing files {} and {}",
+                            filename1.display(),
+                            filename2.display()
+                        )
+                        .unwrap();
                         writeln!(log, "Samtools output: {}", line2.trim()).unwrap();
                         writeln!(log, "Samtools output is longer").unwrap();
                         panic!("Samtools output is longer");
                     } else if x != 0 && y == 0 {
-                        writeln!(log, "Comparing files {} and {}", filename1.display(), filename2.display()).unwrap();
+                        writeln!(
+                            log,
+                            "Comparing files {} and {}",
+                            filename1.display(),
+                            filename2.display()
+                        )
+                        .unwrap();
                         writeln!(log, "Crate output:    {}", line1.trim()).unwrap();
                         writeln!(log, "Crate output is longer").unwrap();
                         panic!("Crate output is longer");
                     } else if x == 0 && y == 0 {
                         break;
                     }
-                },
+                }
                 (Ok(_), Err(e)) => panic!("Could not read samtools output: {:?}", e),
                 (Err(e), Ok(_)) => panic!("Could not read crate output: {:?}", e),
                 (Err(e1), Err(e2)) => panic!("Could not read both outputs: {:?}, {:?}", e1, e2),
             }
             if line1 != line2 {
-                writeln!(log, "Comparing files {} and {}", filename1.display(), filename2.display()).unwrap();
+                writeln!(
+                    log,
+                    "Comparing files {} and {}",
+                    filename1.display(),
+                    filename2.display()
+                )
+                .unwrap();
                 writeln!(log, "Crate output:    {}", line1.trim()).unwrap();
                 writeln!(log, "Samtools output: {}", line2.trim()).unwrap();
                 writeln!(log, "Outputs do not match on line {}", i).unwrap();
@@ -323,5 +381,4 @@ mod tests {
             }
         }
     }
-
 }

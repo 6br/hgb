@@ -9,15 +9,15 @@
 //! ```
 //!
 
-use std::cmp::max;
-use std::io::{Write, BufWriter, Result, Seek, SeekFrom, BufReader, Read};
-use std::fs::File;
-use std::path::Path;
-use crate::ColumnarSet;
+use super::{ChunkWriter, InvertedRecord, InvertedRecordWriter};
 use crate::header::Header;
-use crate::index::{VirtualOffset, Chunk};
+use crate::index::{Chunk, VirtualOffset};
 use crate::range::Record;
-use super::{InvertedRecordWriter, ChunkWriter, InvertedRecord};
+use crate::ColumnarSet;
+use std::cmp::max;
+use std::fs::File;
+use std::io::{BufReader, BufWriter, Read, Result, Seek, SeekFrom, Write};
+use std::path::Path;
 
 /// Builder of the [GhbWriter](struct.GhbWriter.html).
 pub struct GhbWriterBuilder {
@@ -26,9 +26,7 @@ pub struct GhbWriterBuilder {
 
 impl GhbWriterBuilder {
     pub fn new() -> Self {
-        Self {
-            write_header: true,
-        }
+        Self { write_header: true }
     }
 
     /// The option to write or skip header when creating the GHB writer (writing by default).
@@ -38,8 +36,11 @@ impl GhbWriterBuilder {
     }
 
     /// Creates a GHB writer from a file and a header.
-    pub fn from_path<P: AsRef<Path>>(&mut self, path: P, header: Header)
-            -> Result<GhbWriter<BufWriter<File>>> {
+    pub fn from_path<P: AsRef<Path>>(
+        &mut self,
+        path: P,
+        header: Header,
+    ) -> Result<GhbWriter<BufWriter<File>>> {
         let stream = BufWriter::new(File::create(path)?);
         self.from_stream(stream, header)
     }
@@ -111,12 +112,18 @@ impl<W: Write> GhbWriter<W> {
     }
 }
 
-impl<W: Write+Seek> ChunkWriter for GhbWriter<W> {
+impl<W: Write + Seek> ChunkWriter for GhbWriter<W> {
     /// Writes a single record in GHB format.
     fn write(&mut self, record: &Record) -> Result<Chunk> {
-        let start = self.stream.seek(SeekFrom::Current(0)).map(|a| VirtualOffset::from_raw(a))?;
+        let start = self
+            .stream
+            .seek(SeekFrom::Current(0))
+            .map(|a| VirtualOffset::from_raw(a))?;
         record.to_stream(&mut self.stream)?;
-        let stop = self.stream.seek(SeekFrom::Current(0)).map(|a| VirtualOffset::from_raw(a))?;
+        let stop = self
+            .stream
+            .seek(SeekFrom::Current(0))
+            .map(|a| VirtualOffset::from_raw(a))?;
         Ok(Chunk::new(record.sample_id(), 0, start, stop))
     }
 
@@ -129,11 +136,13 @@ impl<W: Write+Seek> ChunkWriter for GhbWriter<W> {
     }
 }
 
-impl<W: Write+Seek> InvertedRecordWriter for GhbWriter<W> {
+impl<W: Write + Seek> InvertedRecordWriter for GhbWriter<W> {
     /// Writes a single record in GHB format.
     fn write(&mut self, record: &InvertedRecord) -> Result<VirtualOffset> {
         record.to_stream(&mut self.stream)?;
-        self.stream.seek(SeekFrom::Current(0)).map(|a| VirtualOffset::from_raw(a))
+        self.stream
+            .seek(SeekFrom::Current(0))
+            .map(|a| VirtualOffset::from_raw(a))
     }
 
     fn finish(&mut self) -> Result<()> {
@@ -144,7 +153,6 @@ impl<W: Write+Seek> InvertedRecordWriter for GhbWriter<W> {
         self.flush()
     }
 }
-
 
 /// Reads records from GHB format.
 ///
@@ -190,7 +198,14 @@ impl<R: Read + Seek> GhbReader<R> {
         // let _marker = std::marker::PhantomData;
         let chunks = Vec::new();
         let offset = stream.seek(SeekFrom::Current(0))?;
-        Ok(GhbReader { stream, header, chunks, index: 0 as usize, started: false, offset })
+        Ok(GhbReader {
+            stream,
+            header,
+            chunks,
+            index: 0 as usize,
+            started: false,
+            offset,
+        })
     }
 
     /// Returns [header](../header/struct.Header.html).
@@ -218,7 +233,7 @@ impl<R: Read + Seek> GhbReader<R> {
                 self.offset = new_offset;
             }
             record.fill_from_bam(&mut self.stream)
-            // self.offset = TODO(offset should be updated, but how?)
+        // self.offset = TODO(offset should be updated, but how?)
         } else {
             Ok(false)
             //Err(Error::new(ErrorKind::Other, "The end of stream"))
@@ -236,7 +251,9 @@ impl<R: Read + Seek> GhbReader<R> {
 
         let curr_offset = VirtualOffset::new(self.offset, 0);
         // When not full query:
-        if curr_offset > self.chunks[self.index].end() || VirtualOffset::MAX != self.chunks[self.index].end() {
+        if curr_offset > self.chunks[self.index].end()
+            || VirtualOffset::MAX != self.chunks[self.index].end()
+        {
             self.index += 1;
         }
         //}
@@ -252,11 +269,17 @@ impl<R: Read + Seek> GhbReader<R> {
         self.chunks.extend(chunks);
         for i in 1..self.chunks.len() {
             if self.chunks[i - 1].intersect(&self.chunks[i]) {
-                panic!("Cannot set chunks: chunk {:?} intersects chunk {:?}",
-                    self.chunks[i - 1], self.chunks[i]);
+                panic!(
+                    "Cannot set chunks: chunk {:?} intersects chunk {:?}",
+                    self.chunks[i - 1],
+                    self.chunks[i]
+                );
             } else if self.chunks[i - 1] >= self.chunks[i] {
-                panic!("Cannot set chunks: chunks are unordered: {:?} >= {:?}",
-                    self.chunks[i - 1], self.chunks[i]);
+                panic!(
+                    "Cannot set chunks: chunks are unordered: {:?} >= {:?}",
+                    self.chunks[i - 1],
+                    self.chunks[i]
+                );
             }
         }
         self.index = 0;

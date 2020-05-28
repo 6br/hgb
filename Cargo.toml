@@ -24,6 +24,7 @@ bitpacking = "0.5" # Pfor
 byteorder = "*"
 env_logger = "*"
 flate2 = "1.0" # A streaming compression/decompression library
+genomic_range = { git = "https://github.com/6br/genomic_range" }
 libflate = "0.1"
 log = "*"
 numpress = "1.0"

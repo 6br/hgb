@@ -1,13 +1,13 @@
 //! GHB writer.
 
-use std::io::{Write, Result};
 use std::fs::File;
+use std::io::{Result, Write};
 use std::path::Path;
 
-use bam::bgzip;
-use crate::header::Header;
 use super::IndexWriter;
 use crate::checker_index::Index;
+use crate::header::Header;
+use bam::bgzip;
 
 /// Builder of the [GhiWriter](struct.GhiWriter.html).
 pub struct GhiWriterBuilder {
@@ -49,8 +49,11 @@ impl GhiWriterBuilder {
     }
 
     /// Creates a GHI writer from a file and a header.
-    pub fn from_path<P: AsRef<Path>>(&mut self, path: P, header: Header)
-            -> Result<GhiWriter<File>> {
+    pub fn from_path<P: AsRef<Path>>(
+        &mut self,
+        path: P,
+        header: Header,
+    ) -> Result<GhiWriter<File>> {
         let stream = File::create(path)?;
         self.from_stream(stream, header)
     }
@@ -105,7 +108,6 @@ impl<W: Write> GhiWriter<W> {
     pub fn take_stream(self) -> W {
         self.writer.take_stream()
     }
-
 
     /// Pauses multi-thread writer until the next write operation. Does nothing to a single-thread writer.
     ///

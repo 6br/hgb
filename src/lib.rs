@@ -1,32 +1,32 @@
-#![feature(associated_type_bounds)]
-#![feature(rustc_private)]
-extern crate log;
-extern crate libc;
+//#![feature(associated_type_bounds)]
+//#![feature(rustc_private)]
+//extern crate libc;
 extern crate csv;
+extern crate log;
 
-extern crate serde_json;
-extern crate bitpacking;
-extern crate regex;
-extern crate byteorder;
 extern crate bam;
+extern crate bitpacking;
+extern crate byteorder;
+extern crate regex;
+extern crate serde_json;
 
 #[no_mangle]
 pub mod alignment;
 pub mod binary;
 pub mod builder;
+pub mod checker_index;
 pub mod compression;
 pub mod header;
 pub mod index;
 pub mod range;
 pub mod reader;
 pub mod writer;
-pub mod checker_index;
 
-use std::io;
+use checker_index::Index;
 use range::InvertedRecord;
 use range::{Format, Record};
-use checker_index::Index;
-use std::io::{Result, Write, Read};
+use std::io;
+use std::io::{Read, Result, Write};
 
 /// A trait for writing records.
 pub trait ChunkWriter {
@@ -53,7 +53,6 @@ pub trait ChunkReader: Iterator<Item = io::Result<Record>> {
     /// Use with caution: pausing and unpausing takes some time.
     fn pause(&mut self);
 }
-
 
 /// A trait for writing records. (Deprecated.)
 pub trait InvertedRecordWriter {
@@ -93,18 +92,17 @@ pub trait Builder {
     fn to_format(self) -> Format;
 }
 
-
 #[cfg(test)]
 mod tests {
-    use crate::header::{Header};
-    use bio::io::bed;
     use crate::binary;
-    use crate::writer::GhiWriter;
-    use crate::reader::IndexedReader;
-    use crate::range::{InvertedRecordEntire, Format};
-    use crate::IndexWriter;
     use crate::builder::InvertedRecordBuilder;
-    use crate::{range::Set, index::Region};
+    use crate::header::Header;
+    use crate::range::{Format, InvertedRecordEntire};
+    use crate::reader::IndexedReader;
+    use crate::writer::GhiWriter;
+    use crate::IndexWriter;
+    use crate::{index::Region, range::Set};
+    use bio::io::bed;
 
     #[test]
     fn full_works() {
@@ -112,27 +110,31 @@ mod tests {
         let reader = bed::Reader::from_file(path).unwrap();
         //let set = InvertedRecordBuilderSet::new(reader, 0 as u64);
         let mut header_2 = Header::new();
-        let set: Set<InvertedRecordBuilder> = Set::<InvertedRecordBuilder>::new(reader, 1 as u64, &mut header_2).unwrap();
+        let set: Set<InvertedRecordBuilder> =
+            Set::<InvertedRecordBuilder>::new(reader, 1 as u64, &mut header_2).unwrap();
 
-//        let set_vec = vec![set];
+        //        let set_vec = vec![set];
         // println!("{:?}", set);
 
         let set_vec = vec![set];
-//        let entire = InvertedRecordEntire::new(set_vec);
+        //        let entire = InvertedRecordEntire::new(set_vec);
         let entire = InvertedRecordEntire::new_from_set(set_vec);
 
         let header = Header::new();
         let mut writer = binary::GhbWriter::build()
             .write_header(false)
-            .from_path("./test/test2.ghb", header).unwrap();
+            .from_path("./test/test2.ghb", header)
+            .unwrap();
         let index = entire.write_binary(&mut writer).unwrap();
         writer.flush().unwrap();
         // println!("{}", index);
 
-
         let mut header2 = Header::new();
         entire.write_header(&mut header2);
-        let mut index_writer = GhiWriter::build().write_header(true).from_path("./test/test2.ghb.ghi", header2).unwrap();
+        let mut index_writer = GhiWriter::build()
+            .write_header(true)
+            .from_path("./test/test2.ghb.ghi", header2)
+            .unwrap();
         let _result = index_writer.write(&index);
         let _result = index_writer.flush();
 
@@ -145,14 +147,20 @@ mod tests {
 
         assert_eq!(records.len(), 10); // The number of the
         */
-        let bed_records = viewer.into_iter().flat_map(|t| t.map(|f| 
-            if let Format::Range(rec) = f.data() {
-                // println!("debug {:#?}", rec.to_record(chrom));
-                return rec.to_record("null")
-            } else {
-                return vec![]
-            }
-        ).unwrap()).collect::<Vec<bed::Record>>();
+        let bed_records = viewer
+            .into_iter()
+            .flat_map(|t| {
+                t.map(|f| {
+                    if let Format::Range(rec) = f.data() {
+                        // println!("debug {:#?}", rec.to_record(chrom));
+                        return rec.to_record("null");
+                    } else {
+                        return vec![];
+                    }
+                })
+                .unwrap()
+            })
+            .collect::<Vec<bed::Record>>();
         assert_eq!(bed_records.len(), 10);
     }
 
@@ -163,7 +171,8 @@ mod tests {
         let reader = bed::Reader::from_file(path).unwrap();
         // let set = InvertedRecordBuilderSet::new(reader, 0 as u64);
         let mut header2 = Header::new();
-        let set: Set<InvertedRecordBuilder> = Set::<InvertedRecordBuilder>::new(reader, 1 as u64, &mut header2).unwrap();
+        let set: Set<InvertedRecordBuilder> =
+            Set::<InvertedRecordBuilder>::new(reader, 1 as u64, &mut header2).unwrap();
         println!("{:?}", set);
 
         let set_vec = vec![set];
@@ -172,14 +181,17 @@ mod tests {
         let header = Header::new();
         let mut writer = binary::GhbWriter::build()
             .write_header(false)
-            .from_path("./test/test.ghb", header).unwrap();
+            .from_path("./test/test.ghb", header)
+            .unwrap();
         let index = entire.write_binary(&mut writer).unwrap();
         writer.flush().unwrap();
 
-
         // let mut header2 = Header::new();
         // entire.write_header(&mut header2);
-        let mut index_writer = GhiWriter::build().write_header(true).from_path("./test/test.ghb.ghi", header2).unwrap();
+        let mut index_writer = GhiWriter::build()
+            .write_header(true)
+            .from_path("./test/test.ghb.ghi", header2)
+            .unwrap();
         let _result = index_writer.write(&index);
         assert_eq!(_result.ok(), Some(()));
         let _result = index_writer.flush();
@@ -187,23 +199,30 @@ mod tests {
         let mut reader2 = IndexedReader::from_path("./test/test.ghb").unwrap();
         // println!("{}", reader2.index());
 
-
         // assert_eq!(format!("{}", index), format!("{}", reader2.index()));
         // assert_eq!(&index, reader2.index());
         let chrom = "2";
         let chrom_id = reader2.reference_id(&chrom).unwrap();
         assert_eq!(chrom_id, 1);
 
-        let viewer = reader2.fetch(&Region::new(chrom_id, 17_000, 17_500)).unwrap();
+        let viewer = reader2
+            .fetch(&Region::new(chrom_id, 17_000, 17_500))
+            .unwrap();
 
-        let records = viewer.into_iter().flat_map(|t| t.map(|f| 
-            if let Format::Range(rec) = f.data() {
-                // println!("debug {:#?}", rec);
-                return rec.to_record(chrom)
-            } else {
-                return vec![]
-            }
-        ).unwrap()).collect::<Vec<bed::Record>>();
+        let records = viewer
+            .into_iter()
+            .flat_map(|t| {
+                t.map(|f| {
+                    if let Format::Range(rec) = f.data() {
+                        // println!("debug {:#?}", rec);
+                        return rec.to_record(chrom);
+                    } else {
+                        return vec![];
+                    }
+                })
+                .unwrap()
+            })
+            .collect::<Vec<bed::Record>>();
         println!("Records: {:?}", records);
 
         let example = "2\t16382\t16385\tbin4682\t20\t-\n2\t16388\t31768\tbin4683\t20\t-\n";
@@ -213,12 +232,9 @@ mod tests {
             let mut writer = bed::Writer::new(&mut buf);
             for i in records {
                 writer.write(&i).ok().unwrap();
-            } 
+            }
         }
-        assert_eq!(
-            example,
-            String::from_utf8(buf).unwrap().as_str()
-        );
+        assert_eq!(example, String::from_utf8(buf).unwrap().as_str());
         // let records_from = reader.records().into_iter().flat_map(|t| t).collect::<Vec<bed::Record>>();
         //assert_eq!(records[0], records_from[0]);
         //assert_eq!(records[1], records_from[1]);

@@ -1,20 +1,25 @@
-use std::fs::File;
 use crate::index::{Bin, Chunk, Region};
-use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
-use std::io::{Write, Read, Result, Error};
-use std::io::ErrorKind::InvalidData;
-use std::mem::MaybeUninit;
-use std::fmt;
-use std::{path::Path, fmt::{Display, Formatter}, result, ops::Range};
 use bam::header::HeaderEntry;
+use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use fmt::Debug;
+use std::fmt;
+use std::fs::File;
+use std::io::ErrorKind::InvalidData;
+use std::io::{Error, Read, Result, Write};
+use std::mem::MaybeUninit;
+use std::{
+    fmt::{Display, Formatter},
+    ops::Range,
+    path::Path,
+    result,
+};
 
 /// Index for a single reference sequence. Contains [bins](struct.Bin.html).
 #[derive(Clone)]
 pub struct Reference {
     bin_count_mask: u64,
-    bin_pitch_indices: [u8;64],
-    bins: Vec<Bin> // or bins: Vec<Chunk>,
+    bin_pitch_indices: [u8; 64],
+    bins: Vec<Bin>, // or bins: Vec<Chunk>,
 }
 
 impl Debug for Reference {
@@ -24,11 +29,11 @@ impl Debug for Reference {
 }
 
 impl Reference {
-    pub fn new(bin_count_mask: u64, bin_pitch_indices: [u8;64], bins: Vec<Bin>) -> Reference {
+    pub fn new(bin_count_mask: u64, bin_pitch_indices: [u8; 64], bins: Vec<Bin>) -> Reference {
         Reference {
             bin_count_mask,
             bin_pitch_indices,
-            bins
+            bins,
         }
     }
 
@@ -36,22 +41,22 @@ impl Reference {
         if len > 2_u64.pow(32) {
             panic!("Unsupported reference size");
         } else {
-            return Reference::new_with_bai_half_overlapping()
+            return Reference::new_with_bai_half_overlapping();
         }
     }
 
     pub fn new_from_reference(reference: &HeaderEntry) -> Reference {
         if let Some(len) = reference.get(b"LN") {
             if let Some(len) = len.parse::<u64>().ok() {
-                return Reference::new_from_len(len)
+                return Reference::new_from_len(len);
             }
         }
-        return Reference::new_with_bai_half_overlapping()
+        return Reference::new_with_bai_half_overlapping();
     }
 
     /// The reference length is at most 512Mbp.
     pub fn new_with_bai_half_overlapping() -> Reference {
-        let mut bin_pitch_indices = [0;64];
+        let mut bin_pitch_indices = [0; 64];
         bin_pitch_indices[0] = 28;
         bin_pitch_indices[1] = 25;
         bin_pitch_indices[2] = 22;
@@ -61,18 +66,18 @@ impl Reference {
         Reference {
             bin_count_mask: 0b10010010010010001,
             bin_pitch_indices,
-            bins: vec![]
+            bins: vec![],
         }
     }
 
     pub fn bins(&mut self) -> &Vec<Bin> {
-        return &self.bins
+        return &self.bins;
     }
 
     // Update the item of bin list by given Bin.
     pub fn update(&mut self, bin_id: usize, bin: Bin) {
         let new_len = bin_id + 1;
-        
+
         if self.bins.len() < new_len {
             // Bins will be filled with dummy data.
             self.bins.resize(bin_id + 1, Bin::dummy());
@@ -103,7 +108,11 @@ impl Reference {
             chunks.push(Bin::from_stream(stream)?);
         }
 
-        Ok(Reference{bin_count_mask, bin_pitch_indices: array, bins: chunks})
+        Ok(Reference {
+            bin_count_mask,
+            bin_pitch_indices: array,
+            bins: chunks,
+        })
     }
 
     fn to_stream<W: Write>(&self, stream: &mut W) -> Result<()> {
@@ -122,7 +131,7 @@ impl Reference {
         Ok(())
     }
 
-    /// Returns a bin for the record with alignment `[beg-end)` for multiplex lower-level 
+    /// Returns a bin for the record with alignment `[beg-end)` for multiplex lower-level
     pub fn region_to_bin(&self, range: Region) -> usize {
         let len = range.len();
         let end = range.end();
@@ -131,11 +140,11 @@ impl Reference {
         loop {
             let next = iter.next();
             match next {
-                None => { return prev }
+                None => return prev,
                 Some(slice) => {
                     // println!("Here: {:?} {:?} {} {}", slice.bin_disp_range, slice.range,  (slice.bin_size as u64), prev);
                     if (slice.bin_size as u64) < len {
-                        return prev
+                        return prev;
                     } else {
                         prev = slice.bin_disp_range.start;
                         let mut slice_end = slice.range.start() + slice.bin_size as u64;
@@ -145,7 +154,7 @@ impl Reference {
                         while slice_end < end {
                             // println!("Inside: {:?}, {}, {}, {}", slice.range, start, end);
                             prev += 1;
-                            slice_end += slice.bin_size as u64 / 2; // Since it is half-overlapping. 
+                            slice_end += slice.bin_size as u64 / 2; // Since it is half-overlapping.
                         }
                     }
                 }
@@ -155,10 +164,10 @@ impl Reference {
 
     /// Returns all possible BAI bins for the region `[beg-end)`.
     pub fn region_to_bins(&self, range: Region) -> BinsIter {
-        BinsIter{
+        BinsIter {
             range,
             finished: 0,
-            header: self
+            header: self,
         }
     }
 }
@@ -175,7 +184,6 @@ impl Display for Reference {
     }
 }
 
-
 #[derive(Clone)]
 pub struct Index {
     // samples: Vec<String>, // sample names, we expect sample id is continuous.
@@ -184,7 +192,9 @@ pub struct Index {
 
 impl Index {
     pub fn new(references: Vec<Reference>) -> Index {
-        Index{references: references}
+        Index {
+            references: references,
+        }
     }
     /// Loads index from stream.
     pub fn from_stream<R: Read>(mut stream: R) -> Result<Index> {
@@ -199,8 +209,8 @@ impl Index {
         for _ in 0..n_ref {
             references.push(Reference::from_stream(&mut stream)?);
         }
-//        let n_unmapped = stream.read_u64::<LittleEndian>().ok();
-//        Ok(Index { references, n_unmapped })
+        //        let n_unmapped = stream.read_u64::<LittleEndian>().ok();
+        //        Ok(Index { references, n_unmapped })
         Ok(Index { references })
     }
 
@@ -232,7 +242,7 @@ impl Index {
     }
     /// Fetches [chunks](struct.Chunk.html) of the BAM file that contain all records for a given region.
     pub fn fetch_chunks(&self, ref_id: u64, start: u64, end: u64) -> Vec<Chunk> {
-    //pub fn fetch_chunks(&self, region: Region) -> Vec<Chunk> {
+        //pub fn fetch_chunks(&self, region: Region) -> Vec<Chunk> {
         let mut chunks: Vec<&Chunk> = Vec::new();
         //let ref_id = region.ref_id() as usize;
         let region = Region::new(ref_id, start, end);
@@ -276,7 +286,7 @@ pub struct BinsIter<'a> {
 pub struct Slice<'a> {
     slice: Option<&'a [Bin]>, // or Chunk
     bin_size: usize,
-    //bin_disp_start: usize, // For debugging and 
+    //bin_disp_start: usize, // For debugging and
     bin_disp_range: Range<usize>,
     range: Region, // The entire range the slice covers.
 }
@@ -294,33 +304,37 @@ impl<'a> Iterator for BinsIter<'a> {
 
         /* if there is no remaining bits, iteration is done */
         if remaining == 0 {
-            return None
+            return None;
         }
-        
+
         /* compute bin offset; offset base is the sum of the number of finished bins */
         let bin_ofs_base = (everything & finished) as usize;
-        
+
         /* determine bin pitch and size; note that bin span (size) is twice as large as bin pitch, because bins are half-overlapping */
         let iterations_done;
         unsafe {
             iterations_done = core::arch::x86_64::_popcnt64(bin_ofs_base as i64) as usize;
         }
         let bin_pitch_index = self.header.bin_pitch_indices[iterations_done];
-        let bin_pitch = (0x01u64<<bin_pitch_index) as usize;
+        let bin_pitch = (0x01u64 << bin_pitch_index) as usize;
         let bin_size = 2 * bin_pitch;
 
         let bin_ofs_disp_start = {
             let mut t = self.range.start() >> bin_pitch_index;
-            if t > 0 { t -= 1; }
+            if t > 0 {
+                t -= 1;
+            }
             t
         };
 
         let bin_ofs_disp_end = {
             let mut t = self.range.end() >> bin_pitch_index;
             //if t > finished { t = finished; }
-            if t > remaining ^ (remaining - 1) { t = remaining ^ (remaining - 1); }
+            if t > remaining ^ (remaining - 1) {
+                t = remaining ^ (remaining - 1);
+            }
             /* previous finished (not new one) is <bin count for this depth> - 1 */
-            t + 1									/* make the range margined (tail margin) */
+            t + 1 /* make the range margined (tail margin) */
         };
 
         /* compute bin range */
@@ -328,7 +342,7 @@ impl<'a> Iterator for BinsIter<'a> {
         //let bin_range_end = (bin_ofs_disp_start + bin_ofs_disp_end + 1) << bin_pitch_index;
         let bin_range_end = (bin_ofs_disp_end + 1) << bin_pitch_index;
         let bin_disp_start: usize = bin_ofs_base + bin_ofs_disp_start as usize;
-        let bin_disp_end: usize = bin_ofs_base + bin_ofs_disp_end as usize ;
+        let bin_disp_end: usize = bin_ofs_base + bin_ofs_disp_end as usize;
 
         /* update finished mask; find least significant set bit to locate the next unfinished bit, then xor to squish further remaining bits out */
         self.finished = remaining ^ (remaining - 1);
@@ -336,7 +350,7 @@ impl<'a> Iterator for BinsIter<'a> {
         // println!("{:?} {} {} {} {} {:?} {:?} {} {}", self.range, bin_range_start, bin_range_end, bin_size, finished, bin_disp_start..bin_disp_end, bin_ofs_disp_start..bin_ofs_disp_end, iterations_done, bin_pitch_index);
 
         /* done; compute bin pointer */
-        Some(Slice{
+        Some(Slice {
             //slice: &self.header.bins[bin_disp_start..bin_disp_end],
             slice: self.header.bins.get(bin_disp_start..bin_disp_end),
             bin_size,
@@ -355,93 +369,99 @@ mod tests {
     fn iterator_works() {
         let bai = Reference::new_with_bai_half_overlapping();
         //assert_eq!(bai.bin_pitch_indices[0], 28);
-        let mut iter = bai.region_to_bins(Region::new(0,0,8191));
+        let mut iter = bai.region_to_bins(Region::new(0, 0, 8191));
         let slice = iter.next().unwrap();
         /* Because we adopt half-overlapping, the most  */
         assert_eq!(slice.bin_size, 2_usize.pow(29));
-        assert_eq!(slice.range, Region::new(0,0,2_u64.pow(29)));
+        assert_eq!(slice.range, Region::new(0, 0, 2_u64.pow(29)));
         assert_eq!(slice.bin_disp_range, 0..1); //1 is not included.
         let slice = iter.next().unwrap();
         assert_eq!(slice.bin_size, 2_usize.pow(26));
-        assert_eq!(slice.range, Region::new(0,0,2_u64.pow(26)));
+        assert_eq!(slice.range, Region::new(0, 0, 2_u64.pow(26)));
         assert_eq!(slice.bin_disp_range, 1..2); //2 is not included.
         let slice = iter.next().unwrap();
         assert_eq!(slice.bin_size, 2_usize.pow(23));
-        assert_eq!(slice.range, Region::new(0,0,2_u64.pow(23)));
+        assert_eq!(slice.range, Region::new(0, 0, 2_u64.pow(23)));
         assert_eq!(slice.bin_disp_range, 17..18); //18 is not included.
         let slice = iter.next().unwrap();
         assert_eq!(slice.bin_size, 2_usize.pow(20));
-        assert_eq!(slice.range, Region::new(0,0,2_u64.pow(20)));
+        assert_eq!(slice.range, Region::new(0, 0, 2_u64.pow(20)));
         assert_eq!(slice.bin_disp_range, 145..146); //2 is not included
         let slice = iter.next().unwrap();
         assert_eq!(slice.bin_size, 2_usize.pow(17));
-        assert_eq!(slice.range, Region::new(0,0,2_u64.pow(17)));
+        assert_eq!(slice.range, Region::new(0, 0, 2_u64.pow(17)));
         assert_eq!(slice.bin_disp_range, 1169..1170); //2 is not included
         let slice = iter.next().unwrap();
         assert_eq!(slice.bin_size, 2_usize.pow(14));
-        assert_eq!(slice.range, Region::new(0,0,2_u64.pow(14)));
+        assert_eq!(slice.range, Region::new(0, 0, 2_u64.pow(14)));
         assert_eq!(slice.bin_disp_range, 9361..9362); //2 is not included
     }
     #[test]
     fn iterator_2_works() {
         let bai = Reference::new_with_bai_half_overlapping();
         //assert_eq!(bai.bin_pitch_indices[0], 28);
-        let mut iter = bai.region_to_bins(Region::new(0,0,8192));
+        let mut iter = bai.region_to_bins(Region::new(0, 0, 8192));
         let slice = iter.next().unwrap();
         /* Because we adopt half-overlapping, the most  */
         assert_eq!(slice.bin_size, 2_usize.pow(29));
-        assert_eq!(slice.range, Region::new(0,0,2_u64.pow(29)));
+        assert_eq!(slice.range, Region::new(0, 0, 2_u64.pow(29)));
         assert_eq!(slice.bin_disp_range, 0..1); //1 is not included.
         let slice = iter.next().unwrap();
         assert_eq!(slice.bin_size, 2_usize.pow(26));
-        assert_eq!(slice.range, Region::new(0,0,2_u64.pow(26)));
+        assert_eq!(slice.range, Region::new(0, 0, 2_u64.pow(26)));
         assert_eq!(slice.bin_disp_range, 1..2); //2 is not included.
         let slice = iter.next().unwrap();
         assert_eq!(slice.bin_size, 2_usize.pow(23));
-        assert_eq!(slice.range, Region::new(0,0,2_u64.pow(23)));
+        assert_eq!(slice.range, Region::new(0, 0, 2_u64.pow(23)));
         assert_eq!(slice.bin_disp_range, 17..18); //18 is not included.
         let slice = iter.next().unwrap();
         assert_eq!(slice.bin_size, 2_usize.pow(20));
-        assert_eq!(slice.range, Region::new(0,0,2_u64.pow(20)));
+        assert_eq!(slice.range, Region::new(0, 0, 2_u64.pow(20)));
         assert_eq!(slice.bin_disp_range, 145..146); //2 is not included
         let slice = iter.next().unwrap();
         assert_eq!(slice.bin_size, 2_usize.pow(17));
-        assert_eq!(slice.range, Region::new(0,0,2_u64.pow(17)));
+        assert_eq!(slice.range, Region::new(0, 0, 2_u64.pow(17)));
         assert_eq!(slice.bin_disp_range, 1169..1170); //2 is not included
         let slice = iter.next().unwrap();
         assert_eq!(slice.bin_size, 2_usize.pow(14));
-        assert_eq!(slice.range, Region::new(0,0,2_u64.pow(14) + 2_u64.pow(13)));
+        assert_eq!(
+            slice.range,
+            Region::new(0, 0, 2_u64.pow(14) + 2_u64.pow(13))
+        );
         assert_eq!(slice.bin_disp_range, 9361..9363); //2 is not included
     }
     #[test]
     fn iterator3_works() {
         let bai = Reference::new_with_bai_half_overlapping();
         //assert_eq!(bai.bin_pitch_indices[0], 28);
-        let mut iter = bai.region_to_bins(Region::new(0,17000,17500));
+        let mut iter = bai.region_to_bins(Region::new(0, 17000, 17500));
         let slice = iter.next().unwrap();
         /* Because we adopt half-overlapping, the most  */
         assert_eq!(slice.bin_size, 2_usize.pow(29));
-        assert_eq!(slice.range, Region::new(0,0,2_u64.pow(29)));
+        assert_eq!(slice.range, Region::new(0, 0, 2_u64.pow(29)));
         assert_eq!(slice.bin_disp_range, 0..1); //1 is not included.
         let slice = iter.next().unwrap();
         assert_eq!(slice.bin_size, 2_usize.pow(26));
-        assert_eq!(slice.range, Region::new(0,0,2_u64.pow(26)));
+        assert_eq!(slice.range, Region::new(0, 0, 2_u64.pow(26)));
         assert_eq!(slice.bin_disp_range, 1..2); //2 is not included.
         let slice = iter.next().unwrap();
         assert_eq!(slice.bin_size, 2_usize.pow(23));
-        assert_eq!(slice.range, Region::new(0,0,2_u64.pow(23)));
+        assert_eq!(slice.range, Region::new(0, 0, 2_u64.pow(23)));
         assert_eq!(slice.bin_disp_range, 17..18); //18 is not included.
         let slice = iter.next().unwrap();
         assert_eq!(slice.bin_size, 2_usize.pow(20));
-        assert_eq!(slice.range, Region::new(0,0,2_u64.pow(20)));
+        assert_eq!(slice.range, Region::new(0, 0, 2_u64.pow(20)));
         assert_eq!(slice.bin_disp_range, 145..146); //2 is not included
         let slice = iter.next().unwrap();
         assert_eq!(slice.bin_size, 2_usize.pow(17));
-        assert_eq!(slice.range, Region::new(0,0,2_u64.pow(17)));
+        assert_eq!(slice.range, Region::new(0, 0, 2_u64.pow(17)));
         assert_eq!(slice.bin_disp_range, 1169..1170); //2 is not included
         let slice = iter.next().unwrap();
         assert_eq!(slice.bin_size, 2_usize.pow(14));
-        assert_eq!(slice.range, Region::new(0,2_u64.pow(13),2_u64.pow(14)+2_u64.pow(14)));
+        assert_eq!(
+            slice.range,
+            Region::new(0, 2_u64.pow(13), 2_u64.pow(14) + 2_u64.pow(14))
+        );
         assert_eq!(slice.bin_disp_range, 9362..9364); //2 is not included
     }
     #[test]
@@ -449,19 +469,19 @@ mod tests {
         let bai = Reference::new_with_bai_half_overlapping();
         let bin = bai.region_to_bin(Region::new(0, 0, 100_000_000));
         assert_eq!(bin, 0);
-        let bin = bai.region_to_bin(Region::new(0, 0, 2_u64.pow(25)-1));
+        let bin = bai.region_to_bin(Region::new(0, 0, 2_u64.pow(25) - 1));
         assert_eq!(bin, 1);
         let bin = bai.region_to_bin(Region::new(0, 66_000_000, 112_000_000));
         assert_eq!(bin, 3);
-        let bin = bai.region_to_bin(Region::new(0, 0, 1<<17));
+        let bin = bai.region_to_bin(Region::new(0, 0, 1 << 17));
         assert_eq!(bin, 1169);
         let bin = bai.region_to_bin(Region::new(0, 0, 16384));
         assert_eq!(bin, 9361);
         let bin = bai.region_to_bin(Region::new(0, 0, 8191));
         assert_eq!(bin, 9361);
-        let bin = bai.region_to_bin(Region::new(0, 8192, 8192+16384));
+        let bin = bai.region_to_bin(Region::new(0, 8192, 8192 + 16384));
         assert_eq!(bin, 9362);
-        let bin = bai.region_to_bin(Region::new(0, 16384, 16384*2));
+        let bin = bai.region_to_bin(Region::new(0, 16384, 16384 * 2));
         assert_eq!(bin, 9363);
         let bin = bai.region_to_bin(Region::new(0, 16382, 16385));
         assert_eq!(bin, 9362);

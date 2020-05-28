@@ -1,15 +1,15 @@
 /* Making it possible to store any types of header including bam */
 
 use bam::header;
-use std::io::{Result, Read, Write, Error, ErrorKind};
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
-use header::HeaderLine;
 use csv::Reader;
-/// Local headers are categorized as types. 
+use header::HeaderLine;
+use std::io::{Error, ErrorKind, Read, Result, Write};
+/// Local headers are categorized as types.
 #[derive(Clone)]
 pub enum HeaderType {
     None,
-    BAM(header::Header)
+    BAM(header::Header),
 }
 
 impl HeaderType {
@@ -27,24 +27,26 @@ impl HeaderType {
     pub fn from_stream<R: Read>(stream: &mut R) -> Result<HeaderType> {
         let header_type = stream.read_i32::<LittleEndian>()?;
         match header_type {
-            0 => {Ok(HeaderType::None)}
+            0 => Ok(HeaderType::None),
             1 => {
-                let header = header::Header::from_bam(stream).map_err(|e| Error::new(e.kind(), format!("Failed to read local BAI header: {}", e)))?;
+                let header = header::Header::from_bam(stream).map_err(|e| {
+                    Error::new(e.kind(), format!("Failed to read local BAI header: {}", e))
+                })?;
                 Ok(HeaderType::BAM(header))
             }
-            _ => Err(Error::new(ErrorKind::InvalidData, "Invalid header type id"))
+            _ => Err(Error::new(ErrorKind::InvalidData, "Invalid header type id")),
         }
     }
 }
 
 /// GHB/GHI Header.
-/// 
+///
 /// You can modify it by pushing new entry using [push_entry](#method.push_entry),
 /// You cannot remove lines.
 #[derive(Clone)]
 pub struct Header {
-    global_header : header::Header, // Need to be replaced.
-    headers: Vec<HeaderType>
+    global_header: header::Header, // Need to be replaced.
+    headers: Vec<HeaderType>,
 }
 
 impl Header {
@@ -59,7 +61,9 @@ impl Header {
     /// TODO() Support u64; now raise errors when you pass u32.
     /// Returns None if there is no such reference
     pub fn reference_len(&self, id: u64) -> Option<u64> {
-        self.global_header.reference_len(id as u32).map(|e| e as u64)
+        self.global_header
+            .reference_len(id as u32)
+            .map(|e| e as u64)
     }
     /// Returns reference id from its name, if possible.
     pub fn reference_id(&self, ref_name: &str) -> Option<u64> {
@@ -82,7 +86,10 @@ impl Header {
     /// Pushes a new header entry.
     ///
     /// Returns an error if the same reference appears twice or @SQ line has an incorrect format.
-    pub fn push_entry(&mut self, header_entry: header::HeaderEntry) -> std::result::Result<(), String> {
+    pub fn push_entry(
+        &mut self,
+        header_entry: header::HeaderEntry,
+    ) -> std::result::Result<(), String> {
         self.global_header.push_entry(header_entry)
     }
     /// Keep a bam Header  on the local header
@@ -93,10 +100,17 @@ impl Header {
         self.headers[index] = HeaderType::BAM(header.clone());
     }
     /// Load chromosome from chrom.sizes.
-    pub fn set_header_from_sizes<R: Read>(&mut self, reader: &mut Reader<R>) -> std::result::Result<(), Box<dyn std::error::Error>> {
+    pub fn set_header_from_sizes<R: Read>(
+        &mut self,
+        reader: &mut Reader<R>,
+    ) -> std::result::Result<(), Box<dyn std::error::Error>> {
         for result in reader.records() {
             let record = result?;
-            self.global_header.push_entry(header::HeaderEntry::ref_sequence(record[0].to_string(), record[1].parse::<u32>()?))?;
+            self.global_header
+                .push_entry(header::HeaderEntry::ref_sequence(
+                    record[0].to_string(),
+                    record[1].parse::<u32>()?,
+                ))?;
         }
         Ok(())
     }
@@ -105,12 +119,12 @@ impl Header {
     }
     pub fn get_local_bam_header(&self, index: usize) -> Option<&bam::Header> {
         self.headers.get(index).and_then(|f| match &f {
-            HeaderType::None => {None}
-            HeaderType::BAM(a) => {Some(a)}
+            HeaderType::None => None,
+            HeaderType::BAM(a) => Some(a),
         })
     }
     /// Transfer the reference into global header.
-    pub fn transfer(&mut self, header: &bam::Header) -> std::result::Result<(), String>{
+    pub fn transfer(&mut self, header: &bam::Header) -> std::result::Result<(), String> {
         for i in header.lines() {
             match i {
                 HeaderLine::Entry(a) => self.global_header.push_entry(a.clone())?,
@@ -121,7 +135,10 @@ impl Header {
     }
     /// Creates an empty header.
     pub fn new() -> Self {
-        Header{global_header: header::Header::new(), headers:vec![]}
+        Header {
+            global_header: header::Header::new(),
+            headers: vec![],
+        }
     }
 
     /// Pushes a new header entry.
@@ -146,7 +163,8 @@ impl Header {
 
     /// Parse uncompressed header.
     pub fn from_stream<R: Read>(&mut self, stream: &mut R) -> Result<bool> {
-        let global_header = header::Header::from_bam(stream).map_err(|e| Error::new(e.kind(), format!("Failed to read global header: {}", e)))?;
+        let global_header = header::Header::from_bam(stream)
+            .map_err(|e| Error::new(e.kind(), format!("Failed to read global header: {}", e)))?;
         let n_samples = stream.read_i32::<LittleEndian>()? as usize;
         let mut headers = Vec::with_capacity(n_samples);
         for _i in 0..n_samples {
@@ -167,8 +185,7 @@ mod tests {
     fn chrom_sizes() {
         let mut header = Header::new();
         let file = File::open(r#"test/hg38.chrom.sizes"#).unwrap();
-        let mut rdr = csv::ReaderBuilder::new()
-        .delimiter(b'\t').from_reader(file);
+        let mut rdr = csv::ReaderBuilder::new().delimiter(b'\t').from_reader(file);
         let _result = header.set_header_from_sizes(&mut rdr).unwrap();
         assert_eq!(header.reference_names().len(), 454);
         assert_eq!(header.reference_len(0).unwrap(), 242_193_529);

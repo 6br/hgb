@@ -1,15 +1,14 @@
-
-use std::path::{Path, PathBuf};
-use bam::bgzip;
-use std::io::{Result, Error, Read, Seek, BufReader};
-use std::fs::File;
-use std::io::ErrorKind::{InvalidInput, self};
-use crate::header::Header;
-use crate::range::Record;
-use crate::index::{VirtualOffset, Region, Chunk};
-use crate::checker_index::Index;
-use crate::ChunkReader;
 use crate::binary::GhbReader;
+use crate::checker_index::Index;
+use crate::header::Header;
+use crate::index::{Chunk, Region, VirtualOffset};
+use crate::range::Record;
+use crate::ChunkReader;
+use bam::bgzip;
+use std::fs::File;
+use std::io::ErrorKind::{self, InvalidInput};
+use std::io::{BufReader, Error, Read, Result, Seek};
+use std::path::{Path, PathBuf};
 
 /// Defines how to react to a GHI index being younger than GHB file.
 ///
@@ -27,8 +26,14 @@ pub enum ModificationTime {
 
 impl ModificationTime {
     fn check<T: AsRef<Path>, U: AsRef<Path>>(&self, ghb_path: T, ghi_path: U) -> Result<()> {
-        let ghb_modified = ghb_path.as_ref().metadata().and_then(|metadata| metadata.modified());
-        let ghi_modified = ghi_path.as_ref().metadata().and_then(|metadata| metadata.modified());
+        let ghb_modified = ghb_path
+            .as_ref()
+            .metadata()
+            .and_then(|metadata| metadata.modified());
+        let ghi_modified = ghi_path
+            .as_ref()
+            .metadata()
+            .and_then(|metadata| metadata.modified());
         let ghb_younger = match (ghb_modified, ghi_modified) {
             (Ok(ghb_time), Ok(ghi_time)) => ghi_time < ghb_time,
             _ => false, // Modification time not available.
@@ -38,11 +43,16 @@ impl ModificationTime {
         }
 
         match &self {
-            ModificationTime::Ignore => {},
-            ModificationTime::Error => return Err(Error::new(InvalidInput,
-                "the binary file is younger than the index")),
-            ModificationTime::Warn(box_fun) =>
-                box_fun("the binary file is younger than the index index"),
+            ModificationTime::Ignore => {}
+            ModificationTime::Error => {
+                return Err(Error::new(
+                    InvalidInput,
+                    "the binary file is younger than the index",
+                ))
+            }
+            ModificationTime::Warn(box_fun) => {
+                box_fun("the binary file is younger than the index index")
+            }
         }
         Ok(())
     }
@@ -103,9 +113,15 @@ impl IndexedReaderBuilder {
 
     /// Creates a new [IndexedReader](struct.IndexedReader.html) from `ghb_path`.
     /// If GHI path was not specified, the functions tries to open `{ghb_path}.ghi`.
-    pub fn from_path<P: AsRef<Path>, R: Read + Seek>(&self, ghb_path: P) -> Result<IndexedReader<BufReader<File>>> {
+    pub fn from_path<P: AsRef<Path>, R: Read + Seek>(
+        &self,
+        ghb_path: P,
+    ) -> Result<IndexedReader<BufReader<File>>> {
         let ghb_path = ghb_path.as_ref();
-        let ghi_path = self.ghi_path.as_ref().map(PathBuf::clone)
+        let ghi_path = self
+            .ghi_path
+            .as_ref()
+            .map(PathBuf::clone)
             .unwrap_or_else(|| PathBuf::from(format!("{}.ghi", ghb_path.display())));
         self.modification_time.check(&ghb_path, &ghi_path)?;
 
@@ -113,14 +129,14 @@ impl IndexedReaderBuilder {
             .map_err(|e| Error::new(e.kind(), format!("Failed to open GHI file: {}", e)))?;
         index_reader.make_consecutive();
 
-        let header = Header::new_from_stream(&mut index_reader).map_err(|e| Error::new(e.kind(), format!("Failed to read GHI header: {}", e)))?;
+        let header = Header::new_from_stream(&mut index_reader)
+            .map_err(|e| Error::new(e.kind(), format!("Failed to read GHI header: {}", e)))?;
 
         let index = Index::from_stream(&mut index_reader)
-        .map_err(|e| Error::new(e.kind(), format!("Failed to read GHI file: {}", e)))?;
-    
-        let reader = GhbReader::from_path(ghb_path, header)
-        .map_err(|e| Error::new(e.kind(), format!("Failed to open GHB file: {}", e)))?;
+            .map_err(|e| Error::new(e.kind(), format!("Failed to read GHI file: {}", e)))?;
 
+        let reader = GhbReader::from_path(ghb_path, header)
+            .map_err(|e| Error::new(e.kind(), format!("Failed to open GHB file: {}", e)))?;
 
         IndexedReader::new(reader, index)
     }
@@ -128,29 +144,31 @@ impl IndexedReaderBuilder {
     /// Creates a new [IndexedReader](struct.IndexedReader.html) from two streams.
     /// GHB stream should support random access, while GHI stream does not need to.
     /// `check_time` and `ghi_path` values are ignored.
-    pub fn from_streams<R: Read + Seek>(&self, bam_stream: R, bai_stream: R)
-            -> Result<IndexedReader<R>> {
-
+    pub fn from_streams<R: Read + Seek>(
+        &self,
+        bam_stream: R,
+        bai_stream: R,
+    ) -> Result<IndexedReader<R>> {
         let mut index_reader = bgzip::SeekReader::from_stream(bai_stream, self.additional_threads)
             .map_err(|e| Error::new(e.kind(), format!("Failed to read GHI index: {}", e)))?;
         index_reader.make_consecutive();
 
-        let header = Header::new_from_stream(&mut index_reader).map_err(|e| Error::new(e.kind(), format!("Failed to read GHI header: {}", e)))?;
+        let header = Header::new_from_stream(&mut index_reader)
+            .map_err(|e| Error::new(e.kind(), format!("Failed to read GHI header: {}", e)))?;
 
         let index = Index::from_stream(&mut index_reader)?;
 
         let reader = GhbReader::from_stream(bam_stream, header)
-        .map_err(|e| Error::new(e.kind(), format!("Failed to read GHB stream: {}", e)))?;
-
+            .map_err(|e| Error::new(e.kind(), format!("Failed to read GHB stream: {}", e)))?;
 
         IndexedReader::new(reader, index)
     }
 }
 
 pub struct IndexedReader<R: Read + Seek> {
-//    _marker: std::marker::PhantomData<T>,
+    //    _marker: std::marker::PhantomData<T>,
     reader: GhbReader<R>,
-    index: Index
+    index: Index,
 }
 
 impl IndexedReader<BufReader<File>> {
@@ -171,9 +189,8 @@ impl IndexedReader<BufReader<File>> {
     ///
     /// Same as `Self::build().from_path(path)`.
     pub fn from_path<P: AsRef<Path>>(path: P) -> Result<Self> {
-        IndexedReaderBuilder::new().from_path::<P,BufReader<File>>(path)
+        IndexedReaderBuilder::new().from_path::<P, BufReader<File>>(path)
     }
-    
 }
 
 impl<R: Read + Seek> IndexedReader<R> {
@@ -208,53 +225,79 @@ impl<R: Read + Seek> IndexedReader<R> {
     /// Records will be filtered by `predicate`. It helps to slightly reduce fetching time,
     /// as some records will be removed without allocating new memory and without calculating
     /// alignment length.
-    pub fn fetch_by<'a, F>(&'a mut self, region: &Region, predicate: F) -> Result<RegionViewer<'a, R>>
-    where F: 'static + Fn(&Record) -> bool
+    pub fn fetch_by<'a, F>(
+        &'a mut self,
+        region: &Region,
+        predicate: F,
+    ) -> Result<RegionViewer<'a, R>>
+    where
+        F: 'static + Fn(&Record) -> bool,
     {
-
         match self.header().reference_len(region.ref_id()) {
-            None => return Err(Error::new(InvalidInput,
-                format!("Failed to fetch records: out of bounds reference {}", region.ref_id()))),
-            Some(len) if len < region.end() => return Err(Error::new(InvalidInput,
-                format!("Failed to fetch records: end > reference length ({} > {})", region.end(), len))),
-            _ => {},
+            None => {
+                return Err(Error::new(
+                    InvalidInput,
+                    format!(
+                        "Failed to fetch records: out of bounds reference {}",
+                        region.ref_id()
+                    ),
+                ))
+            }
+            Some(len) if len < region.end() => {
+                return Err(Error::new(
+                    InvalidInput,
+                    format!(
+                        "Failed to fetch records: end > reference length ({} > {})",
+                        region.end(),
+                        len
+                    ),
+                ))
+            }
+            _ => {}
         }
 
-        let chunks = self.index.fetch_chunks(region.ref_id(), region.start(), region.end());
+        let chunks = self
+            .index
+            .fetch_chunks(region.ref_id(), region.start(), region.end());
 
         self.reader.set_chunks(chunks);
 
         Ok(RegionViewer {
             parent: self,
-//            start: region.start() as i32,
-//            end: region.end() as i32,
+            //            start: region.start() as i32,
+            //            end: region.end() as i32,
             predicate: Box::new(predicate),
         })
     }
 
-        /// Returns an iterator over all records from the start of the GHB file.
-        pub fn full<'a>(&'a mut self) -> RegionViewer<'a, R> {
-            self.full_by(|_| true)
-        }
-    
-        /// Returns an iterator over all records from the start of the GHB file.
-        ///
-        /// Records will be filtered by `predicate`, which allows to skip some records without allocating new memory.
-        pub fn full_by<'a, F>(&'a mut self, predicate: F) -> RegionViewer<'a, R>
-        where F: 'static + Fn(&Record) -> bool
-        {
-            //if let Some(offset) = self.index.start_offset() {
-            self.reader.set_chunks(vec![Chunk::new(0,0,VirtualOffset::new(0, 0), VirtualOffset::MAX)]);
-            //self.reader.set_chunks(self.index.chunks());
-            //}
-            RegionViewer {
-                parent: self,
-//                start: std::i32::MIN,
-//                end: std::i32::MAX,
-                predicate: Box::new(predicate),
-            }
-        }
+    /// Returns an iterator over all records from the start of the GHB file.
+    pub fn full<'a>(&'a mut self) -> RegionViewer<'a, R> {
+        self.full_by(|_| true)
+    }
 
+    /// Returns an iterator over all records from the start of the GHB file.
+    ///
+    /// Records will be filtered by `predicate`, which allows to skip some records without allocating new memory.
+    pub fn full_by<'a, F>(&'a mut self, predicate: F) -> RegionViewer<'a, R>
+    where
+        F: 'static + Fn(&Record) -> bool,
+    {
+        //if let Some(offset) = self.index.start_offset() {
+        self.reader.set_chunks(vec![Chunk::new(
+            0,
+            0,
+            VirtualOffset::new(0, 0),
+            VirtualOffset::MAX,
+        )]);
+        //self.reader.set_chunks(self.index.chunks());
+        //}
+        RegionViewer {
+            parent: self,
+            //                start: std::i32::MIN,
+            //                end: std::i32::MAX,
+            predicate: Box::new(predicate),
+        }
+    }
 }
 
 /// Iterator over records in a specific region.
@@ -280,7 +323,6 @@ impl<'a, R: Read + Seek> RegionViewer<'a, R> {
     pub fn index(&self) -> &Index {
         self.parent.index()
     }
-
 }
 
 impl<'a, R: Read + Seek> ChunkReader for RegionViewer<'a, R> {
@@ -314,8 +356,8 @@ impl<'a, R: Read + Seek> Iterator for RegionViewer<'a, R> {
             Ok(false) => None,
             Err(e) => match e.kind() {
                 ErrorKind::UnexpectedEof => None, // The end of file; normal.
-                _ => Some(Err(e))
-            } // Some(Err(e)),
+                _ => Some(Err(e)),
+            }, // Some(Err(e)),
         }
     }
 }

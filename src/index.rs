@@ -1,17 +1,15 @@
-use std::collections::BTreeMap;
-use std::io::{Result, Error, Read, Write};
-use std::io::ErrorKind::InvalidData;
-use std::path::Path;
-use std::fs::File;
-use std::fmt::{self, Debug, Display, Formatter};
-use std::result;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use regex::Regex;
-
+use std::collections::BTreeMap;
+use std::fmt::{self, Debug, Display, Formatter};
+use std::fs::File;
+use std::io::ErrorKind::InvalidData;
+use std::io::{Error, Read, Result, Write};
+use std::path::Path;
+use std::result;
 
 /// Per BAM specification, bin with `bin_id == SUMMARY_BIN` contains summary over the reference.
 // const SUMMARY_BIN: u32 = 37450; // TODO(FIXME)
-
 
 /// Genomic coordinates, used in [struct.IndexedReader.html#method.fetch] and [struct.IndexedReader.html#method.pileup].
 /// `ref_id` is 0-based, `start-end` is 0-based half-open interval.
@@ -25,20 +23,39 @@ pub struct Region {
 impl Region {
     /// Creates new region. `ref_id` is 0-based, `start-end` is 0-based half-open interval.
     pub fn new(ref_id: u64, start: u64, end: u64) -> Region {
-        assert!(start <= end, "Region: start should not be greater than end ({} > {})", start, end);
+        assert!(
+            start <= end,
+            "Region: start should not be greater than end ({} > {})",
+            start,
+            end
+        );
         Region { ref_id, start, end }
     }
 
-    pub fn parse<F>(path: &str, to_id: F) -> //Result<Self> 
-    std::result::Result<Self, Box<dyn std::error::Error>> 
-    where F: Fn(&str) -> Option<u64> {
+    pub fn parse<F>(path: &str, to_id: F) -> std::result::Result<Self, Box<dyn std::error::Error>>
+    where
+        F: Fn(&str) -> Option<u64>,
+    {
         let re = Regex::new(r"^(.+):(\d*)-?(\d*)$").unwrap();
         let caps = re.captures(path).ok_or("Parse Error")?;
-        let path = caps.get(1).and_then(|t| Some(t.as_str())).ok_or("Parse Path Error")?;
-        let start = caps.get(2).and_then(|t| t.as_str().parse::<u64>().ok()).ok_or("Error: the reference start is not recognized.")?;
-        let stop = caps.get(3).and_then(|t| t.as_str().parse::<u64>().ok()).ok_or("Error: the reference end is not recognized.")?;
+        let path = caps
+            .get(1)
+            .and_then(|t| Some(t.as_str()))
+            .ok_or("Parse Path Error")?;
+        let start = caps
+            .get(2)
+            .and_then(|t| t.as_str().parse::<u64>().ok())
+            .ok_or("Error: the reference start is not recognized.")?;
+        let stop = caps
+            .get(3)
+            .and_then(|t| t.as_str().parse::<u64>().ok())
+            .ok_or("Error: the reference end is not recognized.")?;
 
-        return Ok(Region{ref_id: to_id(path).ok_or("Error: the reference id is not recognized.")?, start: start, end: stop})
+        return Ok(Region {
+            ref_id: to_id(path).ok_or("Error: the reference id is not recognized.")?,
+            start: start,
+            end: stop,
+        });
     }
 
     pub fn ref_id(&self) -> u64 {
@@ -62,25 +79,33 @@ impl Region {
     }
 
     pub fn set_start(&mut self, start: u64) {
-        assert!(start <= self.end, "Region: start should not be greater than end ({} > {})", start, self.end);
+        assert!(
+            start <= self.end,
+            "Region: start should not be greater than end ({} > {})",
+            start,
+            self.end
+        );
         self.start = start;
     }
 
     pub fn set_end(&mut self, end: u64) {
-        assert!(self.start <= end, "Region: start should not be greater than end ({} > {})", self.start, end);
+        assert!(
+            self.start <= end,
+            "Region: start should not be greater than end ({} > {})",
+            self.start,
+            end
+        );
         self.end = end;
     }
 
     pub fn contains(&self, ref_id: u64, pos: u64) -> bool {
         self.ref_id == ref_id && self.start <= pos && pos < self.end
     }
-    
+
     pub fn include(&self, range: &Region) -> bool {
         self.ref_id == range.ref_id && self.start <= range.start && range.end < self.end
     }
 }
-
-
 
 /// Virtual offset. Represents `block_offset << 16 | contents_offset`, where
 /// `block_offset` is `u48` and represents the offset in the bgzip file to the beginning of the
@@ -143,7 +168,6 @@ impl Display for VirtualOffset {
     }
 }
 
-
 /// Chunk `[start-end)`, where `start` and `end` are [virtual offsets](struct.VirtualOffset.html).
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Chunk {
@@ -157,7 +181,12 @@ pub struct Chunk {
 impl Chunk {
     /// Constructs a `Chunk` from two virtual offsets.
     pub fn new(sample_id: u64, file_id: u32, start: VirtualOffset, end: VirtualOffset) -> Self {
-        Chunk { sample_id, file_id, start, end }
+        Chunk {
+            sample_id,
+            file_id,
+            start,
+            end,
+        }
     }
 
     pub fn from_stream<R: Read>(stream: &mut R, check: bool) -> Result<Self> {
@@ -166,9 +195,17 @@ impl Chunk {
         let start = VirtualOffset::from_stream(stream)?;
         let end = VirtualOffset::from_stream(stream)?;
         if check && end <= start {
-            Err(Error::new(InvalidData, format!("GHI chunk end < start ({}  <  {})", end, start)))
+            Err(Error::new(
+                InvalidData,
+                format!("GHI chunk end < start ({}  <  {})", end, start),
+            ))
         } else {
-            Ok(Chunk { sample_id, file_id, start, end })
+            Ok(Chunk {
+                sample_id,
+                file_id,
+                start,
+                end,
+            })
         }
     }
 
@@ -213,7 +250,7 @@ impl Display for Chunk {
     }
 }
 
-/// Single bin that stores chunks of 
+/// Single bin that stores chunks of
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Bin {
     bin_id: u32,
@@ -222,10 +259,16 @@ pub struct Bin {
 
 impl Bin {
     pub fn new(bin_id: u32, chunks: Vec<Chunk>) -> Bin {
-        Bin{bin_id: bin_id, chunks: chunks}
+        Bin {
+            bin_id: bin_id,
+            chunks: chunks,
+        }
     }
     pub fn dummy() -> Bin {
-        Bin{bin_id: 0, chunks: vec![]}
+        Bin {
+            bin_id: 0,
+            chunks: vec![],
+        }
     }
     pub fn from_stream<R: Read>(stream: &mut R) -> Result<Self> {
         let bin_id = stream.read_u32::<LittleEndian>()?;
@@ -236,7 +279,10 @@ impl Bin {
         for i in 0..n_chunks {
             chunks.push(Chunk::from_stream(stream, check_chunks)?);
             if check_chunks && i > 0 && chunks[i].start() < chunks[i - 1].end() {
-                return Err(Error::new(InvalidData, format!("Invalid index: chunks are not sorted for bin {}", bin_id)));
+                return Err(Error::new(
+                    InvalidData,
+                    format!("Invalid index: chunks are not sorted for bin {}", bin_id),
+                ));
             }
         }
         Ok(Bin { bin_id, chunks })
@@ -278,13 +324,13 @@ impl Display for Bin {
 #[derive(Clone, PartialEq, Eq)]
 pub struct Reference {
     bins: BTreeMap<u32, Bin>, // bin_id is not continuous.
-    // Should we set `bins` as Btree-map?
-    // linear_index: LinearIndex,
+                              // Should we set `bins` as Btree-map?
+                              // linear_index: LinearIndex,
 }
 
 impl Reference {
-    pub fn new(bins: BTreeMap<u32, Bin> ) -> Reference {
-        return Reference {bins: bins}
+    pub fn new(bins: BTreeMap<u32, Bin>) -> Reference {
+        return Reference { bins: bins };
     }
 
     fn from_stream<R: Read>(stream: &mut R) -> Result<Self> {
@@ -297,7 +343,7 @@ impl Reference {
 
         //let linear_index = LinearIndex::from_stream(stream)?;
         //Ok(Reference { bins, linear_index })
-        Ok(Reference {bins})
+        Ok(Reference { bins })
     }
 
     /// Returns all bins for the reference.
@@ -334,10 +380,11 @@ pub struct Index {
     references: Vec<Reference>, // the length is inherited from n_ref
 }
 
-
 impl Index {
     pub fn new(references: Vec<Reference>) -> Index {
-        Index{references: references}
+        Index {
+            references: references,
+        }
     }
     /// Loads index from stream.
     pub fn from_stream<R: Read>(mut stream: R) -> Result<Index> {
@@ -352,8 +399,8 @@ impl Index {
         for _ in 0..n_ref {
             references.push(Reference::from_stream(&mut stream)?);
         }
-//        let n_unmapped = stream.read_u64::<LittleEndian>().ok();
-//        Ok(Index { references, n_unmapped })
+        //        let n_unmapped = stream.read_u64::<LittleEndian>().ok();
+        //        Ok(Index { references, n_unmapped })
         Ok(Index { references })
     }
 
@@ -383,11 +430,11 @@ impl Index {
     pub fn references(&self) -> &[Reference] {
         &self.references
     }
-/*
-    pub fn chunks(self) -> Vec<Chunk> {
-        self.references.into_iter().map(|chr| chr.bins.values().into_iter().map(|bin| bin.chunks).flatten().collect::<Vec<Chunk>>()).flatten().collect()
-    }
-*/
+    /*
+        pub fn chunks(self) -> Vec<Chunk> {
+            self.references.into_iter().map(|chr| chr.bins.values().into_iter().map(|bin| bin.chunks).flatten().collect::<Vec<Chunk>>()).flatten().collect()
+        }
+    */
     /// Fetches [chunks](struct.Chunk.html) of the BAM file that contain all records for a given region.
     pub fn fetch_chunks(&self, ref_id: u64, start: u64, end: u64) -> Vec<Chunk> {
         let mut chunks = Vec::new();
@@ -406,7 +453,7 @@ impl Index {
         }
         res
         //chunks
-/*
+        /*
         let mut res = Vec::new();
         if chunks.is_empty() {
             return res;
@@ -428,7 +475,6 @@ impl Index {
     }
 }
 
-
 impl Display for Index {
     fn fmt(&self, f: &mut Formatter) -> result::Result<(), fmt::Error> {
         for (i, reference) in self.references.iter().enumerate() {
@@ -439,8 +485,8 @@ impl Display for Index {
     }
 }
 
-/// Returns a bin for the record with alignment `[beg-end)` for multiplex lower-level 
-/// Fixed version 
+/// Returns a bin for the record with alignment `[beg-end)` for multiplex lower-level
+/// Fixed version
 pub fn region_to_bin_3(beg: u64, end: u64) -> u32 {
     let end = end - 1;
     let mut res = 0_i32;
@@ -461,11 +507,10 @@ pub fn region_to_bin_3(beg: u64, end: u64) -> u32 {
     res as u32
 }
 
-
 /// Returns all possible BAI bins for the region `[beg-end)`.
 pub fn region_to_bins(start: u64, end: u64) -> BinsIter {
-    BinsIter::new(-1,0,start,end,0,0)
-/*    BinsIter {
+    BinsIter::new(-1, 0, start, end, 0, 0)
+    /*    BinsIter {
         i: -1,
         t: 0,
         start,
@@ -487,18 +532,20 @@ pub struct BinsIter {
 }
 
 impl BinsIter {
-    fn new(    i: i32,
-        t: i32,
-        start: u64,
-        end: u64,
-        curr_bin: u32,
-        bins_end: u32) -> BinsIter {
-            return {
-                let start = start as i32;
-                let end = end as i32;
-                BinsIter{i,t,start,end,curr_bin,bins_end}
+    fn new(i: i32, t: i32, start: u64, end: u64, curr_bin: u32, bins_end: u32) -> BinsIter {
+        return {
+            let start = start as i32;
+            let end = end as i32;
+            BinsIter {
+                i,
+                t,
+                start,
+                end,
+                curr_bin,
+                bins_end,
             }
-        }
+        };
+    }
 }
 
 impl Iterator for BinsIter {
@@ -518,7 +565,6 @@ impl Iterator for BinsIter {
                     self.curr_bin = 4680;
                 }
                 self.bins_end = (self.t + (self.end >> 26 - 3 * self.i - 1)) as u32;
-
             } else {
                 self.curr_bin = (self.t + (self.start >> 26 - 3 * self.i)) as u32 - 1;
                 self.bins_end = (self.t + (self.end >> 26 - 3 * self.i)) as u32;
@@ -554,14 +600,20 @@ pub fn bin_to_region(bin: u32) -> (i32, i32) {
     let i = 5;
     let right = left + (1 << 3 * i);
     if bin >= left && bin < right {
-        let beg = ((bin - left)/2u32) as i32;
+        let beg = ((bin - left) / 2u32) as i32;
         if bin % 2 == 0 {
-            return ((1 << 13) + (beg << 29 - 3 * i), (1 << 13) + (beg + 1 << 29 - 3 * i))
+            return (
+                (1 << 13) + (beg << 29 - 3 * i),
+                (1 << 13) + (beg + 1 << 29 - 3 * i),
+            );
         } else {
             return (beg << 29 - 3 * i, beg + 1 << 29 - 3 * i);
         }
     }
-    panic!("Bin id should be not bigger than MAX_BIN ({} > {})", bin, MAX_BIN);
+    panic!(
+        "Bin id should be not bigger than MAX_BIN ({} > {})",
+        bin, MAX_BIN
+    );
 }
 
 #[cfg(test)]
@@ -569,130 +621,129 @@ mod tests {
     use crate::index::bin_to_region;
     use crate::index::region_to_bins;
     use crate::index::BinsIter;
-    
+
     #[test]
     fn bin_to_region_works() {
-        assert_eq!(bin_to_region(1), (0, 1 << 26));        
+        assert_eq!(bin_to_region(1), (0, 1 << 26));
         assert_eq!(bin_to_region(9), (0, 1 << 23));
         assert_eq!(bin_to_region(73), (0, 1 << 20));
         assert_eq!(bin_to_region(585), (0, 1 << 17));
         assert_eq!(bin_to_region(4681), (0, 16384));
-        assert_eq!(bin_to_region(4683), (16384, 16384*2));
+        assert_eq!(bin_to_region(4683), (16384, 16384 * 2));
         assert_eq!(bin_to_region(4682), (8192, 16384 + 8192));
-
     }
 
-    #[test] 
+    #[test]
     fn bin_iter_4681() {
         let mut bin_iter = region_to_bins(0, 8191);
-        assert_eq!(bin_iter, BinsIter::new(-1,0,0,8191,0,0));
+        assert_eq!(bin_iter, BinsIter::new(-1, 0, 0, 8191, 0, 0));
         bin_iter.next();
-        assert_eq!(bin_iter, BinsIter::new(0,1,0,8191,0,1));
+        assert_eq!(bin_iter, BinsIter::new(0, 1, 0, 8191, 0, 1));
         bin_iter.next();
-        assert_eq!(bin_iter, BinsIter::new(0,1,0,8191,1,1));
+        assert_eq!(bin_iter, BinsIter::new(0, 1, 0, 8191, 1, 1));
         bin_iter.next();
-        assert_eq!(bin_iter, BinsIter::new(1,9,0,8191,9,9));
+        assert_eq!(bin_iter, BinsIter::new(1, 9, 0, 8191, 9, 9));
         bin_iter.next();
-        assert_eq!(bin_iter, BinsIter::new(2,73,0,8191,73,73));
+        assert_eq!(bin_iter, BinsIter::new(2, 73, 0, 8191, 73, 73));
         bin_iter.next();
-        assert_eq!(bin_iter, BinsIter::new(3,585,0,8191,585,585));
+        assert_eq!(bin_iter, BinsIter::new(3, 585, 0, 8191, 585, 585));
         bin_iter.next();
-        assert_eq!(bin_iter, BinsIter::new(4,4681,0,8191,4681,4681));
+        assert_eq!(bin_iter, BinsIter::new(4, 4681, 0, 8191, 4681, 4681));
         assert_eq!(bin_iter.next(), None);
     }
 
-    #[test] 
+    #[test]
     fn bin_iter_4681_4683() {
         let mut bin_iter = region_to_bins(0, 16384);
-        assert_eq!(bin_iter, BinsIter::new(-1,0,0,16384,0,0));
+        assert_eq!(bin_iter, BinsIter::new(-1, 0, 0, 16384, 0, 0));
         bin_iter.next();
-        assert_eq!(bin_iter, BinsIter::new(0,1,0,16384,0,1));
+        assert_eq!(bin_iter, BinsIter::new(0, 1, 0, 16384, 0, 1));
         bin_iter.next();
-        assert_eq!(bin_iter, BinsIter::new(0,1,0,16384,1,1));
+        assert_eq!(bin_iter, BinsIter::new(0, 1, 0, 16384, 1, 1));
         bin_iter.next();
-        assert_eq!(bin_iter, BinsIter::new(1,9,0,16384,9,9));
+        assert_eq!(bin_iter, BinsIter::new(1, 9, 0, 16384, 9, 9));
         bin_iter.next();
-        assert_eq!(bin_iter, BinsIter::new(2,73,0,16384,73,73));
+        assert_eq!(bin_iter, BinsIter::new(2, 73, 0, 16384, 73, 73));
         bin_iter.next();
-        assert_eq!(bin_iter, BinsIter::new(3,585,0,16384,585,585));
+        assert_eq!(bin_iter, BinsIter::new(3, 585, 0, 16384, 585, 585));
         bin_iter.next();
-        assert_eq!(bin_iter, BinsIter::new(4,4681,0,16384,4681,4683));
+        assert_eq!(bin_iter, BinsIter::new(4, 4681, 0, 16384, 4681, 4683));
         assert_eq!(bin_iter.next(), Some(4682));
     }
 
-    #[test] 
+    #[test]
     fn bin_iter_4682_4683() {
         let mut bin_iter = region_to_bins(16485, 16486);
-        assert_eq!(bin_iter, BinsIter::new(-1,0,16485, 16486,0,0));
+        assert_eq!(bin_iter, BinsIter::new(-1, 0, 16485, 16486, 0, 0));
         bin_iter.next();
-        assert_eq!(bin_iter, BinsIter::new(0,1,16485, 16486,0,1));
+        assert_eq!(bin_iter, BinsIter::new(0, 1, 16485, 16486, 0, 1));
         bin_iter.next();
-        assert_eq!(bin_iter, BinsIter::new(0,1,16485, 16486,1,1));
+        assert_eq!(bin_iter, BinsIter::new(0, 1, 16485, 16486, 1, 1));
         bin_iter.next();
-        assert_eq!(bin_iter, BinsIter::new(1,9,16485, 16486,9,9));
+        assert_eq!(bin_iter, BinsIter::new(1, 9, 16485, 16486, 9, 9));
         bin_iter.next();
-        assert_eq!(bin_iter, BinsIter::new(2,73,16485, 16486,73,73));
+        assert_eq!(bin_iter, BinsIter::new(2, 73, 16485, 16486, 73, 73));
         bin_iter.next();
-        assert_eq!(bin_iter, BinsIter::new(3,585,16485, 16486,585,585));
+        assert_eq!(bin_iter, BinsIter::new(3, 585, 16485, 16486, 585, 585));
         bin_iter.next();
-        assert_eq!(bin_iter, BinsIter::new(4,4681,16485, 16486,4682,4683));
+        assert_eq!(bin_iter, BinsIter::new(4, 4681, 16485, 16486, 4682, 4683));
         assert_eq!(bin_iter.next(), Some(4683));
     }
 
-    #[test] 
+    #[test]
     fn bin_iter_4681_4683_2() {
         let mut bin_iter = region_to_bins(0, 16486);
-        assert_eq!(bin_iter, BinsIter::new(-1,0,0, 16486,0,0));
+        assert_eq!(bin_iter, BinsIter::new(-1, 0, 0, 16486, 0, 0));
         bin_iter.next();
-        assert_eq!(bin_iter, BinsIter::new(0,1,0, 16486,0,1));
+        assert_eq!(bin_iter, BinsIter::new(0, 1, 0, 16486, 0, 1));
         bin_iter.next();
-        assert_eq!(bin_iter, BinsIter::new(0,1,0, 16486,1,1));
+        assert_eq!(bin_iter, BinsIter::new(0, 1, 0, 16486, 1, 1));
         bin_iter.next();
-        assert_eq!(bin_iter, BinsIter::new(1,9,0, 16486,9,9));
+        assert_eq!(bin_iter, BinsIter::new(1, 9, 0, 16486, 9, 9));
         bin_iter.next();
-        assert_eq!(bin_iter, BinsIter::new(2,73,0, 16486,73,73));
+        assert_eq!(bin_iter, BinsIter::new(2, 73, 0, 16486, 73, 73));
         bin_iter.next();
-        assert_eq!(bin_iter, BinsIter::new(3,585,0, 16486,585,585));
+        assert_eq!(bin_iter, BinsIter::new(3, 585, 0, 16486, 585, 585));
         bin_iter.next();
-        assert_eq!(bin_iter, BinsIter::new(4,4681,0, 16486,4681,4683));
+        assert_eq!(bin_iter, BinsIter::new(4, 4681, 0, 16486, 4681, 4683));
         assert_eq!(bin_iter.next(), Some(4682));
     }
 
-    #[test] 
+    #[test]
     fn bin_iter_4681_4683_3() {
         let mut bin_iter = region_to_bins(8199, 16384);
-        assert_eq!(bin_iter, BinsIter::new(-1,0,8199, 16384,0,0));
+        assert_eq!(bin_iter, BinsIter::new(-1, 0, 8199, 16384, 0, 0));
         bin_iter.next();
-        assert_eq!(bin_iter, BinsIter::new(0,1,8199, 16384,0,1));
+        assert_eq!(bin_iter, BinsIter::new(0, 1, 8199, 16384, 0, 1));
         bin_iter.next();
-        assert_eq!(bin_iter, BinsIter::new(0,1,8199, 16384,1,1));
+        assert_eq!(bin_iter, BinsIter::new(0, 1, 8199, 16384, 1, 1));
         bin_iter.next();
-        assert_eq!(bin_iter, BinsIter::new(1,9,8199, 16384,9,9));
+        assert_eq!(bin_iter, BinsIter::new(1, 9, 8199, 16384, 9, 9));
         bin_iter.next();
-        assert_eq!(bin_iter, BinsIter::new(2,73,8199, 16384,73,73));
+        assert_eq!(bin_iter, BinsIter::new(2, 73, 8199, 16384, 73, 73));
         bin_iter.next();
-        assert_eq!(bin_iter, BinsIter::new(3,585,8199, 16384,585,585));
+        assert_eq!(bin_iter, BinsIter::new(3, 585, 8199, 16384, 585, 585));
         bin_iter.next();
-        assert_eq!(bin_iter, BinsIter::new(4,4681,8199, 16384,4681,4683));
+        assert_eq!(bin_iter, BinsIter::new(4, 4681, 8199, 16384, 4681, 4683));
         assert_eq!(bin_iter.next(), Some(4682));
     }
 
-    #[test] 
+    #[test]
     fn bin_iter_4683_4684() {
         let mut bin_iter = region_to_bins(24578, 24589);
-        assert_eq!(bin_iter, BinsIter::new(-1,0,24578, 24589,0,0));
+        assert_eq!(bin_iter, BinsIter::new(-1, 0, 24578, 24589, 0, 0));
         bin_iter.next();
-        assert_eq!(bin_iter, BinsIter::new(0,1,24578, 24589,0,1));
+        assert_eq!(bin_iter, BinsIter::new(0, 1, 24578, 24589, 0, 1));
         bin_iter.next();
-        assert_eq!(bin_iter, BinsIter::new(0,1,24578, 24589,1,1));
+        assert_eq!(bin_iter, BinsIter::new(0, 1, 24578, 24589, 1, 1));
         bin_iter.next();
-        assert_eq!(bin_iter, BinsIter::new(1,9,24578, 24589,9,9));
+        assert_eq!(bin_iter, BinsIter::new(1, 9, 24578, 24589, 9, 9));
         bin_iter.next();
-        assert_eq!(bin_iter, BinsIter::new(2,73,24578, 24589,73,73));
+        assert_eq!(bin_iter, BinsIter::new(2, 73, 24578, 24589, 73, 73));
         bin_iter.next();
-        assert_eq!(bin_iter, BinsIter::new(3,585,24578, 24589,585,585));
+        assert_eq!(bin_iter, BinsIter::new(3, 585, 24578, 24589, 585, 585));
         bin_iter.next();
-        assert_eq!(bin_iter, BinsIter::new(4,4681,24578, 24589,4683,4684));
+        assert_eq!(bin_iter, BinsIter::new(4, 4681, 24578, 24589, 4683, 4684));
         assert_eq!(bin_iter.next(), Some(4684));
     }
 }
