@@ -166,15 +166,17 @@ fn build(matches: &ArgMatches, threads: u16) -> () {
 
     let bam_files: Vec<_> = matches.values_of("bam").unwrap().collect();
     let mut set_vec = vec![];
+    let mut i = 0;
 
-    for (i, bam_path) in bam_files.iter().enumerate() {
+    for bam_path in bam_files.iter() {
         info!("Loading {}", bam_path);
         let reader = bam::BamReader::from_path(bam_path, threads).unwrap();
         let bam_header = reader.header();
         if alignment_transfer {
             header.transfer(bam_header).unwrap();
         }
-        header.set_local_header(bam_header, i);
+        header.set_local_header(bam_header, bam_path, i);
+        i += 1;
         let set = Set::<AlignmentBuilder>::new(reader, 0 as u64, &mut header);
         set_vec.push(set);
     }
@@ -187,7 +189,8 @@ fn build(matches: &ArgMatches, threads: u16) -> () {
         let reader = bed::Reader::from_file(bed_path).unwrap();
         let set: Set<InvertedRecordBuilder> =
             Set::<InvertedRecordBuilder>::new(reader, 1 as u64, &mut header).unwrap();
-
+        header.set_local_header(&bam::Header::new(), bed_path, i);
+        i += 1;
         entire.add(set);
     }
 

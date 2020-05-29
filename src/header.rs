@@ -47,7 +47,7 @@ impl HeaderType {
 pub struct Header {
     global_header: header::Header, // Need to be replaced.
     headers: Vec<HeaderType>,
-    //    items: BTreeMap<usize, String>,
+    names: Vec<String>,
 }
 
 impl Header {
@@ -94,11 +94,15 @@ impl Header {
         self.global_header.push_entry(header_entry)
     }
     /// Keep a bam Header  on the local header
-    pub fn set_local_header(&mut self, header: &bam::Header, index: usize) -> () {
+    pub fn set_local_header(&mut self, header: &bam::Header, name: &str, index: usize) -> () {
         if let None = self.headers.get(index) {
-            self.headers.resize(index + 1, HeaderType::None)
+            self.headers.resize(index + 1, HeaderType::None);
+        }
+        if let None = self.names.get(index) {
+            self.names.resize(index + 1, "".to_string());
         }
         self.headers[index] = HeaderType::BAM(header.clone());
+        self.names[index] = name.to_string();
     }
     /// Load chromosome from chrom.sizes.
     pub fn set_header_from_sizes<R: Read>(
@@ -117,6 +121,9 @@ impl Header {
     }
     pub fn get_local_header(&self, index: usize) -> Option<&HeaderType> {
         self.headers.get(index)
+    }
+    pub fn get_name(&self, index: usize) -> Option<&String> {
+        self.names.get(index)
     }
     pub fn get_local_bam_header(&self, index: usize) -> Option<&bam::Header> {
         self.headers.get(index).and_then(|f| match &f {
@@ -139,6 +146,7 @@ impl Header {
         Header {
             global_header: header::Header::new(),
             headers: vec![],
+            names: vec![], //BTreeMap::new(),
         }
     }
 
@@ -159,6 +167,10 @@ impl Header {
         for i in &self.headers {
             i.to_stream(stream)?;
         }
+        for item in &self.names {
+            stream.write_u64::<LittleEndian>(item.len() as u64)?;
+            stream.write_all(&item.as_bytes())?;
+        }
         Ok(())
     }
 
@@ -170,6 +182,14 @@ impl Header {
         let mut headers = Vec::with_capacity(n_samples);
         for _i in 0..n_samples {
             headers.push(HeaderType::from_stream(stream)?);
+        }
+        let mut names = Vec::with_capacity(n_samples);
+        for _i in 0..n_samples {
+            let len = stream.read_u64::<LittleEndian>()? as usize;
+            let mut buf = vec![0u8; len];
+            stream.read_exact(&mut buf)?;
+            let converted: String = String::from_utf8(buf.to_vec()).unwrap();
+            names.push(converted);
         }
         self.global_header = global_header;
         self.headers = headers;
