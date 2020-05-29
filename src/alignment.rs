@@ -16,7 +16,7 @@ use std::{
 /// BAM-Compatible Alignment Inverted-Record
 #[derive(Clone, Debug)]
 pub struct Alignment {
-    pub data: Vec<Record>, //bgzip compressed records
+    pub data: Vec<Record>, // bgzip compressed records
 }
 
 impl PartialEq for Alignment {

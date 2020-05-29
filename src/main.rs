@@ -56,6 +56,11 @@ fn main() {
                         .about("chroms.sizes"),
                 )
                 .arg(
+                    Arg::new("force")
+                        .short('f')
+                        .about("Outputs only header")
+                )
+                .arg(
                     Arg::new("OUTPUT")
                         .about("Sets the output file to use")
                         .takes_value(true)
@@ -106,6 +111,11 @@ fn main() {
                         .takes_value(true)
                         //            .multiple(true)
                         .about("annotation sample to fetch (alignment | annotation)"),
+                )
+                .arg(
+                    Arg::new("header")
+                        .short('h')
+                        .about("Outputs only header")
                 )
                 .arg(
                     Arg::new("INPUT")
