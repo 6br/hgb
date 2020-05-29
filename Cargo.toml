@@ -19,19 +19,19 @@ path = "src/main.rs"
 #bam = { git = "https://bitbucket.org/6br/bam" }
 bam = { path = "../../../gitlab.com/tprodanov/bam" }
 bio = { git = "https://github.com/rust-bio/rust-bio" }
-csv = "1.1"
-bitpacking = "0.5" # Pfor
-byteorder = "*"
-env_logger = "*"
-flate2 = "1.0" # A streaming compression/decompression library
+csv = "1.1.3"
+bitpacking = "0.8.2"
+byteorder = "1.3.4"
+env_logger = "0.7.1"
+flate2 = "1.0.14"
 genomic_range = { git = "https://github.com/6br/genomic_range" }
-libflate = "0.1"
-log = "*"
-numpress = "1.0"
-regex = "*" 
-serde = "*"
-serde_json = "*"
-serde_yaml = "*"
+libflate = "1.0.0"
+log = "0.4.8"
+numpress = "1.1.0"
+regex = "1.3.7"
+serde = "1.0.110"
+serde_json = "1.0.53"
+serde_yaml = "0.8.12"
 vbyte = { git = "https://github.com/6br/vbyte" }
 
 [dependencies.clap]

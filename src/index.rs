@@ -1,4 +1,5 @@
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
+use genomic_range::StringRegion;
 use regex::Regex;
 use std::collections::BTreeMap;
 use std::fmt::{self, Debug, Display, Formatter};
@@ -30,6 +31,20 @@ impl Region {
             end
         );
         Region { ref_id, start, end }
+    }
+
+    pub fn convert<F>(
+        path: &StringRegion,
+        to_id: F,
+    ) -> std::result::Result<Self, Box<dyn std::error::Error>>
+    where
+        F: Fn(&str) -> Option<u64>,
+    {
+        Ok(Region {
+            ref_id: to_id(&path.path).ok_or("Error: the reference id is not recognized.")?,
+            start: path.start,
+            end: path.end,
+        })
     }
 
     pub fn parse<F>(path: &str, to_id: F) -> std::result::Result<Self, Box<dyn std::error::Error>>

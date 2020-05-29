@@ -47,6 +47,7 @@ impl HeaderType {
 pub struct Header {
     global_header: header::Header, // Need to be replaced.
     headers: Vec<HeaderType>,
+    //    items: BTreeMap<usize, String>,
 }
 
 impl Header {

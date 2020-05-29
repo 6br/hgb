@@ -430,7 +430,15 @@ impl InvertedRecord {
             aux: aux,
         }
     }
-
+    /*
+        // Output as Record with F(u64) -> &str
+        pub fn to_record_f<F>(self, to_str: F) -> Vec<bed::Record> where
+        F: Fn(u64) -> &str
+        {
+            let chromosome =
+            to_record(self, chromosome);
+        }
+    */
     /// Output as Record.
     pub fn to_record(self, chromosome: &str) -> Vec<bed::Record> {
         let mut records = vec![];

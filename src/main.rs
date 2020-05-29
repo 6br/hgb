@@ -2,8 +2,9 @@ extern crate log;
 
 use bio::io::bed;
 use clap::{App, Arg, ArgMatches};
+use genomic_range::StringRegion;
 use log::info;
-use std::fs::File;
+use std::{fs::File, io};
 
 use ghi::alignment::AlignmentBuilder;
 use ghi::binary::GhbWriter;
@@ -75,13 +76,13 @@ fn main() {
                         .multiple(true)
                         .about("sorted bam"),
                 )
-                .arg(
+                /*.arg(
                     Arg::new("type")
                         .short('t')
                         .takes_value(true)
                         .possible_values(&["alignment", "range"])
                         .about("annotation type to fetch"),
-                )
+                )*/
                 .arg(
                     Arg::new("id")
                         .short('i')
@@ -205,34 +206,110 @@ fn build(matches: &ArgMatches, threads: u16) -> () {
     let _result = index_writer.write(&index);
     assert_eq!(_result.ok(), Some(()));
     let _result = index_writer.flush();
-    println!("Annotation saved!");
+    // println!("Annotation saved!");
     // Some(())
 }
 
-fn query(matches: &ArgMatches, threads: u16) -> () {
+fn query(matches: &ArgMatches, _threads: u16) -> () {
     if let Some(o) = matches.value_of("INPUT") {
         let mut reader = IndexedReader::from_path(o).unwrap();
         if let Some(range) = matches.value_of("range") {
             let closure = |x: &str| reader.reference_id(x);
-            let range = Region::parse(range, closure).unwrap();
+            let string_range = StringRegion::new(range).unwrap();
+            let reference_name = &string_range.path;
 
+            let range = Region::convert(&string_range, closure).unwrap();
             let viewer = reader.fetch(&range).unwrap();
 
-            let sample_id = matches.value_of("id").unwrap();
+            let sample_ids: Vec<u64> = matches
+                .values_of("id")
+                .unwrap()
+                .map(|t| t.parse::<u64>().unwrap())
+                .collect();
+            /*
             let format_type = matches.value_of_t("type").unwrap();
 
             match format_type {
                 Format::Alignment(alignment) => {}
                 Format::Range(range) => {}
                 _ => println!("Format not matched."),
-            }
+            }*/
+            let mut output = io::BufWriter::new(io::stdout());
 
-            let records = viewer.into_iter().flat_map(|t| {
+            let _ = viewer.into_iter().flat_map(|t| {
                 t.map(|f| {
+                    if sample_ids.iter().any(|&i| i == f.sample_id()) {
+                        match f.data() {
+                            Format::Default(_) => {}
+                            Format::Range(rec) => {
+                                let mut writer = bed::Writer::new(&mut output);
+                                for i in rec.to_record(&reference_name) {
+                                    writer.write(&i).unwrap();
+                                }
+                            }
+                            Format::Alignment(rec) => {
+                                for i in rec.data {
+                                    let _result = i.write_bam(&mut output).unwrap();
+                                }
+                            }
+                        }
+                    }
+                    /*
                     if let Format::Range(rec) = f.data() {
-                        rec.to_record(range.ref_id())
+                        for i in rec.to_record(&reference_name) {
+                            writer.write(&i);
+                        }
                     } else if let Format::Alignment(rec) = f.data() {
-                        rec.to_record(range.ref_id())
+                        for i in rec.data {
+                            let _result = i.write_bam(&mut output);
+                        }
+                    }*/
+                })
+            });
+        }
+    }
+}
+
+fn decompose(matches: &ArgMatches, _threads: u16) -> () {
+    if let Some(i) = matches.value_of("INPUT") {
+        if let Some(o) = matches.value_of("OUTPUT") {
+            let id = matches
+                .value_of("id")
+                .and_then(|t| t.parse::<u64>().ok())
+                .unwrap();
+            let header = matches.is_present("header");
+            let mut reader = IndexedReader::from_path(i).unwrap();
+            let mut writer = File::open(o).unwrap();
+            if let Some(header) = reader.header().get_local_header(id as usize) {
+                header.to_stream(&mut writer).unwrap();
+            } else {
+                println!("There is no header of id {}", id);
+            }
+            if header {
+                return;
+            }
+            // todo!("Implement later; Now just returns only header.");
+            let mut output = io::BufWriter::new(io::stdout());
+
+            let viewer = reader.full();
+
+            let _ = viewer.into_iter().flat_map(|t| {
+                t.map(|f| {
+                    if f.sample_id() == id {
+                        match f.data() {
+                            Format::Default(_) => {}
+                            Format::Range(rec) => {
+                                let mut writer = bed::Writer::new(&mut output);
+                                for i in rec.to_record("null") {
+                                    writer.write(&i).unwrap();
+                                }
+                            }
+                            Format::Alignment(rec) => {
+                                for i in rec.data {
+                                    let _result = i.write_bam(&mut output).unwrap();
+                                }
+                            }
+                        }
                     }
                 })
             });
@@ -240,30 +317,6 @@ fn query(matches: &ArgMatches, threads: u16) -> () {
     }
 }
 
-fn decompose(matches: &ArgMatches, threads: u16) -> () {
-    if let Some(i) = matches.value_of("INPUT") {
-        if let Some(o) = matches.value_of("OUTPUT") {
-            let id = matches
-                .value_of("id")
-                .and_then(|t| t.parse::<usize>().ok())
-                .unwrap();
-            let mut reader = IndexedReader::from_path(i).unwrap();
-            let mut writer = File::open(o).unwrap();
-            if let Some(header) = reader.header().get_local_header(id) {
-                header.to_stream(&mut writer);
-            } else {
-                println!("There is no header of id {}", id);
-            }
-            todo!("Implement later; Now just returns only header.");
-            /*
-            let viewer = reader.full();
-            viewer.into_iter().flat_map(|t|
-
-            )*/
-        }
-    }
-}
-
-fn server(matches: &ArgMatches, threads: u16) -> () {
+fn server(_matches: &ArgMatches, _threads: u16) -> () {
     //todo!("Implement a web server using actix-web.");
 }
