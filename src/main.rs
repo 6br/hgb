@@ -173,7 +173,7 @@ fn build(matches: &ArgMatches, threads: u16) -> () {
         let reader = bam::BamReader::from_path(bam_path, threads).unwrap();
         let bam_header = reader.header();
         if alignment_transfer {
-            header.transfer(bam_header).unwrap();
+            header.transfer(bam_header);
         }
         header.set_local_header(bam_header, bam_path, i);
         i += 1;

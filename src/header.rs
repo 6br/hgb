@@ -132,14 +132,16 @@ impl Header {
         })
     }
     /// Transfer the reference into global header.
-    pub fn transfer(&mut self, header: &bam::Header) -> std::result::Result<(), String> {
+    /// If it intends to override existing line, the new line would be ignored.
+    pub fn transfer(&mut self, header: &bam::Header) -> () {
         for i in header.lines() {
             match i {
-                HeaderLine::Entry(a) => self.global_header.push_entry(a.clone())?,
+                HeaderLine::Entry(a) => {
+                    let _ = self.global_header.push_entry(a.clone());
+                }
                 HeaderLine::Comment(_) => {}
             }
         }
-        Ok(())
     }
     /// Creates an empty header.
     pub fn new() -> Self {

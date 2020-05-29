@@ -182,8 +182,8 @@ mod tests {
         let reader = bam::BamReader::from_path(bam_path, 4).unwrap();
         let bam_header = reader.header();
         let mut header = Header::new();
-        header.transfer(bam_header).unwrap();
-        header.set_local_header(bam_header, 0);
+        header.transfer(bam_header);
+        header.set_local_header(bam_header, "bam", 0);
         {
             let set = Set::<AlignmentBuilder>::new(reader, 0 as u64, &mut header);
 
