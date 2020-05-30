@@ -23,7 +23,7 @@ pub enum Alignment {
     Object(Vec<Record>)
 }
 */
-#[derive(Eq, PartialEq, Debug)]
+#[derive(Clone, Eq, PartialEq, Debug)]
 pub struct Alignment {
     pub data: Vec<Chunk>, // bgzip compressed records
     reader: String,       // TODO()Path should be a reference to bam::Reader.
@@ -131,12 +131,12 @@ impl AlignmentBuilder {
         }
     }
 }
-/*
+
 impl Builder for AlignmentBuilder {
     fn to_format(self) -> Format {
         Format::Alignment(self.to_record())
     }
-}*/
+}
 impl ColumnarSet for Alignment {
     fn new() -> Alignment {
         Alignment {

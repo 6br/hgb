@@ -10,8 +10,6 @@ extern crate byteorder;
 extern crate regex;
 extern crate serde_json;
 
-#[no_mangle]
-pub mod twopass_alignment;
 pub mod alignment;
 pub mod binary;
 pub mod builder;
@@ -21,6 +19,8 @@ pub mod header;
 pub mod index;
 pub mod range;
 pub mod reader;
+#[no_mangle]
+pub mod twopass_alignment;
 pub mod writer;
 
 use checker_index::Index;

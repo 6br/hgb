@@ -1,4 +1,4 @@
-use crate::alignment::Alignment;
+use crate::twopass_alignment::Alignment;
 use crate::binary::GhbWriter;
 use crate::checker_index::{Index, Reference};
 use crate::compression::{
@@ -43,7 +43,7 @@ impl FromStr for Format {
     fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
         match s {
             "default" => Ok(Format::Default(Default {})),
-            "alignment" => Ok(Format::Alignment(Alignment { data: vec![] })),
+            "alignment" => Ok(Format::Alignment(Alignment::new())),
             "range" => Ok(Format::Range(InvertedRecord {
                 aux: vec![],
                 end: vec![],

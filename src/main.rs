@@ -6,7 +6,7 @@ use genomic_range::StringRegion;
 use log::info;
 use std::{fs::File, io};
 
-use ghi::alignment::AlignmentBuilder;
+use ghi::twopass_alignment::AlignmentBuilder;
 use ghi::binary::GhbWriter;
 use ghi::builder::InvertedRecordBuilder;
 use ghi::header::Header;
@@ -55,11 +55,7 @@ fn main() {
                         .takes_value(true)
                         .about("chroms.sizes"),
                 )
-                .arg(
-                    Arg::new("force")
-                        .short('f')
-                        .about("Outputs only header")
-                )
+                .arg(Arg::new("force").short('f').about("Outputs only header"))
                 .arg(
                     Arg::new("OUTPUT")
                         .about("Sets the output file to use")
@@ -112,11 +108,7 @@ fn main() {
                         //            .multiple(true)
                         .about("annotation sample to fetch (alignment | annotation)"),
                 )
-                .arg(
-                    Arg::new("header")
-                        .short('h')
-                        .about("Outputs only header")
-                )
+                .arg(Arg::new("header").short('h').about("Outputs only header"))
                 .arg(
                     Arg::new("INPUT")
                         .about("Sets the input file to use")
