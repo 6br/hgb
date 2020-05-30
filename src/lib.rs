@@ -11,6 +11,7 @@ extern crate regex;
 extern crate serde_json;
 
 #[no_mangle]
+pub mod twopass_alignment;
 pub mod alignment;
 pub mod binary;
 pub mod builder;
