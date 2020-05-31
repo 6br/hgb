@@ -1,4 +1,3 @@
-use crate::twopass_alignment::Alignment;
 use crate::binary::GhbWriter;
 use crate::checker_index::{Index, Reference};
 use crate::compression::{
@@ -7,6 +6,7 @@ use crate::compression::{
 };
 use crate::header::Header;
 use crate::index::Bin;
+use crate::twopass_alignment::Alignment;
 use crate::{builder::InvertedRecordBuilder, Builder};
 use crate::{ChunkWriter, ColumnarSet};
 use bam::header::HeaderEntry;

@@ -10,7 +10,7 @@ extern crate byteorder;
 extern crate regex;
 extern crate serde_json;
 
-pub mod alignment;
+//pub mod alignment;
 pub mod binary;
 pub mod builder;
 pub mod checker_index;

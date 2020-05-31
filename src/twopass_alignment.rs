@@ -14,13 +14,13 @@ use bam::{
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use std::{
     collections::{BTreeMap, HashMap},
-    io::{Read, Result},
+    io::{Read, Result, Seek},
 };
 /*
-#[derive(Eq, PartialEq, Debug)]
+#[derive(Clone, Eq, PartialEq, Debug)]
 pub enum Alignment {
     Offset(String, Vec<Chunk>),
-    Object(Vec<Record>)
+    Object(Vec<Record>),
 }
 */
 #[derive(Clone, Eq, PartialEq, Debug)]
@@ -68,18 +68,21 @@ impl Bins<AlignmentBuilder> {
 }
 
 impl Set<AlignmentBuilder> {
-    pub fn new<R: Read>(
-        mut reader: bam::BamReader<R>,
+    pub fn new<R: Read + Seek>(
+        //mut reader: bam::BamReader<R>,
+        mut reader: bam::IndexedReader<R>,
         sample_id: u64,
         header: &mut Header,
     ) -> Self {
         let mut chrom = BTreeMap::new();
         let mut unmapped = AlignmentBuilder::new();
-        let mut prev = reader.reader.current().and_then(|t| t.offset()).unwrap();
+        // let mut prev = reader.reader.current().and_then(|t| t.offset()).unwrap();
+        let mut prev = reader.index().start_offset().unwrap();
         let mut rec = Record::new();
+        let mut viewer = reader.full();
 
         //for record in reader {
-        while let Ok(true) = reader.read_into(&mut rec) {
+        while let Ok(true) = viewer.read_into(&mut rec) {
             //.ok().expect("Error reading record.");
             if rec.ref_id() >= 0 {
                 let chrom_len = header.reference_len(rec.ref_id() as u64).unwrap();
@@ -97,19 +100,33 @@ impl Set<AlignmentBuilder> {
                         .bins
                         .entry(bin_id as u32)
                         .or_insert(AlignmentBuilder::new());
-                    let end: u64 = reader.reader.current().and_then(|t| t.offset()).unwrap();
+                    let end_offset: u64 = viewer
+                        .parent
+                        .reader
+                        .current()
+                        .and_then(|t| t.offset())
+                        .unwrap();
+                    let content_offset = viewer.parent.reader.contents_offset();
+                    let end = VirtualOffset::from_raw(end_offset << 16 | content_offset as u64);
+                    // println!("{} {} {}", prev, end, content_offset,);
                     stat.add(
-                        Chunk::new(VirtualOffset::from_raw(prev), VirtualOffset::from_raw(end)),
+                        Chunk::new(prev, end),
                         header.get_name(sample_id as usize).unwrap(),
                     );
+                    //TODO() Chunks should be merged if the two chunks are neighbor.
                     prev = end;
                 }
             } else if rec.ref_id() == -1 {
-                let end: u64 = reader.reader.current().and_then(|t| t.offset()).unwrap();
-                unmapped.alignments.push(Chunk::new(
-                    VirtualOffset::from_raw(prev),
-                    VirtualOffset::from_raw(end),
-                ));
+                let end_offset: u64 = viewer
+                    .parent
+                    .reader
+                    .current()
+                    .and_then(|t| t.offset())
+                    .unwrap();
+                let content_offset = viewer.parent.reader.contents_offset();
+                let end = VirtualOffset::from_raw(end_offset << 16 | content_offset as u64);
+                unmapped.alignments.push(Chunk::new(prev, end));
+                prev = end;
             } else {
                 // return Err(io::Error::new(InvalidData, "Reference id < -1"));
                 panic!("Reference id < -1");
@@ -155,7 +172,9 @@ impl ColumnarSet for Alignment {
         let mut reader = bam::IndexedReader::from_path(&self.reader)?;
         let viewer = reader.chunk(self.data.clone());
         for i in viewer {
+            println!("{:?} {:?}", self.data, i);
             writer.write(&i?)?;
+            //TODO() Don't have to parse in this implementation.
         }
         writer.finish()?;
         Ok(())
@@ -180,5 +199,74 @@ impl ColumnarSet for Alignment {
 
         Ok(true)
         */
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::AlignmentBuilder;
+    use crate::bam::RecordWriter;
+    use crate::binary;
+    use crate::header::Header;
+    use crate::index::Region;
+    use crate::range::{Format, InvertedRecordEntire};
+    use crate::reader::IndexedReader;
+    use crate::writer::GhiWriter;
+    use crate::IndexWriter;
+    use crate::{builder::InvertedRecordBuilder, twopass_alignment::Set};
+    use bam::record::Record;
+    use bio::io::bed;
+    use std::{
+        fs::File,
+        io::{BufRead, BufReader, Write},
+        path::Path,
+        process::Command,
+        time::Instant,
+    };
+    #[test]
+    fn bam_works() {
+        let bam_path = "./test/index_test.bam";
+        let reader = bam::BamReader::from_path(bam_path, 4).unwrap();
+        let reader2 = bam::IndexedReader::from_path(bam_path).unwrap();
+        // println!("{}", reader2.index());
+
+        let bam_header = reader.header();
+        let mut header = Header::new();
+        header.transfer(bam_header);
+        header.set_local_header(bam_header, bam_path, 0);
+        {
+            let set = Set::<AlignmentBuilder>::new(reader2, 0 as u64, &mut header);
+
+            let example =
+                b"chr2\t16382\t16385\tbin4682\t20\t-\nchr2\t16388\t31768\tbin4683\t20\t-\n";
+            let reader = bed::Reader::new(&example[..]);
+            let set2: Set<InvertedRecordBuilder> =
+                Set::<InvertedRecordBuilder>::new(reader, 1 as u64, &mut header).unwrap();
+
+            assert_eq!(None, header.reference_id("1"));
+            assert_eq!(Some(1), header.reference_id("chr1"));
+            assert_eq!(Some(2), header.reference_id("chr2"));
+
+            let dummy_header = Header::new();
+            let set_vec = vec![set2];
+            let mut entire = InvertedRecordEntire::new_from_set(set_vec);
+            // println!("{:?}", entire);
+            entire.add(set);
+            let mut writer = binary::GhbWriter::build()
+                .write_header(false)
+                .from_path("./test/test_bam.ghb", dummy_header)
+                .unwrap();
+            let index = entire.write_binary(&mut writer).unwrap();
+            writer.flush().unwrap();
+
+            entire.write_header(&mut header);
+            let mut index_writer = GhiWriter::build()
+                .write_header(true)
+                .from_path("./test/test_bam.ghb.ghi", header)
+                .unwrap();
+            let _result = index_writer.write(&index);
+            assert_eq!(_result.ok(), Some(()));
+            let _result = index_writer.flush();
+        }
     }
 }

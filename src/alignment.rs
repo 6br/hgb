@@ -113,13 +113,11 @@ impl AlignmentBuilder {
         Alignment { data: self.take() }
     }
 }
-/*
 impl Builder for AlignmentBuilder {
     fn to_format(self) -> Format {
         Format::Alignment(self.to_record())
     }
 }
-*/
 impl ColumnarSet for Alignment {
     fn new() -> Alignment {
         Alignment { data: vec![] }

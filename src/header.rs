@@ -48,6 +48,7 @@ pub struct Header {
     global_header: header::Header, // Need to be replaced.
     headers: Vec<HeaderType>,
     names: Vec<String>,
+//     bam_readers: BTreeMap<u64, IndexedRe>
 }
 
 impl Header {

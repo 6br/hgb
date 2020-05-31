@@ -6,12 +6,12 @@ use genomic_range::StringRegion;
 use log::info;
 use std::{fs::File, io};
 
-use ghi::twopass_alignment::AlignmentBuilder;
 use ghi::binary::GhbWriter;
 use ghi::builder::InvertedRecordBuilder;
 use ghi::header::Header;
 use ghi::index::Region;
 use ghi::range::{Format, InvertedRecordEntire, Set};
+use ghi::twopass_alignment::AlignmentBuilder;
 use ghi::writer::GhiWriter;
 use ghi::{reader::IndexedReader, IndexWriter};
 
@@ -172,14 +172,15 @@ fn build(matches: &ArgMatches, threads: u16) -> () {
 
     for bam_path in bam_files.iter() {
         info!("Loading {}", bam_path);
-        let reader = bam::BamReader::from_path(bam_path, threads).unwrap();
-        let bam_header = reader.header();
+        // let reader = bam::BamReader::from_path(bam_path, threads).unwrap();
+        let reader2 = bam::IndexedReader::from_path(bam_path).unwrap();
+        let bam_header = reader2.header();
         if alignment_transfer {
             header.transfer(bam_header);
         }
         header.set_local_header(bam_header, bam_path, i);
         i += 1;
-        let set = Set::<AlignmentBuilder>::new(reader, 0 as u64, &mut header);
+        let set = Set::<AlignmentBuilder>::new(reader2, 0 as u64, &mut header);
         set_vec.push(set);
     }
     let mut entire = InvertedRecordEntire::new_from_set(set_vec);
@@ -254,7 +255,7 @@ fn query(matches: &ArgMatches, _threads: u16) -> () {
                             }
                             Format::Alignment(rec) => {
                                 for i in rec.data {
-                                    let _result = i.write_bam(&mut output).unwrap();
+                                    // let _result = i.write_bam(&mut output).unwrap();
                                 }
                             }
                         }
@@ -311,7 +312,7 @@ fn decompose(matches: &ArgMatches, _threads: u16) -> () {
                             }
                             Format::Alignment(rec) => {
                                 for i in rec.data {
-                                    let _result = i.write_bam(&mut output).unwrap();
+                                    // let _result = i.write_bam(&mut output).unwrap();
                                 }
                             }
                         }
