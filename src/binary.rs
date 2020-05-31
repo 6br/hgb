@@ -14,6 +14,7 @@ use crate::header::Header;
 use crate::index::{Chunk, VirtualOffset};
 use crate::range::Record;
 use crate::ColumnarSet;
+use bam::IndexedReader;
 use std::cmp::max;
 use std::fs::File;
 use std::io::{BufReader, BufWriter, Read, Result, Seek, SeekFrom, Write};
@@ -112,14 +113,18 @@ impl<W: Write> GhbWriter<W> {
     }
 }
 
-impl<W: Write + Seek> ChunkWriter for GhbWriter<W> {
+impl<W: Write + Seek, R: Read + Seek> ChunkWriter<R> for GhbWriter<W> {
     /// Writes a single record in GHB format.
-    fn write(&mut self, record: &Record) -> Result<Chunk> {
+    fn write(
+        &mut self,
+        record: &Record,
+        bam_reader: Option<&mut IndexedReader<R>>,
+    ) -> Result<Chunk> {
         let start = self
             .stream
             .seek(SeekFrom::Current(0))
             .map(|a| VirtualOffset::from_raw(a))?;
-        record.to_stream(&mut self.stream)?;
+        record.to_stream(&mut self.stream, bam_reader)?;
         let stop = self
             .stream
             .seek(SeekFrom::Current(0))
@@ -135,11 +140,11 @@ impl<W: Write + Seek> ChunkWriter for GhbWriter<W> {
         self.flush()
     }
 }
-
+/*
 impl<W: Write + Seek> InvertedRecordWriter for GhbWriter<W> {
     /// Writes a single record in GHB format.
     fn write(&mut self, record: &InvertedRecord) -> Result<VirtualOffset> {
-        record.to_stream(&mut self.stream)?;
+        record.to_stream(&mut self.stream, None)?;
         self.stream
             .seek(SeekFrom::Current(0))
             .map(|a| VirtualOffset::from_raw(a))
@@ -153,7 +158,7 @@ impl<W: Write + Seek> InvertedRecordWriter for GhbWriter<W> {
         self.flush()
     }
 }
-
+*/
 /// Reads records from GHB format.
 ///
 /// Can be opened as

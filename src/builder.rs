@@ -7,7 +7,7 @@ use bam::header::HeaderEntry;
 use bio::io::bed;
 use std::cell::RefCell;
 use std::collections::{BTreeMap, HashMap};
-use std::io::Read;
+use std::io::{Read, Seek};
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Debug)]
 pub struct InvertedRecordBuilder {
@@ -64,7 +64,7 @@ impl InvertedRecordReference {
     }
 }
 
-impl Set<InvertedRecordBuilder> {
+impl<U: Read + Seek> Set<InvertedRecordBuilder, U> {
     pub fn new<R: Read>(
         mut reader: bed::Reader<R>,
         sample_id: u64,
@@ -106,10 +106,11 @@ impl Set<InvertedRecordBuilder> {
                 aux,
             )
         }
-        Ok(Set::<InvertedRecordBuilder> {
+        Ok(Set::<InvertedRecordBuilder, U> {
             sample_id: sample_id,
             chrom: inverted_record_set,
             unmapped: InvertedRecordBuilder::new(),
+            bam_reader: None,
         })
     }
 }

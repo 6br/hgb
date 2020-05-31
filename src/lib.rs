@@ -23,16 +23,22 @@ pub mod reader;
 pub mod twopass_alignment;
 pub mod writer;
 
+use bam::IndexedReader;
 use checker_index::Index;
+use io::Seek;
 use range::InvertedRecord;
 use range::{Format, Record};
 use std::io;
 use std::io::{Read, Result, Write};
 
 /// A trait for writing records.
-pub trait ChunkWriter {
+pub trait ChunkWriter<R: Read + Seek> {
     /// Writes a single record.
-    fn write(&mut self, record: &Record) -> io::Result<index::Chunk>;
+    fn write(
+        &mut self,
+        record: &Record,
+        bam_reader: Option<&mut IndexedReader<R>>,
+    ) -> io::Result<index::Chunk>;
 
     /// Finishes the stream, same as `std::mem::drop(writer)`, but can return an error.
     fn finish(&mut self) -> io::Result<()>;
@@ -83,9 +89,13 @@ pub trait IndexWriter {
 pub trait ColumnarSet {
     fn new() -> Self;
 
-    fn to_stream<W: Write>(&self, stream: &mut W) -> Result<()>;
+    fn to_stream<W: Write, R: Read + Seek>(
+        &self,
+        stream: &mut W,
+        bam_reader: Option<&mut IndexedReader<R>>,
+    ) -> Result<()>;
 
-    fn from_stream<R: Read>(&mut self, stream: &mut R) -> Result<bool>;
+    fn from_stream<U: Read>(&mut self, stream: &mut U) -> Result<bool>;
 }
 
 /// A trait for Formattable data structure.
@@ -104,6 +114,7 @@ mod tests {
     use crate::IndexWriter;
     use crate::{index::Region, range::Set};
     use bio::io::bed;
+    use std::fs::File;
 
     #[test]
     fn full_works() {
@@ -111,15 +122,15 @@ mod tests {
         let reader = bed::Reader::from_file(path).unwrap();
         //let set = InvertedRecordBuilderSet::new(reader, 0 as u64);
         let mut header_2 = Header::new();
-        let set: Set<InvertedRecordBuilder> =
-            Set::<InvertedRecordBuilder>::new(reader, 1 as u64, &mut header_2).unwrap();
+        let set: Set<InvertedRecordBuilder, File> =
+            Set::<InvertedRecordBuilder, File>::new(reader, 1 as u64, &mut header_2).unwrap();
 
         //        let set_vec = vec![set];
         // println!("{:?}", set);
 
         let set_vec = vec![set];
         //        let entire = InvertedRecordEntire::new(set_vec);
-        let entire = InvertedRecordEntire::new_from_set(set_vec);
+        let mut entire: InvertedRecordEntire<File> = InvertedRecordEntire::new_from_set(set_vec);
 
         let header = Header::new();
         let mut writer = binary::GhbWriter::build()
@@ -172,12 +183,12 @@ mod tests {
         let reader = bed::Reader::from_file(path).unwrap();
         // let set = InvertedRecordBuilderSet::new(reader, 0 as u64);
         let mut header2 = Header::new();
-        let set: Set<InvertedRecordBuilder> =
-            Set::<InvertedRecordBuilder>::new(reader, 1 as u64, &mut header2).unwrap();
-        println!("{:?}", set);
+        let set: Set<InvertedRecordBuilder, File> =
+            Set::<InvertedRecordBuilder, File>::new(reader, 1 as u64, &mut header2).unwrap();
+        // println!("{:?}", set);
 
         let set_vec = vec![set];
-        let entire = InvertedRecordEntire::new_from_set(set_vec);
+        let mut entire: InvertedRecordEntire<File> = InvertedRecordEntire::new_from_set(set_vec);
 
         let header = Header::new();
         let mut writer = binary::GhbWriter::build()

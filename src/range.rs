@@ -9,7 +9,7 @@ use crate::index::Bin;
 use crate::twopass_alignment::Alignment;
 use crate::{builder::InvertedRecordBuilder, Builder};
 use crate::{ChunkWriter, ColumnarSet};
-use bam::header::HeaderEntry;
+use bam::{header::HeaderEntry, IndexedReader};
 use bio::io::bed;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use std::collections::{BTreeMap, HashMap};
@@ -96,21 +96,25 @@ impl Record {
     }
 
     /// Writes a record in binary format.
-    pub fn to_stream<W: Write>(&self, stream: &mut W) -> Result<()> {
+    pub fn to_stream<W: Write, R: Read + Seek>(
+        &self,
+        stream: &mut W,
+        bam_reader: Option<&mut IndexedReader<R>>,
+    ) -> Result<()> {
         stream.write_u64::<LittleEndian>(self.sample_id)?;
         stream.write_u32::<LittleEndian>(self.sample_file_id)?;
         stream.write_u32::<LittleEndian>(self.format)?;
 
         match &self.data {
-            Format::Default(data) => data.to_stream(stream)?,
-            Format::Range(data) => data.to_stream(stream)?,
-            Format::Alignment(data) => data.to_stream(stream)?,
+            Format::Default(data) => data.to_stream(stream, bam_reader)?,
+            Format::Range(data) => data.to_stream(stream, bam_reader)?,
+            Format::Alignment(data) => data.to_stream(stream, bam_reader)?,
         }
         Ok(())
     }
 
     /// Fills the record from a `stream` of uncompressed binary contents.
-    pub fn from_stream<R: Read, T: ColumnarSet>(&self, stream: &mut R) -> Result<Self> {
+    pub fn from_stream<U: Read, T: ColumnarSet>(&self, stream: &mut U) -> Result<Self> {
         let sample_id = stream.read_u64::<LittleEndian>()?;
         let sample_file_id = stream.read_u32::<LittleEndian>()?;
         let format = stream.read_u32::<LittleEndian>()?;
@@ -175,12 +179,12 @@ pub struct InvertedRecordChromosome {
     reference: Reference,
 }
 
-#[derive(Clone, Debug)]
-pub struct InvertedRecordEntire {
+pub struct InvertedRecordEntire<R: Read + Seek> {
     chrom: Vec<InvertedRecordChromosome>, // Mutex?
     unmapped: Vec<Record>,
     chrom_table: Chromosome,
     sample_file_id_max: usize,
+    bam_reader: BTreeMap<u64, IndexedReader<R>>,
 }
 
 #[derive(Clone, Debug)]
@@ -190,16 +194,17 @@ pub struct Bins<T> {
 }
 
 /// Set is a data structure for storing entire inverted data structure typed T.
-#[derive(Clone, Debug)]
-pub struct Set<T> {
+/// #[derive(Clone)]
+pub struct Set<T, R: Read + Seek> {
     pub sample_id: u64,
     pub chrom: BTreeMap<u64, Bins<T>>, // Mutex?
     pub unmapped: T,
+    pub bam_reader: Option<IndexedReader<R>>,
 }
 
-impl InvertedRecordEntire {
+impl<R: Read + Seek> InvertedRecordEntire<R> {
     /// Add new inverted record from Set.
-    pub fn add<T: Builder>(&mut self, sample_file: Set<T>) {
+    pub fn add<T: Builder>(&mut self, sample_file: Set<T, R>) {
         let sample_file_id = self.sample_file_id_max;
         self.sample_file_id_max += 1;
         for (id, chromosome) in sample_file.chrom {
@@ -234,14 +239,25 @@ impl InvertedRecordEntire {
             data: data,
         };
         self.unmapped.push(unmapped);
+        if let Some(bam_reader) = sample_file.bam_reader {
+            self.bam_reader.insert(sample_file_id as u64, bam_reader);
+        }
+    }
+    pub fn add_reader(&mut self, index: u64, reader: IndexedReader<R>) {
+        self.bam_reader.insert(index, reader);
     }
     /// Create an initial inverted record from Set.
-    pub fn new_from_set<T: Builder>(sample_file_list: Vec<Set<T>>) -> Self {
+    pub fn new_from_set<T: Builder>(sample_file_list: Vec<Set<T, R>>) -> Self {
         let mut inverted_record = vec![];
         let chrom_table = vec![];
         let sample_len = sample_file_list.len();
         let mut unmapped_list = Vec::with_capacity(sample_len);
+        let mut bam_readers = BTreeMap::new();
+
         for (sample_file_id, set) in sample_file_list.into_iter().enumerate() {
+            if let Some(bam_reader) = set.bam_reader {
+                bam_readers.insert(sample_file_id as u64, bam_reader);
+            }
             for (_name, chromosome) in set.chrom {
                 let mut chrom = InvertedRecordChromosome {
                     bins: BTreeMap::new(),
@@ -284,6 +300,7 @@ impl InvertedRecordEntire {
             unmapped: unmapped_list,
             chrom_table,
             sample_file_id_max: sample_len,
+            bam_reader: bam_readers,
         }
     }
     pub fn chrom_table(self) -> Chromosome {
@@ -295,7 +312,7 @@ impl InvertedRecordEntire {
         }
     }
 
-    pub fn write_binary<W: Write + Seek>(&self, writer: &mut GhbWriter<W>) -> Result<Index> {
+    pub fn write_binary<W: Write + Seek>(&mut self, writer: &mut GhbWriter<W>) -> Result<Index> {
         let mut references = vec![];
         for chromosome in &self.chrom {
             let mut reference = chromosome.reference.clone();
@@ -303,7 +320,8 @@ impl InvertedRecordEntire {
             for (bin_id, bin) in &chromosome.bins {
                 let mut records = vec![];
                 for chunk in bin {
-                    let record = writer.write(&chunk)?;
+                    let record =
+                        writer.write(&chunk, (self.bam_reader).get_mut(&chunk.sample_id))?;
                     records.push(record);
                 }
                 reference.update(*bin_id as usize, Bin::new(*bin_id, records));
@@ -321,11 +339,15 @@ impl ColumnarSet for Default {
     fn new() -> Self {
         Default {}
     }
-    fn to_stream<W: Write>(&self, _stream: &mut W) -> Result<()> {
+    fn to_stream<W: Write, R: Read + Seek>(
+        &self,
+        _stream: &mut W,
+        bam_reader: Option<&mut IndexedReader<R>>,
+    ) -> Result<()> {
         Err(Error::new(InvalidData, format!("No data.")))
     }
 
-    fn from_stream<R: Read>(&mut self, _stream: &mut R) -> Result<bool> {
+    fn from_stream<U: Read>(&mut self, _stream: &mut U) -> Result<bool> {
         Err(Error::new(InvalidData, format!("No data.")))
     }
 }
@@ -352,7 +374,7 @@ impl ColumnarSet for InvertedRecord {
         }
     }
 
-    fn from_stream<R: Read>(&mut self, stream: &mut R) -> Result<bool> {
+    fn from_stream<U: Read>(&mut self, stream: &mut U) -> Result<bool> {
         let _n_items = stream.read_u64::<LittleEndian>()?;
         let n_header = stream.read_u64::<LittleEndian>()?;
         for _i in 0..n_header {
@@ -382,7 +404,11 @@ impl ColumnarSet for InvertedRecord {
         Ok(true)
     }
 
-    fn to_stream<W: Write>(&self, stream: &mut W) -> Result<()> {
+    fn to_stream<W: Write, R: Read + Seek>(
+        &self,
+        stream: &mut W,
+        bam_reader: Option<&mut IndexedReader<R>>,
+    ) -> Result<()> {
         stream.write_u64::<LittleEndian>(self.start.len() as u64)?; //n_item
         stream.write_u64::<LittleEndian>(3 as u64)?; // n_header
         stream.write_u16::<LittleEndian>(1 as u16)?; // u64

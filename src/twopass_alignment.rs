@@ -14,7 +14,7 @@ use bam::{
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use std::{
     collections::{BTreeMap, HashMap},
-    io::{Read, Result, Seek},
+    io::{Read, Result, Seek, Write},
 };
 /*
 #[derive(Clone, Eq, PartialEq, Debug)]
@@ -67,8 +67,8 @@ impl Bins<AlignmentBuilder> {
     }
 }
 
-impl Set<AlignmentBuilder> {
-    pub fn new<R: Read + Seek>(
+impl<R: Read + Seek> Set<AlignmentBuilder, R> {
+    pub fn new(
         //mut reader: bam::BamReader<R>,
         mut reader: bam::IndexedReader<R>,
         sample_id: u64,
@@ -132,10 +132,11 @@ impl Set<AlignmentBuilder> {
                 panic!("Reference id < -1");
             }
         }
-        Set::<AlignmentBuilder> {
+        Set::<AlignmentBuilder, R> {
             sample_id,
             chrom,
             unmapped,
+            bam_reader: Some(reader),
         }
     }
 }
@@ -161,7 +162,11 @@ impl ColumnarSet for Alignment {
             reader: "".to_string(),
         }
     }
-    fn to_stream<W: std::io::Write>(&self, stream: &mut W) -> Result<()> {
+    fn to_stream<W: Write, R: Read + Seek>(
+        &self,
+        stream: &mut W,
+        bam_reader: Option<&mut bam::IndexedReader<R>>,
+    ) -> Result<()> {
         stream.write_u64::<LittleEndian>(self.data.len() as u64)?;
         let header = bam::Header::new();
         let mut writer = bam::bam_writer::BamWriterBuilder::new()
@@ -169,8 +174,8 @@ impl ColumnarSet for Alignment {
             .write_header(false)
             .from_stream(stream, header)?;
         // TODO() Inject the number of threads.
-        let mut reader = bam::IndexedReader::from_path(&self.reader)?;
-        let viewer = reader.chunk(self.data.clone());
+        // let mut reader = bam::IndexedReader::from_path(&self.reader)?;
+        let viewer = bam_reader.unwrap().chunk(self.data.clone());
         for i in viewer {
             println!("{:?} {:?}", self.data, i);
             writer.write(&i?)?;
@@ -217,6 +222,7 @@ mod tests {
     use bam::record::Record;
     use bio::io::bed;
     use std::{
+        collections::BTreeMap,
         fs::File,
         io::{BufRead, BufReader, Write},
         path::Path,
@@ -226,22 +232,22 @@ mod tests {
     #[test]
     fn bam_works() {
         let bam_path = "./test/index_test.bam";
-        let reader = bam::BamReader::from_path(bam_path, 4).unwrap();
+        // let reader = bam::BamReader::from_path(bam_path, 4).unwrap();
         let reader2 = bam::IndexedReader::from_path(bam_path).unwrap();
         // println!("{}", reader2.index());
 
-        let bam_header = reader.header();
+        let bam_header = reader2.header();
         let mut header = Header::new();
         header.transfer(bam_header);
         header.set_local_header(bam_header, bam_path, 0);
         {
-            let set = Set::<AlignmentBuilder>::new(reader2, 0 as u64, &mut header);
+            let set = Set::<AlignmentBuilder, File>::new(reader2, 0 as u64, &mut header);
 
             let example =
                 b"chr2\t16382\t16385\tbin4682\t20\t-\nchr2\t16388\t31768\tbin4683\t20\t-\n";
             let reader = bed::Reader::new(&example[..]);
-            let set2: Set<InvertedRecordBuilder> =
-                Set::<InvertedRecordBuilder>::new(reader, 1 as u64, &mut header).unwrap();
+            let set2: Set<InvertedRecordBuilder, File> =
+                Set::<InvertedRecordBuilder, File>::new(reader, 1 as u64, &mut header).unwrap();
 
             assert_eq!(None, header.reference_id("1"));
             assert_eq!(Some(1), header.reference_id("chr1"));
@@ -249,9 +255,11 @@ mod tests {
 
             let dummy_header = Header::new();
             let set_vec = vec![set2];
-            let mut entire = InvertedRecordEntire::new_from_set(set_vec);
+            let mut entire: InvertedRecordEntire<File> =
+                InvertedRecordEntire::new_from_set(set_vec);
             // println!("{:?}", entire);
             entire.add(set);
+            // entire.add_reader(0, reader2);
             let mut writer = binary::GhbWriter::build()
                 .write_header(false)
                 .from_path("./test/test_bam.ghb", dummy_header)

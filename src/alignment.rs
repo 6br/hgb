@@ -199,7 +199,8 @@ mod tests {
 
             let dummy_header = Header::new();
             let set_vec = vec![set2];
-            let mut entire = InvertedRecordEntire::new_from_set(set_vec);
+            let mut entire: InvertedRecordEntire<File> =
+                InvertedRecordEntire::new_from_set(set_vec);
             // println!("{:?}", entire);
             entire.add(set);
             let mut writer = binary::GhbWriter::build()
