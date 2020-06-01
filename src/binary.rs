@@ -9,7 +9,7 @@
 //! ```
 //!
 
-use super::{ChunkWriter};
+use super::ChunkWriter;
 use crate::header::Header;
 use crate::index::{Chunk, VirtualOffset};
 use crate::range::Record;

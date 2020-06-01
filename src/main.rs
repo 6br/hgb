@@ -166,28 +166,33 @@ fn build(matches: &ArgMatches, _threads: u16) -> () {
         alignment_transfer = true;
     }
 
-    let bam_files: Vec<_> = matches.values_of("bam").unwrap().collect();
     let mut set_vec = vec![];
     let mut i = 0;
 
-    for bam_path in bam_files.iter() {
-        info!("Loading {}", bam_path);
-        // let reader = bam::BamReader::from_path(bam_path, threads).unwrap();
-        let reader2 = bam::IndexedReader::from_path(bam_path).unwrap();
-        let bam_header = reader2.header();
-        if alignment_transfer {
-            header.transfer(bam_header);
+    if let Some(bam_files) = matches.values_of("bam") {
+        let bam_files : Vec<&str> = bam_files.collect();
+        for bam_path in bam_files.iter() {
+            info!("Loading {}", bam_path);
+            // let reader = bam::BamReader::from_path(bam_path, threads).unwrap();
+            let reader2 = bam::IndexedReader::from_path(bam_path).unwrap();
+            let bam_header = reader2.header();
+            if alignment_transfer {
+                header.transfer(bam_header);
+            }
+            header.set_local_header(bam_header, bam_path, i);
+            i += 1;
+            let set = Set::<AlignmentBuilder, File>::new(reader2, 0 as u64, &mut header);
+            set_vec.push(set);
         }
-        header.set_local_header(bam_header, bam_path, i);
-        i += 1;
-        let set = Set::<AlignmentBuilder, File>::new(reader2, 0 as u64, &mut header);
-        set_vec.push(set);
     }
+
+
     let mut entire: InvertedRecordEntire<File> =
         InvertedRecordEntire::<File>::new_from_set(set_vec);
 
-    let bed_files: Vec<_> = matches.values_of("bed").unwrap().collect();
-
+    if let Some(bed_files) = matches.values_of("bed") {
+    // let bed_files: Vec<_> = matches.values_of("bed").unwrap().collect();
+        let bed_files : Vec<&str> = bed_files.collect();
     for bed_path in bed_files {
         info!("Loading {}", bed_path);
         let reader = bed::Reader::from_file(bed_path).unwrap();
@@ -196,7 +201,8 @@ fn build(matches: &ArgMatches, _threads: u16) -> () {
         header.set_local_header(&bam::Header::new(), bed_path, i);
         i += 1;
         entire.add(set);
-    }
+    }    
+}
 
     let dummy_header = Header::new();
     let mut writer = GhbWriter::build()
