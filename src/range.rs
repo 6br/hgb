@@ -240,7 +240,7 @@ impl<R: Read + Seek> InvertedRecordEntire<R> {
         };
         self.unmapped.push(unmapped);
         if let Some(bam_reader) = sample_file.bam_reader {
-            self.bam_reader.insert(sample_file_id as u64, bam_reader);
+            self.bam_reader.insert(sample_file.sample_id as u64, bam_reader);
         }
     }
     pub fn add_reader(&mut self, index: u64, reader: IndexedReader<R>) {
@@ -320,6 +320,7 @@ impl<R: Read + Seek> InvertedRecordEntire<R> {
             for (bin_id, bin) in &chromosome.bins {
                 let mut records = vec![];
                 for chunk in bin {
+                    // println!("{:?} {:?}", chunk.sample_id, self.bam_reader.keys());
                     let record =
                         writer.write(&chunk, (self.bam_reader).get_mut(&chunk.sample_id))?;
                     records.push(record);
