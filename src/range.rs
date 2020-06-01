@@ -344,7 +344,7 @@ impl ColumnarSet for Default {
     fn to_stream<W: Write, R: Read + Seek>(
         &self,
         _stream: &mut W,
-        bam_reader: Option<&mut IndexedReader<R>>,
+        _bam_reader: Option<&mut IndexedReader<R>>,
     ) -> Result<()> {
         Err(Error::new(InvalidData, format!("No data.")))
     }
@@ -409,7 +409,7 @@ impl ColumnarSet for InvertedRecord {
     fn to_stream<W: Write, R: Read + Seek>(
         &self,
         stream: &mut W,
-        bam_reader: Option<&mut IndexedReader<R>>,
+        _bam_reader: Option<&mut IndexedReader<R>>,
     ) -> Result<()> {
         stream.write_u64::<LittleEndian>(self.start.len() as u64)?; //n_item
         stream.write_u64::<LittleEndian>(3 as u64)?; // n_header

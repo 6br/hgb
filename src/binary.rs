@@ -9,11 +9,10 @@
 //! ```
 //!
 
-use super::{ChunkWriter, InvertedRecord, InvertedRecordWriter};
+use super::{ChunkWriter};
 use crate::header::Header;
 use crate::index::{Chunk, VirtualOffset};
 use crate::range::Record;
-use crate::ColumnarSet;
 use bam::IndexedReader;
 use std::cmp::max;
 use std::fs::File;

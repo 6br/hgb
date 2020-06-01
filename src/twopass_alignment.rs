@@ -16,35 +16,59 @@ use std::{
     collections::{BTreeMap, HashMap},
     io::{Read, Result, Seek, Write},
 };
-/*
-#[derive(Clone, Eq, PartialEq, Debug)]
+
+#[derive(Clone, Debug)]
 pub enum Alignment {
     Offset(Vec<Chunk>),
     Object(Vec<Record>),
 }
-*/
+
+impl PartialEq for Alignment {
+    fn eq(&self, other: &Self) -> bool {
+        use Alignment::*;
+        match (self, other) {
+            (Offset(a), Offset(b)) => a == b,
+            (Object(data), Object(other)) => {
+                if data.len() != other.len() {
+                    return false;
+                }
+                for i in 0..data.len() {
+                    if data[i].name() != other[i].name() {
+                        return false;
+                    }
+                }
+                true
+            }
+            _ => false,
+        }
+    }
+}
+
+impl Eq for Alignment {}
+/*
 #[derive(Clone, Eq, PartialEq, Debug)]
 pub struct Alignment {
     pub data: Vec<Chunk>, // bgzip compressed records
     reader: String,       // TODO()Path should be a reference to bam::Reader.
 }
+*/
 
 /// BAM-Compatible Alignment Record
 pub struct AlignmentBuilder {
     alignments: Vec<Chunk>,
-    reader: String,
+    //    reader: String,
 }
 
 impl AlignmentBuilder {
     pub fn new() -> Self {
         AlignmentBuilder {
             alignments: vec![],
-            reader: "".to_string(),
+            //            reader: "".to_string(),
         }
     }
-    pub fn add(&mut self, alignment: Chunk, reader: &str) {
+    pub fn add(&mut self, alignment: Chunk) {
         self.alignments.push(alignment);
-        self.reader = reader.to_string();
+        //        self.reader = reader.to_string();
     }
 
     pub fn take(self) -> Vec<Chunk> {
@@ -81,7 +105,7 @@ impl<R: Read + Seek> Set<AlignmentBuilder, R> {
         let mut rec = Record::new();
         let mut viewer = reader.full();
         let mut prev_next_offset = 0; //viewer.parent.reader.reader.next_offset().unwrap();
-        //for record in reader {
+                                      //for record in reader {
         while let Ok(true) = viewer.read_into(&mut rec) {
             //.ok().expect("Error reading record.");
             if rec.ref_id() >= 0 {
@@ -109,20 +133,25 @@ impl<R: Read + Seek> Set<AlignmentBuilder, R> {
                     let contents_offset = viewer.parent.reader.contents_offset();
                     let end = VirtualOffset::from_raw(end_offset << 16 | contents_offset as u64);
                     let next_offset = viewer.parent.reader.reader.next_offset().unwrap();
-                    if (prev.contents_offset() == 0 || end.contents_offset() == 0) {
-                        println!("{} {} {} {} {}", prev, end, contents_offset, next_offset, prev_next_offset);
+                    /*if prev.contents_offset() == 0 || end.contents_offset() == 0 {
+                        println!(
+                            "{} {} {} {} {}",
+                            prev, end, contents_offset, next_offset, prev_next_offset
+                        );
                         //VirtualOffset::from_raw(next_offset));
-                    }
+                    }*/
                     stat.add(
                         Chunk::new(prev, end),
-                        header.get_name(sample_id as usize).unwrap(),
+                        //  header.get_name(sample_id as usize).unwrap(),
                     );
                     //TODO() Chunks should be merged if the two chunks are neighbor.
-                    if prev.block_offset() != end.block_offset() && end.block_offset() != prev_next_offset {
-                        println!("a: {} {} {} {}", prev, end, contents_offset, next_offset);
+                    if prev.block_offset() != end.block_offset()
+                        && end.block_offset() != prev_next_offset
+                    {
+                        // println!("a: {} {} {} {}", prev, end, contents_offset, next_offset);
                         prev = VirtualOffset::new(next_offset, end.contents_offset());
                     } else {
-                        prev=end;
+                        prev = end;
                     }
                     prev_next_offset = next_offset;
                     // println!("{}")
@@ -154,10 +183,11 @@ impl<R: Read + Seek> Set<AlignmentBuilder, R> {
 
 impl AlignmentBuilder {
     pub fn to_record(self) -> Alignment {
-        Alignment {
-            reader: self.reader.clone(),
-            data: self.take(),
-        }
+        //        Alignment {
+        //            reader: self.reader.clone(),
+        //            data: self.take(),
+        //        }
+        Alignment::Offset(self.take())
     }
 }
 
@@ -168,17 +198,18 @@ impl Builder for AlignmentBuilder {
 }
 impl ColumnarSet for Alignment {
     fn new() -> Alignment {
-        Alignment {
-            data: vec![],
-            reader: "".to_string(),
-        }
+        Alignment::Object(vec![])
     }
     fn to_stream<W: Write, R: Read + Seek>(
         &self,
         stream: &mut W,
         bam_reader: Option<&mut bam::IndexedReader<R>>,
     ) -> Result<()> {
-        stream.write_u64::<LittleEndian>(self.data.len() as u64)?;
+        let len = match self {
+            Alignment::Offset(vec) => vec.len(),
+            Alignment::Object(vec) => vec.len(),
+        };
+        stream.write_u64::<LittleEndian>(len as u64)?;
         let header = bam::Header::new();
         let mut writer = bam::bam_writer::BamWriterBuilder::new()
             .additional_threads(4)
@@ -186,41 +217,52 @@ impl ColumnarSet for Alignment {
             .from_stream(stream, header)?;
         // TODO() Inject the number of threads.
         // let mut reader = bam::IndexedReader::from_path(&self.reader)?;
-        let viewer = bam_reader.unwrap().chunk(self.data.clone());
-        for i in viewer {
-            println!("{:?} {:?}", self.data, i);
-            writer.write(&i?)?;
-            //TODO() Don't have to parse in this implementation.
-        }
+        let _ = match self {
+            Alignment::Offset(data) => {
+                let viewer = bam_reader.unwrap().chunk(data.clone());
+                for i in viewer {
+                    writer.write(&i?)?;
+                    //TODO() Don't have to parse in this implementation.
+                }
+            }
+            Alignment::Object(vec) => {
+                //let viewer = bam_reader.unwrap().chunk(self.data.clone());
+                for i in vec {
+                    writer.write(&i)?;
+                    //TODO() Don't have to parse in this implementation.
+                }
+            }
+        };
+
         writer.finish()?;
         Ok(())
     }
     fn from_stream<R: Read>(&mut self, stream: &mut R) -> Result<bool> {
-        todo!("Unimplemented")
-        /*
         let len = stream.read_u64::<LittleEndian>()?;
 
         let mut reader =
             bam::BamReader::from_stream_no_header(stream, bam::Header::new(), 0).unwrap();
-
+        let mut data = Vec::with_capacity(len as usize);
         for _i in 0..len as usize {
             let mut record = Record::new();
             reader.read_into(&mut record)?;
-            self.data.push(record);
+            data.push(record);
         }
+        let alignment = Alignment::Object(data);
+        //self = &mut Alignment::Object(data);
+        std::mem::replace(self, alignment);
         let mut _record = Record::new();
         // For consuming all bgzip blocks.
         let _ = reader.next();
         let _ = reader.next();
 
         Ok(true)
-        */
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::AlignmentBuilder;
+    use super::{Alignment, AlignmentBuilder};
     use crate::bam::RecordWriter;
     use crate::binary;
     use crate::header::Header;
@@ -233,7 +275,6 @@ mod tests {
     use bam::record::Record;
     use bio::io::bed;
     use std::{
-        collections::BTreeMap,
         fs::File,
         io::{BufRead, BufReader, Write},
         path::Path,
@@ -287,7 +328,7 @@ mod tests {
             assert_eq!(_result.ok(), Some(()));
             let _result = index_writer.flush();
         }
-        
+
         let mut reader2 = IndexedReader::from_path("./test/test_bam.ghb").unwrap();
         // println!("{}", reader2.index().references()[2]);
 
@@ -295,7 +336,7 @@ mod tests {
         let chrom_id = reader2.reference_id(&chrom).unwrap();
 
         assert_eq!(chrom_id, 2);
-        
+
         {
             let chrom_name = reader2.reference_name(0).unwrap();
             assert_eq!(chrom_name, "chrM");
@@ -325,7 +366,7 @@ mod tests {
             }
         }
         assert_eq!(example, String::from_utf8(buf).unwrap().as_str());
-/*
+
         /* check if chr1 paired end read is rescued */
         let chrom_1 = reader2.reference_id("chr1").unwrap();
         let viewer = reader2
@@ -336,8 +377,8 @@ mod tests {
             .flat_map(|t| {
                 t.map(|f|
             // println!("debug {:#?}", t.to_record(chrom));
-            if let Format::Alignment(rec) = f.data() {
-                return rec.data
+            if let Format::Alignment(Alignment::Object(rec)) = f.data() {
+                return rec
             } else {
                 return vec![]
             }
@@ -356,8 +397,8 @@ mod tests {
         let viewer2 = reader2.full();
         viewer2.into_iter().for_each(|t| {
             t.map(|f| match f.data() {
-                Format::Alignment(record) => {
-                    for i in record.data {
+                Format::Alignment(Alignment::Object(record)) => {
+                    for i in record {
                         writer.write(&i).unwrap();
                         count += 1;
                     }
@@ -369,6 +410,84 @@ mod tests {
             .unwrap()
         });
         writer.finish().unwrap();
-        */
+
+        let mut log = File::create("./test/compare_alignment2_pass.log").unwrap();
+
+        let timer = Instant::now();
+        let mut child = Command::new("samtools")
+            .args(&["view", "-h", "--no-PG", "-F", "4"])
+            .arg(&bam_path)
+            .args(&["-o", &output1])
+            .spawn()
+            .expect("Failed to run samtools view");
+        let ecode = child.wait().expect("Failed to wait on samtools view");
+        assert!(ecode.success());
+        writeln!(log, "        samtools view:  {:?}", timer.elapsed()).unwrap();
+        writeln!(log, "        total {} records", count).unwrap();
+
+        compare_sam_files(&output1, &sam_output, &mut log);
+    }
+
+    fn compare_sam_files<P: AsRef<Path>, T: AsRef<Path>, W: Write>(
+        filename1: P,
+        filename2: T,
+        log: &mut W,
+    ) {
+        let filename1 = filename1.as_ref();
+        let filename2 = filename2.as_ref();
+        let mut file1 = BufReader::new(File::open(&filename1).unwrap());
+        let mut file2 = BufReader::new(File::open(&filename2).unwrap());
+        let mut line1 = String::new();
+        let mut line2 = String::new();
+
+        for i in 1_usize.. {
+            line1.clear();
+            line2.clear();
+            match (file1.read_line(&mut line1), file2.read_line(&mut line2)) {
+                (Ok(x), Ok(y)) => {
+                    if x == 0 && y != 0 {
+                        writeln!(
+                            log,
+                            "Comparing files {} and {}",
+                            filename1.display(),
+                            filename2.display()
+                        )
+                        .unwrap();
+                        writeln!(log, "Samtools output: {}", line2.trim()).unwrap();
+                        writeln!(log, "Samtools output is longer").unwrap();
+                        panic!("Samtools output is longer");
+                    } else if x != 0 && y == 0 {
+                        writeln!(
+                            log,
+                            "Comparing files {} and {}",
+                            filename1.display(),
+                            filename2.display()
+                        )
+                        .unwrap();
+                        writeln!(log, "Crate output:    {}", line1.trim()).unwrap();
+                        writeln!(log, "Crate output is longer").unwrap();
+                        panic!("Crate output is longer");
+                    } else if x == 0 && y == 0 {
+                        break;
+                    }
+                }
+                (Ok(_), Err(e)) => panic!("Could not read samtools output: {:?}", e),
+                (Err(e), Ok(_)) => panic!("Could not read crate output: {:?}", e),
+                (Err(e1), Err(e2)) => panic!("Could not read both outputs: {:?}, {:?}", e1, e2),
+            }
+            if line1 != line2 {
+                writeln!(
+                    log,
+                    "Comparing files {} and {}",
+                    filename1.display(),
+                    filename2.display()
+                )
+                .unwrap();
+                writeln!(log, "Crate output:    {}", line1.trim()).unwrap();
+                writeln!(log, "Samtools output: {}", line2.trim()).unwrap();
+                writeln!(log, "Outputs do not match on line {}", i).unwrap();
+                panic!("Outputs do not match on line {}", i);
+            }
+        }
     }
 }

@@ -11,7 +11,7 @@ use ghi::builder::InvertedRecordBuilder;
 use ghi::header::Header;
 use ghi::index::Region;
 use ghi::range::{Format, InvertedRecordEntire, Set};
-use ghi::twopass_alignment::AlignmentBuilder;
+use ghi::twopass_alignment::{Alignment, AlignmentBuilder};
 use ghi::writer::GhiWriter;
 use ghi::{reader::IndexedReader, IndexWriter};
 
@@ -152,7 +152,7 @@ fn main() {
     }
 }
 
-fn build(matches: &ArgMatches, threads: u16) -> () {
+fn build(matches: &ArgMatches, _threads: u16) -> () {
     let mut header = Header::new();
     let mut alignment_transfer = false;
     let output_path = matches.value_of("OUTPUT").unwrap();
@@ -247,18 +247,18 @@ fn query(matches: &ArgMatches, _threads: u16) -> () {
                 t.map(|f| {
                     if sample_ids.iter().any(|&i| i == f.sample_id()) {
                         match f.data() {
-                            Format::Default(_) => {}
                             Format::Range(rec) => {
                                 let mut writer = bed::Writer::new(&mut output);
                                 for i in rec.to_record(&reference_name) {
                                     writer.write(&i).unwrap();
                                 }
                             }
-                            Format::Alignment(rec) => {
-                                for i in rec.data {
-                                    // let _result = i.write_bam(&mut output).unwrap();
+                            Format::Alignment(Alignment::Object(rec)) => {
+                                for i in rec {
+                                    let _result = i.write_bam(&mut output).unwrap();
                                 }
                             }
+                            _ => {}
                         }
                     }
                     /*
@@ -304,18 +304,18 @@ fn decompose(matches: &ArgMatches, _threads: u16) -> () {
                 t.map(|f| {
                     if f.sample_id() == id {
                         match f.data() {
-                            Format::Default(_) => {}
                             Format::Range(rec) => {
                                 let mut writer = bed::Writer::new(&mut output);
                                 for i in rec.to_record("null") {
                                     writer.write(&i).unwrap();
                                 }
                             }
-                            Format::Alignment(rec) => {
-                                for i in rec.data {
-                                    // let _result = i.write_bam(&mut output).unwrap();
+                            Format::Alignment(Alignment::Object(rec)) => {
+                                for i in rec {
+                                    let _result = i.write_bam(&mut output).unwrap();
                                 }
                             }
+                            _ => {}
                         }
                     }
                 })
