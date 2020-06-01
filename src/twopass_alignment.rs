@@ -19,7 +19,7 @@ use std::{
 /*
 #[derive(Clone, Eq, PartialEq, Debug)]
 pub enum Alignment {
-    Offset(String, Vec<Chunk>),
+    Offset(Vec<Chunk>),
     Object(Vec<Record>),
 }
 */
@@ -80,7 +80,7 @@ impl<R: Read + Seek> Set<AlignmentBuilder, R> {
         let mut prev = reader.index().start_offset().unwrap();
         let mut rec = Record::new();
         let mut viewer = reader.full();
-
+        let mut prev_next_offset = 0; //viewer.parent.reader.reader.next_offset().unwrap();
         //for record in reader {
         while let Ok(true) = viewer.read_into(&mut rec) {
             //.ok().expect("Error reading record.");
@@ -106,15 +106,26 @@ impl<R: Read + Seek> Set<AlignmentBuilder, R> {
                         .current()
                         .and_then(|t| t.offset())
                         .unwrap();
-                    let content_offset = viewer.parent.reader.contents_offset();
-                    let end = VirtualOffset::from_raw(end_offset << 16 | content_offset as u64);
-                    // println!("{} {} {}", prev, end, content_offset,);
+                    let contents_offset = viewer.parent.reader.contents_offset();
+                    let end = VirtualOffset::from_raw(end_offset << 16 | contents_offset as u64);
+                    let next_offset = viewer.parent.reader.reader.next_offset().unwrap();
+                    if (prev.contents_offset() == 0 || end.contents_offset() == 0) {
+                        println!("{} {} {} {} {}", prev, end, contents_offset, next_offset, prev_next_offset);
+                        //VirtualOffset::from_raw(next_offset));
+                    }
                     stat.add(
                         Chunk::new(prev, end),
                         header.get_name(sample_id as usize).unwrap(),
                     );
                     //TODO() Chunks should be merged if the two chunks are neighbor.
-                    prev = end;
+                    if prev.block_offset() != end.block_offset() && end.block_offset() != prev_next_offset {
+                        println!("a: {} {} {} {}", prev, end, contents_offset, next_offset);
+                        prev = VirtualOffset::new(next_offset, end.contents_offset());
+                    } else {
+                        prev=end;
+                    }
+                    prev_next_offset = next_offset;
+                    // println!("{}")
                 }
             } else if rec.ref_id() == -1 {
                 let end_offset: u64 = viewer
@@ -276,5 +287,88 @@ mod tests {
             assert_eq!(_result.ok(), Some(()));
             let _result = index_writer.flush();
         }
+        
+        let mut reader2 = IndexedReader::from_path("./test/test_bam.ghb").unwrap();
+        // println!("{}", reader2.index().references()[2]);
+
+        let chrom = "chr2";
+        let chrom_id = reader2.reference_id(&chrom).unwrap();
+
+        assert_eq!(chrom_id, 2);
+        
+        {
+            let chrom_name = reader2.reference_name(0).unwrap();
+            assert_eq!(chrom_name, "chrM");
+        }
+        let viewer = reader2
+            .fetch(&Region::new(chrom_id, 17_000, 17_500))
+            .unwrap();
+        let example = "chr2\t16382\t16385\tbin4682\t20\t-\nchr2\t16388\t31768\tbin4683\t20\t-\n";
+        let records = viewer
+            .into_iter()
+            .flat_map(|t| {
+                t.map(|f| {
+                    if let Format::Range(rec) = f.data() {
+                        return rec.to_record(chrom);
+                    } else {
+                        return vec![];
+                    }
+                })
+                .unwrap()
+            })
+            .collect::<Vec<bed::Record>>();
+        let mut buf = Vec::new();
+        {
+            let mut writer = bed::Writer::new(&mut buf);
+            for i in records {
+                writer.write(&i).ok().unwrap();
+            }
+        }
+        assert_eq!(example, String::from_utf8(buf).unwrap().as_str());
+/*
+        /* check if chr1 paired end read is rescued */
+        let chrom_1 = reader2.reference_id("chr1").unwrap();
+        let viewer = reader2
+            .fetch(&Region::new(chrom_1, 470_000, 471_500))
+            .unwrap();
+        let records = viewer
+            .into_iter()
+            .flat_map(|t| {
+                t.map(|f|
+            // println!("debug {:#?}", t.to_record(chrom));
+            if let Format::Alignment(rec) = f.data() {
+                return rec.data
+            } else {
+                return vec![]
+            }
+        ).unwrap()
+            })
+            .collect::<Vec<Record>>();
+        assert_eq!(records.len(), 2);
+
+        /* Check if bam can reconstruct, except for unmapped reads */
+        let sam_output = format!("./test/index_output.sam");
+        let mut count = 0;
+        let output1 = format!("./test/index_test.sam");
+        let header = reader2.header().get_local_bam_header(0).unwrap().clone();
+        // let mut writer = bam::BamWriter::from_path(bam_output, header).unwrap();
+        let mut writer = bam::SamWriter::from_path(&sam_output, header).unwrap();
+        let viewer2 = reader2.full();
+        viewer2.into_iter().for_each(|t| {
+            t.map(|f| match f.data() {
+                Format::Alignment(record) => {
+                    for i in record.data {
+                        writer.write(&i).unwrap();
+                        count += 1;
+                    }
+                    // return rec.to_record(c)
+                    ()
+                }
+                _ => (),
+            })
+            .unwrap()
+        });
+        writer.finish().unwrap();
+        */
     }
 }

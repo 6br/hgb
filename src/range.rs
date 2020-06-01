@@ -240,7 +240,8 @@ impl<R: Read + Seek> InvertedRecordEntire<R> {
         };
         self.unmapped.push(unmapped);
         if let Some(bam_reader) = sample_file.bam_reader {
-            self.bam_reader.insert(sample_file.sample_id as u64, bam_reader);
+            self.bam_reader
+                .insert(sample_file.sample_id as u64, bam_reader);
         }
     }
     pub fn add_reader(&mut self, index: u64, reader: IndexedReader<R>) {
