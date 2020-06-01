@@ -3,7 +3,7 @@
 //! Contains a [GHB reader](struct.GhbReader.html) and [GHB writer](struct.GhbWriter.html).
 //! You can construct them as
 //!
-//! ```rust
+//! ```ignore
 //! let reader = GhbReader::from_path("in.ghb").unwrap();
 //! let writer = GhbWriter::from_path("out.ghb", reader.header().clone()).unwrap();
 //! ```
@@ -59,11 +59,11 @@ impl GhbWriterBuilder {
 /// Writes records in GHB format.
 ///
 /// Can be created as
-/// ```rust
+/// ```ignore
 /// let writer = GhbWriter::from_path("out.ghb", header).unwrap();
 /// ```
 /// or using a [builder](struct.GhbWriterBuilder.html)
-/// ```rust
+/// ```ignore
 /// let writer = GhbWriter::build()
 ///     .write_header(false)
 ///     .from_path("out.ghb", header).unwrap();
@@ -161,12 +161,12 @@ impl<W: Write + Seek> InvertedRecordWriter for GhbWriter<W> {
 /// Reads records from GHB format.
 ///
 /// Can be opened as
-/// ```rust
+/// ```ignore
 /// let reader = GhbReader::from_path("in.ghb").unwrap();
 /// ```
 ///
 /// You can iterate over records:
-/// ```rust
+/// ```ignore
 /// let mut reader = binary::GhbReader::from_path("in.ghb").unwrap();
 /// for record in reader {
 ///     let record = record.unwrap();

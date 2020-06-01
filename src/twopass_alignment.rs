@@ -140,6 +140,7 @@ impl<R: Read + Seek> Set<AlignmentBuilder, R> {
                         );
                         //VirtualOffset::from_raw(next_offset));
                     }*/
+                    assert!(end > prev);
                     stat.add(
                         Chunk::new(prev, end),
                         //  header.get_name(sample_id as usize).unwrap(),
@@ -147,9 +148,10 @@ impl<R: Read + Seek> Set<AlignmentBuilder, R> {
                     //TODO() Chunks should be merged if the two chunks are neighbor.
                     if prev.block_offset() != end.block_offset()
                         && end.block_offset() != prev_next_offset
+                        && end.contents_offset() == 0
                     {
                         // println!("a: {} {} {} {}", prev, end, contents_offset, next_offset);
-                        prev = VirtualOffset::new(next_offset, end.contents_offset());
+                        prev = VirtualOffset::new(next_offset, 0);
                     } else {
                         prev = end;
                     }

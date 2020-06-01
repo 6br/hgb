@@ -170,7 +170,7 @@ fn build(matches: &ArgMatches, _threads: u16) -> () {
     let mut i = 0;
 
     if let Some(bam_files) = matches.values_of("bam") {
-        let bam_files : Vec<&str> = bam_files.collect();
+        let bam_files: Vec<&str> = bam_files.collect();
         for bam_path in bam_files.iter() {
             info!("Loading {}", bam_path);
             // let reader = bam::BamReader::from_path(bam_path, threads).unwrap();
@@ -186,23 +186,22 @@ fn build(matches: &ArgMatches, _threads: u16) -> () {
         }
     }
 
-
     let mut entire: InvertedRecordEntire<File> =
         InvertedRecordEntire::<File>::new_from_set(set_vec);
 
     if let Some(bed_files) = matches.values_of("bed") {
-    // let bed_files: Vec<_> = matches.values_of("bed").unwrap().collect();
-        let bed_files : Vec<&str> = bed_files.collect();
-    for bed_path in bed_files {
-        info!("Loading {}", bed_path);
-        let reader = bed::Reader::from_file(bed_path).unwrap();
-        let set: Set<InvertedRecordBuilder, File> =
-            Set::<InvertedRecordBuilder, File>::new(reader, 1 as u64, &mut header).unwrap();
-        header.set_local_header(&bam::Header::new(), bed_path, i);
-        i += 1;
-        entire.add(set);
-    }    
-}
+        // let bed_files: Vec<_> = matches.values_of("bed").unwrap().collect();
+        let bed_files: Vec<&str> = bed_files.collect();
+        for bed_path in bed_files {
+            info!("Loading {}", bed_path);
+            let reader = bed::Reader::from_file(bed_path).unwrap();
+            let set: Set<InvertedRecordBuilder, File> =
+                Set::<InvertedRecordBuilder, File>::new(reader, 1 as u64, &mut header).unwrap();
+            header.set_local_header(&bam::Header::new(), bed_path, i);
+            i += 1;
+            entire.add(set);
+        }
+    }
 
     let dummy_header = Header::new();
     let mut writer = GhbWriter::build()
