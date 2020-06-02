@@ -355,7 +355,7 @@ impl ColumnarSet for Default {
         Err(Error::new(InvalidData, format!("No data.")))
     }
 
-    fn from_stream<U: Read>(&mut self, _stream: &mut U,_threads: u16) -> Result<bool> {
+    fn from_stream<U: Read>(&mut self, _stream: &mut U, _threads: u16) -> Result<bool> {
         Err(Error::new(InvalidData, format!("No data.")))
     }
 }
@@ -382,7 +382,7 @@ impl ColumnarSet for InvertedRecord {
         }
     }
 
-    fn from_stream<U: Read>(&mut self, stream: &mut U,_threads: u16) -> Result<bool> {
+    fn from_stream<U: Read>(&mut self, stream: &mut U, _threads: u16) -> Result<bool> {
         let _n_items = stream.read_u64::<LittleEndian>()?;
         let n_header = stream.read_u64::<LittleEndian>()?;
         for _i in 0..n_header {

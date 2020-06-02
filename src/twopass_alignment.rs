@@ -301,7 +301,7 @@ mod tests {
             // entire.add_reader(0, reader2);
             let mut writer = binary::GhbWriter::build()
                 .write_header(false)
-                .from_path("./test/test_bam.ghb", dummy_header)
+                .from_path("./test/test_bam2.ghb", dummy_header)
                 .unwrap();
             let index = entire.write_binary(&mut writer).unwrap();
             writer.flush().unwrap();
@@ -309,7 +309,7 @@ mod tests {
             entire.write_header(&mut header);
             let mut index_writer = GhiWriter::build()
                 .write_header(true)
-                .from_path("./test/test_bam.ghb.ghi", header)
+                .from_path("./test/test_bam2.ghb.ghi", header)
                 .unwrap();
             let _result = index_writer.write(&index);
             assert_eq!(_result.ok(), Some(()));

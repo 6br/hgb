@@ -6,6 +6,7 @@ use genomic_range::StringRegion;
 use log::info;
 use std::{fs::File, io};
 
+use ghi::range::Default;
 use ghi::binary::GhbWriter;
 use ghi::builder::InvertedRecordBuilder;
 use ghi::header::Header;
@@ -78,13 +79,14 @@ fn main() {
                         .multiple(true)
                         .about("sorted bam"),
                 )
-                /*.arg(
+                .arg(
                     Arg::new("type")
                         .short('t')
                         .takes_value(true)
-                        .possible_values(&["alignment", "range"])
+                        // .default_value("default")
+                        .possible_values(&["alignment", "range", "default"])
                         .about("annotation type to fetch"),
-                )*/
+                )
                 .arg(
                     Arg::new("id")
                         .short('i')
@@ -249,16 +251,12 @@ fn query(matches: &ArgMatches, threads: u16) -> () {
 
             let format_type_opt = matches.value_of_t::<Format>("type");
             let format_type_cond = format_type_opt.is_ok();
-            let format_type = format_type_opt.unwrap();
+            let format_type = format_type_opt.unwrap_or(Format::Default(Default {}));
 
-            /*match format_type {
-                Format::Alignment(alignment) => {}
-                Format::Range(range) => {}
-                _ => println!("Format not matched."),
-            }*/
+            // println!("{:?} {:?} {:?} {:?}", sample_id_cond, sample_ids, format_type, range);
             let mut output = io::BufWriter::new(io::stdout());
 
-            let _ = viewer.into_iter().flat_map(|t| {
+            let _ : Vec<()> = viewer.into_iter().flat_map(|t| {
                 t.map(|f| {
                     if !sample_id_cond || sample_ids.iter().any(|&i| i == f.sample_id()) {
                         let data = f.data();
@@ -292,7 +290,7 @@ fn query(matches: &ArgMatches, threads: u16) -> () {
                         }
                     }*/
                 })
-            });
+            }).collect();
         }
     }
 }
