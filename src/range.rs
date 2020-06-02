@@ -99,6 +99,7 @@ impl Record {
     pub fn to_stream<W: Write, R: Read + Seek>(
         &self,
         stream: &mut W,
+        threads: u16,
         bam_reader: Option<&mut IndexedReader<R>>,
     ) -> Result<()> {
         stream.write_u64::<LittleEndian>(self.sample_id)?;
@@ -106,15 +107,19 @@ impl Record {
         stream.write_u32::<LittleEndian>(self.format)?;
 
         match &self.data {
-            Format::Default(data) => data.to_stream(stream, bam_reader)?,
-            Format::Range(data) => data.to_stream(stream, bam_reader)?,
-            Format::Alignment(data) => data.to_stream(stream, bam_reader)?,
+            Format::Default(data) => data.to_stream(stream, threads, bam_reader)?,
+            Format::Range(data) => data.to_stream(stream, threads, bam_reader)?,
+            Format::Alignment(data) => data.to_stream(stream, threads, bam_reader)?,
         }
         Ok(())
     }
 
     /// Fills the record from a `stream` of uncompressed binary contents.
-    pub fn from_stream<U: Read, T: ColumnarSet>(&self, stream: &mut U) -> Result<Self> {
+    pub fn from_stream<U: Read, T: ColumnarSet>(
+        &self,
+        stream: &mut U,
+        threads: u16,
+    ) -> Result<Self> {
         let sample_id = stream.read_u64::<LittleEndian>()?;
         let sample_file_id = stream.read_u32::<LittleEndian>()?;
         let format = stream.read_u32::<LittleEndian>()?;
@@ -122,17 +127,17 @@ impl Record {
         let data = match format {
             0 => {
                 let mut data = Default::new();
-                data.from_stream(stream)?;
+                data.from_stream(stream, threads)?;
                 Format::Default(data)
             }
             1 => {
                 let mut record = InvertedRecord::new();
-                record.from_stream(stream)?;
+                record.from_stream(stream, threads)?;
                 Format::Range(record)
             }
             2 => {
                 let mut record = Alignment::new();
-                record.from_stream(stream)?;
+                record.from_stream(stream, threads)?;
                 Format::Alignment(record)
             }
             _ => panic!("Panic!"),
@@ -146,24 +151,24 @@ impl Record {
     }
 
     /// Fills the record from a `stream` of uncompressed BAM contents.
-    pub(crate) fn fill_from_bam<R: Read>(&mut self, stream: &mut R) -> Result<bool> {
+    pub(crate) fn fill_from_bam<R: Read>(&mut self, stream: &mut R, threads: u16) -> Result<bool> {
         self.sample_id = stream.read_u64::<LittleEndian>()?;
         self.sample_file_id = stream.read_u32::<LittleEndian>()?;
         self.format = stream.read_u32::<LittleEndian>()?;
         let data = match self.format {
             0 => {
                 let mut data = Default::new();
-                data.from_stream(stream)?;
+                data.from_stream(stream, threads)?;
                 Format::Default(data)
             }
             1 => {
                 let mut record = InvertedRecord::new();
-                record.from_stream(stream)?;
+                record.from_stream(stream, threads)?;
                 Format::Range(record)
             }
             2 => {
                 let mut record = Alignment::new();
-                record.from_stream(stream)?;
+                record.from_stream(stream, threads)?;
                 Format::Alignment(record)
             }
             _ => return Err(Error::new(InvalidData, "Invalid format record")),
@@ -344,12 +349,13 @@ impl ColumnarSet for Default {
     fn to_stream<W: Write, R: Read + Seek>(
         &self,
         _stream: &mut W,
+        _threads: u16,
         _bam_reader: Option<&mut IndexedReader<R>>,
     ) -> Result<()> {
         Err(Error::new(InvalidData, format!("No data.")))
     }
 
-    fn from_stream<U: Read>(&mut self, _stream: &mut U) -> Result<bool> {
+    fn from_stream<U: Read>(&mut self, _stream: &mut U,_threads: u16) -> Result<bool> {
         Err(Error::new(InvalidData, format!("No data.")))
     }
 }
@@ -376,7 +382,7 @@ impl ColumnarSet for InvertedRecord {
         }
     }
 
-    fn from_stream<U: Read>(&mut self, stream: &mut U) -> Result<bool> {
+    fn from_stream<U: Read>(&mut self, stream: &mut U,_threads: u16) -> Result<bool> {
         let _n_items = stream.read_u64::<LittleEndian>()?;
         let n_header = stream.read_u64::<LittleEndian>()?;
         for _i in 0..n_header {
@@ -409,6 +415,7 @@ impl ColumnarSet for InvertedRecord {
     fn to_stream<W: Write, R: Read + Seek>(
         &self,
         stream: &mut W,
+        _threads: u16,
         _bam_reader: Option<&mut IndexedReader<R>>,
     ) -> Result<()> {
         stream.write_u64::<LittleEndian>(self.start.len() as u64)?; //n_item

@@ -140,7 +140,7 @@ impl<W: Write + Seek, R: Read + Seek> ChunkWriter<R> for GhbWriter<W> {
             .stream
             .seek(SeekFrom::Current(0))
             .map(|a| VirtualOffset::from_raw(a))?;
-        record.to_stream(&mut self.stream, bam_reader)?;
+        record.to_stream(&mut self.stream, self.additional_threads, bam_reader)?;
         let stop = self
             .stream
             .seek(SeekFrom::Current(0))
@@ -253,7 +253,7 @@ impl<R: Read + Seek> GhbReader<R> {
                 self.stream.seek(SeekFrom::Start(new_offset))?;
                 self.offset = new_offset;
             }
-            record.fill_from_bam(&mut self.stream)
+            record.fill_from_bam(&mut self.stream, 0)
         // self.offset = TODO(offset should be updated, but how?)
         } else {
             Ok(false)

@@ -211,7 +211,7 @@ fn build(matches: &ArgMatches, threads: u16) -> () {
     let dummy_header = Header::new();
     let mut writer = GhbWriter::build()
         .write_header(false)
-        //        .additional_threads(threads-1)
+        .additional_threads(threads-1)
         .from_path(output_path, dummy_header)
         .unwrap();
     let index = entire.write_binary(&mut writer).unwrap();
@@ -248,7 +248,7 @@ fn query(matches: &ArgMatches, threads: u16) -> () {
             let sample_id_cond = sample_ids_opt.is_some();
             let sample_ids = sample_ids_opt.unwrap_or(vec![]);
             //                .collect();
-/*
+            /*
             let format_type_opt = matches.value_of_t("type");
             let format_type_cond = format_type_opt.is_ok();
             */

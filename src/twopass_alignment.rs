@@ -191,6 +191,7 @@ impl ColumnarSet for Alignment {
     fn to_stream<W: Write, R: Read + Seek>(
         &self,
         stream: &mut W,
+        threads: u16,
         bam_reader: Option<&mut bam::IndexedReader<R>>,
     ) -> Result<()> {
         let len = match self {
@@ -200,7 +201,7 @@ impl ColumnarSet for Alignment {
         stream.write_u64::<LittleEndian>(len as u64)?;
         let header = bam::Header::new();
         let mut writer = bam::bam_writer::BamWriterBuilder::new()
-            .additional_threads(4)
+            .additional_threads(threads)
             .write_header(false)
             .from_stream(stream, header)?;
         // TODO() Inject the number of threads.
@@ -225,11 +226,11 @@ impl ColumnarSet for Alignment {
         writer.finish()?;
         Ok(())
     }
-    fn from_stream<R: Read>(&mut self, stream: &mut R) -> Result<bool> {
+    fn from_stream<R: Read>(&mut self, stream: &mut R, threads: u16) -> Result<bool> {
         let len = stream.read_u64::<LittleEndian>()?;
 
         let mut reader =
-            bam::BamReader::from_stream_no_header(stream, bam::Header::new(), 0).unwrap();
+            bam::BamReader::from_stream_no_header(stream, bam::Header::new(), threads).unwrap();
         let mut data = Vec::with_capacity(len as usize);
         for _i in 0..len as usize {
             let mut record = Record::new();
