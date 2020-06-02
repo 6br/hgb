@@ -253,13 +253,16 @@ fn query(matches: &ArgMatches, threads: u16) -> () {
             let format_type_cond = format_type_opt.is_ok();
             let format_type = format_type_opt.unwrap_or(Format::Default(Default {}));
 
-            // println!("{:?} {:?} {:?} {:?}", sample_id_cond, sample_ids, format_type, range);
+            debug!("{:?} {:?} {:?} {:?}", sample_id_cond, sample_ids, format_type, range);
             let mut output = io::BufWriter::new(io::stdout());
 
             let _ : Vec<()> = viewer.into_iter().flat_map(|t| {
+                debug!("{:?}", t);
                 t.map(|f| {
+                    debug!("{:?}", f);
                     if !sample_id_cond || sample_ids.iter().any(|&i| i == f.sample_id()) {
                         let data = f.data();
+                        debug!("{:?}", data);
                         if !format_type_cond
                             || std::mem::discriminant(&format_type) == std::mem::discriminant(&data)
                         {
