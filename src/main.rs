@@ -14,6 +14,7 @@ use ghi::range::{Format, InvertedRecordEntire, Set};
 use ghi::twopass_alignment::{Alignment, AlignmentBuilder};
 use ghi::writer::GhiWriter;
 use ghi::{reader::IndexedReader, IndexWriter};
+use io::BufReader;
 
 fn main() {
     let matches = App::new("GHB/GHI annotation/alignment database")
@@ -152,7 +153,7 @@ fn main() {
     }
 }
 
-fn build(matches: &ArgMatches, _threads: u16) -> () {
+fn build(matches: &ArgMatches, threads: u16) -> () {
     let mut header = Header::new();
     let mut alignment_transfer = false;
     let output_path = matches.value_of("OUTPUT").unwrap();
@@ -174,7 +175,11 @@ fn build(matches: &ArgMatches, _threads: u16) -> () {
         for bam_path in bam_files.iter() {
             info!("Loading {}", bam_path);
             // let reader = bam::BamReader::from_path(bam_path, threads).unwrap();
-            let reader2 = bam::IndexedReader::from_path(bam_path).unwrap();
+            let reader2 = bam::IndexedReader::build()
+                .additional_threads(threads - 1)
+                .from_path(bam_path)
+                .unwrap();
+            // Here all threads can be used, but I suspect that runs double
             let bam_header = reader2.header();
             if alignment_transfer {
                 header.transfer(bam_header);
@@ -206,6 +211,7 @@ fn build(matches: &ArgMatches, _threads: u16) -> () {
     let dummy_header = Header::new();
     let mut writer = GhbWriter::build()
         .write_header(false)
+        //        .additional_threads(threads-1)
         .from_path(output_path, dummy_header)
         .unwrap();
     let index = entire.write_binary(&mut writer).unwrap();
@@ -213,6 +219,7 @@ fn build(matches: &ArgMatches, _threads: u16) -> () {
     let output_index_path = format!("{}.ghi", output_path);
     let mut index_writer = GhiWriter::build()
         .write_header(true)
+        .additional_threads(threads - 1)
         .from_path(output_index_path, header)
         .unwrap();
     let _result = index_writer.write(&index);
@@ -222,9 +229,10 @@ fn build(matches: &ArgMatches, _threads: u16) -> () {
     // Some(())
 }
 
-fn query(matches: &ArgMatches, _threads: u16) -> () {
+fn query(matches: &ArgMatches, threads: u16) -> () {
     if let Some(o) = matches.value_of("INPUT") {
-        let mut reader = IndexedReader::from_path(o).unwrap();
+        let mut reader: IndexedReader<BufReader<File>> =
+            IndexedReader::from_path_with_additional_threads(o, threads - 1).unwrap();
         if let Some(range) = matches.value_of("range") {
             let closure = |x: &str| reader.reference_id(x);
             let string_range = StringRegion::new(range).unwrap();
@@ -282,7 +290,7 @@ fn query(matches: &ArgMatches, _threads: u16) -> () {
     }
 }
 
-fn decompose(matches: &ArgMatches, _threads: u16) -> () {
+fn decompose(matches: &ArgMatches, threads: u16) -> () {
     if let Some(i) = matches.value_of("INPUT") {
         if let Some(o) = matches.value_of("OUTPUT") {
             let id = matches
@@ -290,7 +298,8 @@ fn decompose(matches: &ArgMatches, _threads: u16) -> () {
                 .and_then(|t| t.parse::<u64>().ok())
                 .unwrap();
             let header = matches.is_present("header");
-            let mut reader = IndexedReader::from_path(i).unwrap();
+            let mut reader =
+                IndexedReader::from_path_with_additional_threads(i, threads - 1).unwrap();
             let mut writer = File::open(o).unwrap();
             if let Some(header) = reader.header().get_local_header(id as usize) {
                 header.to_stream(&mut writer).unwrap();

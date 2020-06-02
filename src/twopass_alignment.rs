@@ -45,13 +45,6 @@ impl PartialEq for Alignment {
 }
 
 impl Eq for Alignment {}
-/*
-#[derive(Clone, Eq, PartialEq, Debug)]
-pub struct Alignment {
-    pub data: Vec<Chunk>, // bgzip compressed records
-    reader: String,       // TODO()Path should be a reference to bam::Reader.
-}
-*/
 
 /// BAM-Compatible Alignment Record
 pub struct AlignmentBuilder {
@@ -133,13 +126,7 @@ impl<R: Read + Seek> Set<AlignmentBuilder, R> {
                     let contents_offset = viewer.parent.reader.contents_offset();
                     let end = VirtualOffset::from_raw(end_offset << 16 | contents_offset as u64);
                     let next_offset = viewer.parent.reader.reader.next_offset().unwrap();
-                    /*if prev.contents_offset() == 0 || end.contents_offset() == 0 {
-                        println!(
-                            "{} {} {} {} {}",
-                            prev, end, contents_offset, next_offset, prev_next_offset
-                        );
-                        //VirtualOffset::from_raw(next_offset));
-                    }*/
+
                     assert!(end > prev);
                     stat.add(
                         Chunk::new(prev, end),
@@ -156,7 +143,6 @@ impl<R: Read + Seek> Set<AlignmentBuilder, R> {
                         prev = end;
                     }
                     prev_next_offset = next_offset;
-                    // println!("{}")
                 }
             } else if rec.ref_id() == -1 {
                 let end_offset: u64 = viewer
@@ -251,8 +237,7 @@ impl ColumnarSet for Alignment {
             data.push(record);
         }
         let alignment = Alignment::Object(data);
-        //self = &mut Alignment::Object(data);
-        std::mem::replace(self, alignment);
+        let _old = std::mem::replace(self, alignment);
         let mut _record = Record::new();
         // For consuming all bgzip blocks.
         let _ = reader.next();

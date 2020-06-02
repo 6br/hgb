@@ -92,6 +92,7 @@ pub trait ColumnarSet {
     fn to_stream<W: Write, R: Read + Seek>(
         &self,
         stream: &mut W,
+//        threads: u64,
         bam_reader: Option<&mut IndexedReader<R>>,
     ) -> Result<()>;
 

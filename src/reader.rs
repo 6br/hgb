@@ -191,6 +191,18 @@ impl IndexedReader<BufReader<File>> {
     pub fn from_path<P: AsRef<Path>>(path: P) -> Result<Self> {
         IndexedReaderBuilder::new().from_path::<P, BufReader<File>>(path)
     }
+
+    /// Opens GHB file from `path`. Ghi index will be loaded from `{path}.ghi`.
+    ///
+    /// Same as `Self::build().from_path(path)`.
+    pub fn from_path_with_additional_threads<P: AsRef<Path>>(
+        path: P,
+        threads: u16,
+    ) -> Result<Self> {
+        IndexedReaderBuilder::new()
+            .additional_threads(threads)
+            .from_path::<P, BufReader<File>>(path)
+    }
 }
 
 impl<R: Read + Seek> IndexedReader<R> {
