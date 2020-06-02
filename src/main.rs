@@ -3,7 +3,7 @@ extern crate log;
 use bio::io::bed;
 use clap::{App, Arg, ArgMatches};
 use genomic_range::StringRegion;
-use log::info;
+use log::{debug, info};
 use std::{fs::File, io};
 
 use ghi::range::Default;
