@@ -269,6 +269,53 @@ mod tests {
         process::Command,
         time::Instant,
     };
+
+    #[test]
+    fn two_bam_works() {
+        let bam_path = "./test/index_test.bam";
+        // let reader = bam::BamReader::from_path(bam_path, 4).unwrap();
+        let reader2 = bam::IndexedReader::from_path(bam_path).unwrap();
+        // println!("{}", reader2.index());
+
+        let bam_header = reader2.header();
+        let mut header = Header::new();
+        header.transfer(bam_header);
+        header.set_local_header(bam_header, bam_path, 0);
+        {
+            let set = Set::<AlignmentBuilder, File>::new(reader2, 0 as u64, &mut header);
+            let bam_path2 = "./test/test-in.bam";
+            let reader = bam::IndexedReader::from_path(bam_path2).unwrap();
+            let set2: Set<AlignmentBuilder, File> =
+                Set::<AlignmentBuilder, File>::new(reader, 1 as u64, &mut header);
+
+            assert_eq!(None, header.reference_id("1"));
+            assert_eq!(Some(1), header.reference_id("chr1"));
+            assert_eq!(Some(2), header.reference_id("chr2"));
+
+            let dummy_header = Header::new();
+            let set_vec = vec![set];
+            let mut entire: InvertedRecordEntire<File> =
+                InvertedRecordEntire::new_from_set(set_vec);
+            // println!("{:?}", entire);
+            entire.add(set2);
+            // entire.add_reader(0, reader2);
+            let mut writer = binary::GhbWriter::build()
+                .write_header(false)
+                .from_path("./test/test_bam.ghb", dummy_header)
+                .unwrap();
+            let index = entire.write_binary(&mut writer).unwrap();
+            writer.flush().unwrap();
+
+            entire.write_header(&mut header);
+            let mut index_writer = GhiWriter::build()
+                .write_header(true)
+                .from_path("./test/test_bam.ghb.ghi", header)
+                .unwrap();
+            let _result = index_writer.write(&index);
+            assert_eq!(_result.ok(), Some(()));
+            let _result = index_writer.flush();
+        }
+    }
     #[test]
     fn bam_works() {
         let bam_path = "./test/index_test.bam";

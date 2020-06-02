@@ -186,7 +186,7 @@ fn build(matches: &ArgMatches, threads: u16) -> () {
             }
             header.set_local_header(bam_header, bam_path, i);
             i += 1;
-            let set = Set::<AlignmentBuilder, File>::new(reader2, 0 as u64, &mut header);
+            let set = Set::<AlignmentBuilder, File>::new(reader2, i as u64, &mut header);
             set_vec.push(set);
         }
     }
@@ -211,7 +211,7 @@ fn build(matches: &ArgMatches, threads: u16) -> () {
     let dummy_header = Header::new();
     let mut writer = GhbWriter::build()
         .write_header(false)
-        .additional_threads(threads-1)
+        .additional_threads(threads - 1)
         .from_path(output_path, dummy_header)
         .unwrap();
     let index = entire.write_binary(&mut writer).unwrap();
@@ -225,8 +225,6 @@ fn build(matches: &ArgMatches, threads: u16) -> () {
     let _result = index_writer.write(&index);
     assert_eq!(_result.ok(), Some(()));
     let _result = index_writer.flush();
-    // println!("Annotation saved!");
-    // Some(())
 }
 
 fn query(matches: &ArgMatches, threads: u16) -> () {
