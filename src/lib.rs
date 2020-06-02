@@ -37,6 +37,7 @@ pub trait ChunkWriter<R: Read + Seek> {
     fn write(
         &mut self,
         record: &Record,
+//         threads: u16,
         bam_reader: Option<&mut IndexedReader<R>>,
     ) -> io::Result<index::Chunk>;
 
@@ -92,7 +93,7 @@ pub trait ColumnarSet {
     fn to_stream<W: Write, R: Read + Seek>(
         &self,
         stream: &mut W,
-//        threads: u64,
+        //        threads: u16,
         bam_reader: Option<&mut IndexedReader<R>>,
     ) -> Result<()>;
 

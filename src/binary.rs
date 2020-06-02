@@ -22,11 +22,15 @@ use std::path::Path;
 /// Builder of the [GhbWriter](struct.GhbWriter.html).
 pub struct GhbWriterBuilder {
     write_header: bool,
+    additional_threads: u16,
 }
 
 impl GhbWriterBuilder {
     pub fn new() -> Self {
-        Self { write_header: true }
+        Self {
+            write_header: true,
+            additional_threads: 0,
+        }
     }
 
     /// The option to write or skip header when creating the GHB writer (writing by default).
@@ -34,7 +38,15 @@ impl GhbWriterBuilder {
         self.write_header = write;
         self
     }
-
+    /// Specify the number of additional threads.
+    /// Additional threads are used to compress blocks, while the
+    /// main thread reads the writes to a file/stream.
+    /// If `additional_threads` is 0 (default), the main thread
+    /// will compress blocks itself.
+    pub fn additional_threads(&mut self, additional_threads: u16) -> &mut Self {
+        self.additional_threads = additional_threads;
+        self
+    }
     /// Creates a GHB writer from a file and a header.
     pub fn from_path<P: AsRef<Path>>(
         &mut self,
@@ -52,7 +64,11 @@ impl GhbWriterBuilder {
             header.to_stream(&mut stream)?;
         }
         stream.flush()?;
-        Ok(GhbWriter { stream, header })
+        Ok(GhbWriter {
+            stream,
+            header,
+            additional_threads: self.additional_threads,
+        })
     }
 }
 
@@ -74,6 +90,7 @@ impl GhbWriterBuilder {
 pub struct GhbWriter<W: Write> {
     stream: W,
     header: Header,
+    additional_threads: u16,
 }
 
 impl GhbWriter<BufWriter<File>> {
