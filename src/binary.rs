@@ -201,19 +201,20 @@ pub struct GhbReader<R: Read + Seek> {
     index: usize,
     started: bool,
     offset: u64,
+    additional_threads: u16
 }
 
 impl GhbReader<BufReader<File>> {
     /// Opens GHB reader from `path`.
-    pub fn from_path<P: AsRef<Path>>(path: P, header: Header) -> Result<Self> {
+    pub fn from_path<P: AsRef<Path>>(path: P, header: Header, additional_threads: u16) -> Result<Self> {
         let stream = BufReader::new(File::open(path)?);
-        GhbReader::from_stream(stream, header)
+        GhbReader::from_stream(stream, header, additional_threads)
     }
 }
 
 impl<R: Read + Seek> GhbReader<R> {
     /// Opens GHB reader from a buffered stream.
-    pub fn from_stream(mut stream: R, header: Header) -> Result<Self> {
+    pub fn from_stream(mut stream: R, header: Header, additional_threads: u16) -> Result<Self> {
         // let header = Header::from_bam(&mut stream)?;
         // let header = Header::new();
         // let _marker = std::marker::PhantomData;
@@ -226,6 +227,7 @@ impl<R: Read + Seek> GhbReader<R> {
             index: 0 as usize,
             started: false,
             offset,
+            additional_threads
         })
     }
 
@@ -253,7 +255,7 @@ impl<R: Read + Seek> GhbReader<R> {
                 self.stream.seek(SeekFrom::Start(new_offset))?;
                 self.offset = new_offset;
             }
-            record.fill_from_bam(&mut self.stream, 0)
+            record.fill_from_bam(&mut self.stream, self.additional_threads)
         // self.offset = TODO(offset should be updated, but how?)
         } else {
             Ok(false)

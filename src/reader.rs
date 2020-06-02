@@ -135,7 +135,7 @@ impl IndexedReaderBuilder {
         let index = Index::from_stream(&mut index_reader)
             .map_err(|e| Error::new(e.kind(), format!("Failed to read GHI file: {}", e)))?;
 
-        let reader = GhbReader::from_path(ghb_path, header)
+        let reader = GhbReader::from_path(ghb_path, header, self.additional_threads)
             .map_err(|e| Error::new(e.kind(), format!("Failed to open GHB file: {}", e)))?;
 
         IndexedReader::new(reader, index)
@@ -158,7 +158,7 @@ impl IndexedReaderBuilder {
 
         let index = Index::from_stream(&mut index_reader)?;
 
-        let reader = GhbReader::from_stream(bam_stream, header)
+        let reader = GhbReader::from_stream(bam_stream, header, self.additional_threads)
             .map_err(|e| Error::new(e.kind(), format!("Failed to read GHB stream: {}", e)))?;
 
         IndexedReader::new(reader, index)

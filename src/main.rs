@@ -246,11 +246,10 @@ fn query(matches: &ArgMatches, threads: u16) -> () {
             let sample_id_cond = sample_ids_opt.is_some();
             let sample_ids = sample_ids_opt.unwrap_or(vec![]);
             //                .collect();
-            /*
-            let format_type_opt = matches.value_of_t("type");
+
+            let format_type_opt = matches.value_of_t::<Format>("type");
             let format_type_cond = format_type_opt.is_ok();
-            */
-            // let format_type = format_type_opt.unwrap();
+            let format_type = format_type_opt.unwrap();
 
             /*match format_type {
                 Format::Alignment(alignment) => {}
@@ -262,19 +261,24 @@ fn query(matches: &ArgMatches, threads: u16) -> () {
             let _ = viewer.into_iter().flat_map(|t| {
                 t.map(|f| {
                     if !sample_id_cond || sample_ids.iter().any(|&i| i == f.sample_id()) {
-                        match f.data() {
-                            Format::Range(rec) => {
-                                let mut writer = bed::Writer::new(&mut output);
-                                for i in rec.to_record(&reference_name) {
-                                    writer.write(&i).unwrap();
+                        let data = f.data();
+                        if !format_type_cond
+                            || std::mem::discriminant(&format_type) == std::mem::discriminant(&data)
+                        {
+                            match data {
+                                Format::Range(rec) => {
+                                    let mut writer = bed::Writer::new(&mut output);
+                                    for i in rec.to_record(&reference_name) {
+                                        writer.write(&i).unwrap();
+                                    }
                                 }
-                            }
-                            Format::Alignment(Alignment::Object(rec)) => {
-                                for i in rec {
-                                    let _result = i.write_bam(&mut output).unwrap();
+                                Format::Alignment(Alignment::Object(rec)) => {
+                                    for i in rec {
+                                        let _result = i.write_bam(&mut output).unwrap();
+                                    }
                                 }
+                                _ => {}
                             }
-                            _ => {}
                         }
                     }
                     /*
