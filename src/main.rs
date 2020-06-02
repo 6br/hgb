@@ -185,8 +185,8 @@ fn build(matches: &ArgMatches, threads: u16) -> () {
                 header.transfer(bam_header);
             }
             header.set_local_header(bam_header, bam_path, i);
-            i += 1;
             let set = Set::<AlignmentBuilder, File>::new(reader2, i as u64, &mut header);
+            i += 1;
             set_vec.push(set);
         }
     }
