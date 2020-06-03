@@ -443,8 +443,8 @@ fn bin(matches: &ArgMatches, threads: u16) -> () {
             let format_type = format_type_opt.unwrap_or(Format::Default(Default {}));
 
             println!(
-                "{:?} {:?} {:?} {:?}",
-                sample_id_cond, sample_ids, format_type, range
+                "{:?} {:?} {:?}",
+                sample_id_cond, sample_ids, format_type
             );
             let mut output = io::BufWriter::new(io::stdout());
             let header = viewer.header().clone();
