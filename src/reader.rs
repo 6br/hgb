@@ -283,6 +283,34 @@ impl<R: Read + Seek> IndexedReader<R> {
         })
     }
 
+    /// Returns an iterator over records aligned to the [reference region](struct.Region.html).
+    pub fn chunk<'a>(&'a mut self, region: Vec<Chunk>) -> Result<RegionViewer<'a, R>> {
+        self.chunk_by(region, |_| true)
+    }
+
+    /// Returns an iterator over records aligned to the [reference region](struct.Region.html).
+    ///
+    /// Records will be filtered by `predicate`. It helps to slightly reduce fetching time,
+    /// as some records will be removed without allocating new memory and without calculating
+    /// alignment length.
+    pub fn chunk_by<'a, F>(
+        &'a mut self,
+        chunks: Vec<Chunk>,
+        predicate: F,
+    ) -> Result<RegionViewer<'a, R>>
+    where
+        F: 'static + Fn(&Record) -> bool,
+    {
+        self.reader.set_chunks(chunks);
+
+        Ok(RegionViewer {
+            parent: self,
+            //            start: region.start() as i32,
+            //            end: region.end() as i32,
+            predicate: Box::new(predicate),
+        })
+    }
+
     /// Returns an iterator over all records from the start of the GHB file.
     pub fn full<'a>(&'a mut self) -> RegionViewer<'a, R> {
         self.full_by(|_| true)
