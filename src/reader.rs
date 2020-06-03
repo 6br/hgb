@@ -271,6 +271,7 @@ impl<R: Read + Seek> IndexedReader<R> {
         let chunks = self
             .index
             .fetch_chunks(region.ref_id(), region.start(), region.end());
+        eprintln!("{:?}", chunks);
 
         self.reader.set_chunks(chunks);
 
