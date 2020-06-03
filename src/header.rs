@@ -37,6 +37,14 @@ impl HeaderType {
             _ => Err(Error::new(ErrorKind::InvalidData, "Invalid header type id")),
         }
     }
+
+    pub fn bam_header(&self) -> &bam::Header {
+        if let HeaderType::BAM(c) = self {
+            c
+        } else {
+            panic!("Not Bam header")
+        }
+    }
 }
 
 /// GHB/GHI Header.

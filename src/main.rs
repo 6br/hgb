@@ -6,11 +6,11 @@ use genomic_range::StringRegion;
 use log::{debug, info};
 use std::{fs::File, io};
 
-use ghi::range::Default;
 use ghi::binary::GhbWriter;
 use ghi::builder::InvertedRecordBuilder;
 use ghi::header::Header;
 use ghi::index::Region;
+use ghi::range::Default;
 use ghi::range::{Format, InvertedRecordEntire, Set};
 use ghi::twopass_alignment::{Alignment, AlignmentBuilder};
 use ghi::writer::GhiWriter;
@@ -93,6 +93,14 @@ fn main() {
                         .takes_value(true)
                         .multiple(true)
                         .about("annotation sample to fetch"),
+                )
+                .arg(Arg::new("filter").short('f').about("Pre-filter"))
+                .arg(Arg::new("binary").short('b').about("Binary"))
+                .arg(
+                    Arg::new("output")
+                        .short('o')
+                        .takes_value(true)
+                        .about("Output format"),
                 )
                 .arg(
                     Arg::new("INPUT")
@@ -253,14 +261,22 @@ fn query(matches: &ArgMatches, threads: u16) -> () {
             let format_type_cond = format_type_opt.is_ok();
             let format_type = format_type_opt.unwrap_or(Format::Default(Default {}));
 
-            debug!("{:?} {:?} {:?} {:?}", sample_id_cond, sample_ids, format_type, range);
+            debug!(
+                "{:?} {:?} {:?} {:?}",
+                sample_id_cond, sample_ids, format_type, range
+            );
             let mut output = io::BufWriter::new(io::stdout());
+            let header = viewer.header().clone();
+            /*let mut writer = bam::BamWriter::build()
+                .write_header(true)
+                .from_stream(output, reader.header().clone()).unwrap();*/
 
-            let _ : Vec<()> = viewer.into_iter().flat_map(|t| {
+            let _ = viewer.into_iter().for_each(|t| {
                 debug!("{:?}", t);
-                t.map(|f| {
+                if let Ok(f) = t {
                     debug!("{:?}", f);
                     if !sample_id_cond || sample_ids.iter().any(|&i| i == f.sample_id()) {
+                        let sample_id = f.sample_id();
                         let data = f.data();
                         debug!("{:?}", data);
                         if !format_type_cond
@@ -275,7 +291,15 @@ fn query(matches: &ArgMatches, threads: u16) -> () {
                                 }
                                 Format::Alignment(Alignment::Object(rec)) => {
                                     for i in rec {
-                                        let _result = i.write_bam(&mut output).unwrap();
+                                        let _result = i
+                                            .write_sam(
+                                                &mut output,
+                                                header
+                                                    .get_local_header(sample_id as usize)
+                                                    .unwrap()
+                                                    .bam_header(),
+                                            )
+                                            .unwrap();
                                     }
                                 }
                                 _ => {}
@@ -292,8 +316,8 @@ fn query(matches: &ArgMatches, threads: u16) -> () {
                             let _result = i.write_bam(&mut output);
                         }
                     }*/
-                })
-            }).collect();
+                }
+            });
         }
     }
 }

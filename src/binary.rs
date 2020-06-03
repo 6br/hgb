@@ -201,12 +201,16 @@ pub struct GhbReader<R: Read + Seek> {
     index: usize,
     started: bool,
     offset: u64,
-    additional_threads: u16
+    additional_threads: u16,
 }
 
 impl GhbReader<BufReader<File>> {
     /// Opens GHB reader from `path`.
-    pub fn from_path<P: AsRef<Path>>(path: P, header: Header, additional_threads: u16) -> Result<Self> {
+    pub fn from_path<P: AsRef<Path>>(
+        path: P,
+        header: Header,
+        additional_threads: u16,
+    ) -> Result<Self> {
         let stream = BufReader::new(File::open(path)?);
         GhbReader::from_stream(stream, header, additional_threads)
     }
@@ -227,7 +231,7 @@ impl<R: Read + Seek> GhbReader<R> {
             index: 0 as usize,
             started: false,
             offset,
-            additional_threads
+            additional_threads,
         })
     }
 
