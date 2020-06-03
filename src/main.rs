@@ -4,6 +4,7 @@ use bio::io::bed;
 use clap::{App, Arg, ArgMatches};
 use genomic_range::StringRegion;
 use log::{debug, info};
+use env_logger;
 use std::{fs::File, io};
 
 use ghi::binary::GhbWriter;
@@ -18,6 +19,7 @@ use ghi::{reader::IndexedReader, IndexWriter};
 use io::BufReader;
 
 fn main() {
+    env_logger::init();
     let matches = App::new("GHB/GHI annotation/alignment database")
         .version("0.1")
         .author("6br. ")
@@ -261,7 +263,7 @@ fn query(matches: &ArgMatches, threads: u16) -> () {
             let format_type_cond = format_type_opt.is_ok();
             let format_type = format_type_opt.unwrap_or(Format::Default(Default {}));
 
-            debug!(
+            println!(
                 "{:?} {:?} {:?} {:?}",
                 sample_id_cond, sample_ids, format_type, range
             );
@@ -272,7 +274,7 @@ fn query(matches: &ArgMatches, threads: u16) -> () {
                 .from_stream(output, reader.header().clone()).unwrap();*/
 
             let _ = viewer.into_iter().for_each(|t| {
-                debug!("{:?}", t);
+                println!("{:?}", t);
                 if let Ok(f) = t {
                     debug!("{:?}", f);
                     if !sample_id_cond || sample_ids.iter().any(|&i| i == f.sample_id()) {
