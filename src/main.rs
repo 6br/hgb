@@ -421,7 +421,6 @@ fn bin(matches: &ArgMatches, threads: u16) -> () {
     if let Some(o) = matches.value_of("INPUT") {
         let mut reader: IndexedReader<BufReader<File>> =
             IndexedReader::from_path_with_additional_threads(o, threads - 1).unwrap();
-        if let Some(range) = matches.value_of("range") {
             let closure = |x: &str| reader.reference_id(x);
             let start =  matches.value_of("bin").and_then(|t| t.parse::<u64>().ok()).unwrap();
             let end =  matches.value_of("end").and_then(|t| t.parse::<u64>().ok()).unwrap();
@@ -490,5 +489,4 @@ fn bin(matches: &ArgMatches, threads: u16) -> () {
                 }
             });
         }
-    }
 }
