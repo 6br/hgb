@@ -2,9 +2,9 @@ extern crate log;
 
 use bio::io::bed;
 use clap::{App, Arg, ArgMatches};
+use env_logger;
 use genomic_range::StringRegion;
 use log::{debug, info};
-use env_logger;
 use std::{fs::File, io};
 
 use ghi::binary::GhbWriter;
@@ -133,6 +133,30 @@ fn main() {
                         .about("Sets the output file to use")
                         .required(true)
                         .index(1),
+                ),
+        )
+        .subcommand(
+            App::new("bin")
+                .about("extract bam/bed from GHB and GHI index: (*) Now it needs to ")
+                .arg(
+                    Arg::new("id")
+                        .short('i')
+                        .takes_value(true)
+                        //            .multiple(true)
+                        .about("annotation sample to fetch (alignment | annotation)"),
+                )
+                .arg(
+                    Arg::new("INPUT")
+                        .about("Sets the input file to use")
+                        .required(true)
+                        .index(1),
+                )
+                .arg(
+                    Arg::new("bin")
+                        .short('b')
+                        .takes_value(true)
+                        //            .multiple(true)
+                        .about("annotation sample to fetch (alignment | annotation)"),
                 ),
         )
         .subcommand(
@@ -270,11 +294,11 @@ fn query(matches: &ArgMatches, threads: u16) -> () {
             let mut output = io::BufWriter::new(io::stdout());
             let header = viewer.header().clone();
             /*let mut writer = bam::BamWriter::build()
-                .write_header(true)
-                .from_stream(output, reader.header().clone()).unwrap();*/
+            .write_header(true)
+            .from_stream(output, reader.header().clone()).unwrap();*/
 
             let _ = viewer.into_iter().for_each(|t| {
-                println!("{:?}", t);
+                eprintln!("{:?}", t);
                 if let Ok(f) = t {
                     debug!("{:?}", f);
                     if !sample_id_cond || sample_ids.iter().any(|&i| i == f.sample_id()) {
