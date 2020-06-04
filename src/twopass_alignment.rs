@@ -242,7 +242,7 @@ impl ColumnarSet for Alignment {
         writer.finish()?;
         Ok(())
     }
-    fn from_stream<R: Read>(&mut self, stream: &mut R, threads: u16) -> Result<bool> {
+    fn from_stream<R: Read>(&mut self, stream: &mut R, _threads: u16) -> Result<bool> {
         let len = stream.read_u64::<LittleEndian>()?;
 
         let mut reader =

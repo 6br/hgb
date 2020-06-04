@@ -23,6 +23,13 @@ impl HeaderType {
             }
         }
     }
+    /// Save to stream.
+    pub fn to_text<W: Write>(&self, stream: &mut W) -> Result<()> {
+        match self {
+            HeaderType::None => stream.write_i32::<LittleEndian>(0 as i32),
+            HeaderType::BAM(header) => header.write_text(stream),
+        }
+    }
     /// Load from stream.
     pub fn from_stream<R: Read>(stream: &mut R) -> Result<HeaderType> {
         let header_type = stream.read_i32::<LittleEndian>()?;

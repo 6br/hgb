@@ -373,9 +373,13 @@ fn decompose(matches: &ArgMatches, threads: u16) -> () {
                 .unwrap();
             let header = matches.is_present("header");
             let mut reader = IndexedReader::from_path_with_additional_threads(i, threads).unwrap();
-            let mut writer = File::create(o).unwrap();
-            if let Some(header) = reader.header().get_local_header(id as usize) {
-                // header.to_stream(&mut writer).unwrap();
+            let writer = File::create(o).unwrap();
+            let mut output = io::BufWriter::new(writer);
+            if let Some(header_type) = reader.header().get_local_header(id as usize) {
+                if header {
+                    header_type.to_text(&mut output).unwrap();
+                }
+                // header.write_text(&mut writer);
             } else {
                 println!("There is no header of id {}", id);
             }
@@ -385,7 +389,7 @@ fn decompose(matches: &ArgMatches, threads: u16) -> () {
             }
 
             // todo!("Implement later; Now just returns only header.");
-            let mut output = io::BufWriter::new(writer);
+           
 
             let viewer = reader.full();
             let header_data = viewer.header().clone();
