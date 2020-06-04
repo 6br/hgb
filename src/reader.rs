@@ -5,6 +5,7 @@ use crate::index::{Chunk, Region, VirtualOffset};
 use crate::range::Record;
 use crate::ChunkReader;
 use bam::bgzip;
+use log::debug;
 use std::fs::File;
 use std::io::ErrorKind::{self, InvalidInput};
 use std::io::{BufReader, Error, Read, Result, Seek};

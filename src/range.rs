@@ -11,6 +11,7 @@ use crate::{builder::InvertedRecordBuilder, Builder};
 use crate::{ChunkWriter, ColumnarSet};
 use bam::{header::HeaderEntry, IndexedReader};
 use bio::io::bed;
+use log::debug;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use std::collections::{BTreeMap, HashMap};
 use std::io::ErrorKind::InvalidData;
@@ -329,7 +330,7 @@ impl<R: Read + Seek> InvertedRecordEntire<R> {
                     // println!("{:?} {:?}", chunk.sample_id, self.bam_reader.keys());
                     let record =
                         writer.write(&chunk, (self.bam_reader).get_mut(&chunk.sample_id))?;
-                    eprintln!("{:?} {:?}", bin_id, record);
+                    debug!("{:?} {:?}", bin_id, record);
                     records.push(record);
                 }
                 reference.update(*bin_id as usize, Bin::new(*bin_id, records));

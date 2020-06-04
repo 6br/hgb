@@ -126,7 +126,7 @@ impl<R: Read + Seek> Set<AlignmentBuilder, R> {
                     let contents_offset = viewer.parent.reader.contents_offset();
                     let end = VirtualOffset::from_raw(end_offset << 16 | contents_offset as u64);
                     let next_offset = viewer.parent.reader.reader.next_offset().unwrap();
-
+                    println!("a: {} {} {} {}", prev, end, contents_offset, next_offset);
                     assert!(end > prev);
                     stat.add(
                         Chunk::new(prev, end),
@@ -138,7 +138,12 @@ impl<R: Read + Seek> Set<AlignmentBuilder, R> {
                         && end.contents_offset() == 0
                     {
                         // println!("a: {} {} {} {}", prev, end, contents_offset, next_offset);
-                        prev = VirtualOffset::new(next_offset, 0);
+                        if let Some(block) =
+                            viewer.parent.reader.next().ok().and_then(|t| t.offset())
+                        {
+                            //                            println!("{:?}", block.offset());
+                            prev = VirtualOffset::new(block, 0);
+                        }; //reader.read_next();
                     } else {
                         prev = end;
                     }

@@ -224,6 +224,7 @@ fn build(matches: &ArgMatches, threads: u16) -> () {
 
     if let Some(bam_files) = matches.values_of("bam") {
         let bam_files: Vec<&str> = bam_files.collect();
+        println!("{:?}", bam_files);
         for bam_path in bam_files.iter() {
             info!("Loading {}", bam_path);
             // let reader = bam::BamReader::from_path(bam_path, threads).unwrap();
@@ -281,8 +282,7 @@ fn build(matches: &ArgMatches, threads: u16) -> () {
 
 fn query(matches: &ArgMatches, threads: u16) -> () {
     if let Some(o) = matches.value_of("INPUT") {
-        let mut reader: IndexedReader<BufReader<File>> =
-            IndexedReader::from_path_with_additional_threads(o, threads - 1).unwrap();
+        let mut reader: IndexedReader<BufReader<File>> = IndexedReader::from_path(o).unwrap();
         if let Some(range) = matches.value_of("range") {
             let closure = |x: &str| reader.reference_id(x);
             let string_range = StringRegion::new(range).unwrap();
@@ -303,7 +303,7 @@ fn query(matches: &ArgMatches, threads: u16) -> () {
             let format_type_cond = format_type_opt.is_ok();
             let format_type = format_type_opt.unwrap_or(Format::Default(Default {}));
 
-            println!(
+            debug!(
                 "{:?} {:?} {:?} {:?}",
                 sample_id_cond, sample_ids, format_type, range
             );
@@ -314,7 +314,7 @@ fn query(matches: &ArgMatches, threads: u16) -> () {
             .from_stream(output, reader.header().clone()).unwrap();*/
 
             let _ = viewer.into_iter().for_each(|t| {
-                eprintln!("{:?}", t);
+                debug!("{:?}", t);
                 if let Ok(f) = t {
                     debug!("{:?}", f);
                     if !sample_id_cond || sample_ids.iter().any(|&i| i == f.sample_id()) {
@@ -416,77 +416,83 @@ fn server(_matches: &ArgMatches, _threads: u16) -> () {
     //todo!("Implement a web server using actix-web.");
 }
 
-
 fn bin(matches: &ArgMatches, threads: u16) -> () {
     if let Some(o) = matches.value_of("INPUT") {
         let mut reader: IndexedReader<BufReader<File>> =
             IndexedReader::from_path_with_additional_threads(o, threads - 1).unwrap();
-            let closure = |x: &str| reader.reference_id(x);
-            let start =  matches.value_of("bin").and_then(|t| t.parse::<u64>().ok()).unwrap();
-            let end =  matches.value_of("end").and_then(|t| t.parse::<u64>().ok()).unwrap();
+        let closure = |x: &str| reader.reference_id(x);
+        let start = matches
+            .value_of("bin")
+            .and_then(|t| t.parse::<u64>().ok())
+            .unwrap();
+        let end = matches
+            .value_of("end")
+            .and_then(|t| t.parse::<u64>().ok())
+            .unwrap();
 
+        let range = vec![Chunk::new(
+            0,
+            0,
+            VirtualOffset::from_raw(start),
+            VirtualOffset::from_raw(end),
+        )];
+        let viewer = reader.chunk(range).unwrap();
 
-            let range = vec![Chunk::new(0, 0, VirtualOffset::from_raw(start), VirtualOffset::from_raw(end))];
-            let viewer = reader.chunk(range).unwrap();
+        let sample_ids_opt: Option<Vec<u64>> = matches
+            .values_of("id")
+            //.unwrap()
+            .and_then(|a| Some(a.map(|t| t.parse::<u64>().unwrap()).collect()));
+        let sample_id_cond = sample_ids_opt.is_some();
+        let sample_ids = sample_ids_opt.unwrap_or(vec![]);
+        //                .collect();
 
-            let sample_ids_opt: Option<Vec<u64>> = matches
-                .values_of("id")
-                //.unwrap()
-                .and_then(|a| Some(a.map(|t| t.parse::<u64>().unwrap()).collect()));
-            let sample_id_cond = sample_ids_opt.is_some();
-            let sample_ids = sample_ids_opt.unwrap_or(vec![]);
-            //                .collect();
+        let format_type_opt = matches.value_of_t::<Format>("type");
+        let format_type_cond = format_type_opt.is_ok();
+        let format_type = format_type_opt.unwrap_or(Format::Default(Default {}));
 
-            let format_type_opt = matches.value_of_t::<Format>("type");
-            let format_type_cond = format_type_opt.is_ok();
-            let format_type = format_type_opt.unwrap_or(Format::Default(Default {}));
+        println!("{:?} {:?} {:?}", sample_id_cond, sample_ids, format_type);
+        let mut output = io::BufWriter::new(io::stdout());
+        let header = viewer.header().clone();
+        /*let mut writer = bam::BamWriter::build()
+        .write_header(true)
+        .from_stream(output, reader.header().clone()).unwrap();*/
 
-            println!(
-                "{:?} {:?} {:?}",
-                sample_id_cond, sample_ids, format_type
-            );
-            let mut output = io::BufWriter::new(io::stdout());
-            let header = viewer.header().clone();
-            /*let mut writer = bam::BamWriter::build()
-            .write_header(true)
-            .from_stream(output, reader.header().clone()).unwrap();*/
-
-            let _ = viewer.into_iter().for_each(|t| {
-                eprintln!("{:?}", t);
-                if let Ok(f) = t {
-                    debug!("{:?}", f);
-                    if !sample_id_cond || sample_ids.iter().any(|&i| i == f.sample_id()) {
-                        let sample_id = f.sample_id();
-                        let data = f.data();
-                        debug!("{:?}", data);
-                        if !format_type_cond
-                            || std::mem::discriminant(&format_type) == std::mem::discriminant(&data)
-                        {
-                            match data {
-                                Format::Range(rec) => {
-                                    let mut writer = bed::Writer::new(&mut output);
-                                    for i in rec.to_record("null") {
-                                        writer.write(&i).unwrap();
-                                    }
+        let _ = viewer.into_iter().for_each(|t| {
+            eprintln!("{:?}", t);
+            if let Ok(f) = t {
+                debug!("{:?}", f);
+                if !sample_id_cond || sample_ids.iter().any(|&i| i == f.sample_id()) {
+                    let sample_id = f.sample_id();
+                    let data = f.data();
+                    debug!("{:?}", data);
+                    if !format_type_cond
+                        || std::mem::discriminant(&format_type) == std::mem::discriminant(&data)
+                    {
+                        match data {
+                            Format::Range(rec) => {
+                                let mut writer = bed::Writer::new(&mut output);
+                                for i in rec.to_record("null") {
+                                    writer.write(&i).unwrap();
                                 }
-                                Format::Alignment(Alignment::Object(rec)) => {
-                                    for i in rec {
-                                        let _result = i
-                                            .write_sam(
-                                                &mut output,
-                                                header
-                                                    .get_local_header(sample_id as usize)
-                                                    .unwrap()
-                                                    .bam_header(),
-                                            )
-                                            .unwrap();
-                                    }
-                                }
-                                _ => {}
                             }
+                            Format::Alignment(Alignment::Object(rec)) => {
+                                for i in rec {
+                                    let _result = i
+                                        .write_sam(
+                                            &mut output,
+                                            header
+                                                .get_local_header(sample_id as usize)
+                                                .unwrap()
+                                                .bam_header(),
+                                        )
+                                        .unwrap();
+                                }
+                            }
+                            _ => {}
                         }
                     }
                 }
-            });
-        }
+            }
+        });
+    }
 }
