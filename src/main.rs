@@ -1,5 +1,5 @@
 extern crate log;
-
+use rayon::prelude::*;
 use bio::io::bed;
 use clap::{App, Arg, ArgMatches};
 use env_logger;
@@ -379,7 +379,7 @@ fn decompose(matches: &ArgMatches, threads: u16) -> () {
                 if header {
                     header_type.to_text(&mut output).unwrap();
                 }
-                // header.write_text(&mut writer);
+            // header.write_text(&mut writer);
             } else {
                 println!("There is no header of id {}", id);
             }
@@ -389,7 +389,6 @@ fn decompose(matches: &ArgMatches, threads: u16) -> () {
             }
 
             // todo!("Implement later; Now just returns only header.");
-           
 
             let viewer = reader.full();
             let header_data = viewer.header().clone();
