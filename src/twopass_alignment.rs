@@ -11,8 +11,8 @@ use bam::{
     index::{Chunk, VirtualOffset},
     RecordWriter,
 };
-use log::debug;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
+use log::debug;
 use std::{
     collections::{BTreeMap, HashMap},
     io::{Read, Result, Seek, Write},
@@ -129,6 +129,8 @@ impl<R: Read + Seek> Set<AlignmentBuilder, R> {
                     let next_offset = viewer.parent.reader.reader.next_offset().unwrap();
                     debug!("a: {} {} {} {}", prev, end, contents_offset, next_offset);
                     assert!(end > prev);
+
+                    // println!("{:?} {} {}", rec, prev, end);
                     stat.add(
                         Chunk::new(prev, end),
                         //  header.get_name(sample_id as usize).unwrap(),
@@ -149,6 +151,8 @@ impl<R: Read + Seek> Set<AlignmentBuilder, R> {
                         prev = end;
                     }
                     prev_next_offset = next_offset;
+                } else {
+                    eprintln!("Ignored: {:?}", rec.name());
                 }
             } else if rec.ref_id() == -1 {
                 let end_offset: u64 = viewer
@@ -214,10 +218,16 @@ impl ColumnarSet for Alignment {
         // let mut reader = bam::IndexedReader::from_path(&self.reader)?;
         let _ = match self {
             Alignment::Offset(data) => {
-                let viewer = bam_reader.unwrap().chunk(data.clone());
-                for i in viewer {
-                    writer.write(&i?)?;
-                    //TODO() Don't have to parse in this implementation.
+                let mut id = 0;
+                let mut viewer = bam_reader.unwrap().chunk(data.clone());
+                let mut rec = Record::new();
+                while let Ok(true) = viewer.read_into(&mut rec) {
+                    let contents_offset = viewer.parent.reader.contents_offset();
+                    debug!("{:?} {} {:?}", rec, contents_offset, data[id]);
+                    if contents_offset as u16 == data[id].end().contents_offset() {
+                        writer.write(&rec)?;
+                        id += 1;
+                    }
                 }
             }
             Alignment::Object(vec) => {
@@ -241,6 +251,7 @@ impl ColumnarSet for Alignment {
         for _i in 0..len as usize {
             let mut record = Record::new();
             reader.read_into(&mut record)?;
+            debug!("{:?}", record);
             data.push(record);
         }
         let alignment = Alignment::Object(data);

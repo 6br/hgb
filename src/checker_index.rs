@@ -24,7 +24,12 @@ pub struct Reference {
 
 impl Debug for Reference {
     fn fmt(&self, f: &mut Formatter) -> result::Result<(), fmt::Error> {
-        write!(f, "Mask: {}", self.bin_count_mask)
+        write!(
+            f,
+            "Mask: {}\nBin_length: {}",
+            self.bin_count_mask,
+            self.bins.len()
+        )
     }
 }
 
@@ -262,6 +267,7 @@ impl Index {
         for i in 0..chunks.len() {
             res.push(chunks[i].clone());
         }
+        // println!("{}, chunks, res");
         res
     }
 }
@@ -342,12 +348,29 @@ impl<'a> Iterator for BinsIter<'a> {
         //let bin_range_end = (bin_ofs_disp_start + bin_ofs_disp_end + 1) << bin_pitch_index;
         let bin_range_end = (bin_ofs_disp_end + 1) << bin_pitch_index;
         let bin_disp_start: usize = bin_ofs_base + bin_ofs_disp_start as usize;
-        let bin_disp_end: usize = bin_ofs_base + bin_ofs_disp_end as usize;
+        let bin_disp_end_cd: usize = bin_ofs_base + bin_ofs_disp_end as usize;
+        let bin_disp_end = if bin_disp_end_cd > self.header.bins.len() {
+            self.header.bins.len()
+        } else {
+            bin_disp_end_cd
+        };
 
         /* update finished mask; find least significant set bit to locate the next unfinished bit, then xor to squish further remaining bits out */
         self.finished = remaining ^ (remaining - 1);
 
-        // println!("{:?} {} {} {} {} {:?} {:?} {} {}", self.range, bin_range_start, bin_range_end, bin_size, finished, bin_disp_start..bin_disp_end, bin_ofs_disp_start..bin_ofs_disp_end, iterations_done, bin_pitch_index);
+        /*eprintln!(
+            "{:?} {} {} {} {} {:?} {:?} {} {} {:?}",
+            self.range,
+            bin_range_start,
+            bin_range_end,
+            bin_size,
+            finished,
+            bin_disp_start..bin_disp_end,
+            bin_ofs_disp_start..bin_ofs_disp_end,
+            iterations_done,
+            bin_pitch_index,
+            self.header.bins.get(bin_disp_start..bin_disp_end)
+        );*/
 
         /* done; compute bin pointer */
         Some(Slice {

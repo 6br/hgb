@@ -268,6 +268,7 @@ impl<R: Read + Seek> GhbReader<R> {
     }
 
     fn next_offset(&mut self) -> Option<u64> {
+        // println!("{:?} {}", self.chunks, self.index);
         if self.index >= self.chunks.len() {
             return None;
         }

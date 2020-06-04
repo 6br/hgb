@@ -274,6 +274,7 @@ impl<R: Read + Seek> InvertedRecordEntire<R> {
                 for (bin_id, bin) in chromosome.bins {
                     let chunks = chrom.bins.entry(bin_id).or_insert(Vec::new());
                     let data = bin.to_format();
+                    debug!("{:?} {:?}", bin_id, data);
                     chunks.push(Record {
                         sample_id: set.sample_id,
                         sample_file_id: sample_file_id as u32,
@@ -327,7 +328,7 @@ impl<R: Read + Seek> InvertedRecordEntire<R> {
             for (bin_id, bin) in &chromosome.bins {
                 let mut records = vec![];
                 for chunk in bin {
-                    // println!("{:?} {:?}", chunk.sample_id, self.bam_reader.keys());
+                    //println!("{:?} {:?} {:?}", bin_id, chunk.sample_id, self.bam_reader.keys());
                     let record =
                         writer.write(&chunk, (self.bam_reader).get_mut(&chunk.sample_id))?;
                     debug!("{:?} {:?}", bin_id, record);
@@ -335,6 +336,7 @@ impl<R: Read + Seek> InvertedRecordEntire<R> {
                 }
                 reference.update(*bin_id as usize, Bin::new(*bin_id, records));
             }
+            debug!("{:?}", reference);
             references.push(reference);
         }
         Ok(Index::new(references))

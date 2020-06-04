@@ -16,7 +16,7 @@ use ghi::range::{Format, InvertedRecordEntire, Set};
 use ghi::twopass_alignment::{Alignment, AlignmentBuilder};
 use ghi::writer::GhiWriter;
 use ghi::{reader::IndexedReader, IndexWriter};
-use io::{Write, BufReader};
+use io::{BufReader, Write};
 
 fn main() {
     env_logger::init();
@@ -132,7 +132,7 @@ fn main() {
                     Arg::new("OUTPUT")
                         .about("Sets the output file to use")
                         .required(true)
-                        .index(1),
+                        .index(2),
                 ),
         )
         .subcommand(
@@ -224,7 +224,7 @@ fn build(matches: &ArgMatches, threads: u16) -> () {
 
     if let Some(bam_files) = matches.values_of("bam") {
         let bam_files: Vec<&str> = bam_files.collect();
-        println!("{:?}", bam_files);
+        println!("Input file: {:?}", bam_files);
         for bam_path in bam_files.iter() {
             info!("Loading {}", bam_path);
             // let reader = bam::BamReader::from_path(bam_path, threads).unwrap();
@@ -282,7 +282,8 @@ fn build(matches: &ArgMatches, threads: u16) -> () {
 
 fn query(matches: &ArgMatches, threads: u16) -> () {
     if let Some(o) = matches.value_of("INPUT") {
-        let mut reader: IndexedReader<BufReader<File>> = IndexedReader::from_path(o).unwrap();
+        let mut reader: IndexedReader<BufReader<File>> =
+            IndexedReader::from_path_with_additional_threads(o, 0).unwrap();
         if let Some(range) = matches.value_of("range") {
             let closure = |x: &str| reader.reference_id(x);
             let string_range = StringRegion::new(range).unwrap();
@@ -319,7 +320,7 @@ fn query(matches: &ArgMatches, threads: u16) -> () {
             let header = viewer.header().clone();
 
             let _ = viewer.into_iter().for_each(|t| {
-                debug!("{:?}", t);
+                eprintln!("{:?}", t);
                 if let Ok(f) = t {
                     if !sample_id_cond || sample_ids.iter().any(|&i| i == f.sample_id()) {
                         let sample_id = f.sample_id();
@@ -336,16 +337,19 @@ fn query(matches: &ArgMatches, threads: u16) -> () {
                                 }
                                 Format::Alignment(Alignment::Object(rec)) => {
                                     for i in rec {
-                                        if !filter || (i.calculate_end() as u64 > range.start() && range.end() > i.start() as u64){
-                                        let _result = i
-                                            .write_sam(
-                                                &mut output,
-                                                header
-                                                    .get_local_header(sample_id as usize)
-                                                    .unwrap()
-                                                    .bam_header(),
-                                            )
-                                            .unwrap();
+                                        if !filter
+                                            || (i.calculate_end() as u64 > range.start()
+                                                && range.end() > i.start() as u64)
+                                        {
+                                            let _result = i
+                                                .write_sam(
+                                                    &mut output,
+                                                    header
+                                                        .get_local_header(sample_id as usize)
+                                                        .unwrap()
+                                                        .bam_header(),
+                                                )
+                                                .unwrap();
                                         }
                                     }
                                 }
@@ -367,23 +371,26 @@ fn decompose(matches: &ArgMatches, threads: u16) -> () {
                 .and_then(|t| t.parse::<u64>().ok())
                 .unwrap();
             let header = matches.is_present("header");
-            let mut reader =
-                IndexedReader::from_path_with_additional_threads(i, threads - 1).unwrap();
-            let mut writer = File::open(o).unwrap();
+            let mut reader = IndexedReader::from_path_with_additional_threads(i, 0).unwrap();
+            let mut writer = File::create(o).unwrap();
             if let Some(header) = reader.header().get_local_header(id as usize) {
-                header.to_stream(&mut writer).unwrap();
+                // header.to_stream(&mut writer).unwrap();
             } else {
                 println!("There is no header of id {}", id);
             }
+
             if header {
                 return;
             }
+
             // todo!("Implement later; Now just returns only header.");
-            let mut output = io::BufWriter::new(io::stdout());
+            let mut output = io::BufWriter::new(writer);
 
             let viewer = reader.full();
+            let header_data = viewer.header().clone();
 
-            let _ = viewer.into_iter().flat_map(|t| {
+            let _ = viewer.into_iter().for_each(|t| {
+                eprintln!("{:?}", t);
                 t.map(|f| {
                     if f.sample_id() == id {
                         match f.data() {
@@ -395,13 +402,23 @@ fn decompose(matches: &ArgMatches, threads: u16) -> () {
                             }
                             Format::Alignment(Alignment::Object(rec)) => {
                                 for i in rec {
-                                    let _result = i.write_bam(&mut output).unwrap();
+                                    //let _result = i.write_bam(&mut output).unwrap();
+                                    let _result = i
+                                        .write_sam(
+                                            &mut output,
+                                            header_data
+                                                .get_local_header(id as usize)
+                                                .unwrap()
+                                                .bam_header(),
+                                        )
+                                        .unwrap();
                                 }
                             }
                             _ => {}
                         }
                     }
                 })
+                .unwrap()
             });
         }
     }
@@ -445,7 +462,7 @@ fn bin(matches: &ArgMatches, threads: u16) -> () {
         let format_type_cond = format_type_opt.is_ok();
         let format_type = format_type_opt.unwrap_or(Format::Default(Default {}));
 
-        println!("{:?} {:?} {:?}", sample_id_cond, sample_ids, format_type);
+        debug!("{:?} {:?} {:?}", sample_id_cond, sample_ids, format_type);
         let mut output = io::BufWriter::new(io::stdout());
         let header = viewer.header().clone();
         /*let mut writer = bam::BamWriter::build()

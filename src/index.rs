@@ -335,6 +335,16 @@ impl Display for Bin {
     }
 }
 
+impl Debug for Bin {
+    fn fmt(&self, f: &mut Formatter) -> result::Result<(), fmt::Error> {
+        write!(f, "Bin {}:  ", self.bin_id)?;
+        for (i, chunk) in self.chunks.iter().enumerate() {
+            write!(f, "{}{}", if i > 0 { ",  " } else { "" }, chunk)?;
+        }
+        Ok(())
+    }
+}
+
 /// Index for a single reference sequence. Contains [bins](struct.Bin.html).
 #[derive(Clone, PartialEq, Eq)]
 pub struct Reference {
