@@ -246,7 +246,7 @@ impl ColumnarSet for Alignment {
         let len = stream.read_u64::<LittleEndian>()?;
 
         let mut reader =
-            bam::BamReader::from_stream_no_header(stream, bam::Header::new(), threads).unwrap();
+            bam::BamReader::from_stream_no_header(stream, bam::Header::new(), 0).unwrap();
         let mut data = Vec::with_capacity(len as usize);
         for _i in 0..len as usize {
             let mut record = Record::new();
