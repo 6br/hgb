@@ -317,9 +317,6 @@ fn query(matches: &ArgMatches, threads: u16) -> () {
             let mut output = io::BufWriter::new(out_writer);
 
             let header = viewer.header().clone();
-            /*let mut writer = bam::BamWriter::build()
-            .write_header(true)
-            .from_stream(output, reader.header().clone()).unwrap();*/
 
             let _ = viewer.into_iter().for_each(|t| {
                 debug!("{:?}", t);
@@ -356,16 +353,6 @@ fn query(matches: &ArgMatches, threads: u16) -> () {
                             }
                         }
                     }
-                    /*
-                    if let Format::Range(rec) = f.data() {
-                        for i in rec.to_record(&reference_name) {
-                            writer.write(&i);
-                        }
-                    } else if let Format::Alignment(rec) = f.data() {
-                        for i in rec.data {
-                            let _result = i.write_bam(&mut output);
-                        }
-                    }*/
                 }
             });
         }
