@@ -242,11 +242,11 @@ impl ColumnarSet for Alignment {
         writer.finish()?;
         Ok(())
     }
-    fn from_stream<R: Read>(&mut self, stream: &mut R, _threads: u16) -> Result<bool> {
+    fn from_stream<R: Read>(&mut self, stream: &mut R, threads: u16) -> Result<bool> {
         let len = stream.read_u64::<LittleEndian>()?;
 
         let mut reader =
-            bam::BamReader::from_stream_no_header(stream, bam::Header::new(), 0).unwrap();
+            bam::BamReader::from_stream_no_header(stream, bam::Header::new(), threads).unwrap();
         let mut data = Vec::with_capacity(len as usize);
         for _i in 0..len as usize {
             let mut record = Record::new();
