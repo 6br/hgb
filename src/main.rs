@@ -219,14 +219,16 @@ fn build(matches: &ArgMatches, threads: u16) -> () {
         alignment_transfer = true;
     }
 
-    let mut set_vec = vec![];
+    // let mut set_vec = vec![];
     let mut i = 0;
+
+    let mut records: InvertedRecordEntire<File> = InvertedRecordEntire::<File>::new();
 
     if let Some(bam_files) = matches.values_of("bam") {
         let bam_files: Vec<&str> = bam_files.collect();
         println!("Input file: {:?}", bam_files);
         for bam_path in bam_files.iter() {
-            info!("Loading {}", bam_path);
+            println!("Loading {}", bam_path);
             // let reader = bam::BamReader::from_path(bam_path, threads).unwrap();
             let reader2 = bam::IndexedReader::build()
                 .additional_threads(threads - 1)
@@ -240,12 +242,9 @@ fn build(matches: &ArgMatches, threads: u16) -> () {
             header.set_local_header(bam_header, bam_path, i);
             let set = Set::<AlignmentBuilder, File>::new(reader2, i as u64, &mut header);
             i += 1;
-            set_vec.push(set);
+            records.add(set);
         }
     }
-
-    let mut entire: InvertedRecordEntire<File> =
-        InvertedRecordEntire::<File>::new_from_set(set_vec);
 
     if let Some(bed_files) = matches.values_of("bed") {
         // let bed_files: Vec<_> = matches.values_of("bed").unwrap().collect();
@@ -257,7 +256,7 @@ fn build(matches: &ArgMatches, threads: u16) -> () {
                 Set::<InvertedRecordBuilder, File>::new(reader, 1 as u64, &mut header).unwrap();
             header.set_local_header(&bam::Header::new(), bed_path, i);
             i += 1;
-            entire.add(set);
+            records.add(set);
         }
     }
 
@@ -267,7 +266,7 @@ fn build(matches: &ArgMatches, threads: u16) -> () {
         .additional_threads(threads - 1)
         .from_path(output_path, dummy_header)
         .unwrap();
-    let index = entire.write_binary(&mut writer).unwrap();
+    let index = records.write_binary(&mut writer).unwrap();
     writer.flush().unwrap();
     let output_index_path = format!("{}.ghi", output_path);
     let mut index_writer = GhiWriter::build()
@@ -395,7 +394,7 @@ fn decompose(matches: &ArgMatches, _threads: u16) -> () {
             let header_data = viewer.header().clone();
 
             let _ = viewer.into_iter().for_each(|t| {
-                eprintln!("{:?}", t);
+                //eprintln!("{:?}", t);
                 t.map(|f| {
                     if f.sample_id() == id {
                         match f.data() {

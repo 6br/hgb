@@ -48,6 +48,7 @@ impl PartialEq for Alignment {
 impl Eq for Alignment {}
 
 /// BAM-Compatible Alignment Record
+#[derive(Debug)]
 pub struct AlignmentBuilder {
     alignments: Vec<Chunk>,
     //    reader: String,
@@ -152,7 +153,7 @@ impl<R: Read + Seek> Set<AlignmentBuilder, R> {
                     }
                     prev_next_offset = next_offset;
                 } else {
-                    eprintln!("Ignored: {:?}", rec.name());
+                    // eprintln!("Ignored: {:?}", rec.name());
                 }
             } else if rec.ref_id() == -1 {
                 let end_offset: u64 = viewer

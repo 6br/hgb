@@ -185,14 +185,6 @@ pub struct InvertedRecordChromosome {
     reference: Reference,
 }
 
-pub struct InvertedRecordEntire<R: Read + Seek> {
-    chrom: Vec<InvertedRecordChromosome>, // Mutex?
-    unmapped: Vec<Record>,
-    chrom_table: Chromosome,
-    sample_file_id_max: usize,
-    bam_reader: BTreeMap<u64, IndexedReader<R>>,
-}
-
 #[derive(Clone, Debug)]
 pub struct Bins<T> {
     pub bins: HashMap<u32, T>, // Bin id is regarded as u32 now.
@@ -208,7 +200,24 @@ pub struct Set<T, R: Read + Seek> {
     pub bam_reader: Option<IndexedReader<R>>,
 }
 
+pub struct InvertedRecordEntire<R: Read + Seek> {
+    chrom: Vec<InvertedRecordChromosome>, // Mutex?
+    unmapped: Vec<Record>,
+    chrom_table: Chromosome,
+    sample_file_id_max: usize,
+    bam_reader: BTreeMap<u64, IndexedReader<R>>,
+}
+
 impl<R: Read + Seek> InvertedRecordEntire<R> {
+    pub fn new() -> InvertedRecordEntire<R> {
+        InvertedRecordEntire {
+            chrom: vec![],
+            unmapped: vec![],
+            chrom_table: vec![],
+            sample_file_id_max: 0,
+            bam_reader: BTreeMap::new(),
+        }
+    }
     /// Add new inverted record from Set.
     pub fn add<T: Builder>(&mut self, sample_file: Set<T, R>) {
         let sample_file_id = self.sample_file_id_max;
@@ -262,6 +271,7 @@ impl<R: Read + Seek> InvertedRecordEntire<R> {
         let mut bam_readers = BTreeMap::new();
 
         for (sample_file_id, set) in sample_file_list.into_iter().enumerate() {
+            debug!("{:?}", sample_file_id);
             if let Some(bam_reader) = set.bam_reader {
                 bam_readers.insert(sample_file_id as u64, bam_reader);
             }
@@ -274,7 +284,7 @@ impl<R: Read + Seek> InvertedRecordEntire<R> {
                 for (bin_id, bin) in chromosome.bins {
                     let chunks = chrom.bins.entry(bin_id).or_insert(Vec::new());
                     let data = bin.to_format();
-                    debug!("{:?} {:?}", bin_id, data);
+                    debug!("{:?} {:?} {:?}", bin_id, set.sample_id, sample_file_id);
                     chunks.push(Record {
                         sample_id: set.sample_id,
                         sample_file_id: sample_file_id as u32,
@@ -331,7 +341,7 @@ impl<R: Read + Seek> InvertedRecordEntire<R> {
                     //println!("{:?} {:?} {:?}", bin_id, chunk.sample_id, self.bam_reader.keys());
                     let record =
                         writer.write(&chunk, (self.bam_reader).get_mut(&chunk.sample_id))?;
-                    debug!("{:?} {:?}", bin_id, record);
+                    //debug!("{:?} {:?}", bin_id, record);
                     records.push(record);
                 }
                 reference.update(*bin_id as usize, Bin::new(*bin_id, records));
