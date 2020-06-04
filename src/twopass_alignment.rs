@@ -11,6 +11,7 @@ use bam::{
     index::{Chunk, VirtualOffset},
     RecordWriter,
 };
+use log::debug;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use std::{
     collections::{BTreeMap, HashMap},
@@ -126,7 +127,7 @@ impl<R: Read + Seek> Set<AlignmentBuilder, R> {
                     let contents_offset = viewer.parent.reader.contents_offset();
                     let end = VirtualOffset::from_raw(end_offset << 16 | contents_offset as u64);
                     let next_offset = viewer.parent.reader.reader.next_offset().unwrap();
-                    println!("a: {} {} {} {}", prev, end, contents_offset, next_offset);
+                    debug!("a: {} {} {} {}", prev, end, contents_offset, next_offset);
                     assert!(end > prev);
                     stat.add(
                         Chunk::new(prev, end),

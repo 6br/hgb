@@ -16,7 +16,7 @@ use ghi::range::{Format, InvertedRecordEntire, Set};
 use ghi::twopass_alignment::{Alignment, AlignmentBuilder};
 use ghi::writer::GhiWriter;
 use ghi::{reader::IndexedReader, IndexWriter};
-use io::{BufReader, Write};
+use io::{Write, BufReader};
 
 fn main() {
     env_logger::init();
@@ -324,11 +324,9 @@ fn query(matches: &ArgMatches, threads: u16) -> () {
             let _ = viewer.into_iter().for_each(|t| {
                 debug!("{:?}", t);
                 if let Ok(f) = t {
-                    debug!("{:?}", f);
                     if !sample_id_cond || sample_ids.iter().any(|&i| i == f.sample_id()) {
                         let sample_id = f.sample_id();
                         let data = f.data();
-                        debug!("{:?}", data);
                         if !format_type_cond
                             || std::mem::discriminant(&format_type) == std::mem::discriminant(&data)
                         {
@@ -341,6 +339,7 @@ fn query(matches: &ArgMatches, threads: u16) -> () {
                                 }
                                 Format::Alignment(Alignment::Object(rec)) => {
                                     for i in rec {
+                                        if !filter || (i.calculate_end() as u64 > range.start() && range.end() > i.start() as u64){
                                         let _result = i
                                             .write_sam(
                                                 &mut output,
@@ -350,6 +349,7 @@ fn query(matches: &ArgMatches, threads: u16) -> () {
                                                     .bam_header(),
                                             )
                                             .unwrap();
+                                        }
                                     }
                                 }
                                 _ => {}
