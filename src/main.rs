@@ -5,7 +5,7 @@ use clap::{App, Arg, ArgMatches};
 use env_logger;
 use genomic_range::StringRegion;
 use log::{debug, info};
-use std::{fs::File, io};
+use std::{fs::File, io, path::Path};
 
 use ghi::binary::GhbWriter;
 use ghi::builder::InvertedRecordBuilder;
@@ -16,7 +16,7 @@ use ghi::range::{Format, InvertedRecordEntire, Set};
 use ghi::twopass_alignment::{Alignment, AlignmentBuilder};
 use ghi::writer::GhiWriter;
 use ghi::{reader::IndexedReader, IndexWriter};
-use io::BufReader;
+use io::{BufReader, Write};
 
 fn main() {
     env_logger::init();
@@ -307,7 +307,15 @@ fn query(matches: &ArgMatches, threads: u16) -> () {
                 "{:?} {:?} {:?} {:?}",
                 sample_id_cond, sample_ids, format_type, range
             );
-            let mut output = io::BufWriter::new(io::stdout());
+            let out_writer = match matches.value_of("output") {
+                Some(x) => {
+                    let path = Path::new(x);
+                    Box::new(File::create(&path).unwrap()) as Box<dyn Write>
+                }
+                None => Box::new(io::stdout()) as Box<dyn Write>,
+            };
+            let mut output = io::BufWriter::new(out_writer);
+
             let header = viewer.header().clone();
             /*let mut writer = bam::BamWriter::build()
             .write_header(true)
