@@ -224,11 +224,13 @@ impl ColumnarSet for Alignment {
                 let mut rec = Record::new();
                 while let Ok(true) = viewer.read_into(&mut rec) {
                     let contents_offset = viewer.parent.reader.contents_offset();
-                    debug!("{:?} {} {:?}", rec, contents_offset, data[id]);
-                    if contents_offset as u16 == data[id].end().contents_offset() {
-                        writer.write(&rec)?;
-                        id += 1;
-                    }
+                    debug!("{:?} {} {:?} {:?}", rec, contents_offset, data.get(id), data);
+                    if let Some(data_get) = data.get(id) {
+                        if contents_offset as u16 == data_get.end().contents_offset() {
+                            writer.write(&rec)?;
+                            id += 1;
+                        }
+                   }
                 }
             }
             Alignment::Object(vec) => {

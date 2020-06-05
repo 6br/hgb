@@ -190,7 +190,7 @@ pub struct Chunk {
     end: VirtualOffset, // We don't need "end"
     sample_id: u64,
     file_id: u32, // When we split files of inverted data structure
-    // format_type: u32, // Enum
+                  // format_type: u32, // Enum
 }
 
 impl Chunk {
