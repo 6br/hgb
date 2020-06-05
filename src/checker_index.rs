@@ -267,7 +267,7 @@ impl Index {
         for i in 0..chunks.len() {
             res.push(chunks[i].clone());
         }
-        // println!("{}, chunks, res");
+        //eprintln!("{:?} {:?}", chunks, res);
         res
     }
 }

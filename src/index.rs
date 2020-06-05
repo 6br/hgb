@@ -186,11 +186,11 @@ impl Display for VirtualOffset {
 /// Chunk `[start-end)`, where `start` and `end` are [virtual offsets](struct.VirtualOffset.html).
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Chunk {
+    start: VirtualOffset,
+    end: VirtualOffset, // We don't need "end"
     sample_id: u64,
     file_id: u32, // When we split files of inverted data structure
     // format_type: u32, // Enum
-    start: VirtualOffset,
-    end: VirtualOffset, // We don't need "end"
 }
 
 impl Chunk {

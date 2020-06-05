@@ -341,12 +341,13 @@ impl<R: Read + Seek> InvertedRecordEntire<R> {
                     //println!("{:?} {:?} {:?}", bin_id, chunk.sample_id, self.bam_reader.keys());
                     let record =
                         writer.write(&chunk, (self.bam_reader).get_mut(&chunk.sample_id))?;
-                    //debug!("{:?} {:?}", bin_id, record);
+                    //eprintln!("{:?} {:?}", bin_id, record);
                     records.push(record);
                 }
+                //eprintln!("{:?}", records);
                 reference.update(*bin_id as usize, Bin::new(*bin_id, records));
             }
-            debug!("{:?}", reference);
+            //eprintln!("{:?}", reference);
             references.push(reference);
         }
         Ok(Index::new(references))
