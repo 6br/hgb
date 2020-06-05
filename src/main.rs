@@ -6,6 +6,7 @@ use env_logger;
 use genomic_range::StringRegion;
 use log::{debug, info};
 use std::{fs::File, io, path::Path};
+use bam::RecordWriter;
 
 use ghi::binary::GhbWriter;
 use ghi::builder::InvertedRecordBuilder;
@@ -129,11 +130,11 @@ fn main() {
                         .index(1),
                 )
                 .arg(
-                    Arg::new("OUTPUT")
-                        .about("Sets the output file to use")
-                        .required(true)
-                        .index(2),
-                ),
+                    Arg::new("output")
+                        .short('o')
+                        .takes_value(true)
+                        .about("Output format"),
+                )
         )
         .subcommand(
             App::new("bin")
@@ -195,7 +196,10 @@ fn main() {
     if let Some(ref matches) = matches.subcommand_matches("build") {
         build(matches, threads);
     } else if let Some(ref matches) = matches.subcommand_matches("query") {
-        query(matches, threads);
+        match matches.is_present("binary") {
+            true => bam_query(matches, threads),
+            false => query(matches, threads)
+        }
     } else if let Some(ref matches) = matches.subcommand_matches("decompose") {
         decompose(matches, threads);
     } else if let Some(ref matches) = matches.subcommand_matches("server") {
@@ -361,7 +365,7 @@ fn query(matches: &ArgMatches, threads: u16) -> () {
 
 fn decompose(matches: &ArgMatches, _threads: u16) -> () {
     if let Some(i) = matches.value_of("INPUT") {
-        if let Some(o) = matches.value_of("OUTPUT") {
+        //if let Some(o) = matches.value_of("OUTPUT") {
             let id = matches
                 .value_of("id")
                 .and_then(|t| t.parse::<u64>().ok())
@@ -369,8 +373,16 @@ fn decompose(matches: &ArgMatches, _threads: u16) -> () {
             let header = matches.is_present("header");
             let mut reader = IndexedReader::from_path_with_additional_threads(i, 0).unwrap();
             // Decomposer doesn't know the record boundary, so it can't parallelize.
-            let writer = File::create(o).unwrap();
-            let mut output = io::BufWriter::new(writer);
+            let out = std::io::stdout();
+            let out_writer = match matches.value_of("output") {
+                Some(x) => {
+                    let path = Path::new(x);
+                    Box::new(File::create(&path).unwrap()) as Box<dyn Write>
+                }
+                None => Box::new(out.lock()) as Box<dyn Write>,
+            };
+            let mut output = io::BufWriter::new(out_writer);
+
             if let Some(header_type) = reader.header().get_local_header(id as usize) {
                 if header {
                     header_type.to_text(&mut output).unwrap();
@@ -421,11 +433,93 @@ fn decompose(matches: &ArgMatches, _threads: u16) -> () {
                 .unwrap()
             });
         }
-    }
+    //}
 }
 
 fn server(_matches: &ArgMatches, _threads: u16) -> () {
     //todo!("Implement a web server using actix-web.");
+}
+
+fn bam_query(matches: &ArgMatches, threads: u16) -> () {
+    if let Some(o) = matches.value_of("INPUT") {
+        let mut reader: IndexedReader<BufReader<File>> =
+            IndexedReader::from_path_with_additional_threads(o, threads - 1).unwrap();
+        if let Some(range) = matches.value_of("range") {
+            let closure = |x: &str| reader.reference_id(x);
+            let string_range = StringRegion::new(range).unwrap();
+            let reference_name = &string_range.path;
+
+            let range = Region::convert(&string_range, closure).unwrap();
+            let viewer = reader.fetch(&range).unwrap();
+
+            let sample_ids_opt: Option<Vec<u64>> = matches
+                .values_of("id")
+                //.unwrap()
+                .and_then(|a| Some(a.map(|t| t.parse::<u64>().unwrap()).collect()));
+            let sample_id_cond = sample_ids_opt.is_some();
+            let sample_ids = sample_ids_opt.unwrap_or(vec![]);
+            let filter = matches.is_present("filter");
+
+            let format_type_opt = matches.value_of_t::<Format>("type");
+            let format_type_cond = format_type_opt.is_ok();
+            let format_type = format_type_opt.unwrap_or(Format::Default(Default {}));
+            let out = std::io::stdout();
+            let out_writer = match matches.value_of("output") {
+                Some(x) => {
+                    let path = Path::new(x);
+                    Box::new(File::create(&path).unwrap()) as Box<dyn Write>
+                }
+                None => Box::new(out.lock()) as Box<dyn Write>,
+            };
+            let output = io::BufWriter::new(out_writer);
+
+            let header = viewer
+                .header()
+                .get_local_header(*sample_ids.get(0).unwrap_or(&0) as usize)
+                .unwrap()
+                .bam_header();
+            let mut writer = bam::bam_writer::BamWriterBuilder::new()
+                .additional_threads(threads - 1)
+                .write_header(true)
+                .from_stream(output, header.clone())
+                .unwrap();
+
+            let _ = viewer.into_iter().for_each(|t| {
+                //eprintln!("{:?}", t.clone().unwrap());
+                let f = t.unwrap();
+                //if let Ok(f) = t {
+                if !sample_id_cond || sample_ids.iter().any(|&i| i == f.sample_id()) {
+                    let sample_id = f.sample_id();
+                    let data = f.data();
+                    if !format_type_cond
+                        || std::mem::discriminant(&format_type) == std::mem::discriminant(&data)
+                    {
+                        match data {
+                            Format::Range(rec) => {
+                                /*let mut writer = bed::Writer::new(&mut output);
+                                for i in rec.to_record(&reference_name) {
+                                    writer.write(&i).unwrap();
+                                }*/
+                            }
+                            Format::Alignment(Alignment::Object(rec)) => {
+                                for i in rec {
+                                    if !filter
+                                        || (i.calculate_end() as u64 > range.start()
+                                            && range.end() > i.start() as u64)
+                                    {
+                                        writer.write(&i).unwrap();
+                                        //i.write_bam(&mut writer).unwrap();
+                                    }
+                                }
+                            }
+                            _ => {}
+                        }
+                    }
+                }
+                //}
+            });
+        }
+    }
 }
 
 fn bin(matches: &ArgMatches, threads: u16) -> () {
