@@ -224,7 +224,13 @@ impl ColumnarSet for Alignment {
                 let mut rec = Record::new();
                 while let Ok(true) = viewer.read_into(&mut rec) {
                     let contents_offset = viewer.parent.reader.contents_offset();
-                    debug!("{:?} {} {:?} {:?}", rec, contents_offset, data.get(id), data);
+                    debug!(
+                        "{:?} {} {:?} {:?}",
+                        rec,
+                        contents_offset,
+                        data.get(id),
+                        data
+                    );
                     if let Some(data_get) = data.get(id) {
                         if contents_offset as u16 == data_get.end().contents_offset() {
                             writer.write(&rec)?;
@@ -232,7 +238,7 @@ impl ColumnarSet for Alignment {
                         }
                     } else {
                         eprintln!("Not error: break the loop");
-                        break
+                        break;
                     }
                 }
             }

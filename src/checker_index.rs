@@ -264,8 +264,8 @@ impl Index {
         chunks.sort();
 
         let mut res = Vec::new();
-        for i in 0..chunks.len() {
-            res.push(chunks[i].clone());
+        for i in chunks {
+            res.push(i.clone());
         }
         //eprintln!("{:?} {:?}", chunks, res);
         res

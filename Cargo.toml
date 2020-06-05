@@ -41,3 +41,7 @@ default-features = false
 
 # Cherry-pick the features you'd like to use
 features = [ "suggestions", "color", "std" ]
+
+[profile.release]
+codegen-units = 1
+lto = true

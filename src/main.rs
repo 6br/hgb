@@ -302,17 +302,13 @@ fn query(matches: &ArgMatches, threads: u16) -> () {
             let format_type_opt = matches.value_of_t::<Format>("type");
             let format_type_cond = format_type_opt.is_ok();
             let format_type = format_type_opt.unwrap_or(Format::Default(Default {}));
-
-            debug!(
-                "{:?} {:?} {:?} {:?}",
-                sample_id_cond, sample_ids, format_type, range
-            );
+            let out = std::io::stdout();
             let out_writer = match matches.value_of("output") {
                 Some(x) => {
                     let path = Path::new(x);
                     Box::new(File::create(&path).unwrap()) as Box<dyn Write>
                 }
-                None => Box::new(io::stdout()) as Box<dyn Write>,
+                None => Box::new(out.lock()) as Box<dyn Write>,
             };
             let mut output = io::BufWriter::new(out_writer);
 
