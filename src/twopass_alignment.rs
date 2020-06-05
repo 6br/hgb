@@ -129,7 +129,7 @@ impl<R: Read + Seek> Set<AlignmentBuilder, R> {
                     let end = VirtualOffset::from_raw(end_offset << 16 | contents_offset as u64);
                     let next_offset = viewer.parent.reader.reader.next_offset().unwrap();
                     debug!("a: {} {} {} {}", prev, end, contents_offset, next_offset);
-                    assert!(end > prev);
+                    debug_assert!(end > prev);
 
                     // println!("{:?} {} {}", rec, prev, end);
                     stat.add(
