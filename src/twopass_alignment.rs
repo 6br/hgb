@@ -230,7 +230,10 @@ impl ColumnarSet for Alignment {
                             writer.write(&rec)?;
                             id += 1;
                         }
-                   }
+                    } else {
+                        eprintln!("Not error: break the loop");
+                        break
+                    }
                 }
             }
             Alignment::Object(vec) => {
