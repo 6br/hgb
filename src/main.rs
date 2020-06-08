@@ -1,15 +1,16 @@
 extern crate log;
 
+use bam::RecordWriter;
 use bio::io::bed;
 use clap::{App, Arg, ArgMatches};
 use env_logger;
 use genomic_range::StringRegion;
 use log::{debug, info};
 use std::{fs::File, io, path::Path};
-use bam::RecordWriter;
 
 use ghi::binary::GhbWriter;
 use ghi::builder::InvertedRecordBuilder;
+use ghi::checker_index::Reference;
 use ghi::header::Header;
 use ghi::index::{Chunk, Region, VirtualOffset};
 use ghi::range::Default;
@@ -134,7 +135,7 @@ fn main() {
                         .short('o')
                         .takes_value(true)
                         .about("Output format"),
-                )
+                ),
         )
         .subcommand(
             App::new("bin")
@@ -160,6 +161,13 @@ fn main() {
                         .about("annotation sample to fetch (alignment | annotation)"),
                 )
                 .arg(
+                    Arg::new("start")
+                        .short('s')
+                        .takes_value(true)
+                        //            .multiple(true)
+                        .about("annotation sample to fetch (alignment | annotation)"),
+                )
+                .arg(
                     Arg::new("end")
                         .short('e')
                         .takes_value(true)
@@ -168,10 +176,17 @@ fn main() {
                 )
                 .arg(
                     Arg::new("ref_id")
-                        .short('r')
+                        .short('c')
                         .takes_value(true)
                         //            .multiple(true)
                         .about("annotation sample to fetch (alignment | annotation)"),
+                )
+                .arg(
+                    Arg::new("range")
+                        .short('r')
+                        .takes_value(true)
+                        .multiple(true)
+                        .about("sorted bam"),
                 ),
         )
         .subcommand(
@@ -198,7 +213,7 @@ fn main() {
     } else if let Some(ref matches) = matches.subcommand_matches("query") {
         match matches.is_present("binary") {
             true => bam_query(matches, threads),
-            false => query(matches, threads)
+            false => query(matches, threads),
         }
     } else if let Some(ref matches) = matches.subcommand_matches("decompose") {
         decompose(matches, threads);
@@ -366,73 +381,73 @@ fn query(matches: &ArgMatches, threads: u16) -> () {
 fn decompose(matches: &ArgMatches, _threads: u16) -> () {
     if let Some(i) = matches.value_of("INPUT") {
         //if let Some(o) = matches.value_of("OUTPUT") {
-            let id = matches
-                .value_of("id")
-                .and_then(|t| t.parse::<u64>().ok())
-                .unwrap();
-            let header = matches.is_present("header");
-            let mut reader = IndexedReader::from_path_with_additional_threads(i, 0).unwrap();
-            // Decomposer doesn't know the record boundary, so it can't parallelize.
-            let out = std::io::stdout();
-            let out_writer = match matches.value_of("output") {
-                Some(x) => {
-                    let path = Path::new(x);
-                    Box::new(File::create(&path).unwrap()) as Box<dyn Write>
-                }
-                None => Box::new(out.lock()) as Box<dyn Write>,
-            };
-            let mut output = io::BufWriter::new(out_writer);
-
-            if let Some(header_type) = reader.header().get_local_header(id as usize) {
-                if header {
-                    header_type.to_text(&mut output).unwrap();
-                }
-            // header.write_text(&mut writer);
-            } else {
-                println!("There is no header of id {}", id);
+        let id = matches
+            .value_of("id")
+            .and_then(|t| t.parse::<u64>().ok())
+            .unwrap();
+        let header = matches.is_present("header");
+        let mut reader = IndexedReader::from_path_with_additional_threads(i, 0).unwrap();
+        // Decomposer doesn't know the record boundary, so it can't parallelize.
+        let out = std::io::stdout();
+        let out_writer = match matches.value_of("output") {
+            Some(x) => {
+                let path = Path::new(x);
+                Box::new(File::create(&path).unwrap()) as Box<dyn Write>
             }
+            None => Box::new(out.lock()) as Box<dyn Write>,
+        };
+        let mut output = io::BufWriter::new(out_writer);
 
+        if let Some(header_type) = reader.header().get_local_header(id as usize) {
             if header {
-                return;
+                header_type.to_text(&mut output).unwrap();
             }
-
-            // todo!("Implement later; Now just returns only header.");
-
-            let viewer = reader.full();
-            let header_data = viewer.header().clone();
-
-            let _ = viewer.into_iter().for_each(|t| {
-                //eprintln!("{:?}", t);
-                t.map(|f| {
-                    if f.sample_id() == id {
-                        match f.data() {
-                            Format::Range(rec) => {
-                                let mut writer = bed::Writer::new(&mut output);
-                                for i in rec.to_record("null") {
-                                    writer.write(&i).unwrap();
-                                }
-                            }
-                            Format::Alignment(Alignment::Object(rec)) => {
-                                for i in rec {
-                                    //let _result = i.write_bam(&mut output).unwrap();
-                                    let _result = i
-                                        .write_sam(
-                                            &mut output,
-                                            header_data
-                                                .get_local_header(id as usize)
-                                                .unwrap()
-                                                .bam_header(),
-                                        )
-                                        .unwrap();
-                                }
-                            }
-                            _ => {}
-                        }
-                    }
-                })
-                .unwrap()
-            });
+        // header.write_text(&mut writer);
+        } else {
+            println!("There is no header of id {}", id);
         }
+
+        if header {
+            return;
+        }
+
+        // todo!("Implement later; Now just returns only header.");
+
+        let viewer = reader.full();
+        let header_data = viewer.header().clone();
+
+        let _ = viewer.into_iter().for_each(|t| {
+            //eprintln!("{:?}", t);
+            t.map(|f| {
+                if f.sample_id() == id {
+                    match f.data() {
+                        Format::Range(rec) => {
+                            let mut writer = bed::Writer::new(&mut output);
+                            for i in rec.to_record("null") {
+                                writer.write(&i).unwrap();
+                            }
+                        }
+                        Format::Alignment(Alignment::Object(rec)) => {
+                            for i in rec {
+                                //let _result = i.write_bam(&mut output).unwrap();
+                                let _result = i
+                                    .write_sam(
+                                        &mut output,
+                                        header_data
+                                            .get_local_header(id as usize)
+                                            .unwrap()
+                                            .bam_header(),
+                                    )
+                                    .unwrap();
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+            })
+            .unwrap()
+        });
+    }
     //}
 }
 
@@ -527,22 +542,53 @@ fn bin(matches: &ArgMatches, threads: u16) -> () {
         let mut reader: IndexedReader<BufReader<File>> =
             IndexedReader::from_path_with_additional_threads(o, threads - 1).unwrap();
         let closure = |x: &str| reader.reference_id(x);
-        let start = matches
-            .value_of("bin")
-            .and_then(|t| t.parse::<u64>().ok())
-            .unwrap();
-        let end = matches
-            .value_of("end")
-            .and_then(|t| t.parse::<u64>().ok())
-            .unwrap();
-
-        let range = vec![Chunk::new(
-            0,
-            0,
-            VirtualOffset::from_raw(start),
-            VirtualOffset::from_raw(end),
-        )];
-        let viewer = reader.chunk(range).unwrap();
+        let mut chunks = vec![];
+        if let Some(range) = matches.value_of("range") {
+            let string_range = StringRegion::new(range).unwrap();
+            let range = Region::convert(&string_range, closure).unwrap();
+            {
+                let _bin_id =
+                    reader.index().references()[range.ref_id() as usize].region_to_bin(range);
+                /*let chunk = reader.index().references()[range.ref_id() as usize].bins()[bin_id]
+                    .chunks()
+                    .clone();
+                let mut res = Vec::new();
+                for i in chunks {
+                    res.push(i);
+                }
+                chunks.extend(res);*/
+            }
+        } else {
+            if let Some(bin_id) = matches.value_of("range") {
+                let _ref_id = matches
+                    .value_of("ref_id")
+                    .and_then(|t| t.parse::<usize>().ok())
+                    .unwrap();
+                let _bin_id = bin_id.parse::<usize>().unwrap();
+                /*let chunk = reader.index().references()[ref_id].bins()[bin_id].chunks();
+                let mut res = Vec::new();
+                for i in chunks {
+                    res.push(i);
+                }
+                chunks.extend(res);*/
+            } else {
+                let start = matches
+                    .value_of("bin")
+                    .and_then(|t| t.parse::<u64>().ok())
+                    .unwrap();
+                let end = matches
+                    .value_of("end")
+                    .and_then(|t| t.parse::<u64>().ok())
+                    .unwrap();
+                chunks = vec![Chunk::new(
+                    0,
+                    0,
+                    VirtualOffset::from_raw(start),
+                    VirtualOffset::from_raw(end),
+                )];
+            }
+        }
+        let viewer = reader.chunk(chunks).unwrap();
 
         let sample_ids_opt: Option<Vec<u64>> = matches
             .values_of("id")
