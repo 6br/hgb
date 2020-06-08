@@ -126,10 +126,12 @@ impl<R: Read + Seek> Set<AlignmentBuilder, R> {
                         .and_then(|t| t.offset())
                         .unwrap();
                     let contents_offset = viewer.parent.reader.contents_offset();
-                    let end = VirtualOffset::from_raw(end_offset << 16 | contents_offset as u64);
+
+                    let end = VirtualOffset::from_raw((end_offset << 16) + contents_offset as u64);
                     let next_offset = viewer.parent.reader.reader.next_offset().unwrap();
-                    debug!("a: {} {} {} {}", prev, end, contents_offset, next_offset);
-                    assert!(end > prev);
+                    //eprintln!("a: {} {} {} {}", prev, end, contents_offset, next_offset);
+                    //if(end.)
+                    assert!(end > prev, "{} is not larger than {}", end, prev);
 
                     // println!("{:?} {} {}", rec, prev, end);
                     stat.add(
@@ -145,7 +147,7 @@ impl<R: Read + Seek> Set<AlignmentBuilder, R> {
                         if let Some(block) =
                             viewer.parent.reader.next().ok().and_then(|t| t.offset())
                         {
-                            //                            println!("{:?}", block.offset());
+                            //eprintln!("{:?}", block.offset());
                             prev = VirtualOffset::new(block, 0);
                         }; //reader.read_next();
                     } else {
