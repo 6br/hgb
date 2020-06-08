@@ -168,7 +168,7 @@ mod tests {
     use crate::IndexWriter;
     use crate::{alignment::Set, builder::InvertedRecordBuilder};
     use bam::record::Record;
-    use bio::io::bed;
+    use crate::bed;
     use std::{
         fs::File,
         io::{BufRead, BufReader, Write},

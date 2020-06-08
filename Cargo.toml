@@ -17,8 +17,9 @@ path = "src/main.rs"
 [dependencies]
 #bam = "*" 
 #bam = { git = "https://bitbucket.org/6br/bam" }
+bio-types = { git = "https://github.com/6br/rust-bio-types", branch="alignment_fix" }
 bam = { path = "../../../gitlab.com/tprodanov/bam" }
-bio = { git = "https://github.com/rust-bio/rust-bio" }
+#bio = { git = "https://github.com/rust-bio/rust-bio" }
 csv = "1.1.3"
 bitpacking = "0.8.2"
 byteorder = "1.3.4"

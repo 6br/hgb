@@ -22,6 +22,7 @@ pub mod reader;
 #[no_mangle]
 pub mod twopass_alignment;
 pub mod writer;
+pub mod bed;
 
 use bam::IndexedReader;
 use checker_index::Index;
@@ -115,7 +116,7 @@ mod tests {
     use crate::writer::GhiWriter;
     use crate::IndexWriter;
     use crate::{index::Region, range::Set};
-    use bio::io::bed;
+    use crate::bed;
     use std::fs::File;
 
     #[test]

@@ -1,3 +1,4 @@
+use crate::bed;
 use crate::binary::GhbWriter;
 use crate::checker_index::{Index, Reference};
 use crate::compression::{
@@ -10,7 +11,6 @@ use crate::twopass_alignment::Alignment;
 use crate::{builder::InvertedRecordBuilder, Builder};
 use crate::{ChunkWriter, ColumnarSet};
 use bam::{header::HeaderEntry, IndexedReader};
-use bio::io::bed;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use log::debug;
 use std::collections::{BTreeMap, HashMap};

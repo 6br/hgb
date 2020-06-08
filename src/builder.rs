@@ -1,10 +1,10 @@
+use crate::bed;
 use crate::range::Bins;
 use crate::range::Format;
 use crate::range::InvertedRecord;
 use crate::{checker_index::Reference, header::Header, range::Set};
 use crate::{index::Region, Builder};
 use bam::header::HeaderEntry;
-use bio::io::bed;
 use std::cell::RefCell;
 use std::collections::{BTreeMap, HashMap};
 use std::io::{Read, Seek};

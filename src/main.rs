@@ -1,7 +1,7 @@
 extern crate log;
 
 use bam::RecordWriter;
-use bio::io::bed;
+use ghi::bed;
 use clap::{App, Arg, ArgMatches};
 use env_logger;
 use genomic_range::StringRegion;
@@ -565,12 +565,12 @@ fn bin(matches: &ArgMatches, threads: u16) -> () {
                     .and_then(|t| t.parse::<usize>().ok())
                     .unwrap();
                 let _bin_id = bin_id.parse::<usize>().unwrap();
-                /*let chunk = reader.index().references()[ref_id].bins()[bin_id].chunks();
-                let mut res = Vec::new();
-                for i in chunks {
-                    res.push(i);
-                }
-                chunks.extend(res);*/
+            /*let chunk = reader.index().references()[ref_id].bins()[bin_id].chunks();
+            let mut res = Vec::new();
+            for i in chunks {
+                res.push(i);
+            }
+            chunks.extend(res);*/
             } else {
                 let start = matches
                     .value_of("bin")
