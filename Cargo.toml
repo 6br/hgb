@@ -46,3 +46,5 @@ features = [ "suggestions", "color", "std" ]
 [profile.release]
 codegen-units = 1
 lto = true
+overflow-checks = false
+debug = true

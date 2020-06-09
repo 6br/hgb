@@ -125,7 +125,9 @@ impl IndexedReaderBuilder {
             .unwrap_or_else(|| PathBuf::from(format!("{}.ghi", ghb_path.display())));
         self.modification_time.check(&ghb_path, &ghi_path)?;
 
-        let mut index_reader = bgzip::SeekReader::from_path(ghi_path, self.additional_threads)
+        let index_buf = BufReader::new(File::open(ghi_path)?);
+
+        let mut index_reader = bgzip::SeekReader::from_stream(index_buf, self.additional_threads)
             .map_err(|e| Error::new(e.kind(), format!("Failed to open GHI file: {}", e)))?;
         index_reader.make_consecutive();
 
