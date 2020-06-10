@@ -5,7 +5,7 @@ use std::collections::BTreeMap;
 use std::fmt::{self, Debug, Display, Formatter};
 use std::fs::File;
 use std::io::ErrorKind::InvalidData;
-use std::io::{Error, Read, Result, Write, BufReader, BufWriter};
+use std::io::{BufReader, BufWriter, Error, Read, Result, Write};
 use std::path::Path;
 use std::result;
 
