@@ -159,6 +159,7 @@ impl ColumnarSet for Alignment {
 mod tests {
     use super::AlignmentBuilder;
     use crate::bam::RecordWriter;
+    use crate::bed;
     use crate::binary;
     use crate::header::Header;
     use crate::index::Region;
@@ -168,7 +169,6 @@ mod tests {
     use crate::IndexWriter;
     use crate::{alignment::Set, builder::InvertedRecordBuilder};
     use bam::record::Record;
-    use crate::bed;
     use std::{
         fs::File,
         io::{BufRead, BufReader, Write},

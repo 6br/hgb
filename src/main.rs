@@ -1,10 +1,10 @@
 extern crate log;
 
 use bam::RecordWriter;
-use ghi::bed;
 use clap::{App, Arg, ArgMatches};
 use env_logger;
 use genomic_range::StringRegion;
+use ghi::bed;
 use log::{debug, info};
 use std::{fs::File, io, path::Path};
 
@@ -123,7 +123,7 @@ fn main() {
                         //            .multiple(true)
                         .about("annotation sample to fetch (alignment | annotation)"),
                 )
-                .arg(Arg::new("header").short('h').about("Outputs only header"))
+                .arg(Arg::new("header").short('z').about("Outputs only header"))
                 .arg(
                     Arg::new("INPUT")
                         .about("Sets the input file to use")
