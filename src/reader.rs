@@ -1,7 +1,7 @@
 use crate::binary::GhbReader;
 use crate::checker_index::Index;
-use crate::header::Header;
 use crate::index::{Chunk, Region, VirtualOffset};
+use crate::light_header::Header;
 use crate::range::Record;
 use crate::ChunkReader;
 use bam::bgzip;

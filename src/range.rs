@@ -5,8 +5,8 @@ use crate::compression::{
     integer_decode, integer_encode_wrapper, string_decode, string_encode, Deflate, DeltaVByte,
     IntegerEncode, StringEncode, VByte,
 };
-use crate::header::Header;
 use crate::index::Bin;
+use crate::light_header::Header;
 use crate::twopass_alignment::Alignment;
 use crate::{builder::InvertedRecordBuilder, Builder};
 use crate::{ChunkWriter, ColumnarSet};

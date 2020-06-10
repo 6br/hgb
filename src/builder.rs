@@ -2,7 +2,7 @@ use crate::bed;
 use crate::range::Bins;
 use crate::range::Format;
 use crate::range::InvertedRecord;
-use crate::{checker_index::Reference, header::Header, range::Set};
+use crate::{checker_index::Reference, light_header::Header, range::Set};
 use crate::{index::Region, Builder};
 use bam::header::HeaderEntry;
 use std::cell::RefCell;

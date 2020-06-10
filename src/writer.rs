@@ -4,9 +4,9 @@ use std::fs::File;
 use std::io::{Result, Write};
 use std::path::Path;
 
-use super::IndexWriter;
 use crate::checker_index::Index;
-use crate::header::Header;
+use crate::light_header::Header;
+use crate::IndexWriter;
 use bam::bgzip;
 
 /// Builder of the [GhiWriter](struct.GhiWriter.html).

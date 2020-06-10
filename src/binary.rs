@@ -10,8 +10,8 @@
 //!
 
 use super::ChunkWriter;
-use crate::header::Header;
 use crate::index::{Chunk, VirtualOffset};
+use crate::light_header::Header;
 use crate::range::Record;
 use bam::IndexedReader;
 use std::cmp::max;

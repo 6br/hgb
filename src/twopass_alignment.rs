@@ -1,7 +1,7 @@
 use crate::{checker_index::Reference, range::Format, Builder, ColumnarSet};
 use crate::{
-    header::Header,
     index::Region,
+    light_header::Header,
     range::{Bins, Set},
 };
 use bam::bgzip::ReadBgzip;
@@ -285,8 +285,8 @@ mod tests {
     use crate::bam::RecordWriter;
     use crate::bed;
     use crate::binary;
-    use crate::header::Header;
     use crate::index::Region;
+    use crate::light_header::Header;
     use crate::range::{Format, InvertedRecordEntire};
     use crate::reader::IndexedReader;
     use crate::writer::GhiWriter;

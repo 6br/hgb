@@ -11,18 +11,18 @@ extern crate regex;
 extern crate serde_json;
 
 //pub mod alignment;
+#[no_mangle]
+pub mod bed;
 pub mod binary;
 pub mod builder;
 pub mod checker_index;
 pub mod compression;
-pub mod header;
 pub mod index;
+pub mod light_header;
 pub mod range;
 pub mod reader;
-#[no_mangle]
 pub mod twopass_alignment;
 pub mod writer;
-pub mod bed;
 
 use bam::IndexedReader;
 use checker_index::Index;
@@ -108,15 +108,15 @@ pub trait Builder {
 
 #[cfg(test)]
 mod tests {
+    use crate::bed;
     use crate::binary;
     use crate::builder::InvertedRecordBuilder;
-    use crate::header::Header;
+    use crate::light_header::Header;
     use crate::range::{Format, InvertedRecordEntire};
     use crate::reader::IndexedReader;
     use crate::writer::GhiWriter;
     use crate::IndexWriter;
     use crate::{index::Region, range::Set};
-    use crate::bed;
     use std::fs::File;
 
     #[test]

@@ -11,7 +11,7 @@ use std::{fs::File, io, path::Path};
 use ghi::binary::GhbWriter;
 use ghi::builder::InvertedRecordBuilder;
 use ghi::checker_index::Reference;
-use ghi::header::Header;
+use ghi::light_header::Header;
 use ghi::index::{Chunk, Region, VirtualOffset};
 use ghi::range::Default;
 use ghi::range::{Format, InvertedRecordEntire, Set};
@@ -249,6 +249,7 @@ fn build(matches: &ArgMatches, threads: u16) -> () {
         for bam_path in bam_files.iter() {
             println!("Loading {}", bam_path);
             // let reader = bam::BamReader::from_path(bam_path, threads).unwrap();
+            //let bam_reader = BufReader::new(File::open(bam_path).unwrap());
             let reader2 = bam::IndexedReader::build()
                 .additional_threads(threads - 1)
                 .from_path(bam_path)
@@ -488,11 +489,11 @@ fn bam_query(matches: &ArgMatches, threads: u16) -> () {
             };
             let output = io::BufWriter::new(out_writer);
 
-            let header = viewer
+            let hdr = viewer
                 .header()
-                .get_local_header(*sample_ids.get(0).unwrap_or(&0) as usize)
-                .unwrap()
-                .bam_header();
+                .get_local_header(*sample_ids.get(0).unwrap_or(&0) as usize).unwrap();
+                //.unwrap()
+            let header = hdr.bam_header();    //.bam_header();
             let mut writer = bam::bam_writer::BamWriterBuilder::new()
                 .additional_threads(threads - 1)
                 .write_header(true)
