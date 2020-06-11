@@ -38,6 +38,7 @@ vbyte = { git = "https://github.com/6br/vbyte" }
 [dependencies.clap]
 git = "https://github.com/clap-rs/clap"
 #version = "3.0.0-beta.1"
+rev = "d67c3bb7d3e4d7137419ae40f05fbf233e6ec581"
 default-features = false
 
 # Cherry-pick the features you'd like to use

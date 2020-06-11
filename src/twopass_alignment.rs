@@ -313,11 +313,11 @@ mod tests {
         header.transfer(bam_header);
         header.set_local_header(bam_header, bam_path, 0);
         {
-            let set = Set::<AlignmentBuilder, File>::new(reader2, 0 as u64, &mut header);
+            let set = Set::<AlignmentBuilder, BufReader<File>>::new(reader2, 0 as u64, &mut header);
             let bam_path2 = "./test/test-in.bam";
             let reader = bam::IndexedReader::from_path(bam_path2).unwrap();
-            let set2: Set<AlignmentBuilder, File> =
-                Set::<AlignmentBuilder, File>::new(reader, 1 as u64, &mut header);
+            let set2: Set<AlignmentBuilder, BufReader<File>> =
+                Set::<AlignmentBuilder, BufReader<File>>::new(reader, 1 as u64, &mut header);
 
             assert_eq!(None, header.reference_id("1"));
             assert_eq!(Some(1), header.reference_id("chr1"));
@@ -325,7 +325,7 @@ mod tests {
 
             let dummy_header = Header::new();
             let set_vec = vec![set];
-            let mut entire: InvertedRecordEntire<File> =
+            let mut entire: InvertedRecordEntire<BufReader<File>> =
                 InvertedRecordEntire::new_from_set(set_vec);
             // println!("{:?}", entire);
             entire.add(set2);
@@ -359,13 +359,13 @@ mod tests {
         header.transfer(bam_header);
         header.set_local_header(bam_header, bam_path, 0);
         {
-            let set = Set::<AlignmentBuilder, File>::new(reader2, 0 as u64, &mut header);
+            let set = Set::<AlignmentBuilder, BufReader<File>>::new(reader2, 0 as u64, &mut header);
 
             let example =
                 b"chr2\t16382\t16385\tbin4682\t20\t-\nchr2\t16388\t31768\tbin4683\t20\t-\n";
             let reader = bed::Reader::new(&example[..]);
-            let set2: Set<InvertedRecordBuilder, File> =
-                Set::<InvertedRecordBuilder, File>::new(reader, 1 as u64, &mut header).unwrap();
+            let set2: Set<InvertedRecordBuilder, BufReader<File>> =
+                Set::<InvertedRecordBuilder, BufReader<File>>::new(reader, 1 as u64, &mut header).unwrap();
 
             assert_eq!(None, header.reference_id("1"));
             assert_eq!(Some(1), header.reference_id("chr1"));
@@ -373,7 +373,7 @@ mod tests {
 
             let dummy_header = Header::new();
             let set_vec = vec![set2];
-            let mut entire: InvertedRecordEntire<File> =
+            let mut entire: InvertedRecordEntire<BufReader<File>> =
                 InvertedRecordEntire::new_from_set(set_vec);
             // println!("{:?}", entire);
             entire.add(set);

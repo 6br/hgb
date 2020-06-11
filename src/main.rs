@@ -241,7 +241,7 @@ fn build(matches: &ArgMatches, threads: u16) -> () {
     // let mut set_vec = vec![];
     let mut i = 0;
 
-    let mut records: InvertedRecordEntire<File> = InvertedRecordEntire::<File>::new();
+    let mut records: InvertedRecordEntire<BufReader<File>> = InvertedRecordEntire::<BufReader<File>>::new();
 
     if let Some(bam_files) = matches.values_of("bam") {
         let bam_files: Vec<&str> = bam_files.collect();
@@ -259,7 +259,7 @@ fn build(matches: &ArgMatches, threads: u16) -> () {
                 header.transfer(bam_header);
             }
             header.set_local_header(bam_header, bam_path, i);
-            let set = Set::<AlignmentBuilder, File>::new(reader2, i as u64, &mut header);
+            let set = Set::<AlignmentBuilder, BufReader<File>>::new(reader2, i as u64, &mut header);
             i += 1;
             records.add(set);
         }
@@ -271,8 +271,8 @@ fn build(matches: &ArgMatches, threads: u16) -> () {
         for bed_path in bed_files {
             info!("Loading {}", bed_path);
             let reader = bed::Reader::from_file(bed_path).unwrap();
-            let set: Set<InvertedRecordBuilder, File> =
-                Set::<InvertedRecordBuilder, File>::new(reader, 1 as u64, &mut header).unwrap();
+            let set: Set<InvertedRecordBuilder, BufReader<File>> =
+                Set::<InvertedRecordBuilder, BufReader<File>>::new(reader, 1 as u64, &mut header).unwrap();
             header.set_local_header(&bam::Header::new(), bed_path, i);
             i += 1;
             records.add(set);

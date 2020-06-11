@@ -184,7 +184,7 @@ impl Display for VirtualOffset {
 }
 
 /// Chunk `[start-end)`, where `start` and `end` are [virtual offsets](struct.VirtualOffset.html).
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Copy)]
 pub struct Chunk {
     start: VirtualOffset,
     end: VirtualOffset, // We don't need "end"
@@ -240,6 +240,15 @@ impl Chunk {
     /// Checks if two chunks intersect or one of the chunks goes right after another.
     pub fn can_combine(&self, other: &Chunk) -> bool {
         self.start <= other.end && other.start <= self.end
+    }
+
+    ///Checks if two chunks is adjacent
+    pub fn is_adjacent(&self, next: &Chunk) -> bool {
+        self.can_combine(next) && self.end == next.start
+    }
+
+    pub fn concat(&mut self, next: &Chunk) {
+        self.end = next.end;
     }
 
     /// Returns the start of the chunk.
@@ -305,10 +314,14 @@ impl Bin {
 
     pub fn to_stream<W: Write>(&self, stream: &mut W) -> Result<()> {
         stream.write_u32::<LittleEndian>(self.bin_id)?;
-        let n_chunks = self.chunks.len() as i32;
+        let chunks = self.merge_chunks();
+        if (chunks.len() >1) {
+            eprintln!("{:?} {:?}", self.chunks(), chunks);
+        }
+        let n_chunks = chunks.len() as i32;
         stream.write_i32::<LittleEndian>(n_chunks)?;
 
-        for chunk in &self.chunks {
+        for chunk in chunks {
             chunk.to_stream(stream)?;
         }
         Ok(())
@@ -322,6 +335,22 @@ impl Bin {
     /// Returns all the chunks in the bin.
     pub fn chunks(&self) -> &[Chunk] {
         &self.chunks
+    }
+
+    fn merge_chunks(&self) -> Vec<Chunk> {
+        self.chunks.iter().fold(vec![], |mut acc: Vec<Chunk>, x| {
+            if let Some(last) = acc.last_mut() {
+                if last.is_adjacent(x) {
+                    last.concat(x);
+                    acc
+                } else {
+                    acc.push(*x);
+                    acc
+                }
+            } else {
+                vec![*x]
+            }
+        })
     }
 }
 
@@ -469,16 +498,17 @@ impl Index {
 
         for bin_id in region_to_bins(start, end) {
             if let Some(bin) = self.references[ref_id].bins.get(&bin_id) {
-                chunks.extend(bin.chunks.iter());
+                chunks.extend(bin.chunks.iter().copied());
             }
         }
         chunks.sort();
-
+        chunks
+        /*
         let mut res = Vec::new();
         for i in 0..chunks.len() {
             res.push(chunks[i].clone());
         }
-        res
+        res*/
         //chunks
         /*
         let mut res = Vec::new();
