@@ -315,7 +315,7 @@ impl Bin {
     pub fn to_stream<W: Write>(&self, stream: &mut W) -> Result<()> {
         stream.write_u32::<LittleEndian>(self.bin_id)?;
         let chunks = self.merge_chunks();
-        if (chunks.len() >1) {
+        if chunks.len() > 1 {
             eprintln!("{:?} {:?}", self.chunks(), chunks);
         }
         let n_chunks = chunks.len() as i32;
