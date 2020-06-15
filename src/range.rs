@@ -15,7 +15,7 @@ use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use log::debug;
 use std::collections::{BTreeMap, HashMap};
 use std::io::ErrorKind::InvalidData;
-use std::io::{Error, Read, Result, Seek, Write};
+use std::io::{Error, Read, Result, Seek, SeekFrom, Write};
 use std::str::FromStr;
 
 type Chromosome = Vec<HeaderEntry>;
@@ -152,7 +152,11 @@ impl Record {
     }
 
     /// Fills the record from a `stream` of uncompressed BAM contents.
-    pub(crate) fn fill_from_bam<R: Read>(&mut self, stream: &mut R, threads: u16) -> Result<bool> {
+    pub(crate) fn fill_from_bam<R: Read + Seek>(
+        &mut self,
+        stream: &mut R,
+        threads: u16,
+    ) -> Result<bool> {
         self.sample_id = stream.read_u64::<LittleEndian>()?;
         self.sample_file_id = stream.read_u32::<LittleEndian>()?;
         self.format = stream.read_u32::<LittleEndian>()?;
@@ -168,8 +172,12 @@ impl Record {
                 Format::Range(record)
             }
             2 => {
+                let offset = stream.seek(SeekFrom::Current(0))?;
+                eprintln!("{:?}", offset);
                 let mut record = Alignment::new();
-                record.from_stream(stream, threads)?;
+                let consumed_offset = record.from_stream(stream, threads)?;
+                let offset2 = stream.seek(SeekFrom::Start(offset + consumed_offset + 36))?; // 36 is a magic number.
+                eprintln!("{:?} {:?} {}", offset, offset2, consumed_offset);
                 Format::Alignment(record)
             }
             _ => return Err(Error::new(InvalidData, "Invalid format record")),
@@ -370,7 +378,7 @@ impl ColumnarSet for Default {
         Err(Error::new(InvalidData, format!("No data.")))
     }
 
-    fn from_stream<U: Read>(&mut self, _stream: &mut U, _threads: u16) -> Result<bool> {
+    fn from_stream<U: Read>(&mut self, _stream: &mut U, _threads: u16) -> Result<u64> {
         Err(Error::new(InvalidData, format!("No data.")))
     }
 }
@@ -397,7 +405,7 @@ impl ColumnarSet for InvertedRecord {
         }
     }
 
-    fn from_stream<U: Read>(&mut self, stream: &mut U, _threads: u16) -> Result<bool> {
+    fn from_stream<U: Read>(&mut self, stream: &mut U, _threads: u16) -> Result<u64> {
         let _n_items = stream.read_u64::<LittleEndian>()?;
         let n_header = stream.read_u64::<LittleEndian>()?;
         for _i in 0..n_header {
@@ -424,7 +432,7 @@ impl ColumnarSet for InvertedRecord {
             self.aux.push(stream.read_u8()?);
         }
 
-        Ok(true)
+        Ok(0)
     }
 
     fn to_stream<W: Write, R: Read + Seek>(

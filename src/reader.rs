@@ -400,6 +400,7 @@ impl<'a, R: Read + Seek> Iterator for RegionViewer<'a, R> {
             Ok(false) => None,
             Err(e) => match e.kind() {
                 ErrorKind::UnexpectedEof => None, // The end of file; normal.
+                // ErrorKind::InvalidData => None,
                 _ => Some(Err(e)),
             }, // Some(Err(e)),
         }

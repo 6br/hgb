@@ -256,7 +256,7 @@ impl ColumnarSet for Alignment {
         writer.finish()?;
         Ok(())
     }
-    fn from_stream<R: Read>(&mut self, stream: &mut R, threads: u16) -> Result<bool> {
+    fn from_stream<R: Read>(&mut self, stream: &mut R, threads: u16) -> Result<u64> {
         let len = stream.read_u64::<LittleEndian>()?;
 
         let mut reader =
@@ -272,10 +272,33 @@ impl ColumnarSet for Alignment {
         let _old = std::mem::replace(self, alignment);
         let mut _record = Record::new();
         // For consuming all bgzip blocks.
-        let _ = reader.next();
-        let _ = reader.next();
+        let end_offset: u64 = reader.reader.current().and_then(|t| t.offset()).unwrap();
+        let contents_offset = reader.reader.contents_offset();
 
-        Ok(true)
+        let end = VirtualOffset::from_raw((end_offset << 16) + contents_offset as u64);
+
+        let _ = reader.next();
+        let end_offset2: u64 = reader.reader.current().and_then(|t| t.offset()).unwrap();
+        let contents_offset2 = reader.reader.contents_offset();
+
+        let end2 = VirtualOffset::from_raw((end_offset2 << 16) + contents_offset2 as u64);
+
+        let _ = reader.next();
+        let end_offset3: u64 = reader.reader.current().and_then(|t| t.offset()).unwrap();
+        let contents_offset3 = reader.reader.contents_offset();
+
+        let end3 = VirtualOffset::from_raw((end_offset3 << 16) + contents_offset3 as u64);
+        /*
+        let _ = reader.next();
+        let end_offset4: u64 = reader.reader.current().and_then(|t| t.offset()).unwrap();
+        let contents_offset4 = reader.reader.contents_offset();
+
+        let end4 = VirtualOffset::from_raw((end_offset3 << 16) + contents_offset3 as u64);
+        */
+        // let offset = reader.reader.take_stream().seek(SeekFrom::Current(0))?;
+        eprintln!("{} {} {}", end, end2, end3);
+
+        Ok(end_offset3)
     }
 }
 

@@ -98,7 +98,8 @@ pub trait ColumnarSet {
         bam_reader: Option<&mut IndexedReader<R>>,
     ) -> Result<()>;
 
-    fn from_stream<U: Read>(&mut self, stream: &mut U, threads: u16) -> Result<bool>;
+    // Returns a consumed offset.
+    fn from_stream<U: Read>(&mut self, stream: &mut U, threads: u16) -> Result<u64>;
 }
 
 /// A trait for Formattable data structure.
