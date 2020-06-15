@@ -255,20 +255,12 @@ impl<R: Read + Seek> GhbReader<R> {
 
     pub fn fill_from_binary(&mut self, record: &mut Record) -> Result<bool> {
         if let Some(new_offset) = self.next_offset() {
-            eprintln!(
-                "{:?} {} {:?} {:?}",
-                self.chunks, self.index, self.offset, new_offset
-            );
             if new_offset != self.offset {
                 self.stream.seek(SeekFrom::Start(new_offset))?;
                 self.offset = new_offset;
             }
             let res = record.fill_from_bam(&mut self.stream, self.additional_threads);
             self.offset = self.stream.seek(SeekFrom::Current(0))?;
-            eprintln!(
-                "{:?} {} {:?} {:?}",
-                self.chunks, self.index, self.offset, new_offset
-            );
             res
         } else {
             Ok(false)
