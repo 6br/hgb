@@ -241,7 +241,8 @@ fn build(matches: &ArgMatches, threads: u16) -> () {
     // let mut set_vec = vec![];
     let mut i = 0;
 
-    let mut records: InvertedRecordEntire<BufReader<File>> = InvertedRecordEntire::<BufReader<File>>::new();
+    let mut records: InvertedRecordEntire<BufReader<File>> =
+        InvertedRecordEntire::<BufReader<File>>::new();
 
     if let Some(bam_files) = matches.values_of("bam") {
         let bam_files: Vec<&str> = bam_files.collect();
@@ -272,7 +273,8 @@ fn build(matches: &ArgMatches, threads: u16) -> () {
             info!("Loading {}", bed_path);
             let reader = bed::Reader::from_file(bed_path).unwrap();
             let set: Set<InvertedRecordBuilder, BufReader<File>> =
-                Set::<InvertedRecordBuilder, BufReader<File>>::new(reader, 1 as u64, &mut header).unwrap();
+                Set::<InvertedRecordBuilder, BufReader<File>>::new(reader, 1 as u64, &mut header)
+                    .unwrap();
             header.set_local_header(&bam::Header::new(), bed_path, i);
             i += 1;
             records.add(set);
@@ -610,7 +612,7 @@ fn bin(matches: &ArgMatches, threads: u16) -> () {
         .from_stream(output, reader.header().clone()).unwrap();*/
 
         let _ = viewer.into_iter().for_each(|t| {
-            eprintln!("{:?}", t);
+            debug!("{:?}", t);
             if let Ok(f) = t {
                 debug!("{:?}", f);
                 if !sample_id_cond || sample_ids.iter().any(|&i| i == f.sample_id()) {

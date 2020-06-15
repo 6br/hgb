@@ -365,7 +365,8 @@ mod tests {
                 b"chr2\t16382\t16385\tbin4682\t20\t-\nchr2\t16388\t31768\tbin4683\t20\t-\n";
             let reader = bed::Reader::new(&example[..]);
             let set2: Set<InvertedRecordBuilder, BufReader<File>> =
-                Set::<InvertedRecordBuilder, BufReader<File>>::new(reader, 1 as u64, &mut header).unwrap();
+                Set::<InvertedRecordBuilder, BufReader<File>>::new(reader, 1 as u64, &mut header)
+                    .unwrap();
 
             assert_eq!(None, header.reference_id("1"));
             assert_eq!(Some(1), header.reference_id("chr1"));

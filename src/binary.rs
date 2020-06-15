@@ -259,8 +259,10 @@ impl<R: Read + Seek> GhbReader<R> {
                 self.stream.seek(SeekFrom::Start(new_offset))?;
                 self.offset = new_offset;
             }
-            record.fill_from_bam(&mut self.stream, self.additional_threads)
-        // self.offset = TODO(offset should be updated, but how?)
+            let res = record.fill_from_bam(&mut self.stream, self.additional_threads);
+            self.offset = self.stream.seek(SeekFrom::Current(0))?;
+            //println!("{:?} {} {:?} {:?}", self.chunks, self.index, self.offset, new_offset);
+            res
         } else {
             Ok(false)
             //Err(Error::new(ErrorKind::Other, "The end of stream"))
@@ -268,7 +270,6 @@ impl<R: Read + Seek> GhbReader<R> {
     }
 
     fn next_offset(&mut self) -> Option<u64> {
-        // println!("{:?} {}", self.chunks, self.index);
         if self.index >= self.chunks.len() {
             return None;
         }
@@ -277,11 +278,12 @@ impl<R: Read + Seek> GhbReader<R> {
             return Some(self.chunks[0].start().raw());
         }
 
-        let curr_offset = VirtualOffset::new(self.offset, 0);
+        //let curr_offset = VirtualOffset::new(self.offset, 0);
+        let curr_offset = VirtualOffset::from_raw(self.offset);
         // When not full query:
-        if curr_offset > self.chunks[self.index].end()
-            || VirtualOffset::MAX != self.chunks[self.index].end()
-        {
+        //if curr_offset > self.chunks[self.index].end()
+        /* || VirtualOffset::MAX != self.chunks[self.index].end() */
+        while self.index < self.chunks.len() && curr_offset >= self.chunks[self.index].end() {
             self.index += 1;
         }
         //}
