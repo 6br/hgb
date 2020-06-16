@@ -107,7 +107,7 @@ impl Reference {
 
         // Just copy and paste from old Bins
         let n_chunks = stream.read_u64::<LittleEndian>()? as usize;
-        // let check_chunks = true; // bin_id != SUMMARY_BIN;
+
         let mut chunks = Vec::with_capacity(n_chunks);
         for _i in 0..n_chunks {
             chunks.push(Bin::from_stream(stream)?);
@@ -253,7 +253,7 @@ impl Index {
         let region = Region::new(ref_id, start, end);
         let ref_id = ref_id as usize;
         let ref_container = &self.references[ref_id];
-        // println!("{:?}", region);
+
         for slice in ref_container.region_to_bins(region) {
             if let Some(bin) = slice.slice {
                 for chunk in bin {
@@ -263,12 +263,6 @@ impl Index {
         }
         chunks.sort();
         chunks
-        /*        let mut res = Vec::new();
-        for i in chunks {
-            res.push(i.clone());
-        }
-        //eprintln!("{:?} {:?}", chunks, res);
-        res*/
     }
 }
 
@@ -276,7 +270,6 @@ impl Display for Index {
     fn fmt(&self, f: &mut Formatter) -> result::Result<(), fmt::Error> {
         for (i, reference) in self.references.iter().enumerate() {
             writeln!(f, "Reference {}:", i)?;
-            //reference.fmt::<dyn Display>(f)?;
             Display::fmt(&reference, f)?
         }
         Ok(())
@@ -386,12 +379,14 @@ impl<'a> Iterator for BinsIter<'a> {
 #[cfg(test)]
 mod tests {
     use super::Reference;
-    use crate::index::Region;
+    use crate::index::{Bin, Region};
 
     #[test]
     fn iterator_works() {
-        let bai = Reference::new_with_bai_half_overlapping();
-        //assert_eq!(bai.bin_pitch_indices[0], 28);
+        let mut bai = Reference::new_with_bai_half_overlapping();
+        // Need to fill with dummy bins.
+        bai.update(10000, Bin::dummy());
+        assert_eq!(bai.bin_pitch_indices[0], 28);
         let mut iter = bai.region_to_bins(Region::new(0, 0, 8191));
         let slice = iter.next().unwrap();
         /* Because we adopt half-overlapping, the most  */
@@ -421,8 +416,10 @@ mod tests {
     }
     #[test]
     fn iterator_2_works() {
-        let bai = Reference::new_with_bai_half_overlapping();
-        //assert_eq!(bai.bin_pitch_indices[0], 28);
+        let mut bai = Reference::new_with_bai_half_overlapping();
+        // Need to fill with dummy bins.
+        bai.update(10000, Bin::dummy());
+        assert_eq!(bai.bin_pitch_indices[0], 28);
         let mut iter = bai.region_to_bins(Region::new(0, 0, 8192));
         let slice = iter.next().unwrap();
         /* Because we adopt half-overlapping, the most  */
@@ -454,9 +451,11 @@ mod tests {
         assert_eq!(slice.bin_disp_range, 9361..9363); //2 is not included
     }
     #[test]
-    fn iterator3_works() {
-        let bai = Reference::new_with_bai_half_overlapping();
-        //assert_eq!(bai.bin_pitch_indices[0], 28);
+    fn iterator_3_works() {
+        let mut bai = Reference::new_with_bai_half_overlapping();
+        // Need to fill with dummy bins.
+        bai.update(10000, Bin::dummy());
+        assert_eq!(bai.bin_pitch_indices[0], 28);
         let mut iter = bai.region_to_bins(Region::new(0, 17000, 17500));
         let slice = iter.next().unwrap();
         /* Because we adopt half-overlapping, the most  */

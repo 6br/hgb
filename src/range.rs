@@ -173,11 +173,10 @@ impl Record {
             }
             2 => {
                 let offset = stream.seek(SeekFrom::Current(0))?;
-                //eprintln!("{:?}", offset);
+
                 let mut record = Alignment::new();
                 let consumed_offset = record.from_stream(stream, threads)?;
-                let offset2 = stream.seek(SeekFrom::Start(offset + consumed_offset + 36))?; // 36 is a magic number.
-                //eprintln!("{:?} {:?} {}", offset, offset2, consumed_offset);
+                let _offset = stream.seek(SeekFrom::Start(offset + consumed_offset + 36))?; // 36 is a magic number.
                 Format::Alignment(record)
             }
             _ => return Err(Error::new(InvalidData, "Invalid format record")),

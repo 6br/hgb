@@ -95,14 +95,13 @@ impl<R: Read + Seek> Set<AlignmentBuilder, R> {
     ) -> Self {
         let mut chrom = BTreeMap::new();
         let mut unmapped = AlignmentBuilder::new();
-        // let mut prev = reader.reader.current().and_then(|t| t.offset()).unwrap();
+
         let mut prev = reader.index().start_offset().unwrap();
         let mut rec = Record::new();
         let mut viewer = reader.full();
         let mut prev_next_offset = 0; //viewer.parent.reader.reader.next_offset().unwrap();
-                                      //for record in reader {
+
         while let Ok(true) = viewer.read_into(&mut rec) {
-            //.ok().expect("Error reading record.");
             if rec.ref_id() >= 0 {
                 let chrom_len = header.reference_len(rec.ref_id() as u64).unwrap();
                 let reference = Reference::new_from_len(chrom_len);
@@ -129,14 +128,11 @@ impl<R: Read + Seek> Set<AlignmentBuilder, R> {
 
                     let end = VirtualOffset::from_raw((end_offset << 16) + contents_offset as u64);
                     let next_offset = viewer.parent.reader.reader.next_offset().unwrap();
-                    //eprintln!("a: {} {} {} {}", prev, end, contents_offset, next_offset);
-                    //if(end.)
                     assert!(end > prev, "{} is not larger than {}", end, prev);
 
                     // println!("{:?} {} {}", rec, prev, end);
                     stat.add(
                         Chunk::new(prev, end),
-                        //  header.get_name(sample_id as usize).unwrap(),
                     );
                     //TODO() Chunks should be merged if the two chunks are neighbor.
                     if prev.block_offset() != end.block_offset()
@@ -149,7 +145,7 @@ impl<R: Read + Seek> Set<AlignmentBuilder, R> {
                         {
                             //eprintln!("{:?}", block.offset());
                             prev = VirtualOffset::new(block, 0);
-                        }; //reader.read_next();
+                        };
                     } else {
                         prev = end;
                     }
@@ -218,7 +214,6 @@ impl ColumnarSet for Alignment {
             .write_header(false)
             .from_stream(stream, header)?;
         // TODO() Inject the number of threads.
-        // let mut reader = bam::IndexedReader::from_path(&self.reader)?;
         let _ = match self {
             Alignment::Offset(data) => {
                 let mut id = 0;
@@ -245,7 +240,6 @@ impl ColumnarSet for Alignment {
                 }
             }
             Alignment::Object(vec) => {
-                //let viewer = bam_reader.unwrap().chunk(self.data.clone());
                 for i in vec {
                     writer.write(&i)?;
                     //TODO() Don't have to parse in this implementation.

@@ -10,7 +10,6 @@ use std::{fs::File, io, path::Path};
 
 use ghi::binary::GhbWriter;
 use ghi::builder::InvertedRecordBuilder;
-use ghi::checker_index::Reference;
 use ghi::header::Header;
 use ghi::index::{Chunk, Region, VirtualOffset};
 use ghi::range::Default;
@@ -464,7 +463,7 @@ fn bam_query(matches: &ArgMatches, threads: u16) -> () {
         if let Some(range) = matches.value_of("range") {
             let closure = |x: &str| reader.reference_id(x);
             let string_range = StringRegion::new(range).unwrap();
-            let reference_name = &string_range.path;
+            let _reference_name = &string_range.path;
 
             let range = Region::convert(&string_range, closure).unwrap();
             let viewer = reader.fetch(&range).unwrap();
@@ -504,9 +503,8 @@ fn bam_query(matches: &ArgMatches, threads: u16) -> () {
             let _ = viewer.into_iter().for_each(|t| {
                 //eprintln!("{:?}", t.clone().unwrap());
                 let f = t.unwrap();
-                //if let Ok(f) = t {
                 if !sample_id_cond || sample_ids.iter().any(|&i| i == f.sample_id()) {
-                    let sample_id = f.sample_id();
+                    let _sample_id = f.sample_id();
                     let data = f.data();
                     if !format_type_cond
                         || std::mem::discriminant(&format_type) == std::mem::discriminant(&data)
@@ -594,11 +592,9 @@ fn bin(matches: &ArgMatches, threads: u16) -> () {
 
         let sample_ids_opt: Option<Vec<u64>> = matches
             .values_of("id")
-            //.unwrap()
             .and_then(|a| Some(a.map(|t| t.parse::<u64>().unwrap()).collect()));
         let sample_id_cond = sample_ids_opt.is_some();
         let sample_ids = sample_ids_opt.unwrap_or(vec![]);
-        //                .collect();
 
         let format_type_opt = matches.value_of_t::<Format>("type");
         let format_type_cond = format_type_opt.is_ok();

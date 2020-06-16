@@ -203,7 +203,7 @@ impl Header {
         let mut names = Vec::with_capacity(n_samples);
         for _i in 0..n_samples {
             let len = stream.read_u64::<LittleEndian>()? as usize;
-            let mut buf = vec![0u8; len];
+            let buf = vec![0u8; len];
             for _i in 0..len {
                 stream.read_u8()?;
             }
