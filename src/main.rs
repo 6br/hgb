@@ -83,11 +83,17 @@ fn main() {
                         .about("sorted bam"),
                 )
                 .arg(
+                    Arg::new("bed")
+                        .short('L')
+                        .takes_value(true)
+                        .about("sorted bam"),
+                )
+                .arg(
                     Arg::new("type")
                         .short('t')
                         .takes_value(true)
                         // .default_value("default")
-                        .possible_values(& ["alignment", "range", "default"])
+                        .possible_values(&["alignment", "range", "default"])
                         .about("annotation type to fetch"),
                 )
                 .arg(
@@ -460,9 +466,10 @@ fn bam_query(matches: &ArgMatches, threads: u16) -> () {
     if let Some(o) = matches.value_of("INPUT") {
         let mut reader: IndexedReader<BufReader<File>> =
             IndexedReader::from_path_with_additional_threads(o, threads - 1).unwrap();
-            if let Some(ranges) = matches.values_of("range") {
-                let ranges: Vec<&str> = ranges.collect();
-                for range in ranges {
+        if let Some(ranges) = matches.values_of("range") {
+            let ranges: Vec<&str> = ranges.collect();
+            for range in ranges {
+                eprintln!("{}", range);
                 let closure = |x: &str| reader.reference_id(x);
                 let string_range = StringRegion::new(range).unwrap();
                 let _reference_name = &string_range.path;
