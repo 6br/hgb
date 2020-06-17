@@ -131,9 +131,7 @@ impl<R: Read + Seek> Set<AlignmentBuilder, R> {
                     assert!(end > prev, "{} is not larger than {}", end, prev);
 
                     // println!("{:?} {} {}", rec, prev, end);
-                    stat.add(
-                        Chunk::new(prev, end),
-                    );
+                    stat.add(Chunk::new(prev, end));
                     //TODO() Chunks should be merged if the two chunks are neighbor.
                     if prev.block_offset() != end.block_offset()
                         && end.block_offset() != prev_next_offset
