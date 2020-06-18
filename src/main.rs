@@ -198,6 +198,12 @@ fn main() {
                         .takes_value(true)
                         .multiple(true)
                         .about("sorted bam"),
+                )
+                .arg(
+                    Arg::new("layer")
+                        .short('l')
+                        .takes_value(true)
+                        .about("sorted bam"),
                 ),
         )
         .subcommand(
@@ -570,17 +576,34 @@ fn bin(matches: &ArgMatches, threads: u16) -> () {
         if let Some(range) = matches.value_of("range") {
             let string_range = StringRegion::new(range).unwrap();
             let range = Region::convert(&string_range, closure).unwrap();
+
+            let index = matches
+                .value_of("layer")
+                .and_then(|a| a.parse::<usize>().ok())
+                .unwrap_or(0usize);
             {
-                let _bin_id =
-                    reader.index().references()[range.ref_id() as usize].region_to_bin(range);
-                /*let chunk = reader.index().references()[range.ref_id() as usize].bins()[bin_id]
-                    .chunks()
-                    .clone();
-                let mut res = Vec::new();
-                for i in chunks {
-                    res.push(i);
+                //let _bin_id =
+                //    reader.index().references()[range.ref_id() as usize].region_to_bin(range);
+                for (i, slice) in
+                    reader.index().references()[range.ref_id() as usize].region_to_bins(range).enumerate()
+                {
+                    if index == i {
+                        if let Some(bin) = slice.slice {
+                            for chunk in bin {
+                                chunks.extend(chunk.chunks().iter().copied());
+                            }
+                        }
+                    }
+                    /*let chunk = reader.index().references()[range.ref_id() as usize].bins()[bin_id]
+                        .chunks()
+                        .clone();
+                    let mut res = Vec::new();
+                    for i in chunks {
+                        res.push(i);
+                    }
+                    chunks.extend(res);*/
                 }
-                chunks.extend(res);*/
+                // chunks = vec![chunks[index]];
             }
         } else {
             if let Some(bin_id) = matches.value_of("range") {

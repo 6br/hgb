@@ -283,7 +283,7 @@ pub struct BinsIter<'a> {
 }
 
 pub struct Slice<'a> {
-    slice: Option<&'a [Bin]>, // or Chunk
+    pub slice: Option<&'a [Bin]>, // or Chunk
     bin_size: usize,
     //bin_disp_start: usize, // For debugging and
     bin_disp_range: Range<usize>,
