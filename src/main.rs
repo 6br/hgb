@@ -204,7 +204,12 @@ fn main() {
                         .short('l')
                         .takes_value(true)
                         .about("sorted bam"),
-                ),
+                )                .arg(
+                    Arg::new("output")
+                        .short('o')
+                        .takes_value(true)
+                        .about("Output format"),
+                ),,
         )
         .subcommand(
             App::new("server")
