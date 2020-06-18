@@ -309,7 +309,10 @@ fn query(matches: &ArgMatches, threads: u16) -> () {
     if let Some(o) = matches.value_of("INPUT") {
         let mut reader: IndexedReader<BufReader<File>> =
             IndexedReader::from_path_with_additional_threads(o, threads - 1).unwrap();
-        if let Some(range) = matches.value_of("range") {
+        if let Some(ranges) = matches.values_of("range") {
+            let ranges: Vec<&str> = ranges.collect();
+            for range in ranges {
+                eprintln!("{}", range);
             let closure = |x: &str| reader.reference_id(x);
             let string_range = StringRegion::new(range).unwrap();
             let reference_name = &string_range.path;
@@ -382,6 +385,7 @@ fn query(matches: &ArgMatches, threads: u16) -> () {
                 //}
             });
         }
+    }
     }
 }
 
