@@ -209,7 +209,7 @@ fn main() {
                         .short('o')
                         .takes_value(true)
                         .about("Output format"),
-                ),,
+                ),
         )
         .subcommand(
             App::new("server")

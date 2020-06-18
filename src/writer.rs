@@ -1,7 +1,7 @@
 //! GHB writer.
 
 use std::fs::File;
-use std::io::{Result, Write};
+use std::io::{Result, Write, BufWriter};
 use std::path::Path;
 
 use super::IndexWriter;
@@ -53,21 +53,22 @@ impl GhiWriterBuilder {
         &mut self,
         path: P,
         header: Header,
-    ) -> Result<GhiWriter<File>> {
+    ) -> Result<GhiWriter<BufWriter<File>>> {
         let stream = File::create(path)?;
-        self.from_stream(stream, header)
+        let buf_stream = BufWriter::new(stream);
+        self.from_stream(buf_stream, header)
     }
 
     /// Creates a GHB writer from a stream and a header.
-    pub fn from_stream<W: Write>(&mut self, stream: W, header: Header) -> Result<GhiWriter<W>> {
-        let mut writer = bgzip::Writer::build()
+    pub fn from_stream<W: Write>(&mut self, mut writer: W, header: Header) -> Result<GhiWriter<W>> {
+        /*let mut writer = bgzip::Writer::build()
             .additional_threads(self.additional_threads)
             .compression_level(self.level)
-            .from_stream(stream);
+            .from_stream(stream);*/
+        
         if self.write_header {
             header.to_stream(&mut writer)?;
         }
-        writer.flush_contents()?;
         Ok(GhiWriter { writer, header })
     }
 }
@@ -77,11 +78,12 @@ impl GhiWriterBuilder {
 ///
 /// Use [RecordWriter](../trait.RecordWriter.html) trait to write records.
 pub struct GhiWriter<W: Write> {
-    writer: bgzip::Writer<W>,
+    writer: W,
     header: Header,
 }
 
-impl GhiWriter<File> {
+
+impl GhiWriter<BufWriter<File>> {
     /// Creates a [GhiWriterBuilder](struct.GhiWriterBuilder.html).
     pub fn build() -> GhiWriterBuilder {
         GhiWriterBuilder::new()
@@ -106,7 +108,7 @@ impl<W: Write> GhiWriter<W> {
 
     /// Consumes the writer and returns inner stream.
     pub fn take_stream(self) -> W {
-        self.writer.take_stream()
+        self.writer //.take_stream()
     }
 
     /// Pauses multi-thread writer until the next write operation. Does nothing to a single-thread writer.
@@ -117,22 +119,19 @@ impl<W: Write> GhiWriter<W> {
     ///
     /// To compress and write all remaining blocks you can call [flush](#method.flush) before calling `pause`.
     pub fn pause(&mut self) {
-        self.writer.pause();
+        //self.writer.pause();
     }
 }
 
 impl<W: Write> IndexWriter for GhiWriter<W> {
     fn write(&mut self, index: &Index) -> Result<()> {
         index.to_stream(&mut self.writer)?;
-        self.writer.end_context();
         Ok(())
     }
 
     fn finish(&mut self) -> Result<()> {
-        self.writer.finish()
-    }
+        Ok(())    }
 
     fn flush(&mut self) -> Result<()> {
-        self.writer.flush()
-    }
+        Ok(())    }
 }
