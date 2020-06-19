@@ -53,7 +53,7 @@ impl GhbWriterBuilder {
         path: P,
         header: Header,
     ) -> Result<GhbWriter<BufWriter<File>>> {
-        let stream = BufWriter::new(File::create(path)?);
+        let stream = BufWriter::with_capacity(262144, File::create(path)?);
         self.from_stream(stream, header)
     }
 

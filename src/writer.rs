@@ -55,7 +55,7 @@ impl GhiWriterBuilder {
         header: Header,
     ) -> Result<GhiWriter<BufWriter<File>>> {
         let stream = File::create(path)?;
-        let buf_stream = BufWriter::new(stream);
+        let buf_stream = BufWriter::with_capacity(262144, stream);
         self.from_stream(buf_stream, header)
     }
 

@@ -478,7 +478,7 @@ impl Index {
 
     pub fn to_path<P: AsRef<Path> + Write>(&self, path: P) -> Result<()> {
         let f = File::open(&path)?;
-        let b = BufWriter::new(f);
+        let b = BufWriter::with_capacity(262144, f);
         Index::to_stream(&self, b)
     }
 
