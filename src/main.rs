@@ -204,7 +204,8 @@ fn main() {
                         .short('l')
                         .takes_value(true)
                         .about("sorted bam"),
-                )                .arg(
+                )
+                .arg(
                     Arg::new("output")
                         .short('o')
                         .takes_value(true)
@@ -589,8 +590,9 @@ fn bin(matches: &ArgMatches, threads: u16) -> () {
             {
                 //let _bin_id =
                 //    reader.index().references()[range.ref_id() as usize].region_to_bin(range);
-                for (i, slice) in
-                    reader.index().references()[range.ref_id() as usize].region_to_bins(range).enumerate()
+                for (i, slice) in reader.index().references()[range.ref_id() as usize]
+                    .region_to_bins(range)
+                    .enumerate()
                 {
                     if index == i {
                         if let Some(bin) = slice.slice {

@@ -211,7 +211,7 @@ impl GhbReader<BufReader<File>> {
         header: Header,
         additional_threads: u16,
     ) -> Result<Self> {
-        let stream = BufReader::new(File::open(path)?);
+        let stream = BufReader::with_capacity(262144, File::open(path)?);
         GhbReader::from_stream(stream, header, additional_threads)
     }
 }

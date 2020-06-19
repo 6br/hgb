@@ -327,8 +327,8 @@ mod tests {
     ) {
         let filename1 = filename1.as_ref();
         let filename2 = filename2.as_ref();
-        let mut file1 = BufReader::new(File::open(&filename1).unwrap());
-        let mut file2 = BufReader::new(File::open(&filename2).unwrap());
+        let mut file1 = BufReader::with_capacity(262144, File::open(&filename1).unwrap());
+        let mut file2 = BufReader::with_capacity(262144, File::open(&filename2).unwrap());
         let mut line1 = String::new();
         let mut line2 = String::new();
 
