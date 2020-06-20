@@ -357,7 +357,7 @@ fn query(matches: &ArgMatches, threads: u16) -> () {
                     }
                     None => Box::new(out.lock()) as Box<dyn Write>,
                 };
-                let mut output = io::BufWriter::with_capacity(262144, out_writer);
+                let mut output = io::BufWriter::with_capacity(1048576, out_writer);
 
                 let header = viewer.header().clone();
 
@@ -425,7 +425,7 @@ fn decompose(matches: &ArgMatches, _threads: u16) -> () {
             }
             None => Box::new(out.lock()) as Box<dyn Write>,
         };
-        let mut output = io::BufWriter::with_capacity(262144, out_writer);
+        let mut output = io::BufWriter::with_capacity(1048576, out_writer);
 
         if let Some(header_type) = reader.header().get_local_header(id as usize) {
             if header {
@@ -521,7 +521,7 @@ fn bam_query(matches: &ArgMatches, threads: u16) -> () {
                     }
                     None => Box::new(out.lock()) as Box<dyn Write>,
                 };
-                let output = io::BufWriter::with_capacity(262144, out_writer);
+                let output = io::BufWriter::with_capacity(1048576, out_writer);
 
                 let header = viewer
                     .header()
@@ -655,7 +655,7 @@ fn bin(matches: &ArgMatches, threads: u16) -> () {
         let format_type = format_type_opt.unwrap_or(Format::Default(Default {}));
 
         debug!("{:?} {:?} {:?}", sample_id_cond, sample_ids, format_type);
-        let mut output = io::BufWriter::with_capacity(262144, io::stdout());
+        let mut output = io::BufWriter::with_capacity(1048576, io::stdout());
         let header = viewer.header().clone();
         /*let mut writer = bam::BamWriter::build()
         .write_header(true)

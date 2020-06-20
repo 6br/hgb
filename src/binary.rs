@@ -53,7 +53,7 @@ impl GhbWriterBuilder {
         path: P,
         header: Header,
     ) -> Result<GhbWriter<BufWriter<File>>> {
-        let stream = BufWriter::with_capacity(262144, File::create(path)?);
+        let stream = BufWriter::with_capacity(1048576, File::create(path)?);
         self.from_stream(stream, header)
     }
 
@@ -211,7 +211,7 @@ impl GhbReader<BufReader<File>> {
         header: Header,
         additional_threads: u16,
     ) -> Result<Self> {
-        let stream = BufReader::with_capacity(262144, File::open(path)?);
+        let stream = BufReader::with_capacity(1048576, File::open(path)?);
         GhbReader::from_stream(stream, header, additional_threads)
     }
 }

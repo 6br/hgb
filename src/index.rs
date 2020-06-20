@@ -461,7 +461,7 @@ impl Index {
     /// Loads index from path.
     pub fn from_path<P: AsRef<Path>>(path: P) -> Result<Index> {
         let f = File::open(&path)?;
-        let r = BufReader::with_capacity(262144, f);
+        let r = BufReader::with_capacity(1048576, f);
         Index::from_stream(r)
     }
 
@@ -478,7 +478,7 @@ impl Index {
 
     pub fn to_path<P: AsRef<Path> + Write>(&self, path: P) -> Result<()> {
         let f = File::open(&path)?;
-        let b = BufWriter::with_capacity(262144, f);
+        let b = BufWriter::with_capacity(1048576, f);
         Index::to_stream(&self, b)
     }
 
