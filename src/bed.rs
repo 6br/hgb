@@ -8,7 +8,7 @@
 //! # Example
 //!
 //! ```
-//! use bio::io::bed;
+//! use crate::bed;
 //! let example = b"1\t5\t5000\tname1\t0.5";
 //! let mut reader = bed::Reader::new(&example[..]);
 //! let mut writer = bed::Writer::new(vec![]);
@@ -235,9 +235,9 @@ impl<'a> From<&'a Record> for annot::contig::Contig<String, strand::Strand> {
     /// Returns a `Contig` annotation for the BED record.
     ///
     /// ```
-    /// # extern crate bio;
+    /// # extern crate ghb;
     /// # extern crate bio_types;
-    /// use bio::io::bed;
+    /// use ghb::bed;
     /// use bio_types::strand::Strand;
     /// use bio_types::annot::contig::Contig;
     /// # use std::error::Error;

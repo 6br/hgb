@@ -558,7 +558,6 @@ fn bam_query(matches: &ArgMatches, threads: u16) -> () {
                                                 && range.end() > i.start() as u64)
                                         {
                                             writer.write(&i).unwrap();
-                                            //i.write_bam(&mut writer).unwrap();
                                         }
                                     }
                                 }
@@ -588,8 +587,6 @@ fn bin(matches: &ArgMatches, threads: u16) -> () {
                 .and_then(|a| a.parse::<usize>().ok())
                 .unwrap_or(0usize);
             {
-                //let _bin_id =
-                //    reader.index().references()[range.ref_id() as usize].region_to_bin(range);
                 for (i, slice) in reader.index().references()[range.ref_id() as usize]
                     .region_to_bins(range)
                     .enumerate()
@@ -657,9 +654,6 @@ fn bin(matches: &ArgMatches, threads: u16) -> () {
         debug!("{:?} {:?} {:?}", sample_id_cond, sample_ids, format_type);
         let mut output = io::BufWriter::with_capacity(1048576, io::stdout());
         let header = viewer.header().clone();
-        /*let mut writer = bam::BamWriter::build()
-        .write_header(true)
-        .from_stream(output, reader.header().clone()).unwrap();*/
 
         let _ = viewer.into_iter().for_each(|t| {
             debug!("{:?}", t);

@@ -1,7 +1,7 @@
 //! GHB writer.
 
 use std::fs::File;
-use std::io::{Result, Write, BufWriter};
+use std::io::{BufWriter, Result, Write};
 use std::path::Path;
 
 use super::IndexWriter;
@@ -62,10 +62,10 @@ impl GhiWriterBuilder {
     /// Creates a GHB writer from a stream and a header.
     pub fn from_stream<W: Write>(&mut self, mut writer: W, header: Header) -> Result<GhiWriter<W>> {
         /*let mut writer = bgzip::Writer::build()
-            .additional_threads(self.additional_threads)
-            .compression_level(self.level)
-            .from_stream(stream);*/
-        
+        .additional_threads(self.additional_threads)
+        .compression_level(self.level)
+        .from_stream(stream);*/
+
         if self.write_header {
             header.to_stream(&mut writer)?;
         }
@@ -81,7 +81,6 @@ pub struct GhiWriter<W: Write> {
     writer: W,
     header: Header,
 }
-
 
 impl GhiWriter<BufWriter<File>> {
     /// Creates a [GhiWriterBuilder](struct.GhiWriterBuilder.html).
@@ -122,7 +121,7 @@ impl<W: Write> GhiWriter<W> {
         //self.writer.pause();
     }
 }
-
+/*
 impl<W: Write> IndexWriter for GhiWriter<W> {
     fn write(&mut self, index: &Index) -> Result<()> {
         index.to_stream(&mut self.writer)?;
@@ -130,8 +129,24 @@ impl<W: Write> IndexWriter for GhiWriter<W> {
     }
 
     fn finish(&mut self) -> Result<()> {
-        Ok(())    }
+        Ok(())
+    }
 
     fn flush(&mut self) -> Result<()> {
-        Ok(())    }
+        Ok(())
+    }
+}*/
+
+impl IndexWriter for GhiWriter<BufWriter<File>> {
+    fn write(&mut self, index: &Index) -> Result<()> {
+        index.to_stream(&mut self.writer)?;
+        Ok(())
+    }
+    fn finish(&mut self) -> Result<()> {
+        self.writer.flush()
+    }
+
+    fn flush(&mut self) -> Result<()> {
+        self.writer.flush()
+    }
 }
