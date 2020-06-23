@@ -7,7 +7,7 @@ use genomic_range::StringRegion;
 use ghi::bed;
 use log::{debug, info};
 use plotters::prelude::*;
-use std::{fs::File, io, path::Path};
+use std::{collections::BTreeMap, fs::File, io, path::Path};
 
 use ghi::binary::GhbWriter;
 use ghi::builder::InvertedRecordBuilder;
@@ -665,24 +665,13 @@ fn vis_query(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::erro
                 let output = io::BufWriter::with_capacity(1048576, out_writer);*/
                 let output = matches.value_of("output").unwrap();
 
-                let root = BitMapBackend::new(output, (640, 480)).into_drawing_area();
-                root.fill(&WHITE);
-                let root = root.margin(10, 10, 10, 10);
-                // After this point, we should be able to draw construct a chart context
-                let mut chart = ChartBuilder::on(&root)
-                    // Set the caption of the chart
-                    .caption("Alignment Plot", ("sans-serif", 40).into_font())
-                    // Set the size of the label region
-                    .x_label_area_size(20)
-                    .y_label_area_size(40)
-                    // Finally attach a coordinate on the drawing area and make a chart context
-                    .build_ranged(range.start()..range.end(), 0f32..10f32)?;
-
+                let mut list = vec![];
+                //let mut list = BTreeMap::new();
                 let _ = viewer.into_iter().for_each(|t| {
                     //eprintln!("{:?}", t.clone().unwrap());
                     let f = t.unwrap();
                     if !sample_id_cond || sample_ids.iter().any(|&i| i == f.sample_id()) {
-                        let _sample_id = f.sample_id();
+                        let sample_id = f.sample_id();
                         let data = f.data();
                         if !format_type_cond
                             || std::mem::discriminant(&format_type) == std::mem::discriminant(&data)
@@ -700,10 +689,8 @@ fn vis_query(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::erro
                                             || (i.calculate_end() as u64 > range.start()
                                                 && range.end() > i.start() as u64)
                                         {
-                                            chart.draw_series(LineSeries::new(
-                                                vec![(0, 0.0), (5, 5.0), (8, 7.0)],
-                                                &RED,
-                                            ));
+                                            list.push((sample_id, i));
+                                            //list.insert(sample_id, i);
                                         }
                                     }
                                 }
@@ -711,8 +698,110 @@ fn vis_query(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::erro
                             }
                         }
                     }
-                    //}
                 });
+
+                let root = SVGBackend::new(output, (1280, 100 + list.len() as u32 * 15))
+                    .into_drawing_area();
+                root.fill(&WHITE)?;
+                let root = root.margin(10, 10, 10, 10);
+                // After this point, we should be able to draw construct a chart context
+                let mut chart = ChartBuilder::on(&root)
+                    // Set the caption of the chart
+                    .caption("Alignment Plot", ("sans-serif", 20).into_font())
+                    // Set the size of the label region
+                    .x_label_area_size(20)
+                    .y_label_area_size(40)
+                    // Finally attach a coordinate on the drawing area and make a chart context
+                    .build_ranged(range.start()..range.end(), 0..list.len())?;
+                // Then we can draw a mesh
+                chart
+                    .configure_mesh()
+                    // We can customize the maximum number of labels allowed for each axis
+                    //.x_labels(5)
+                    .y_labels(1)
+                    // We can also change the format of the label text
+                    .x_label_formatter(&|x| format!("{:.3}", x))
+                    .draw()?;
+                list.sort_by(|a, b| a.0.cmp(&b.0));
+                chart.draw_series((0..).zip(list.iter()).map(|(index, data)| {
+                    //for (index, data) in list.iter().enumerate() {
+                    let bam = &(*data).1;
+                    let color = if bam.flag().is_reverse_strand() {
+                        BLUE
+                    } else {
+                        RED
+                    };
+                    let stroke = if data.0 % 2 == 0 { CYAN } else { GREEN };
+                    let start = if bam.start() as u64 > range.start() {
+                        bam.start() as u64
+                    } else {
+                        range.start()
+                    };
+                    let end = if bam.calculate_end() as u64 > range.end() {
+                        range.end()
+                    } else {
+                        bam.calculate_end() as u64
+                    };
+                    /*chart
+                    .draw_series(LineSeries::new(vec![(start, index), (end, index)], &color))?;*/
+                    let mut bar =
+                        Rectangle::new([(start, index), (end, index + 1)], color.filled());
+                    bar.set_margin(1, 1, 0, 0);
+                    let mut bar2 =
+                        Rectangle::new([(start, index), (end, index + 1)], stroke.stroke_width(1));
+                    bar2.set_margin(1, 1, 0, 0);
+                    
+                    let mut bars = vec![bar, bar2];
+                    let mut prev_ref = bam.start() as u64;
+                    for entry in bam.aligned_pairs() {
+                        // eprintln!("{:?}",entry);
+                        
+                        match entry {
+                            // (Seq_idx, ref_idx)
+                            (Some(_), Some(reference)) => {
+                                prev_ref = reference as u64;
+                                if reference > bam.calculate_end() as u32 {break;}
+                            }
+                            (None, Some(reference)) => {
+                                //Deletion
+                                if reference > bam.start() as u32 {
+                                let mut bar =
+                                Rectangle::new([(reference as u64, index), (reference as u64 + 1, index + 1)], WHITE.filled());
+                                bar.set_margin(1, 1, 0, 0);
+                                prev_ref = reference as u64;
+                                bars.push(bar);
+                                }
+                                if reference > bam.calculate_end() as u32 {break;}
+                            }
+                            (Some(record), None) => {
+                                //Insertion
+                                if prev_ref > bam.start() as u64 {
+                                let mut bar = Rectangle::new([(prev_ref, index), (prev_ref + 1, index + 1)], MAGENTA.stroke_width(1));
+                                eprintln!("{:?}", [(prev_ref, index), (prev_ref + 1, index + 1)]);
+                                bar.set_margin(1, 1, 0, 0);
+                                bars.push(bar);
+                                prev_ref = 0;
+                            }
+                                // eprintln!("{}", prev_ref)
+
+                            }
+                            _ => {}
+                        }
+
+                        /*if let Some((record_pos, record_nt)) = entry.record_pos_nt() {
+                            print!("{} {}", record_pos, record_nt as char);
+                        } else {
+                            print!("-");
+                        }
+                        print!(", ");
+                        if let Some((ref_pos, ref_nt)) = entry.ref_pos_nt() {
+                            println!("{} {}", ref_pos, ref_nt as char);
+                        } else {
+                            println!("-");
+                        }*/
+                    }
+                    bars
+                }).into_iter().flatten().collect::<Vec<Rectangle<(u64, usize)>>>())?;
             }
         }
     }
