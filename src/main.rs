@@ -224,6 +224,22 @@ fn main() {
                         .index(1),
                 ),
         )
+        .subcommand(
+            App::new("split")
+                .about("start the web server.")
+                .arg(
+                    Arg::new("output")
+                        .short('o')
+                        .takes_value(true)
+                        .about("Output format"),
+                )
+                .arg(
+                    Arg::new("INPUT")
+                        .about("Sets the input file to use")
+                        .required(true)
+                        .index(1),
+                ),
+        )
         .get_matches();
 
     let threads = matches
@@ -240,8 +256,8 @@ fn main() {
         }
     } else if let Some(ref matches) = matches.subcommand_matches("decompose") {
         decompose(matches, threads);
-    } else if let Some(ref matches) = matches.subcommand_matches("server") {
-        server(matches, threads);
+    } else if let Some(ref matches) = matches.subcommand_matches("split") {
+        split(matches, threads);
     } else if let Some(ref matches) = matches.subcommand_matches("bin") {
         bin(matches, threads);
     }
@@ -480,8 +496,42 @@ fn decompose(matches: &ArgMatches, _threads: u16) -> () {
     //}
 }
 
-fn server(_matches: &ArgMatches, _threads: u16) -> () {
-    //todo!("Implement a web server using actix-web.");
+fn split(matches: &ArgMatches, threads: u16) -> () {
+    if let Some(bam_path) = matches.value_of("INPUT") {
+        //todo!("Implement a web server using actix-web.");
+        let mut reader2 = bam::IndexedReader::build()
+            .additional_threads(threads - 1)
+            .from_path(bam_path)
+            .unwrap();
+        // Here all threads can be used, but I suspect that runs double
+        let bam_header = reader2.header();
+
+        let out = std::io::stdout();
+        let out_writer = match matches.value_of("output") {
+            Some(x) => {
+                let path = Path::new(x);
+                Box::new(File::create(&path).unwrap()) as Box<dyn Write>
+            }
+            None => Box::new(out.lock()) as Box<dyn Write>,
+        };
+        let output = io::BufWriter::with_capacity(1048576, out_writer);
+        let clevel = matches
+            .value_of("compression")
+            .and_then(|a| a.parse::<u8>().ok())
+            .unwrap_or(6u8);
+        let header = bam_header;
+        let mut writer = bam::bam_writer::BamWriterBuilder::new()
+            .additional_threads(threads - 1)
+            .compression_level(clevel)
+            .write_header(true)
+            .from_stream(output, header.clone())
+            .unwrap();
+
+        let viewer = reader2.full();
+        for record in viewer {
+            
+        }
+    }
 }
 
 fn bam_query(matches: &ArgMatches, threads: u16) -> () {
