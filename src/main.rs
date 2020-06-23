@@ -6,6 +6,7 @@ use env_logger;
 use genomic_range::StringRegion;
 use ghi::bed;
 use log::{debug, info};
+use plotters::prelude::*;
 use std::{fs::File, io, path::Path};
 
 use ghi::binary::GhbWriter;
@@ -111,6 +112,7 @@ fn main() {
                 )
                 .arg(Arg::new("filter").short('f').about("Pre-filter"))
                 .arg(Arg::new("binary").short('b').about("Binary"))
+                .arg(Arg::new("vis").short('v').about("Binary"))
                 .arg(
                     Arg::new("output")
                         .short('o')
@@ -252,7 +254,10 @@ fn main() {
     } else if let Some(ref matches) = matches.subcommand_matches("query") {
         match matches.is_present("binary") {
             true => bam_query(matches, threads),
-            false => query(matches, threads),
+            false => match matches.is_present("vis") {
+                true => vis_query(matches, threads).unwrap(),
+                false => query(matches, threads),
+            },
         }
     } else if let Some(ref matches) = matches.subcommand_matches("decompose") {
         decompose(matches, threads);
@@ -528,9 +533,7 @@ fn split(matches: &ArgMatches, threads: u16) -> () {
             .unwrap();
 
         let viewer = reader2.full();
-        for record in viewer {
-            
-        }
+        for record in viewer {}
     }
 }
 
@@ -620,6 +623,100 @@ fn bam_query(matches: &ArgMatches, threads: u16) -> () {
             }
         }
     }
+}
+
+fn vis_query(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::error::Error>> {
+    if let Some(o) = matches.value_of("INPUT") {
+        let mut reader: IndexedReader<BufReader<File>> =
+            IndexedReader::from_path_with_additional_threads(o, threads - 1).unwrap();
+        if let Some(ranges) = matches.values_of("range") {
+            let ranges: Vec<&str> = ranges.collect();
+            for range in ranges {
+                eprintln!("{}", range);
+                let closure = |x: &str| reader.reference_id(x);
+                let string_range = StringRegion::new(range).unwrap();
+                let _reference_name = &string_range.path;
+
+                let range = Region::convert(&string_range, closure).unwrap();
+                let viewer = reader.fetch(&range).unwrap();
+                let clevel = matches
+                    .value_of("compression")
+                    .and_then(|a| a.parse::<u8>().ok())
+                    .unwrap_or(6u8);
+                let sample_ids_opt: Option<Vec<u64>> = matches
+                    .values_of("id")
+                    //.unwrap()
+                    .and_then(|a| Some(a.map(|t| t.parse::<u64>().unwrap()).collect()));
+                let sample_id_cond = sample_ids_opt.is_some();
+                let sample_ids = sample_ids_opt.unwrap_or(vec![]);
+                let filter = matches.is_present("filter");
+
+                let format_type_opt = matches.value_of_t::<Format>("type");
+                let format_type_cond = format_type_opt.is_ok();
+                let format_type = format_type_opt.unwrap_or(Format::Default(Default {}));
+                /*let out = std::io::stdout();
+                let out_writer = match matches.value_of("output") {
+                    Some(x) => {
+                        let path = Path::new(x);
+                        Box::new(File::create(&path).unwrap()) as Box<dyn Write>
+                    }
+                    None => Box::new(out.lock()) as Box<dyn Write>,
+                };
+                let output = io::BufWriter::with_capacity(1048576, out_writer);*/
+                let output = matches.value_of("output").unwrap();
+
+                let root = BitMapBackend::new(output, (640, 480)).into_drawing_area();
+                root.fill(&WHITE);
+                let root = root.margin(10, 10, 10, 10);
+                // After this point, we should be able to draw construct a chart context
+                let mut chart = ChartBuilder::on(&root)
+                    // Set the caption of the chart
+                    .caption("Alignment Plot", ("sans-serif", 40).into_font())
+                    // Set the size of the label region
+                    .x_label_area_size(20)
+                    .y_label_area_size(40)
+                    // Finally attach a coordinate on the drawing area and make a chart context
+                    .build_ranged(range.start()..range.end(), 0f32..10f32)?;
+
+                let _ = viewer.into_iter().for_each(|t| {
+                    //eprintln!("{:?}", t.clone().unwrap());
+                    let f = t.unwrap();
+                    if !sample_id_cond || sample_ids.iter().any(|&i| i == f.sample_id()) {
+                        let _sample_id = f.sample_id();
+                        let data = f.data();
+                        if !format_type_cond
+                            || std::mem::discriminant(&format_type) == std::mem::discriminant(&data)
+                        {
+                            match data {
+                                Format::Range(rec) => {
+                                    /*let mut writer = bed::Writer::new(&mut output);
+                                    for i in rec.to_record(&reference_name) {
+                                        writer.write(&i).unwrap();
+                                    }*/
+                                }
+                                Format::Alignment(Alignment::Object(rec)) => {
+                                    for i in rec {
+                                        if !filter
+                                            || (i.calculate_end() as u64 > range.start()
+                                                && range.end() > i.start() as u64)
+                                        {
+                                            chart.draw_series(LineSeries::new(
+                                                vec![(0, 0.0), (5, 5.0), (8, 7.0)],
+                                                &RED,
+                                            ));
+                                        }
+                                    }
+                                }
+                                _ => {}
+                            }
+                        }
+                    }
+                    //}
+                });
+            }
+        }
+    }
+    Ok(())
 }
 
 fn bin(matches: &ArgMatches, threads: u16) -> () {
