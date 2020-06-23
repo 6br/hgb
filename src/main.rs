@@ -113,6 +113,8 @@ fn main() {
                 .arg(Arg::new("filter").short('f').about("Pre-filter"))
                 .arg(Arg::new("binary").short('b').about("Binary"))
                 .arg(Arg::new("vis").short('v').about("Binary"))
+                .arg(Arg::new("no-cigar").short('n').about("Binary"))
+                .arg(Arg::new("packing").short('p').about("Binary"))
                 .arg(
                     Arg::new("output")
                         .short('o')
@@ -650,6 +652,8 @@ fn vis_query(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::erro
                 let sample_id_cond = sample_ids_opt.is_some();
                 let sample_ids = sample_ids_opt.unwrap_or(vec![]);
                 let filter = matches.is_present("filter");
+                let no_cigar = matches.is_present("no-cigar");
+                let packing = matches.is_present("packing");
 
                 let format_type_opt = matches.value_of_t::<Format>("type");
                 let format_type_cond = format_type_opt.is_ok();
@@ -700,7 +704,7 @@ fn vis_query(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::erro
                     }
                 });
 
-                let root = SVGBackend::new(output, (1280, 100 + list.len() as u32 * 15))
+                let root = SVGBackend::new(output, (1280, 40 + list.len() as u32 * 15))
                     .into_drawing_area();
                 root.fill(&WHITE)?;
                 let root = root.margin(10, 10, 10, 10);
@@ -712,7 +716,7 @@ fn vis_query(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::erro
                     .x_label_area_size(20)
                     .y_label_area_size(40)
                     // Finally attach a coordinate on the drawing area and make a chart context
-                    .build_ranged(range.start()..range.end(), 0..list.len())?;
+                    .build_ranged((range.start() - 1)..(range.end() + 1), 0..(1 + list.len()))?;
                 // Then we can draw a mesh
                 chart
                     .configure_mesh()
@@ -723,6 +727,7 @@ fn vis_query(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::erro
                     .x_label_formatter(&|x| format!("{:.3}", x))
                     .draw()?;
                 list.sort_by(|a, b| a.0.cmp(&b.0));
+                // eprintln!("{}", list.len());
                 chart.draw_series((0..).zip(list.iter()).map(|(index, data)| {
                     //for (index, data) in list.iter().enumerate() {
                     let bam = &(*data).1;
@@ -748,10 +753,12 @@ fn vis_query(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::erro
                         Rectangle::new([(start, index), (end, index + 1)], color.filled());
                     bar.set_margin(1, 1, 0, 0);
                     let mut bar2 =
-                        Rectangle::new([(start, index), (end, index + 1)], stroke.stroke_width(1));
+                        Rectangle::new([(start, index), (end, index + 1)], stroke.stroke_width(2));
                     bar2.set_margin(1, 1, 0, 0);
+                    // eprintln!("{:?}", [(start, index), (end, index + 1)]);
                     
                     let mut bars = vec![bar, bar2];
+                    if ! no_cigar {
                     let mut prev_ref = bam.start() as u64;
                     for entry in bam.aligned_pairs() {
                         // eprintln!("{:?}",entry);
@@ -760,28 +767,28 @@ fn vis_query(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::erro
                             // (Seq_idx, ref_idx)
                             (Some(_), Some(reference)) => {
                                 prev_ref = reference as u64;
-                                if reference > bam.calculate_end() as u32 {break;}
+                                if reference > range.end() as u32 {break;}
                             }
                             (None, Some(reference)) => {
                                 //Deletion
-                                if reference > bam.start() as u32 {
-                                let mut bar =
-                                Rectangle::new([(reference as u64, index), (reference as u64 + 1, index + 1)], WHITE.filled());
-                                bar.set_margin(1, 1, 0, 0);
-                                prev_ref = reference as u64;
-                                bars.push(bar);
+                                if reference > range.start() as u32 {
+                                    let mut bar =
+                                    Rectangle::new([(reference as u64, index), (reference as u64 + 1, index + 1)], WHITE.filled());
+                                    bar.set_margin(1, 1, 0, 0);
+                                    prev_ref = reference as u64;
+                                    bars.push(bar);
                                 }
-                                if reference > bam.calculate_end() as u32 {break;}
+                                if reference >= range.end() as u32 {break;}
                             }
                             (Some(record), None) => {
                                 //Insertion
-                                if prev_ref > bam.start() as u64 {
-                                let mut bar = Rectangle::new([(prev_ref, index), (prev_ref + 1, index + 1)], MAGENTA.stroke_width(1));
-                                eprintln!("{:?}", [(prev_ref, index), (prev_ref + 1, index + 1)]);
-                                bar.set_margin(1, 1, 0, 0);
-                                bars.push(bar);
-                                prev_ref = 0;
-                            }
+                                if prev_ref > range.start() as u64 {
+                                    let mut bar = Rectangle::new([(prev_ref, index), (prev_ref+1, index + 1)], MAGENTA.stroke_width(1));
+                                    eprintln!("{:?}", [(prev_ref, index), (prev_ref + 1, index + 1)]);
+                                    bar.set_margin(0, 0, 0, 15);
+                                    bars.push(bar);
+                                    prev_ref = 0;
+                                }
                                 // eprintln!("{}", prev_ref)
 
                             }
@@ -800,6 +807,7 @@ fn vis_query(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::erro
                             println!("-");
                         }*/
                     }
+                }
                     bars
                 }).into_iter().flatten().collect::<Vec<Rectangle<(u64, usize)>>>())?;
             }
