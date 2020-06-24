@@ -755,7 +755,10 @@ fn vis_query(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::erro
                             reader.header().get_name(idx).unwrap_or(&idx.to_string())
                         ))
                         .legend(move |(x, y)| {
-                            Rectangle::new([(x - 5, y - 5), (x + 5, y + 5)], &Palette99::pick(idx))
+                            Rectangle::new(
+                                [(x - 5, y - 5), (x + 5, y + 5)],
+                                Palette99::pick(idx).filled(),
+                            )
                         });
                     prev_index += count;
                 }
@@ -915,7 +918,6 @@ fn vis_query(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::erro
             }
         }
     }
-
     Ok(())
 }
 
