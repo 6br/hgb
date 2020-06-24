@@ -5,9 +5,11 @@ use clap::{App, Arg, ArgMatches};
 use env_logger;
 use genomic_range::StringRegion;
 use ghi::bed;
+use itertools::Itertools;
 use log::{debug, info};
 use plotters::prelude::Palette;
 use plotters::prelude::*;
+
 use std::{collections::BTreeMap, fs::File, io, path::Path};
 
 use ghi::binary::GhbWriter;
@@ -671,6 +673,7 @@ fn vis_query(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::erro
                 let output = matches.value_of("output").unwrap();
 
                 let mut list = vec![];
+                let mut list2 = vec![];
                 let mut samples = BTreeMap::new();
                 let _ = viewer.into_iter().for_each(|t| {
                     //eprintln!("{:?}", t.clone().unwrap());
@@ -695,6 +698,8 @@ fn vis_query(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::erro
                                                 && range.end() > i.start() as u64)
                                         {
                                             list.push((sample_id, i));
+                                            list2.push((sample_id, true));
+                                            samples.insert(sample_id, true);
                                             //list.insert(sample_id, i);
                                         }
                                     }
@@ -728,7 +733,55 @@ fn vis_query(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::erro
                     .x_label_formatter(&|x| format!("{:.3}", x))
                     .draw()?;
                 list.sort_by(|a, b| a.0.cmp(&b.0));
+                list2.sort_by(|a, b| a.0.cmp(&b.0));
                 // eprintln!("{}", list.len());
+                let mut prev_index = 0;
+                
+                for (sample_sequential_id, sample) in list2.into_iter().group_by(|elt| elt.0).into_iter() {
+                    // Check that the sum of each group is +/- 4.
+                    // assert_eq!(4, group.iter().fold(0_i32, |a, b| a + b).abs());
+                    let count = sample.count();
+                    let idx = sample_sequential_id as usize;
+                    chart
+                        .draw_series(LineSeries::new(
+                            vec![
+                                (range.start(), prev_index),
+                                (range.end(), prev_index),
+                            ],
+                            &Palette99::pick(idx),
+                        ))?
+                        // .label(format!("CPU {}", idx))
+                        .legend(move |(x, y)| {
+                            Rectangle::new([(x - 5, y - 5), (x + 5, y + 5)], &Palette99::pick(idx))
+                        });
+                    prev_index += count;
+                }
+
+                chart.configure_series_labels()
+                .background_style(&WHITE.mix(0.8))
+                .border_style(&BLACK)
+                .draw()?;
+                
+                // For each sample:
+/*
+                chart.draw_series(list2.into_iter().group_by(|elt| elt.0).into_iter().map(
+                    |(sample_sequential_id, sample)| {
+                        let count = sample.count();
+                        let stroke = Palette99::pick(sample_sequential_id as usize);
+                        let mut bar2 = Rectangle::new(
+                            [
+                                (range.start(), prev_index),
+                                (range.end(), prev_index + count),
+                            ],
+                            stroke.stroke_width(100),
+                        );
+                        bar2.set_margin(1, 0, 0, 0);
+                        prev_index += count;
+                        bar2
+                    },
+                ))?;
+*/
+                // For each alignment:
                 chart.draw_series((0..).zip(list.iter()).map(|(index, data)| {
                     //for (index, data) in list.iter().enumerate() {
                     let bam = &(*data).1;
@@ -758,7 +811,7 @@ fn vis_query(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::erro
                     bar2.set_margin(1, 1, 0, 0);
                     // eprintln!("{:?}", [(start, index), (end, index + 1)]);
                     
-                    let mut bars = vec![bar, bar2];
+                    let mut bars = vec![bar]; //, bar2];
                     if ! no_cigar {
                     let mut prev_ref = bam.start() as u64;
 
