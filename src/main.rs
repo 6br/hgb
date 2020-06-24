@@ -736,51 +736,49 @@ fn vis_query(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::erro
                 list2.sort_by(|a, b| a.0.cmp(&b.0));
                 // eprintln!("{}", list.len());
                 let mut prev_index = 0;
-                
-                for (sample_sequential_id, sample) in list2.into_iter().group_by(|elt| elt.0).into_iter() {
+
+                for (sample_sequential_id, sample) in
+                    list2.into_iter().group_by(|elt| elt.0).into_iter()
+                {
                     // Check that the sum of each group is +/- 4.
                     // assert_eq!(4, group.iter().fold(0_i32, |a, b| a + b).abs());
                     let count = sample.count();
                     let idx = sample_sequential_id as usize;
+                    // let idx = sample.next().0;
                     chart
                         .draw_series(LineSeries::new(
-                            vec![
-                                (range.start(), prev_index),
-                                (range.end(), prev_index),
-                            ],
+                            vec![(range.start(), prev_index), (range.end(), prev_index)],
                             &Palette99::pick(idx),
                         ))?
-                        // .label(format!("CPU {}", idx))
+                        .label(format!(
+                            "{}",
+                            reader.header().get_name(idx).unwrap_or(&idx.to_string())
+                        ))
                         .legend(move |(x, y)| {
                             Rectangle::new([(x - 5, y - 5), (x + 5, y + 5)], &Palette99::pick(idx))
                         });
                     prev_index += count;
                 }
 
-                chart.configure_series_labels()
-                .background_style(&WHITE.mix(0.8))
-                .border_style(&BLACK)
-                .draw()?;
-                
                 // For each sample:
-/*
-                chart.draw_series(list2.into_iter().group_by(|elt| elt.0).into_iter().map(
-                    |(sample_sequential_id, sample)| {
-                        let count = sample.count();
-                        let stroke = Palette99::pick(sample_sequential_id as usize);
-                        let mut bar2 = Rectangle::new(
-                            [
-                                (range.start(), prev_index),
-                                (range.end(), prev_index + count),
-                            ],
-                            stroke.stroke_width(100),
-                        );
-                        bar2.set_margin(1, 0, 0, 0);
-                        prev_index += count;
-                        bar2
-                    },
-                ))?;
-*/
+                /*
+                                chart.draw_series(list2.into_iter().group_by(|elt| elt.0).into_iter().map(
+                                    |(sample_sequential_id, sample)| {
+                                        let count = sample.count();
+                                        let stroke = Palette99::pick(sample_sequential_id as usize);
+                                        let mut bar2 = Rectangle::new(
+                                            [
+                                                (range.start(), prev_index),
+                                                (range.end(), prev_index + count),
+                                            ],
+                                            stroke.stroke_width(100),
+                                        );
+                                        bar2.set_margin(1, 0, 0, 0);
+                                        prev_index += count;
+                                        bar2
+                                    },
+                                ))?;
+                */
                 // For each alignment:
                 chart.draw_series((0..).zip(list.iter()).map(|(index, data)| {
                     //for (index, data) in list.iter().enumerate() {
@@ -901,19 +899,23 @@ fn vis_query(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::erro
                                     prev_ref = 0;
                                 }
                                 // eprintln!("{}", prev_ref)
-
                             }
                             _ => {}
                         }
-
                     }
-                }
+                    }
                 }
                     bars
                 }).into_iter().flatten().collect::<Vec<Rectangle<(u64, usize)>>>())?;
+                chart
+                    .configure_series_labels()
+                    .background_style(&WHITE.mix(0.8))
+                    .border_style(&BLACK)
+                    .draw()?;
             }
         }
     }
+
     Ok(())
 }
 
