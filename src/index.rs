@@ -122,6 +122,12 @@ impl Region {
     }
 }
 
+impl Display for Region {
+    fn fmt(&self, f: &mut Formatter) -> result::Result<(), fmt::Error> {
+        write!(f, "{}:{}-{}", self.ref_id, self.start, self.end)
+    }
+}
+
 /// Virtual offset. Represents `block_offset << 16 | contents_offset`, where
 /// `block_offset` is `u48` and represents the offset in the bgzip file to the beginning of the
 /// block (also known as `coffset` or `compressed_offset`).

@@ -6,6 +6,7 @@ use env_logger;
 use genomic_range::StringRegion;
 use ghi::bed;
 use log::{debug, info};
+use plotters::prelude::Palette;
 use plotters::prelude::*;
 use std::{collections::BTreeMap, fs::File, io, path::Path};
 
@@ -670,7 +671,7 @@ fn vis_query(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::erro
                 let output = matches.value_of("output").unwrap();
 
                 let mut list = vec![];
-                //let mut list = BTreeMap::new();
+                let mut samples = BTreeMap::new();
                 let _ = viewer.into_iter().for_each(|t| {
                     //eprintln!("{:?}", t.clone().unwrap());
                     let f = t.unwrap();
@@ -711,7 +712,7 @@ fn vis_query(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::erro
                 // After this point, we should be able to draw construct a chart context
                 let mut chart = ChartBuilder::on(&root)
                     // Set the caption of the chart
-                    .caption("Alignment Plot", ("sans-serif", 20).into_font())
+                    .caption(format!("{}", string_range), ("sans-serif", 20).into_font())
                     // Set the size of the label region
                     .x_label_area_size(20)
                     .y_label_area_size(40)
@@ -736,7 +737,7 @@ fn vis_query(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::erro
                     } else {
                         RED
                     };
-                    let stroke = if data.0 % 2 == 0 { CYAN } else { GREEN };
+                    let stroke = Palette99::pick(data.0 as usize); //.unwrap(); //if data.0 % 2 == 0 { CYAN } else { GREEN };
                     let start = if bam.start() as u64 > range.start() {
                         bam.start() as u64
                     } else {
@@ -753,48 +754,59 @@ fn vis_query(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::erro
                         Rectangle::new([(start, index), (end, index + 1)], color.filled());
                     bar.set_margin(1, 1, 0, 0);
                     let mut bar2 =
-                        Rectangle::new([(start, index), (end, index + 1)], stroke.stroke_width(2));
+                        Rectangle::new([(start, index), (end, index + 1)], stroke.stroke_width(3));
                     bar2.set_margin(1, 1, 0, 0);
                     // eprintln!("{:?}", [(start, index), (end, index + 1)]);
                     
                     let mut bars = vec![bar, bar2];
                     if ! no_cigar {
                     let mut prev_ref = bam.start() as u64;
-                    for entry in bam.aligned_pairs() {
-                        // eprintln!("{:?}",entry);
-                        
-                        match entry {
-                            // (Seq_idx, ref_idx)
-                            (Some(_), Some(reference)) => {
-                                prev_ref = reference as u64;
-                                if reference > range.end() as u32 {break;}
-                            }
-                            (None, Some(reference)) => {
-                                //Deletion
-                                if reference > range.start() as u32 {
-                                    let mut bar =
-                                    Rectangle::new([(reference as u64, index), (reference as u64 + 1, index + 1)], WHITE.filled());
-                                    bar.set_margin(1, 1, 0, 0);
-                                    prev_ref = reference as u64;
-                                    bars.push(bar);
-                                }
-                                if reference >= range.end() as u32 {break;}
-                            }
-                            (Some(record), None) => {
-                                //Insertion
-                                if prev_ref > range.start() as u64 {
+
+                    if let Ok(a) = bam.alignment_entries() {
+                        for entry in a {
+                            if entry.is_insertion() {
+                                if prev_ref >= range.start() as u64 {
                                     let mut bar = Rectangle::new([(prev_ref, index), (prev_ref+1, index + 1)], MAGENTA.stroke_width(1));
-                                    eprintln!("{:?}", [(prev_ref, index), (prev_ref + 1, index + 1)]);
-                                    bar.set_margin(0, 0, 0, 15);
+                                    //eprintln!("{:?}", [(prev_ref, index), (prev_ref + 1, index + 1)]);
+                                    bar.set_margin(0, 0, 0, 3);
                                     bars.push(bar);
                                     prev_ref = 0;
                                 }
-                                // eprintln!("{}", prev_ref)
+                            } else if entry.is_deletion() {
+                                prev_ref = entry.ref_pos_nt().unwrap().0 as u64;
+                                if prev_ref > range.end() as u64 {break;}
+                                if prev_ref >= range.start() as u64 {
+                                let mut bar = Rectangle::new([(prev_ref , index), (prev_ref + 1, index + 1)], WHITE.filled());
+                                bar.set_margin(2, 2, 0, 0);
+                                //eprintln!("{:?}", [(prev_ref, index), (prev_ref + 1, index + 1)]);
+                                bars.push(bar);
+                                }
+                            } else if entry.is_seq_match() {
+                                prev_ref = entry.ref_pos_nt().unwrap().0 as u64;
+                                if prev_ref > range.end() as u64 {break;}
+                            } else {
+                                /* Mismatch */
+                                prev_ref = entry.ref_pos_nt().unwrap().0 as u64;
+
+                                if prev_ref > range.end() as u64 {break;}
+                                if prev_ref >= range.start() as u64 {
+                                let record_nt = entry.record_pos_nt().unwrap().1;
+                                let color = match record_nt as char {
+                                    'A' => GREEN, //RED,
+                                    'C' => BLUE,
+                                    'G' => YELLOW,
+                                    'T' => RED, //GREEN,
+                                    _ => BLACK,
+                                };
+
+                                let mut bar =
+                                Rectangle::new([(prev_ref as u64, index), (prev_ref as u64 + 1, index + 1)], color.filled());
+                                bar.set_margin(2, 2, 0, 0);
+                                //eprintln!("{:?}", [(prev_ref, index), (prev_ref + 1, index + 1)]);
+                                bars.push(bar);
+                            }
 
                             }
-                            _ => {}
-                        }
-
                         /*if let Some((record_pos, record_nt)) = entry.record_pos_nt() {
                             print!("{} {}", record_pos, record_nt as char);
                         } else {
@@ -806,7 +818,43 @@ fn vis_query(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::erro
                         } else {
                             println!("-");
                         }*/
+                        }
+                    } else {
+                    for entry in bam.aligned_pairs() {
+                        match entry {
+                            // (Seq_idx, ref_idx)
+                            (Some(_), Some(reference)) => {
+                                prev_ref = reference as u64;
+                                if reference > range.end() as u32 {break;}
+                            }
+                            (None, Some(reference)) => {
+                                //Deletion
+                                if reference > range.start() as u32 {
+                                    let mut bar =
+                                    Rectangle::new([(reference as u64, index), (reference as u64 + 1, index + 1)], WHITE.filled());
+                                    bar.set_margin(2, 2, 0, 0);
+                                    prev_ref = reference as u64;
+                                    bars.push(bar);
+                                }
+                                if reference >= range.end() as u32 {break;}
+                            }
+                            (Some(record), None) => {
+                                //Insertion
+                                if prev_ref > range.start() as u64 {
+                                    let mut bar = Rectangle::new([(prev_ref, index), (prev_ref+1, index + 1)], MAGENTA.stroke_width(1));
+                                    // eprintln!("{:?}", [(prev_ref, index), (prev_ref + 1, index + 1)]);
+                                    bar.set_margin(0, 0, 0, 5);
+                                    bars.push(bar);
+                                    prev_ref = 0;
+                                }
+                                // eprintln!("{}", prev_ref)
+
+                            }
+                            _ => {}
+                        }
+
                     }
+                }
                 }
                     bars
                 }).into_iter().flatten().collect::<Vec<Rectangle<(u64, usize)>>>())?;
