@@ -802,9 +802,9 @@ fn vis_query(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::erro
                 } else {
                     list.iter().enumerate().into_iter()
                 }*/
-                chart.draw_series((0..).zip(list.iter()).map(|(index, data)| {
+                chart.draw_series(list.into_par_iter().enumerate().map(|(index, data)| {
                     //for (index, data) in list.iter().enumerate() {
-                    let bam = &(*data).1;
+                    let bam = data.1;
                     let color = if bam.flag().is_reverse_strand() {
                         BLUE
                     } else {
@@ -931,7 +931,7 @@ fn vis_query(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::erro
                     }
                 }
                     bars
-                }).into_iter().flatten().collect::<Vec<Rectangle<(u64, usize)>>>())?;
+                }).flatten().collect::<Vec<Rectangle<(u64, usize)>>>())?;
 
                 if legend {
                     chart
