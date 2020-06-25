@@ -9,7 +9,8 @@ use itertools::Itertools;
 use log::{debug, info};
 use plotters::prelude::Palette;
 use plotters::prelude::*;
-
+use rayon::iter::{IntoParallelIterator, ParallelIterator};
+use rayon::prelude::*;
 use std::{collections::BTreeMap, fs::File, io, path::Path};
 
 use ghi::binary::GhbWriter;
@@ -118,6 +119,8 @@ fn main() {
                 .arg(Arg::new("vis").short('v').about("Binary"))
                 .arg(Arg::new("no-cigar").short('n').about("Binary"))
                 .arg(Arg::new("packing").short('p').about("Binary"))
+                .arg(Arg::new("legend").short('l').about("Legend"))
+                .arg(Arg::new("no-md").short('m').about("No-md"))
                 .arg(
                     Arg::new("output")
                         .short('o')
@@ -252,6 +255,11 @@ fn main() {
     let threads = matches
         .value_of("threads")
         .and_then(|t| t.parse::<u16>().ok())
+        .unwrap();
+
+    rayon::ThreadPoolBuilder::new()
+        .num_threads(threads as usize)
+        .build_global()
         .unwrap();
 
     if let Some(ref matches) = matches.subcommand_matches("build") {
@@ -657,6 +665,7 @@ fn vis_query(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::erro
                 let filter = matches.is_present("filter");
                 let no_cigar = matches.is_present("no-cigar");
                 let packing = matches.is_present("packing");
+                let legend = matches.is_present("legend");
 
                 let format_type_opt = matches.value_of_t::<Format>("type");
                 let format_type_cond = format_type_opt.is_ok();
@@ -733,34 +742,36 @@ fn vis_query(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::erro
                     .x_label_formatter(&|x| format!("{:.3}", x))
                     .draw()?;
                 list.sort_by(|a, b| a.0.cmp(&b.0));
-                list2.sort_by(|a, b| a.0.cmp(&b.0));
-                // eprintln!("{}", list.len());
-                let mut prev_index = 0;
+                if legend {
+                    list2.sort_by(|a, b| a.0.cmp(&b.0));
+                    // eprintln!("{}", list.len());
+                    let mut prev_index = 0;
 
-                for (sample_sequential_id, sample) in
-                    list2.into_iter().group_by(|elt| elt.0).into_iter()
-                {
-                    // Check that the sum of each group is +/- 4.
-                    // assert_eq!(4, group.iter().fold(0_i32, |a, b| a + b).abs());
-                    let count = sample.count();
-                    let idx = sample_sequential_id as usize;
-                    // let idx = sample.next().0;
-                    chart
-                        .draw_series(LineSeries::new(
-                            vec![(range.start(), prev_index), (range.end(), prev_index)],
-                            &Palette99::pick(idx),
-                        ))?
-                        .label(format!(
-                            "{}",
-                            reader.header().get_name(idx).unwrap_or(&idx.to_string())
-                        ))
-                        .legend(move |(x, y)| {
-                            Rectangle::new(
-                                [(x - 5, y - 5), (x + 5, y + 5)],
-                                Palette99::pick(idx).filled(),
-                            )
-                        });
-                    prev_index += count;
+                    for (sample_sequential_id, sample) in
+                        list2.into_iter().group_by(|elt| elt.0).into_iter()
+                    {
+                        // Check that the sum of each group is +/- 4.
+                        // assert_eq!(4, group.iter().fold(0_i32, |a, b| a + b).abs());
+                        let count = sample.count();
+                        let idx = sample_sequential_id as usize;
+                        // let idx = sample.next().0;
+                        chart
+                            .draw_series(LineSeries::new(
+                                vec![(range.start(), prev_index), (range.end(), prev_index)],
+                                &Palette99::pick(idx),
+                            ))?
+                            .label(format!(
+                                "{}",
+                                reader.header().get_name(idx).unwrap_or(&idx.to_string())
+                            ))
+                            .legend(move |(x, y)| {
+                                Rectangle::new(
+                                    [(x - 5, y - 5), (x + 5, y + 5)],
+                                    Palette99::pick(idx).filled(),
+                                )
+                            });
+                        prev_index += count;
+                    }
                 }
 
                 // For each sample:
@@ -783,6 +794,14 @@ fn vis_query(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::erro
                                 ))?;
                 */
                 // For each alignment:
+                /*let k = if packing {
+                    // (0..).zip(list.iter())
+                    list.iter().group_by(|elt| elt.0).into_iter().map(|t|
+                        t
+                    ).collect::<&(u64, Record)>().into_iter()
+                } else {
+                    list.iter().enumerate().into_iter()
+                }*/
                 chart.draw_series((0..).zip(list.iter()).map(|(index, data)| {
                     //for (index, data) in list.iter().enumerate() {
                     let bam = &(*data).1;
@@ -813,6 +832,9 @@ fn vis_query(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::erro
                     // eprintln!("{:?}", [(start, index), (end, index + 1)]);
                     
                     let mut bars = vec![bar]; //, bar2];
+                    if !legend {
+                        bars.push(bar2)
+                    }
                     if ! no_cigar {
                     let mut prev_ref = bam.start() as u64;
 
@@ -910,11 +932,14 @@ fn vis_query(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::erro
                 }
                     bars
                 }).into_iter().flatten().collect::<Vec<Rectangle<(u64, usize)>>>())?;
-                chart
-                    .configure_series_labels()
-                    .background_style(&WHITE.mix(0.8))
-                    .border_style(&BLACK)
-                    .draw()?;
+
+                if legend {
+                    chart
+                        .configure_series_labels()
+                        .background_style(&WHITE.mix(0.8))
+                        .border_style(&BLACK)
+                        .draw()?;
+                }
             }
         }
     }
