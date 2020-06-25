@@ -129,7 +129,7 @@ fn main() {
                 .arg(Arg::new("no-cigar").short('n').about("Binary"))
                 .arg(Arg::new("packing").short('p').about("Binary"))
                 .arg(Arg::new("legend").short('l').about("Legend"))
-                .arg(Arg::new("no-md").short('m').about("No-md"))
+                .arg(Arg::new("x").short('x').takes_value(true).about("x"))
                 .arg(Arg::new("no-insertion").short('s').about("No-md"))
                 // .arg(Arg::new("insertion").short('').about("No-md"))
                 .arg(
@@ -679,6 +679,10 @@ fn vis_query(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::erro
                 let packing = matches.is_present("packing");
                 let legend = matches.is_present("legend");
                 let insertion = !matches.is_present("no-insertion");
+                let x = matches
+                    .value_of("x")
+                    .and_then(|a| a.parse::<u32>().ok())
+                    .unwrap_or(1280u32);
 
                 let format_type_opt = matches.value_of_t::<Format>("type");
                 let format_type_cond = format_type_opt.is_ok();
@@ -693,7 +697,12 @@ fn vis_query(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::erro
                 };
                 let output = io::BufWriter::with_capacity(1048576, out_writer);*/
                 let output = matches.value_of("output").unwrap();
-
+                let end0 = start.elapsed();
+                eprintln!(
+                    "{}.{:03} sec.",
+                    end0.as_secs(),
+                    end0.subsec_nanos() / 1_000_000
+                );
                 let mut list = vec![];
                 //let mut list2 = vec![];
                 //let mut samples = BTreeMap::new();
@@ -777,7 +786,8 @@ fn vis_query(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::erro
 
                 // Packing for each genome
                 let mut prev_index = 0;
-                let mut compressed_list = BTreeMap::<u64, usize>::new();
+                //let mut compressed_list = BTreeMap::<u64, usize>::new();
+                let mut compressed_list = vec![];
                 let mut index_list = Vec::with_capacity(list.len());
                 if packing {
                     list.iter().group_by(|elt| elt.0).into_iter().for_each(|t| {
@@ -802,7 +812,8 @@ fn vis_query(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::erro
                             //(index, (k.0, k.1))
                         }); //.collect::<Vec<(usize, (u64, Record))>>()
                             // compressed_list.push(prev_index);
-                        compressed_list.insert(t.0, prev_index);
+                            //compressed_list.insert(t.0, prev_index);
+                        compressed_list.push((t.0, prev_index));
                         //(t.0, ((t.1).0, (t.1).1))
                         // .collect::<&(u64, Record)>(). // collect::<Vec<(usize, (u64, Record))>>
                     });
@@ -815,7 +826,8 @@ fn vis_query(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::erro
                             let count = sample.count();
                             prev_index += count;
                             // compressed_list.push(prev_index);
-                            compressed_list.insert(sample_sequential_id, prev_index);
+                            // compressed_list.insert(sample_sequential_id, prev_index);
+                            compressed_list.push((sample_sequential_id, prev_index));
                         },
                     )
                 }
@@ -827,7 +839,7 @@ fn vis_query(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::erro
                 );
                 eprintln!("{:?}", compressed_list);
 
-                let root = BitMapBackend::new(output, (1280, 40 + prev_index as u32 * 15))
+                let root = BitMapBackend::new(output, (x, 40 + prev_index as u32 * 15))
                     .into_drawing_area();
                 root.fill(&WHITE)?;
                 let root = root.margin(10, 10, 10, 10);
@@ -885,22 +897,22 @@ fn vis_query(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::erro
 
                 // For each sample:
                 /*
-                                chart.draw_series(list2.into_iter().group_by(|elt| elt.0).into_iter().map(
-                                    |(sample_sequential_id, sample)| {
-                                        let count = sample.count();
-                                        let stroke = Palette99::pick(sample_sequential_id as usize);
-                                        let mut bar2 = Rectangle::new(
-                                            [
-                                                (range.start(), prev_index),
-                                                (range.end(), prev_index + count),
-                                            ],
-                                            stroke.stroke_width(100),
-                                        );
-                                        bar2.set_margin(1, 0, 0, 0);
-                                        prev_index += count;
-                                        bar2
-                                    },
-                                ))?;
+                    chart.draw_series(list2.into_iter().group_by(|elt| elt.0).into_iter().map(
+                        |(sample_sequential_id, sample)| {
+                            let count = sample.count();
+                            let stroke = Palette99::pick(sample_sequential_id as usize);
+                            let mut bar2 = Rectangle::new(
+                                [
+                                    (range.start(), prev_index),
+                                    (range.end(), prev_index + count),
+                                ],
+                                stroke.stroke_width(100),
+                            );
+                            bar2.set_margin(1, 0, 0, 0);
+                            prev_index += count;
+                            bar2
+                        },
+                    ))?;
                 */
                 // For each alignment:
                 // chart.draw_series(list.into_iter().enumerate().map(|(index, data)| {
