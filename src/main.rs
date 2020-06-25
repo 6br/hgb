@@ -11,7 +11,8 @@ use plotters::prelude::Palette;
 use plotters::prelude::*;
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use rayon::prelude::*;
-use std::{collections::BTreeMap, fs::File, io, path::Path};
+use std::sync::Arc;
+use std::{cell::RefCell, collections::BTreeMap, fs::File, io, path::Path};
 
 use ghi::binary::GhbWriter;
 use ghi::builder::InvertedRecordBuilder;
@@ -121,6 +122,7 @@ fn main() {
                 .arg(Arg::new("packing").short('p').about("Binary"))
                 .arg(Arg::new("legend").short('l').about("Legend"))
                 .arg(Arg::new("no-md").short('m').about("No-md"))
+                .arg(Arg::new("svg").short('s').about("No-md"))
                 .arg(
                     Arg::new("output")
                         .short('o')
@@ -666,6 +668,7 @@ fn vis_query(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::erro
                 let no_cigar = matches.is_present("no-cigar");
                 let packing = matches.is_present("packing");
                 let legend = matches.is_present("legend");
+                let svg = matches.is_present("svg");
 
                 let format_type_opt = matches.value_of_t::<Format>("type");
                 let format_type_cond = format_type_opt.is_ok();
@@ -729,7 +732,7 @@ fn vis_query(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::erro
                     list.iter().enumerate().into_iter()
                 }*/
 
-                let root = SVGBackend::new(output, (1280, 40 + list.len() as u32 * 15))
+                let root = BitMapBackend::new(output, (1280, 40 + list.len() as u32 * 15))
                     .into_drawing_area();
                 root.fill(&WHITE)?;
                 let root = root.margin(10, 10, 10, 10);
