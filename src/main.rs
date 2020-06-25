@@ -832,7 +832,7 @@ fn vis_query(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::erro
                 root.fill(&WHITE)?;
                 let root = root.margin(10, 10, 10, 10);
                 // After this point, we should be able to draw construct a chart context
-                let areas = root.split_by_breakpoints([], compressed_list);
+                // let areas = root.split_by_breakpoints([], compressed_list);
                 let mut chart = ChartBuilder::on(&root)
                     // Set the caption of the chart
                     .caption(format!("{}", string_range), ("sans-serif", 20).into_font())
