@@ -14,10 +14,11 @@ use rayon::prelude::*;
 use std::sync::Arc;
 use std::{
     cell::RefCell,
+    cmp::Reverse,
     collections::{BTreeMap, BinaryHeap},
     fs::File,
     io,
-    path::Path, cmp::Reverse,
+    path::Path,
 };
 
 use ghi::binary::GhbWriter;
@@ -128,7 +129,8 @@ fn main() {
                 .arg(Arg::new("packing").short('p').about("Binary"))
                 .arg(Arg::new("legend").short('l').about("Legend"))
                 .arg(Arg::new("no-md").short('m').about("No-md"))
-                .arg(Arg::new("svg").short('s').about("No-md"))
+                .arg(Arg::new("no-insertion").short('s').about("No-md"))
+                // .arg(Arg::new("insertion").short('').about("No-md"))
                 .arg(
                     Arg::new("output")
                         .short('o')
@@ -674,7 +676,7 @@ fn vis_query(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::erro
                 let no_cigar = matches.is_present("no-cigar");
                 let packing = matches.is_present("packing");
                 let legend = matches.is_present("legend");
-                let svg = matches.is_present("svg");
+                let insertion = !matches.is_present("no-insertion");
 
                 let format_type_opt = matches.value_of_t::<Format>("type");
                 let format_type_cond = format_type_opt.is_ok();
@@ -918,7 +920,7 @@ fn vis_query(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::erro
                     if let Ok(a) = bam.alignment_entries() {
                         for entry in a {
                             if entry.is_insertion() {
-                                if prev_ref >= range.start() as u64 {
+                                if prev_ref >= range.start() as u64 && insertion {
                                     let mut bar = Rectangle::new([(prev_ref, index), (prev_ref+1, index + 1)], MAGENTA.stroke_width(1));
                                     //eprintln!("{:?}", [(prev_ref, index), (prev_ref + 1, index + 1)]);
                                     bar.set_margin(0, 0, 0, 3);
