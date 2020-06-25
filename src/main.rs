@@ -718,6 +718,16 @@ fn vis_query(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::erro
                         }
                     }
                 });
+                list.sort_by(|a, b| a.0.cmp(&b.0));
+
+                /*let k = if packing {
+                    // (0..).zip(list.iter())
+                    list.iter().group_by(|elt| elt.0).into_iter().map(|t|
+                        t
+                    ).collect::<&(u64, Record)>().into_iter()
+                } else {
+                    list.iter().enumerate().into_iter()
+                }*/
 
                 let root = SVGBackend::new(output, (1280, 40 + list.len() as u32 * 15))
                     .into_drawing_area();
@@ -741,7 +751,7 @@ fn vis_query(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::erro
                     // We can also change the format of the label text
                     .x_label_formatter(&|x| format!("{:.3}", x))
                     .draw()?;
-                list.sort_by(|a, b| a.0.cmp(&b.0));
+
                 if legend {
                     list2.sort_by(|a, b| a.0.cmp(&b.0));
                     // eprintln!("{}", list.len());
@@ -794,14 +804,6 @@ fn vis_query(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::erro
                                 ))?;
                 */
                 // For each alignment:
-                /*let k = if packing {
-                    // (0..).zip(list.iter())
-                    list.iter().group_by(|elt| elt.0).into_iter().map(|t|
-                        t
-                    ).collect::<&(u64, Record)>().into_iter()
-                } else {
-                    list.iter().enumerate().into_iter()
-                }*/
                 chart.draw_series(list.into_par_iter().enumerate().map(|(index, data)| {
                     //for (index, data) in list.iter().enumerate() {
                     let bam = data.1;
