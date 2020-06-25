@@ -827,7 +827,7 @@ fn vis_query(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::erro
                 );
                 eprintln!("{:?}", compressed_list);
 
-                let root = BitMapBackend::new(output, (1280, 40 + list.len() as u32 * 15))
+                let root = BitMapBackend::new(output, (1280, 40 + prev_index as u32 * 15))
                     .into_drawing_area();
                 root.fill(&WHITE)?;
                 let root = root.margin(10, 10, 10, 10);
