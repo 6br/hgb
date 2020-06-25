@@ -739,7 +739,7 @@ fn vis_query(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::erro
                     end.as_secs(),
                     end.subsec_nanos() / 1_000_000
                 );
-                list.sort_by(|a, b| a.0.cmp(&b.0));
+                list.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.start().cmp(&b.1.start())));
                 let end2 = start.elapsed();
                 eprintln!(
                     "{}.{:03} sec.",
@@ -798,7 +798,7 @@ fn vis_query(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::erro
                             };
                             //let index =
                             index_list.push(index);
-                            // eprintln!("{:?}", heap);
+                            eprintln!("{:?}", heap);
                             //(index, (k.0, k.1))
                         }); //.collect::<Vec<(usize, (u64, Record))>>()
                             // compressed_list.push(prev_index);
