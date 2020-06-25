@@ -840,7 +840,7 @@ fn vis_query(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::erro
                     .x_label_area_size(20)
                     .y_label_area_size(40)
                     // Finally attach a coordinate on the drawing area and make a chart context
-                    .build_ranged((range.start() - 1)..(range.end() + 1), 0..(1 + list.len()))?;
+                    .build_ranged((range.start() - 1)..(range.end() + 1), 0..(1 + prev_index))?;
                 // Then we can draw a mesh
                 chart
                     .configure_mesh()
