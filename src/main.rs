@@ -1,6 +1,6 @@
 extern crate log;
 
-use bam::RecordWriter;
+use bam::{Record, RecordWriter};
 use clap::{App, Arg, ArgMatches};
 use env_logger;
 use genomic_range::StringRegion;
@@ -12,7 +12,13 @@ use plotters::prelude::*;
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use rayon::prelude::*;
 use std::sync::Arc;
-use std::{cell::RefCell, collections::BTreeMap, fs::File, io, path::Path};
+use std::{
+    cell::RefCell,
+    collections::{BTreeMap, BinaryHeap},
+    fs::File,
+    io,
+    path::Path, cmp::Reverse,
+};
 
 use ghi::binary::GhbWriter;
 use ghi::builder::InvertedRecordBuilder;
@@ -685,8 +691,8 @@ fn vis_query(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::erro
                 let output = matches.value_of("output").unwrap();
 
                 let mut list = vec![];
-                let mut list2 = vec![];
-                let mut samples = BTreeMap::new();
+                //let mut list2 = vec![];
+                //let mut samples = BTreeMap::new();
                 let _ = viewer.into_iter().for_each(|t| {
                     //eprintln!("{:?}", t.clone().unwrap());
                     let f = t.unwrap();
@@ -710,8 +716,8 @@ fn vis_query(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::erro
                                                 && range.end() > i.start() as u64)
                                         {
                                             list.push((sample_id, i));
-                                            list2.push((sample_id, true));
-                                            samples.insert(sample_id, true);
+                                            //list2.push((sample_id, true));
+                                            //samples.insert(sample_id, true);
                                             //list.insert(sample_id, i);
                                         }
                                     }
@@ -721,16 +727,81 @@ fn vis_query(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::erro
                         }
                     }
                 });
-                list.sort_by(|a, b| a.0.cmp(&b.0));
-
-                /*let k = if packing {
+                list.par_sort_by(|a, b| a.0.cmp(&b.0));
+                /*
+                let iterator = if packing {
                     // (0..).zip(list.iter())
-                    list.iter().group_by(|elt| elt.0).into_iter().map(|t|
-                        t
-                    ).collect::<&(u64, Record)>().into_iter()
+                    let mut prev_index = 0;
+                    list.iter().group_by(|elt| elt.0).into_iter().map(|t| {
+                        let mut heap = BinaryHeap::<(u64, usize)>::new();
+                        (t.1).map(|k| {
+                            let index: usize = if heap.peek() != None && heap.peek().unwrap().0 > k.1.start() as u64 {
+                                let hp = heap.pop().unwrap();
+                                // let index = hp.1;
+                                heap.push((k.1.calculate_end() as u64, hp.1));
+                                hp.1
+                            } else {
+                                let index = prev_index;
+                                prev_index += 1;
+                                heap.push((k.1.calculate_end() as u64, index));
+                                index
+                            };
+                            //let index =
+                            (index, (k.0, k.1))
+                        }) //.collect::<Vec<(usize, (u64, Record))>>()
+                        //(t.0, ((t.1).0, (t.1).1))
+                        // .collect::<&(u64, Record)>(). // collect::<Vec<(usize, (u64, Record))>>
+                        }
+                    ).flatten().collect::<Vec<(usize, (u64, Record))>>().into_iter()
                 } else {
-                    list.iter().enumerate().into_iter()
-                }*/
+                    list.into_iter().enumerate().collect::<Vec<(usize, (u64, Record))>>().into_iter()
+                };*/
+
+                // Packing for each genome
+                let mut prev_index = 0;
+                let mut compressed_list = BTreeMap::<u64, usize>::new();
+                let mut index_list = Vec::with_capacity(list.len());
+                if packing {
+                    list.iter().group_by(|elt| elt.0).into_iter().for_each(|t| {
+                        let mut heap = BinaryHeap::<(i64, usize)>::new();
+                        (t.1).for_each(|k| {
+                            let index: usize = if heap.peek() != None
+                                && -heap.peek().unwrap().0 < k.1.start() as i64
+                            {
+                                let hp = heap.pop().unwrap();
+                                // let index = hp.1;
+                                heap.push((-k.1.calculate_end() as i64, hp.1));
+                                hp.1
+                            } else {
+                                let index = prev_index;
+                                prev_index += 1;
+                                heap.push((-k.1.calculate_end() as i64, index));
+                                index
+                            };
+                            //let index =
+                            index_list.push(index);
+                            // eprintln!("{:?}", heap);
+                            //(index, (k.0, k.1))
+                        }); //.collect::<Vec<(usize, (u64, Record))>>()
+                            // compressed_list.push(prev_index);
+                        compressed_list.insert(t.0, prev_index);
+                        //(t.0, ((t.1).0, (t.1).1))
+                        // .collect::<&(u64, Record)>(). // collect::<Vec<(usize, (u64, Record))>>
+                    });
+                } else {
+                    index_list = (0..list.len()).collect();
+                    // list.sort_by(|a, b| a.0.cmp(&b.0));
+                    // eprintln!("{}", list.len());
+                    list.iter().group_by(|elt| elt.0).into_iter().for_each(
+                        |(sample_sequential_id, sample)| {
+                            let count = sample.count();
+                            prev_index += count;
+                            // compressed_list.push(prev_index);
+                            compressed_list.insert(sample_sequential_id, prev_index);
+                        },
+                    )
+                }
+                eprintln!("{:?} {:?}", compressed_list, index_list);
 
                 let root = BitMapBackend::new(output, (1280, 40 + list.len() as u32 * 15))
                     .into_drawing_area();
@@ -756,17 +827,17 @@ fn vis_query(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::erro
                     .draw()?;
 
                 if legend {
-                    list2.sort_by(|a, b| a.0.cmp(&b.0));
+                    //list2.sort_by(|a, b| a.0.cmp(&b.0));
                     // eprintln!("{}", list.len());
                     let mut prev_index = 0;
 
-                    for (sample_sequential_id, sample) in
-                        list2.into_iter().group_by(|elt| elt.0).into_iter()
+                    for (sample_sequential_id, sample) in compressed_list.iter()
+                    // list2.into_iter().group_by(|elt| elt.0).into_iter()
                     {
                         // Check that the sum of each group is +/- 4.
                         // assert_eq!(4, group.iter().fold(0_i32, |a, b| a + b).abs());
-                        let count = sample.count();
-                        let idx = sample_sequential_id as usize;
+                        let count = sample; //.count();
+                        let idx = *sample_sequential_id as usize;
                         // let idx = sample.next().0;
                         chart
                             .draw_series(LineSeries::new(
@@ -807,7 +878,8 @@ fn vis_query(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::erro
                                 ))?;
                 */
                 // For each alignment:
-                chart.draw_series(list.into_iter().enumerate().map(|(index, data)| {
+                // chart.draw_series(list.into_iter().enumerate().map(|(index, data)| {
+                chart.draw_series(index_list.into_iter().zip(list).map(|(index, data)| {
                     //for (index, data) in list.iter().enumerate() {
                     let bam = data.1;
                     let color = if bam.flag().is_reverse_strand() {
