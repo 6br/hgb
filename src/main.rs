@@ -921,7 +921,7 @@ fn vis_query(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::erro
                 */
                 // For each alignment:
                 // chart.draw_series(list.into_iter().enumerate().map(|(index, data)| {
-                chart.draw_series(index_list.into_iter().zip(list).map(|(index, data)| {
+                chart.draw_series(index_list.into_par_iter().zip(list).map(|(index, data)| {
                     //for (index, data) in list.iter().enumerate() {
                     let bam = data.1;
                     let color = if bam.flag().is_reverse_strand() {
@@ -945,14 +945,15 @@ fn vis_query(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::erro
                     let mut bar =
                         Rectangle::new([(start, index), (end, index + 1)], color.filled());
                     bar.set_margin(1, 1, 0, 0);
-                    let mut bar2 =
-                        Rectangle::new([(start, index), (end, index + 1)], stroke.stroke_width(3));
-                    bar2.set_margin(1, 1, 0, 0);
+
                     // eprintln!("{:?}", [(start, index), (end, index + 1)]);
                     
                     let mut bars =  //, bar2];
                     if legend {
                         vec![bar]                    } else {
+                            let mut bar2 =
+                            Rectangle::new([(start, index), (end, index + 1)], stroke.stroke_width(3));
+                        bar2.set_margin(1, 1, 0, 0);
                         vec![bar,bar2]
                     };
                     if ! no_cigar {
@@ -1051,7 +1052,7 @@ fn vis_query(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::erro
                     }
                 }
                     bars
-                }).flatten())?;
+                }).flatten().collect::<Vec<_>>())?;
 
                 if legend {
                     chart
