@@ -213,6 +213,7 @@ impl Header {
         }
         self.global_header = global_header;
         self.headers = headers;
+        self.names = names;
         Ok(true)
     }
 }

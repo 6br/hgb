@@ -269,7 +269,7 @@ fn main() {
         .unwrap();
 
     rayon::ThreadPoolBuilder::new()
-        .num_threads(threads as usize)
+        .num_threads(threads as usize - 1)
         .build_global()
         .unwrap();
 
@@ -866,19 +866,19 @@ fn vis_query(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::erro
                 if legend {
                     //list2.sort_by(|a, b| a.0.cmp(&b.0));
                     // eprintln!("{}", list.len());
-                    let mut prev_index = 0;
+                    // let mut prev_index = 0;
 
                     for (sample_sequential_id, sample) in compressed_list.iter()
                     // list2.into_iter().group_by(|elt| elt.0).into_iter()
                     {
                         // Check that the sum of each group is +/- 4.
                         // assert_eq!(4, group.iter().fold(0_i32, |a, b| a + b).abs());
-                        let count = sample; //.count();
+                        let count = *sample; //.count();
                         let idx = *sample_sequential_id as usize;
                         // let idx = sample.next().0;
                         chart
                             .draw_series(LineSeries::new(
-                                vec![(range.start(), prev_index), (range.end(), prev_index)],
+                                vec![(range.start(), count), (range.end(), count)],
                                 &Palette99::pick(idx),
                             ))?
                             .label(format!(
@@ -891,10 +891,15 @@ fn vis_query(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::erro
                                     Palette99::pick(idx).filled(),
                                 )
                             });
-                        prev_index += count;
+                        //prev_index += count;
                     }
                 }
-
+                let end4 = start.elapsed();
+                eprintln!(
+                    "{}.{:03} sec.",
+                    end4.as_secs(),
+                    end4.subsec_nanos() / 1_000_000
+                );
                 // For each sample:
                 /*
                     chart.draw_series(list2.into_iter().group_by(|elt| elt.0).into_iter().map(
