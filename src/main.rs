@@ -950,10 +950,11 @@ fn vis_query(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::erro
                     bar2.set_margin(1, 1, 0, 0);
                     // eprintln!("{:?}", [(start, index), (end, index + 1)]);
                     
-                    let mut bars = vec![bar]; //, bar2];
-                    if !legend {
-                        bars.push(bar2)
-                    }
+                    let mut bars =  //, bar2];
+                    if legend {
+                        vec![bar]                    } else {
+                        vec![bar,bar2]
+                    };
                     if ! no_cigar {
                     let mut prev_ref = bam.start() as u64;
 
