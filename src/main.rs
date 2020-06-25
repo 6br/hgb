@@ -18,7 +18,8 @@ use std::{
     collections::{BTreeMap, BinaryHeap},
     fs::File,
     io,
-    path::Path, time::Instant,
+    path::Path,
+    time::Instant,
 };
 
 use ghi::binary::GhbWriter;
@@ -718,7 +719,9 @@ fn vis_query(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::erro
                                             || (i.calculate_end() as u64 > range.start()
                                                 && range.end() > i.start() as u64)
                                         {
-                                            list.push((sample_id, i));
+                                            if !i.flag().is_secondary() {
+                                                list.push((sample_id, i));
+                                            }
                                             //list2.push((sample_id, true));
                                             //samples.insert(sample_id, true);
                                             //list.insert(sample_id, i);
@@ -731,10 +734,18 @@ fn vis_query(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::erro
                     }
                 });
                 let end = start.elapsed();
-                eprintln!("{}.{:03} sec.", end.as_secs(), end.subsec_nanos() / 1_000_000);
+                eprintln!(
+                    "{}.{:03} sec.",
+                    end.as_secs(),
+                    end.subsec_nanos() / 1_000_000
+                );
                 list.sort_by(|a, b| a.0.cmp(&b.0));
                 let end2 = start.elapsed();
-                eprintln!("{}.{:03} sec.", end2.as_secs(), end2.subsec_nanos() / 1_000_000);
+                eprintln!(
+                    "{}.{:03} sec.",
+                    end2.as_secs(),
+                    end2.subsec_nanos() / 1_000_000
+                );
                 /*
                 let iterator = if packing {
                     // (0..).zip(list.iter())
@@ -809,7 +820,11 @@ fn vis_query(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::erro
                     )
                 }
                 let end3 = start.elapsed();
-                eprintln!("{}.{:03} sec.", end3.as_secs(), end3.subsec_nanos() / 1_000_000);
+                eprintln!(
+                    "{}.{:03} sec.",
+                    end3.as_secs(),
+                    end3.subsec_nanos() / 1_000_000
+                );
                 // eprintln!("{:?} {:?}", compressed_list, index_list);
 
                 let root = BitMapBackend::new(output, (1280, 40 + list.len() as u32 * 15))
@@ -817,7 +832,7 @@ fn vis_query(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::erro
                 root.fill(&WHITE)?;
                 let root = root.margin(10, 10, 10, 10);
                 // After this point, we should be able to draw construct a chart context
-                // let areas = root.split_by_breakpoints();
+                let areas = root.split_by_breakpoints([], compressed_list);
                 let mut chart = ChartBuilder::on(&root)
                     // Set the caption of the chart
                     .caption(format!("{}", string_range), ("sans-serif", 20).into_font())
