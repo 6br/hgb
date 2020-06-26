@@ -790,34 +790,52 @@ fn vis_query(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::erro
 
                 // Packing for each genome
                 let mut prev_index = 0;
+                let mut last_prev_index = 0;
                 //let mut compressed_list = BTreeMap::<u64, usize>::new();
                 let mut compressed_list = vec![];
                 let mut index_list = Vec::with_capacity(list.len());
                 if packing {
                     list.iter().group_by(|elt| elt.0).into_iter().for_each(|t| {
-                        let mut heap = BinaryHeap::<(i64, usize)>::new();
+                        // let mut heap = BinaryHeap::<(i64, usize)>::new();
+                        let mut packing = vec![0u64];
+                        prev_index += 1;
                         (t.1).for_each(|k| {
-                            let index: usize = if heap.peek() != None
-                                && -heap.peek().unwrap().0 < k.1.start() as i64
+                            let index = if let Some(index) = packing
+                                .iter_mut()
+                                .enumerate()
+                                .find(|(_, item)| **item < k.1.start() as u64)
                             {
-                                let hp = heap.pop().unwrap();
-                                // let index = hp.1;
-                                heap.push((-k.1.calculate_end() as i64, hp.1));
-                                hp.1
+                                //packing[index.0] = k.1.calculate_end() as u64;
+                                *index.1 = k.1.calculate_end() as u64;
+                                index.0
                             } else {
-                                let index = prev_index;
+                                packing.push(k.1.calculate_end() as u64);
                                 prev_index += 1;
-                                heap.push((-k.1.calculate_end() as i64, index));
-                                index
-                            };
+                                packing.len() - 1
+                            }; /*
+                               let index: usize = if heap.peek() != None
+                                   && -heap.peek().unwrap().0 < k.1.start() as i64
+                               {
+                                   let hp = heap.pop().unwrap();
+                                   // let index = hp.1;
+                                   heap.push((-k.1.calculate_end() as i64, hp.1));
+                                   hp.1
+                               } else {
+                                   let index = prev_index;
+                                   prev_index += 1;
+                                   heap.push((-k.1.calculate_end() as i64, index));
+                                   index
+                               };*/
                             //let index =
-                            index_list.push(index);
-                            // eprintln!("{:?}", heap);
+                            index_list.push(index + last_prev_index);
+                            eprintln!("{:?}", packing);
                             //(index, (k.0, k.1))
                         }); //.collect::<Vec<(usize, (u64, Record))>>()
                             // compressed_list.push(prev_index);
                             //compressed_list.insert(t.0, prev_index);
                         compressed_list.push((t.0, prev_index));
+                        last_prev_index = prev_index;
+                        // prev_index += 1;
                         //(t.0, ((t.1).0, (t.1).1))
                         // .collect::<&(u64, Record)>(). // collect::<Vec<(usize, (u64, Record))>>
                     });
@@ -843,8 +861,8 @@ fn vis_query(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::erro
                 );
                 eprintln!("{:?}", compressed_list);
 
-                let root = BitMapBackend::new(output, (x, 40 + prev_index as u32 * y))
-                    .into_drawing_area();
+                let root =
+                    BitMapBackend::new(output, (x, 40 + prev_index as u32 * y)).into_drawing_area();
                 root.fill(&WHITE)?;
                 let root = root.margin(10, 10, 10, 10);
                 // After this point, we should be able to draw construct a chart context
