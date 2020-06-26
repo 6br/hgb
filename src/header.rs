@@ -203,9 +203,9 @@ impl Header {
         let mut names = Vec::with_capacity(n_samples);
         for _i in 0..n_samples {
             let len = stream.read_u64::<LittleEndian>()? as usize;
-            let buf = vec![0u8; len];
-            for _i in 0..len {
-                stream.read_u8()?;
+            let mut buf = vec![0u8; len];
+            for i in 0..len {
+                buf[i] = stream.read_u8()?;
             }
             //stream.read_exact(&mut buf)?;
             let converted: String = String::from_utf8(buf.to_vec()).unwrap();

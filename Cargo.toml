@@ -30,7 +30,7 @@ itertools = "*"
 libflate = "1.0.0"
 log = "0.4.8"
 numpress = "1.1.0"
-plotters = { git = "https://github.com/38/plotters.git", default-features = false, features = ["svg", "line_series","image_encoder"] }
+plotters = { git = "https://github.com/38/plotters.git", default-features = false, features = ["svg", "line_series","image_encoder", "ttf"] }
 #plotters = "^0.2.15"
 rayon = "*"
 regex = "1.3.7"

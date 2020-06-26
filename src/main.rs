@@ -130,6 +130,7 @@ fn main() {
                 .arg(Arg::new("packing").short('p').about("Binary"))
                 .arg(Arg::new("legend").short('l').about("Legend"))
                 .arg(Arg::new("x").short('x').takes_value(true).about("x"))
+                .arg(Arg::new("y").short('y').takes_value(true).about("y"))
                 .arg(Arg::new("no-insertion").short('s').about("No-md"))
                 // .arg(Arg::new("insertion").short('').about("No-md"))
                 .arg(
@@ -683,7 +684,10 @@ fn vis_query(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::erro
                     .value_of("x")
                     .and_then(|a| a.parse::<u32>().ok())
                     .unwrap_or(1280u32);
-
+                let y = matches
+                    .value_of("x")
+                    .and_then(|a| a.parse::<u32>().ok())
+                    .unwrap_or(15u32);
                 let format_type_opt = matches.value_of_t::<Format>("type");
                 let format_type_cond = format_type_opt.is_ok();
                 let format_type = format_type_opt.unwrap_or(Format::Default(Default {}));
@@ -839,7 +843,7 @@ fn vis_query(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::erro
                 );
                 eprintln!("{:?}", compressed_list);
 
-                let root = BitMapBackend::new(output, (x, 40 + prev_index as u32 * 15))
+                let root = BitMapBackend::new(output, (x, 40 + prev_index as u32 * y))
                     .into_drawing_area();
                 root.fill(&WHITE)?;
                 let root = root.margin(10, 10, 10, 10);
@@ -950,8 +954,9 @@ fn vis_query(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::erro
                     
                     let mut bars =  //, bar2];
                     if legend {
-                        vec![bar]                    } else {
-                            let mut bar2 =
+                        vec![bar]
+                    } else {
+                        let mut bar2 =
                             Rectangle::new([(start, index), (end, index + 1)], stroke.stroke_width(3));
                         bar2.set_margin(1, 1, 0, 0);
                         vec![bar,bar2]
