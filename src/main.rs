@@ -828,7 +828,7 @@ fn vis_query(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::erro
                                };*/
                             //let index =
                             index_list.push(index + last_prev_index);
-                            eprintln!("{:?}", packing);
+                            // eprintln!("{:?}", packing);
                             //(index, (k.0, k.1))
                         }); //.collect::<Vec<(usize, (u64, Record))>>()
                             // compressed_list.push(prev_index);
