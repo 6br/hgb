@@ -343,19 +343,20 @@ fn main() {
     } else if let Some(ref matches) = matches.subcommand_matches("bin") {
         bin(matches, threads);
     } else if let Some(ref matches) = matches.subcommand_matches("vis") {
-        bam_vis(matches, threads);
+        bam_vis(matches, threads).unwrap();
     }
 }
 
-fn bam_vis(matches: &ArgMatches, threads: u16) -> () {
+fn bam_vis(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::error::Error>> {
     // let output_path = matches.value_of("OUTPUT").unwrap();
 
-    let mut list: Vec<(u64, Record)> = vec![];
     if let Some(ranges) = matches.values_of("range") {
         let ranges: Vec<&str> = ranges.collect();
         for range in ranges {
+            let string_range = StringRegion::new(range).unwrap();
             if let Some(bam_files) = matches.values_of("bam") {
                 let bam_files: Vec<&str> = bam_files.collect();
+                let mut list: Vec<(u64, Record)> = vec![];
                 println!("Input file: {:?}", bam_files);
                 for (index, bam_path) in bam_files.iter().enumerate() {
                     println!("Loading {}", bam_path);
@@ -364,7 +365,7 @@ fn bam_vis(matches: &ArgMatches, threads: u16) -> () {
                         .additional_threads(threads - 1)
                         .from_path(bam_path)
                         .unwrap();
-                    let string_range = StringRegion::new(range).unwrap();
+
                     // Here all threads can be used, but I suspect that runs double
                     //reader2.fetch()
                     let ref_id = reader2.header().reference_id(string_range.path.as_ref());
@@ -384,9 +385,11 @@ fn bam_vis(matches: &ArgMatches, threads: u16) -> () {
                         list.push((index as u64, record.unwrap()));
                     }
                 }
+                bam_record_vis(matches, string_range, list, |idx| Some(bam_files[idx]))?;
             }
         }
     }
+    Ok(())
 }
 
 fn build(matches: &ArgMatches, threads: u16) -> () {
@@ -719,7 +722,7 @@ fn bam_query(matches: &ArgMatches, threads: u16) -> () {
                             || std::mem::discriminant(&format_type) == std::mem::discriminant(&data)
                         {
                             match data {
-                                Format::Range(rec) => {
+                                Format::Range(_rec) => {
                                     /*let mut writer = bed::Writer::new(&mut output);
                                     for i in rec.to_record(&reference_name) {
                                         writer.write(&i).unwrap();
@@ -761,10 +764,7 @@ fn vis_query(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::erro
 
                 let range = Region::convert(&string_range, closure).unwrap();
                 let viewer = reader.fetch(&range).unwrap();
-                let clevel = matches
-                    .value_of("compression")
-                    .and_then(|a| a.parse::<u8>().ok())
-                    .unwrap_or(6u8);
+
                 let sample_ids_opt: Option<Vec<u64>> = matches
                     .values_of("id")
                     //.unwrap()
@@ -772,7 +772,6 @@ fn vis_query(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::erro
                 let sample_id_cond = sample_ids_opt.is_some();
                 let sample_ids = sample_ids_opt.unwrap_or(vec![]);
                 let filter = matches.is_present("filter");
-                let no_cigar = matches.is_present("no-cigar");
 
                 let format_type_opt = matches.value_of_t::<Format>("type");
                 let format_type_cond = format_type_opt.is_ok();
@@ -786,7 +785,7 @@ fn vis_query(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::erro
                     None => Box::new(out.lock()) as Box<dyn Write>,
                 };
                 let output = io::BufWriter::with_capacity(1048576, out_writer);*/
-                let output = matches.value_of("output").unwrap();
+
                 let end0 = start.elapsed();
                 eprintln!(
                     "{}.{:03} sec.",
@@ -832,218 +831,213 @@ fn vis_query(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::erro
                         }
                     }
                 });
+                bam_record_vis(matches, string_range, list, |idx| {
+                    reader.header().get_name(idx).and_then(|t| Some(t.as_str()))
+                })?;
+            }
+        }
+    }
+    Ok(())
+}
 
-                let packing = matches.is_present("packing");
-                let legend = matches.is_present("legend");
-                let insertion = !matches.is_present("no-insertion");
-                let x = matches
-                    .value_of("x")
-                    .and_then(|a| a.parse::<u32>().ok())
-                    .unwrap_or(1280u32);
-                let y = matches
-                    .value_of("x")
-                    .and_then(|a| a.parse::<u32>().ok())
-                    .unwrap_or(15u32);
-                let end = start.elapsed();
-                eprintln!(
-                    "{}.{:03} sec.",
-                    end.as_secs(),
-                    end.subsec_nanos() / 1_000_000
-                );
-                list.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.start().cmp(&b.1.start())));
-                let end2 = start.elapsed();
-                eprintln!(
-                    "{}.{:03} sec.",
-                    end2.as_secs(),
-                    end2.subsec_nanos() / 1_000_000
-                );
-                /*
-                let iterator = if packing {
-                    // (0..).zip(list.iter())
-                    let mut prev_index = 0;
-                    list.iter().group_by(|elt| elt.0).into_iter().map(|t| {
-                        let mut heap = BinaryHeap::<(u64, usize)>::new();
-                        (t.1).map(|k| {
-                            let index: usize = if heap.peek() != None && heap.peek().unwrap().0 > k.1.start() as u64 {
-                                let hp = heap.pop().unwrap();
-                                // let index = hp.1;
-                                heap.push((k.1.calculate_end() as u64, hp.1));
-                                hp.1
-                            } else {
-                                let index = prev_index;
-                                prev_index += 1;
-                                heap.push((k.1.calculate_end() as u64, index));
-                                index
-                            };
-                            //let index =
-                            (index, (k.0, k.1))
-                        }) //.collect::<Vec<(usize, (u64, Record))>>()
-                        //(t.0, ((t.1).0, (t.1).1))
-                        // .collect::<&(u64, Record)>(). // collect::<Vec<(usize, (u64, Record))>>
-                        }
-                    ).flatten().collect::<Vec<(usize, (u64, Record))>>().into_iter()
+fn bam_record_vis<'a, F>(
+    matches: &ArgMatches,
+    range: StringRegion,
+    mut list: Vec<(u64, Record)>,
+    lambda: F,
+) -> Result<(), Box<dyn std::error::Error>>
+where
+    F: Fn(usize) -> Option<&'a str>,
+{
+    let no_cigar = matches.is_present("no-cigar");
+    let output = matches.value_of("output").unwrap();
+    let packing = matches.is_present("packing");
+    let legend = matches.is_present("legend");
+    let insertion = !matches.is_present("no-insertion");
+    let x = matches
+        .value_of("x")
+        .and_then(|a| a.parse::<u32>().ok())
+        .unwrap_or(1280u32);
+    let y = matches
+        .value_of("x")
+        .and_then(|a| a.parse::<u32>().ok())
+        .unwrap_or(15u32);
+    list.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.start().cmp(&b.1.start())));
+    /*
+    let iterator = if packing {
+        // (0..).zip(list.iter())
+        let mut prev_index = 0;
+        list.iter().group_by(|elt| elt.0).into_iter().map(|t| {
+            let mut heap = BinaryHeap::<(u64, usize)>::new();
+            (t.1).map(|k| {
+                let index: usize = if heap.peek() != None && heap.peek().unwrap().0 > k.1.start() as u64 {
+                    let hp = heap.pop().unwrap();
+                    // let index = hp.1;
+                    heap.push((k.1.calculate_end() as u64, hp.1));
+                    hp.1
                 } else {
-                    list.into_iter().enumerate().collect::<Vec<(usize, (u64, Record))>>().into_iter()
-                };*/
+                    let index = prev_index;
+                    prev_index += 1;
+                    heap.push((k.1.calculate_end() as u64, index));
+                    index
+                };
+                //let index =
+                (index, (k.0, k.1))
+            }) //.collect::<Vec<(usize, (u64, Record))>>()
+            //(t.0, ((t.1).0, (t.1).1))
+            // .collect::<&(u64, Record)>(). // collect::<Vec<(usize, (u64, Record))>>
+            }
+        ).flatten().collect::<Vec<(usize, (u64, Record))>>().into_iter()
+    } else {
+        list.into_iter().enumerate().collect::<Vec<(usize, (u64, Record))>>().into_iter()
+    };*/
 
-                // Packing for each genome
-                let mut prev_index = 0;
-                let mut last_prev_index = 0;
-                //let mut compressed_list = BTreeMap::<u64, usize>::new();
-                let mut compressed_list = vec![];
-                let mut index_list = Vec::with_capacity(list.len());
-                if packing {
-                    list.iter().group_by(|elt| elt.0).into_iter().for_each(|t| {
-                        // let mut heap = BinaryHeap::<(i64, usize)>::new();
-                        let mut packing = vec![0u64];
-                        prev_index += 1;
-                        (t.1).for_each(|k| {
-                            let index = if let Some(index) = packing
-                                .iter_mut()
-                                .enumerate()
-                                .find(|(_, item)| **item < k.1.start() as u64)
-                            {
-                                //packing[index.0] = k.1.calculate_end() as u64;
-                                *index.1 = k.1.calculate_end() as u64;
-                                index.0
-                            } else {
-                                packing.push(k.1.calculate_end() as u64);
-                                prev_index += 1;
-                                packing.len() - 1
-                            }; /*
-                               let index: usize = if heap.peek() != None
-                                   && -heap.peek().unwrap().0 < k.1.start() as i64
-                               {
-                                   let hp = heap.pop().unwrap();
-                                   // let index = hp.1;
-                                   heap.push((-k.1.calculate_end() as i64, hp.1));
-                                   hp.1
-                               } else {
-                                   let index = prev_index;
-                                   prev_index += 1;
-                                   heap.push((-k.1.calculate_end() as i64, index));
-                                   index
-                               };*/
-                            //let index =
-                            index_list.push(index + last_prev_index);
-                            // eprintln!("{:?}", packing);
-                            //(index, (k.0, k.1))
-                        }); //.collect::<Vec<(usize, (u64, Record))>>()
-                            // compressed_list.push(prev_index);
-                            //compressed_list.insert(t.0, prev_index);
-                        compressed_list.push((t.0, prev_index));
-                        last_prev_index = prev_index;
-                        // prev_index += 1;
-                        //(t.0, ((t.1).0, (t.1).1))
-                        // .collect::<&(u64, Record)>(). // collect::<Vec<(usize, (u64, Record))>>
-                    });
+    // Packing for each genome
+    let mut prev_index = 0;
+    let mut last_prev_index = 0;
+    //let mut compressed_list = BTreeMap::<u64, usize>::new();
+    let mut compressed_list = vec![];
+    let mut index_list = Vec::with_capacity(list.len());
+    if packing {
+        list.iter().group_by(|elt| elt.0).into_iter().for_each(|t| {
+            // let mut heap = BinaryHeap::<(i64, usize)>::new();
+            let mut packing = vec![0u64];
+            prev_index += 1;
+            (t.1).for_each(|k| {
+                let index = if let Some(index) = packing
+                    .iter_mut()
+                    .enumerate()
+                    .find(|(_, item)| **item < k.1.start() as u64)
+                {
+                    //packing[index.0] = k.1.calculate_end() as u64;
+                    *index.1 = k.1.calculate_end() as u64;
+                    index.0
                 } else {
-                    index_list = (0..list.len()).collect();
-                    // list.sort_by(|a, b| a.0.cmp(&b.0));
-                    // eprintln!("{}", list.len());
-                    list.iter().group_by(|elt| elt.0).into_iter().for_each(
-                        |(sample_sequential_id, sample)| {
-                            let count = sample.count();
-                            prev_index += count;
-                            // compressed_list.push(prev_index);
-                            // compressed_list.insert(sample_sequential_id, prev_index);
-                            compressed_list.push((sample_sequential_id, prev_index));
-                        },
+                    packing.push(k.1.calculate_end() as u64);
+                    prev_index += 1;
+                    packing.len() - 1
+                    //prev_index - 1
+                }; /*
+                   let index: usize = if heap.peek() != None
+                       && -heap.peek().unwrap().0 < k.1.start() as i64
+                   {
+                       let hp = heap.pop().unwrap();
+                       // let index = hp.1;
+                       heap.push((-k.1.calculate_end() as i64, hp.1));
+                       hp.1
+                   } else {
+                       let index = prev_index;
+                       prev_index += 1;
+                       heap.push((-k.1.calculate_end() as i64, index));
+                       index
+                   };*/
+                //let index =
+                index_list.push(index + last_prev_index);
+                // eprintln!("{:?}", packing);
+                //(index, (k.0, k.1))
+            }); //.collect::<Vec<(usize, (u64, Record))>>()
+                // compressed_list.push(prev_index);
+                //compressed_list.insert(t.0, prev_index);
+                //prev_index += 1;
+            compressed_list.push((t.0, prev_index));
+            eprintln!("{:?} {:?} {:?}", compressed_list, packing, index_list);
+            last_prev_index = prev_index;
+            //(t.0, ((t.1).0, (t.1).1))
+            // .collect::<&(u64, Record)>(). // collect::<Vec<(usize, (u64, Record))>>
+        });
+    } else {
+        index_list = (0..list.len()).collect();
+        // list.sort_by(|a, b| a.0.cmp(&b.0));
+        // eprintln!("{}", list.len());
+        list.iter()
+            .group_by(|elt| elt.0)
+            .into_iter()
+            .for_each(|(sample_sequential_id, sample)| {
+                let count = sample.count();
+                prev_index += count;
+                // compressed_list.push(prev_index);
+                // compressed_list.insert(sample_sequential_id, prev_index);
+                compressed_list.push((sample_sequential_id, prev_index));
+            })
+    }
+    eprintln!("{:?}", compressed_list);
+
+    let root = BitMapBackend::new(output, (x, 40 + (prev_index as u32) * y)).into_drawing_area();
+    root.fill(&WHITE)?;
+    let root = root.margin(10, 10, 10, 10);
+    // After this point, we should be able to draw construct a chart context
+    // let areas = root.split_by_breakpoints([], compressed_list);
+    let mut chart = ChartBuilder::on(&root)
+        // Set the caption of the chart
+        .caption(format!("{}", range), ("sans-serif", 20).into_font())
+        // Set the size of the label region
+        .x_label_area_size(20)
+        .y_label_area_size(40)
+        // Finally attach a coordinate on the drawing area and make a chart context
+        .build_ranged((range.start() - 1)..(range.end() + 1), 0..(1 + prev_index))?;
+    // Then we can draw a mesh
+    chart
+        .configure_mesh()
+        // We can customize the maximum number of labels allowed for each axis
+        //.x_labels(5)
+        .y_labels(1)
+        // We can also change the format of the label text
+        .x_label_formatter(&|x| format!("{:.3}", x))
+        .draw()?;
+
+    if legend {
+        //list2.sort_by(|a, b| a.0.cmp(&b.0));
+        // eprintln!("{}", list.len());
+        // let mut prev_index = 0;
+
+        for (sample_sequential_id, sample) in compressed_list.iter()
+        // list2.into_iter().group_by(|elt| elt.0).into_iter()
+        {
+            // Check that the sum of each group is +/- 4.
+            // assert_eq!(4, group.iter().fold(0_i32, |a, b| a + b).abs());
+            let count = *sample; //.count();
+            let idx = *sample_sequential_id as usize;
+            // let idx = sample.next().0;
+            chart
+                .draw_series(LineSeries::new(
+                    vec![(range.start() - 1, count), (range.end() + 1, count)],
+                    &Palette99::pick(idx),
+                ))?
+                .label(format!("{}", lambda(idx).unwrap_or(&idx.to_string())))
+                .legend(move |(x, y)| {
+                    Rectangle::new(
+                        [(x - 5, y - 5), (x + 5, y + 5)],
+                        Palette99::pick(idx).filled(),
                     )
-                }
-                let end3 = start.elapsed();
-                eprintln!(
-                    "{}.{:03} sec.",
-                    end3.as_secs(),
-                    end3.subsec_nanos() / 1_000_000
+                });
+            //prev_index += count;
+        }
+    }
+    // For each sample:
+    /*
+        chart.draw_series(list2.into_iter().group_by(|elt| elt.0).into_iter().map(
+            |(sample_sequential_id, sample)| {
+                let count = sample.count();
+                let stroke = Palette99::pick(sample_sequential_id as usize);
+                let mut bar2 = Rectangle::new(
+                    [
+                        (range.start(), prev_index),
+                        (range.end(), prev_index + count),
+                    ],
+                    stroke.stroke_width(100),
                 );
-                eprintln!("{:?}", compressed_list);
+                bar2.set_margin(1, 0, 0, 0);
+                prev_index += count;
+                bar2
+            },
+        ))?;
+    */
 
-                let root =
-                    BitMapBackend::new(output, (x, 40 + prev_index as u32 * y)).into_drawing_area();
-                root.fill(&WHITE)?;
-                let root = root.margin(10, 10, 10, 10);
-                // After this point, we should be able to draw construct a chart context
-                // let areas = root.split_by_breakpoints([], compressed_list);
-                let mut chart = ChartBuilder::on(&root)
-                    // Set the caption of the chart
-                    .caption(format!("{}", string_range), ("sans-serif", 20).into_font())
-                    // Set the size of the label region
-                    .x_label_area_size(20)
-                    .y_label_area_size(40)
-                    // Finally attach a coordinate on the drawing area and make a chart context
-                    .build_ranged((range.start() - 1)..(range.end() + 1), 0..(1 + prev_index))?;
-                // Then we can draw a mesh
-                chart
-                    .configure_mesh()
-                    // We can customize the maximum number of labels allowed for each axis
-                    //.x_labels(5)
-                    .y_labels(1)
-                    // We can also change the format of the label text
-                    .x_label_formatter(&|x| format!("{:.3}", x))
-                    .draw()?;
+    // For each alignment:
 
-                if legend {
-                    //list2.sort_by(|a, b| a.0.cmp(&b.0));
-                    // eprintln!("{}", list.len());
-                    // let mut prev_index = 0;
-
-                    for (sample_sequential_id, sample) in compressed_list.iter()
-                    // list2.into_iter().group_by(|elt| elt.0).into_iter()
-                    {
-                        // Check that the sum of each group is +/- 4.
-                        // assert_eq!(4, group.iter().fold(0_i32, |a, b| a + b).abs());
-                        let count = *sample; //.count();
-                        let idx = *sample_sequential_id as usize;
-                        // let idx = sample.next().0;
-                        chart
-                            .draw_series(LineSeries::new(
-                                vec![(range.start(), count), (range.end(), count)],
-                                &Palette99::pick(idx),
-                            ))?
-                            .label(format!(
-                                "{}",
-                                reader.header().get_name(idx).unwrap_or(&idx.to_string())
-                            ))
-                            .legend(move |(x, y)| {
-                                Rectangle::new(
-                                    [(x - 5, y - 5), (x + 5, y + 5)],
-                                    Palette99::pick(idx).filled(),
-                                )
-                            });
-                        //prev_index += count;
-                    }
-                }
-                let end4 = start.elapsed();
-                eprintln!(
-                    "{}.{:03} sec.",
-                    end4.as_secs(),
-                    end4.subsec_nanos() / 1_000_000
-                );
-                // For each sample:
-                /*
-                    chart.draw_series(list2.into_iter().group_by(|elt| elt.0).into_iter().map(
-                        |(sample_sequential_id, sample)| {
-                            let count = sample.count();
-                            let stroke = Palette99::pick(sample_sequential_id as usize);
-                            let mut bar2 = Rectangle::new(
-                                [
-                                    (range.start(), prev_index),
-                                    (range.end(), prev_index + count),
-                                ],
-                                stroke.stroke_width(100),
-                            );
-                            bar2.set_margin(1, 0, 0, 0);
-                            prev_index += count;
-                            bar2
-                        },
-                    ))?;
-                */
-
-                // For each alignment:
-
-                let series = {
-                    list.into_iter().enumerate().map(|(index, data)| {
+    let series = {
+        //list.into_iter().enumerate().map(|(index, data)| {
+        index_list.into_iter().zip(list).map(|(index, data)| {
                 //chart.draw_series(index_list.into_par_iter().zip(list).map(|(index, data)| {
                     //for (index, data) in list.iter().enumerate() {
                     let bam = data.1;
@@ -1206,18 +1200,16 @@ fn vis_query(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::erro
                     }
                     bars
                 //}).flatten().collect::<Vec<_>>())?;
-                }).flatten().collect::<Vec<_>>()};
-                chart.draw_series(series)?;
+                }).flatten().collect::<Vec<_>>()
+    };
+    chart.draw_series(series)?;
 
-                if legend {
-                    chart
-                        .configure_series_labels()
-                        .background_style(&WHITE.mix(0.8))
-                        .border_style(&BLACK)
-                        .draw()?;
-                }
-            }
-        }
+    if legend {
+        chart
+            .configure_series_labels()
+            .background_style(&WHITE.mix(0.8))
+            .border_style(&BLACK)
+            .draw()?;
     }
     Ok(())
 }
