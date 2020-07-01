@@ -940,7 +940,7 @@ where
                 //compressed_list.insert(t.0, prev_index);
                 //prev_index += 1;
             compressed_list.push((t.0, prev_index));
-            eprintln!("{:?} {:?} {:?}", compressed_list, packing, index_list);
+            //eprintln!("{:?} {:?} {:?}", compressed_list, packing, index_list);
             last_prev_index = prev_index;
             //(t.0, ((t.1).0, (t.1).1))
             // .collect::<&(u64, Record)>(). // collect::<Vec<(usize, (u64, Record))>>
@@ -1182,7 +1182,7 @@ where
                                 }
                                 if reference >= range.end() as u32 {break;}
                             }
-                            (Some(record), None) => {
+                            (Some(_record), None) => {
                                 //Insertion
                                 if prev_ref > range.start() as u64 {
                                     let mut bar = Rectangle::new([(prev_ref, index), (prev_ref+1, index + 1)], MAGENTA.stroke_width(1));
