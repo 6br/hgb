@@ -1,5 +1,6 @@
 extern crate log;
 
+use bam;
 use bam::{Record, RecordWriter};
 use clap::{App, Arg, ArgMatches};
 use env_logger;
@@ -7,14 +8,11 @@ use genomic_range::StringRegion;
 use ghi::bed;
 use itertools::Itertools;
 use log::{debug, info};
+use plotters::coord::ReverseCoordTranslate;
 use plotters::prelude::Palette;
 use plotters::prelude::*;
-use rayon::iter::{IntoParallelIterator, ParallelIterator};
 use rayon::prelude::*;
-use std::sync::Arc;
 use std::{
-    cell::RefCell,
-    cmp::Reverse,
     collections::{BTreeMap, BinaryHeap},
     fs::File,
     io,
@@ -247,6 +245,60 @@ fn main() {
                 ),
         )
         .subcommand(
+            App::new("vis")
+                .about("construct GHB and GHI index from bam/")
+                .arg(
+                    Arg::new("range")
+                        .short('r')
+                        .takes_value(true)
+                        .multiple(true)
+                        .about("sorted bam"),
+                )
+                .arg(
+                    Arg::new("bed")
+                        .short('L')
+                        .takes_value(true)
+                        .about("sorted bam"),
+                )
+                .arg(
+                    Arg::new("type")
+                        .short('t')
+                        .takes_value(true)
+                        // .default_value("default")
+                        .possible_values(&["alignment", "range", "default"])
+                        .about("annotation type to fetch"),
+                )
+                .arg(
+                    Arg::new("id")
+                        .short('i')
+                        .takes_value(true)
+                        .multiple(true)
+                        .about("annotation sample to fetch"),
+                )
+                .arg(Arg::new("filter").short('f').about("Pre-filter"))
+                .arg(Arg::new("binary").short('b').about("Binary"))
+                .arg(Arg::new("no-cigar").short('n').about("Binary"))
+                .arg(Arg::new("packing").short('p').about("Binary"))
+                .arg(Arg::new("legend").short('l').about("Legend"))
+                .arg(Arg::new("x").short('x').takes_value(true).about("x"))
+                .arg(Arg::new("y").short('y').takes_value(true).about("y"))
+                .arg(Arg::new("no-insertion").short('s').about("No-md"))
+                // .arg(Arg::new("insertion").short('').about("No-md"))
+                .arg(
+                    Arg::new("output")
+                        .short('o')
+                        .takes_value(true)
+                        .about("Output format"),
+                )
+                .arg(
+                    Arg::new("bam")
+                        .short('a')
+                        .takes_value(true)
+                        .multiple(true)
+                        .about("sorted bam"),
+                ),
+        )
+        .subcommand(
             App::new("split")
                 .about("start the web server.")
                 .arg(
@@ -290,6 +342,50 @@ fn main() {
         split(matches, threads);
     } else if let Some(ref matches) = matches.subcommand_matches("bin") {
         bin(matches, threads);
+    } else if let Some(ref matches) = matches.subcommand_matches("vis") {
+        bam_vis(matches, threads);
+    }
+}
+
+fn bam_vis(matches: &ArgMatches, threads: u16) -> () {
+    // let output_path = matches.value_of("OUTPUT").unwrap();
+
+    let mut list: Vec<(u64, Record)> = vec![];
+    if let Some(ranges) = matches.values_of("range") {
+        let ranges: Vec<&str> = ranges.collect();
+        for range in ranges {
+            if let Some(bam_files) = matches.values_of("bam") {
+                let bam_files: Vec<&str> = bam_files.collect();
+                println!("Input file: {:?}", bam_files);
+                for (index, bam_path) in bam_files.iter().enumerate() {
+                    println!("Loading {}", bam_path);
+                    // let reader = bam::BamReader::from_path(bam_path, threads).unwrap();
+                    let mut reader2 = bam::IndexedReader::build()
+                        .additional_threads(threads - 1)
+                        .from_path(bam_path)
+                        .unwrap();
+                    let string_range = StringRegion::new(range).unwrap();
+                    // Here all threads can be used, but I suspect that runs double
+                    //reader2.fetch()
+                    let ref_id = reader2.header().reference_id(string_range.path.as_ref());
+                    //                    let closure = |x: &str| reader.reference_id(x);
+                    //                   let string_range = StringRegion::new(range).unwrap();
+                    //                    let reference_name = &string_range.path;
+
+                    //                    let range = Region::convert(&string_range, closure).unwrap();
+                    let viewer = reader2
+                        .fetch(&bam::bam_reader::Region::new(
+                            ref_id.unwrap(),
+                            string_range.start as u32,
+                            string_range.end as u32,
+                        ))
+                        .unwrap();
+                    for record in viewer {
+                        list.push((index as u64, record.unwrap()));
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -677,17 +773,7 @@ fn vis_query(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::erro
                 let sample_ids = sample_ids_opt.unwrap_or(vec![]);
                 let filter = matches.is_present("filter");
                 let no_cigar = matches.is_present("no-cigar");
-                let packing = matches.is_present("packing");
-                let legend = matches.is_present("legend");
-                let insertion = !matches.is_present("no-insertion");
-                let x = matches
-                    .value_of("x")
-                    .and_then(|a| a.parse::<u32>().ok())
-                    .unwrap_or(1280u32);
-                let y = matches
-                    .value_of("x")
-                    .and_then(|a| a.parse::<u32>().ok())
-                    .unwrap_or(15u32);
+
                 let format_type_opt = matches.value_of_t::<Format>("type");
                 let format_type_cond = format_type_opt.is_ok();
                 let format_type = format_type_opt.unwrap_or(Format::Default(Default {}));
@@ -746,6 +832,18 @@ fn vis_query(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::erro
                         }
                     }
                 });
+
+                let packing = matches.is_present("packing");
+                let legend = matches.is_present("legend");
+                let insertion = !matches.is_present("no-insertion");
+                let x = matches
+                    .value_of("x")
+                    .and_then(|a| a.parse::<u32>().ok())
+                    .unwrap_or(1280u32);
+                let y = matches
+                    .value_of("x")
+                    .and_then(|a| a.parse::<u32>().ok())
+                    .unwrap_or(15u32);
                 let end = start.elapsed();
                 eprintln!(
                     "{}.{:03} sec.",
@@ -941,13 +1039,16 @@ fn vis_query(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::erro
                         },
                     ))?;
                 */
+
                 // For each alignment:
-                // chart.draw_series(list.into_iter().enumerate().map(|(index, data)| {
-                chart.draw_series(index_list.into_par_iter().zip(list).map(|(index, data)| {
+
+                let series = {
+                    list.into_iter().enumerate().map(|(index, data)| {
+                //chart.draw_series(index_list.into_par_iter().zip(list).map(|(index, data)| {
                     //for (index, data) in list.iter().enumerate() {
                     let bam = data.1;
                     let color = if bam.flag().is_reverse_strand() {
-                        BLUE
+                        CYAN
                     } else {
                         RED
                     };
@@ -981,52 +1082,81 @@ fn vis_query(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::erro
                     };
                     if ! no_cigar {
                     let mut prev_ref = bam.start() as u64;
+                    let mut prev_pixel_ref = start;
+                    let left_top = chart.as_coord_spec().translate(&(start, index));
+                    let right_bottom = chart.as_coord_spec().translate(&(end, index+1));
 
-                    if let Ok(a) = bam.alignment_entries() {
-                        for entry in a {
-                            if entry.is_insertion() {
-                                if prev_ref >= range.start() as u64 && insertion {
-                                    let mut bar = Rectangle::new([(prev_ref, index), (prev_ref+1, index + 1)], MAGENTA.stroke_width(1));
-                                    //eprintln!("{:?}", [(prev_ref, index), (prev_ref + 1, index + 1)]);
-                                    bar.set_margin(0, 0, 0, 3);
-                                    bars.push(bar);
-                                    prev_ref = 0;
+                    if let Ok(mut a) = bam.alignment_entries() {
+                        for i in left_top.0 + 1..right_bottom.0 { 
+                            /*let k = {
+                                let from = chart.into_coord_trans();
+                                from((i, left_top.1))
+                            };*/
+                            let k = chart.as_coord_spec().reverse_translate((i, left_top.1));
+                            let mut color = None;
+                            if let Some(k) = k {
+                            while k.0 > prev_ref {
+                                let entry = a.next();
+                                if let Some(entry) = entry {
+                                    if entry.is_insertion() {
+                                        if prev_ref >= range.start() as u64 && insertion {
+                                            //let mut bar = Rectangle::new([(prev_ref, index), (prev_ref+1, index + 1)], MAGENTA.stroke_width(1));
+                                            //eprintln!("{:?}", [(prev_ref, index), (prev_ref + 1, index + 1)]);
+                                            //bar.set_margin(0, 0, 0, 3);
+                                            //bars.push(bar);
+                                            //prev_ref = 0;
+                                            color = Some(MAGENTA);
+                                        }
+                                    } else if entry.is_deletion() {
+                                        prev_ref = entry.ref_pos_nt().unwrap().0 as u64;
+                                        if prev_ref > range.end() as u64 {break;}
+                                        if prev_ref >= range.start() as u64 {
+                                        //let mut bar = Rectangle::new([(prev_ref , index), (prev_ref + 1, index + 1)], WHITE.filled());
+                                        //bar.set_margin(2, 2, 0, 0);
+                                        //eprintln!("{:?}", [(prev_ref, index), (prev_ref + 1, index + 1)]);
+                                        //bars.push(bar);
+                                        color = Some(WHITE);
+                                        }
+                                    } else if entry.is_seq_match() {
+                                        prev_ref = entry.ref_pos_nt().unwrap().0 as u64;
+                                        if prev_ref > range.end() as u64 {break;}
+                                    } else {
+                                        /* Mismatch */
+                                        prev_ref = entry.ref_pos_nt().unwrap().0 as u64;
+
+                                        if prev_ref > range.end() as u64 {break;}
+                                        if prev_ref >= range.start() as u64 {
+                                        let record_nt = entry.record_pos_nt().unwrap().1;
+                                        color = match record_nt as char {
+                                            'A' => Some(GREEN), //RED,
+                                            'C' => Some(BLUE), // BLUE,
+                                            'G' => Some(YELLOW),
+                                            'T' => Some(RED), //GREEN,
+                                            _ => Some(BLACK),
+                                        };
+
+                                        /*let mut bar =
+                                        Rectangle::new([(prev_ref as u64, index), (prev_ref as u64 + 1, index + 1)], color.filled());
+                                        bar.set_margin(2, 2, 0, 0);
+                                        //eprintln!("{:?}", [(prev_ref, index), (prev_ref + 1, index + 1)]);
+                                        bars.push(bar);*/
+                                        }
+                                    }
                                 }
-                            } else if entry.is_deletion() {
-                                prev_ref = entry.ref_pos_nt().unwrap().0 as u64;
-                                if prev_ref > range.end() as u64 {break;}
-                                if prev_ref >= range.start() as u64 {
-                                let mut bar = Rectangle::new([(prev_ref , index), (prev_ref + 1, index + 1)], WHITE.filled());
-                                bar.set_margin(2, 2, 0, 0);
-                                //eprintln!("{:?}", [(prev_ref, index), (prev_ref + 1, index + 1)]);
-                                bars.push(bar);
-                                }
-                            } else if entry.is_seq_match() {
-                                prev_ref = entry.ref_pos_nt().unwrap().0 as u64;
-                                if prev_ref > range.end() as u64 {break;}
-                            } else {
-                                /* Mismatch */
-                                prev_ref = entry.ref_pos_nt().unwrap().0 as u64;
 
-                                if prev_ref > range.end() as u64 {break;}
-                                if prev_ref >= range.start() as u64 {
-                                let record_nt = entry.record_pos_nt().unwrap().1;
-                                let color = match record_nt as char {
-                                    'A' => GREEN, //RED,
-                                    'C' => BLUE,
-                                    'G' => YELLOW,
-                                    'T' => RED, //GREEN,
-                                    _ => BLACK,
-                                };
-
-                                let mut bar =
-                                Rectangle::new([(prev_ref as u64, index), (prev_ref as u64 + 1, index + 1)], color.filled());
+                            }
+                            if prev_ref >= range.start() as u64 {
+                            if let Some(color) = color {
+                                let mut bar = Rectangle::new([(prev_pixel_ref as u64, index), (prev_ref as u64, index + 1)], color.filled());
                                 bar.set_margin(2, 2, 0, 0);
-                                //eprintln!("{:?}", [(prev_ref, index), (prev_ref + 1, index + 1)]);
+                                /*if prev_pixel_ref < start || end < prev_ref {
+                                    eprintln!("{:?}", [(prev_pixel_ref, index), (prev_ref, index + 1)]);
+                                }*/
                                 bars.push(bar);
                             }
-
-                            }
+                            prev_pixel_ref = k.0;
+                        }
+                        }
                         /*if let Some((record_pos, record_nt)) = entry.record_pos_nt() {
                             print!("{} {}", record_pos, record_nt as char);
                         } else {
@@ -1073,9 +1203,11 @@ fn vis_query(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::erro
                         }
                     }
                     }
-                }
+                    }
                     bars
-                }).flatten().collect::<Vec<_>>())?;
+                //}).flatten().collect::<Vec<_>>())?;
+                }).flatten().collect::<Vec<_>>()};
+                chart.draw_series(series)?;
 
                 if legend {
                     chart
