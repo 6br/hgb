@@ -1186,17 +1186,17 @@ where
                                 // (Seq_idx, ref_idx)
                                 (Some(_record), Some(reference)) => {
                                     if prev_ref > range.start() as u64 && quality {
-                                        let qual = bam.qualities().raw()[_record as usize];
+                                        if let Some(qual) = bam.qualities().raw().get(_record as usize){
                                         let mut bar = Rectangle::new(
                                             [
                                                 (reference as u64, index),
                                                 (reference as u64 + 1, index + 1),
                                             ],
-                                            RGBColor(128u8, 128u8, qual).filled(),
+                                            RGBColor(128u8, 128u8, *qual).filled(),
                                         );
                                         bar.set_margin(2, 2, 0, 0);
                                         bars.push(bar);
-                                    }
+                                    }}
                                     prev_ref = reference as u64;
                                     if reference > range.end() as u32 {
                                         break;
