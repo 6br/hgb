@@ -127,6 +127,7 @@ fn main() {
                 .arg(Arg::new("no-cigar").short('n').about("Binary"))
                 .arg(Arg::new("packing").short('p').about("Binary"))
                 .arg(Arg::new("legend").short('l').about("Legend"))
+                .arg(Arg::new("quality").short('q').about("Quality"))
                 .arg(Arg::new("x").short('x').takes_value(true).about("x"))
                 .arg(Arg::new("y").short('y').takes_value(true).about("y"))
                 .arg(Arg::new("no-insertion").short('s').about("No-md"))
@@ -280,6 +281,7 @@ fn main() {
                 .arg(Arg::new("no-cigar").short('n').about("Binary"))
                 .arg(Arg::new("packing").short('p').about("Binary"))
                 .arg(Arg::new("legend").short('l').about("Legend"))
+                .arg(Arg::new("quality").short('q').about("Quality"))
                 .arg(Arg::new("x").short('x').takes_value(true).about("x"))
                 .arg(Arg::new("y").short('y').takes_value(true).about("y"))
                 .arg(Arg::new("no-insertion").short('s').about("No-md"))
@@ -852,6 +854,7 @@ where
     let no_cigar = matches.is_present("no-cigar");
     let output = matches.value_of("output").unwrap();
     let packing = matches.is_present("packing");
+    let quality = matches.is_present("quality");
     let legend = matches.is_present("legend");
     let insertion = !matches.is_present("no-insertion");
     let x = matches
@@ -1038,52 +1041,51 @@ where
     let series = {
         //list.into_iter().enumerate().map(|(index, data)| {
         let mut bars = vec![];
-        index_list
-            .into_iter()
-            .zip(list)
-            .for_each(|(index, data)| {
-                //chart.draw_series(index_list.into_par_iter().zip(list).map(|(index, data)| {
-                //for (index, data) in list.iter().enumerate() {
-                let bam = data.1;
-                let color = if bam.flag().is_reverse_strand() {
-                    CYAN
-                } else {
-                    RED
-                };
-                let stroke = Palette99::pick(data.0 as usize); //.unwrap(); //if data.0 % 2 == 0 { CYAN } else { GREEN };
-                let start = if bam.start() as u64 > range.start() {
-                    bam.start() as u64
-                } else {
-                    range.start()
-                };
-                let end = if bam.calculate_end() as u64 > range.end() {
-                    range.end()
-                } else {
-                    bam.calculate_end() as u64
-                };
-                /*chart
-                .draw_series(LineSeries::new(vec![(start, index), (end, index)], &color))?;*/
-                let mut bar = Rectangle::new([(start, index), (end, index + 1)], color.filled());
-                bar.set_margin(1, 1, 0, 0);
+        index_list.into_iter().zip(list).for_each(|(index, data)| {
+            //chart.draw_series(index_list.into_par_iter().zip(list).map(|(index, data)| {
+            //for (index, data) in list.iter().enumerate() {
+            let bam = data.1;
+            let color = if bam.flag().is_reverse_strand() {
+                CYAN
+            } else {
+                RED
+            };
+            let stroke = Palette99::pick(data.0 as usize); //.unwrap(); //if data.0 % 2 == 0 { CYAN } else { GREEN };
+            let start = if bam.start() as u64 > range.start() {
+                bam.start() as u64
+            } else {
+                range.start()
+            };
+            let end = if bam.calculate_end() as u64 > range.end() {
+                range.end()
+            } else {
+                bam.calculate_end() as u64
+            };
+            /*chart
+            .draw_series(LineSeries::new(vec![(start, index), (end, index)], &color))?;*/
+            let mut bar = Rectangle::new([(start, index), (end, index + 1)], color.filled());
+            bar.set_margin(1, 1, 0, 0);
 
-                // eprintln!("{:?}", [(start, index), (end, index + 1)]);
-                bars.push(bar);
-                //let mut bars =  //, bar2];
-                if legend {
-                } else {
-                    let mut bar2 =
-                        Rectangle::new([(start, index), (end, index + 1)], stroke.stroke_width(3));
-                    bar2.set_margin(1, 1, 0, 0);
-                    //vec![bar,bar2]
-                    bars.push(bar2);
-                };
-                if !no_cigar {
-                    let mut prev_ref = bam.start() as u64;
-                    let mut prev_pixel_ref = start;
-                    let left_top = chart.as_coord_spec().translate(&(start, index));
-                    let right_bottom = chart.as_coord_spec().translate(&(end, index + 1));
+            // eprintln!("{:?}", [(start, index), (end, index + 1)]);
+            bars.push(bar);
+            //let mut bars =  //, bar2];
+            if legend {
+            } else {
+                let mut bar2 =
+                    Rectangle::new([(start, index), (end, index + 1)], stroke.stroke_width(3));
+                bar2.set_margin(1, 1, 0, 0);
+                //vec![bar,bar2]
+                bars.push(bar2);
+            };
+            if !no_cigar {
+                let mut prev_ref = bam.start() as u64;
+                let mut prev_pixel_ref = start;
+                let left_top = chart.as_coord_spec().translate(&(start, index));
+                let right_bottom = chart.as_coord_spec().translate(&(end, index + 1));
 
-                    if let Ok(mut a) = bam.alignment_entries() {
+                //if let Ok(mut a) = bam.alignment_entries() {
+                match (quality, bam.alignment_entries()) {
+                    (false, Ok(mut a)) => {
                         for i in left_top.0 + 1..right_bottom.0 {
                             /*let k = {
                                 let from = chart.into_coord_trans();
@@ -1177,11 +1179,24 @@ where
                                 println!("-");
                             }*/
                         }
-                    } else {
+                    }
+                    _ => {
                         for entry in bam.aligned_pairs() {
                             match entry {
                                 // (Seq_idx, ref_idx)
-                                (Some(_), Some(reference)) => {
+                                (Some(_record), Some(reference)) => {
+                                    if prev_ref > range.start() as u64 && quality {
+                                        let qual = bam.qualities().raw()[_record as usize];
+                                        let mut bar = Rectangle::new(
+                                            [
+                                                (reference as u64, index),
+                                                (reference as u64 + 1, index + 1),
+                                            ],
+                                            RGBColor(128u8, 128u8, qual).filled(),
+                                        );
+                                        bar.set_margin(2, 2, 0, 0);
+                                        bars.push(bar);
+                                    }
                                     prev_ref = reference as u64;
                                     if reference > range.end() as u32 {
                                         break;
@@ -1207,7 +1222,7 @@ where
                                 }
                                 (Some(_record), None) => {
                                     //Insertion
-                                    if prev_ref > range.start() as u64 {
+                                    if prev_ref > range.start() as u64 && insertion {
                                         let mut bar = Rectangle::new(
                                             [(prev_ref, index), (prev_ref + 1, index + 1)],
                                             MAGENTA.stroke_width(1),
@@ -1224,8 +1239,9 @@ where
                         }
                     }
                 }
-                //}).flatten().collect::<Vec<_>>())?;
-            });
+            }
+            //}).flatten().collect::<Vec<_>>())?;
+        });
         bars
     };
     chart.draw_series(series)?;
