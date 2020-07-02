@@ -1186,17 +1186,21 @@ where
                                 // (Seq_idx, ref_idx)
                                 (Some(_record), Some(reference)) => {
                                     if prev_ref > range.start() as u64 && quality {
-                                        if let Some(qual) = bam.qualities().raw().get(_record as usize){
-                                        let mut bar = Rectangle::new(
-                                            [
-                                                (reference as u64, index),
-                                                (reference as u64 + 1, index + 1),
-                                            ],
-                                            RGBColor(128u8, 128u8, *qual).filled(),
-                                        );
-                                        bar.set_margin(2, 2, 0, 0);
-                                        bars.push(bar);
-                                    }}
+                                        if let Some(qual) =
+                                            bam.qualities().raw().get(_record as usize)
+                                        {
+//                                            eprintln!("{:?}", RGBColor(*qual*5, *qual*5, *qual*5));
+                                            let mut bar = Rectangle::new(
+                                                [
+                                                    (reference as u64, index),
+                                                    (reference as u64 + 1, index + 1),
+                                                ],
+                                                RGBColor(*qual*5, *qual*5, *qual*5).filled(),
+                                            );
+                                            bar.set_margin(2, 2, 0, 0);
+                                            bars.push(bar);
+                                        }
+                                    }
                                     prev_ref = reference as u64;
                                     if reference > range.end() as u32 {
                                         break;
@@ -1204,7 +1208,7 @@ where
                                 }
                                 (None, Some(reference)) => {
                                     //Deletion
-                                    if reference > range.start() as u32 {
+                                    if reference > range.start() as u32 && !quality {
                                         let mut bar = Rectangle::new(
                                             [
                                                 (reference as u64, index),
