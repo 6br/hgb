@@ -1189,13 +1189,13 @@ where
                                         if let Some(qual) =
                                             bam.qualities().raw().get(_record as usize)
                                         {
-//                                            eprintln!("{:?}", RGBColor(*qual*5, *qual*5, *qual*5));
+                                            //                                            eprintln!("{:?}", RGBColor(*qual*5, *qual*5, *qual*5));
                                             let mut bar = Rectangle::new(
                                                 [
                                                     (reference as u64, index),
                                                     (reference as u64 + 1, index + 1),
                                                 ],
-                                                RGBColor(*qual*5, *qual*5, *qual*5).filled(),
+                                                RGBColor(*qual * 5, *qual * 5, *qual * 5).filled(),
                                             );
                                             bar.set_margin(2, 2, 0, 0);
                                             bars.push(bar);
