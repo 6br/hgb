@@ -19,7 +19,7 @@ use plotters::prelude::Palette;
 use plotters::prelude::*;
 use rayon::prelude::*;
 use std::{
-    collections::{BTreeMap, BinaryHeap},
+    collections::{BTreeMap, BinaryHeap, HashMap},
     fs::{self, File},
     io,
     path::Path,
@@ -934,52 +934,106 @@ where
     let mut compressed_list = vec![];
     let mut index_list = Vec::with_capacity(list.len());
     if packing {
-        list.iter().group_by(|elt| elt.0).into_iter().for_each(|t| {
-            // let mut heap = BinaryHeap::<(i64, usize)>::new();
-            let mut packing = vec![0u64];
-            prev_index += 1;
-            (t.1).for_each(|k| {
-                let index = if let Some(index) = packing
-                    .iter_mut()
-                    .enumerate()
-                    .find(|(_, item)| **item < k.1.start() as u64)
-                {
-                    //packing[index.0] = k.1.calculate_end() as u64;
-                    *index.1 = k.1.calculate_end() as u64;
-                    index.0
-                } else {
-                    packing.push(k.1.calculate_end() as u64);
-                    prev_index += 1;
-                    packing.len() - 1
-                    //prev_index - 1
-                }; /*
-                   let index: usize = if heap.peek() != None
-                       && -heap.peek().unwrap().0 < k.1.start() as i64
-                   {
-                       let hp = heap.pop().unwrap();
-                       // let index = hp.1;
-                       heap.push((-k.1.calculate_end() as i64, hp.1));
-                       hp.1
-                   } else {
-                       let index = prev_index;
-                       prev_index += 1;
-                       heap.push((-k.1.calculate_end() as i64, index));
-                       index
-                   };*/
-                //let index =
-                index_list.push(index + last_prev_index);
-                // eprintln!("{:?}", packing);
-                //(index, (k.0, k.1))
-            }); //.collect::<Vec<(usize, (u64, Record))>>()
-                // compressed_list.push(prev_index);
-                //compressed_list.insert(t.0, prev_index);
-                //prev_index += 1;
-            compressed_list.push((t.0, prev_index));
-            //eprintln!("{:?} {:?} {:?}", compressed_list, packing, index_list);
-            last_prev_index = prev_index;
-            //(t.0, ((t.1).0, (t.1).1))
-            // .collect::<&(u64, Record)>(). // collect::<Vec<(usize, (u64, Record))>>
-        });
+        if split {
+            // let mut end_map = HashMap::new();
+            list.sort_by(|a, b| {
+                a.0.cmp(&b.0)
+                    .then(a.1.name().cmp(&b.1.name()))
+                    .then(a.1.start().cmp(&b.1.start()))
+            });
+            list.iter().group_by(|elt| elt.0).into_iter().for_each(|t| {
+                t.1.group_by(|elt| elt.1.name()).into_iter().for_each(|s| {
+                    let items: Vec<&(u64, Record)> = s.1.into_iter().collect();
+                    if items.len() > 1 {
+                        let last: &(u64, Record) =
+                            items.iter().max_by_key(|t| t.1.calculate_end()).unwrap();
+                        /*items
+                        .get_mut(0)
+                        .unwrap()
+                        .1
+                        .tags_mut()
+                        .push_num(b"PE", last.1.calculate_end());*/
+                        // end_map.insert((t.0.clone(), s.0), last.1.calculate_end().clone());
+                    }
+                })
+                //group.into_iter().for_each(|t| {})
+            });
+            list.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.start().cmp(&b.1.start())));
+
+            list.iter().group_by(|elt| elt.0).into_iter().for_each(|t| {
+                // let mut heap = BinaryHeap::<(i64, usize)>::new();
+                let mut packing = vec![0u64];
+                let mut name_index = HashMap::new();
+                prev_index += 1;
+                (t.1).for_each(|k| {
+                    let index = if let Some(index) = name_index.get(k.1.name()) {
+                        *index
+                    } else if let Some(index) = packing
+                        .iter_mut()
+                        .enumerate()
+                        .find(|(_, item)| **item < k.1.start() as u64)
+                    {
+                        *index.1 = k.1.calculate_end() as u64;
+                        index.0
+                    } else {
+                        packing.push(k.1.calculate_end() as u64);
+                        prev_index += 1;
+                        packing.len() - 1
+                    };
+                    index_list.push(index + last_prev_index);
+                    name_index.insert(k.1.name(), index);
+                });
+                compressed_list.push((t.0, prev_index));
+                last_prev_index = prev_index;
+            });
+        } else {
+            list.iter().group_by(|elt| elt.0).into_iter().for_each(|t| {
+                // let mut heap = BinaryHeap::<(i64, usize)>::new();
+                let mut packing = vec![0u64];
+                prev_index += 1;
+                (t.1).for_each(|k| {
+                    let index = if let Some(index) = packing
+                        .iter_mut()
+                        .enumerate()
+                        .find(|(_, item)| **item < k.1.start() as u64)
+                    {
+                        //packing[index.0] = k.1.calculate_end() as u64;
+                        *index.1 = k.1.calculate_end() as u64;
+                        index.0
+                    } else {
+                        packing.push(k.1.calculate_end() as u64);
+                        prev_index += 1;
+                        packing.len() - 1
+                        //prev_index - 1
+                    }; /*
+                       let index: usize = if heap.peek() != None
+                           && -heap.peek().unwrap().0 < k.1.start() as i64
+                       {
+                           let hp = heap.pop().unwrap();
+                           // let index = hp.1;
+                           heap.push((-k.1.calculate_end() as i64, hp.1));
+                           hp.1
+                       } else {
+                           let index = prev_index;
+                           prev_index += 1;
+                           heap.push((-k.1.calculate_end() as i64, index));
+                           index
+                       };*/
+                    //let index =
+                    index_list.push(index + last_prev_index);
+                    // eprintln!("{:?}", packing);
+                    //(index, (k.0, k.1))
+                }); //.collect::<Vec<(usize, (u64, Record))>>()
+                    // compressed_list.push(prev_index);
+                    //compressed_list.insert(t.0, prev_index);
+                    //prev_index += 1;
+                compressed_list.push((t.0, prev_index));
+                //eprintln!("{:?} {:?} {:?}", compressed_list, packing, index_list);
+                last_prev_index = prev_index;
+                //(t.0, ((t.1).0, (t.1).1))
+                // .collect::<&(u64, Record)>(). // collect::<Vec<(usize, (u64, Record))>>
+            });
+        }
     } else {
         index_list = (0..list.len()).collect();
         // list.sort_by(|a, b| a.0.cmp(&b.0));
@@ -1266,7 +1320,7 @@ where
                             // split alignment on left
                             let mut bar = Rectangle::new(
                                 [(start, index), (start + 1, index + 1)],
-                                color.stroke_width(10), //.filled(),
+                                color.stroke_width(3), //.filled(),
                             );
                             bar.set_margin(0, 0, 0, 0);
                             bars.push(bar)
@@ -1301,7 +1355,7 @@ where
             if legend {
             } else {
                 let mut bar2 =
-                    Rectangle::new([(start, index), (end, index + 1)], stroke.stroke_width(3));
+                    Rectangle::new([(start, index), (end, index + 1)], stroke.stroke_width(1));
                 bar2.set_margin(1, 1, 0, 0);
                 //vec![bar,bar2]
                 bars.push(bar2);
