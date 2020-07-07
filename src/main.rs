@@ -1053,19 +1053,20 @@ where
     let mut prev_node_id = 0u64;
 
     // We assume that axis[&range.path] includes all node id to be serialized.
-    axis[&range.path]
-        .iter()
-        //.filter(|t| t.0 == range.path)
-        .for_each(|(node_id, pos)| {
-            if prev_pos > *pos {
-            } else {
-                node_id_dict.insert(prev_node_id, (prev_pos, *pos));
-            }
-            prev_pos = *pos;
-            prev_node_id = *node_id;
-        });
-    //node_id_dict[&prev_node_id] = (prev_pos, range.end());
-    node_id_dict.insert(prev_node_id, (prev_pos, range.end()));
+    if let Some(axis) = axis.get(&range.path) {
+        axis.iter()
+            //.filter(|t| t.0 == range.path)
+            .for_each(|(node_id, pos)| {
+                if prev_pos > *pos {
+                } else {
+                    node_id_dict.insert(prev_node_id, (prev_pos, *pos));
+                }
+                prev_pos = *pos;
+                prev_node_id = *node_id;
+            });
+        //node_id_dict[&prev_node_id] = (prev_pos, range.end());
+        node_id_dict.insert(prev_node_id, (prev_pos, range.end()));
+    }
 
     // Draw graph axis if there is graph information.
     axis.into_iter()
@@ -1235,7 +1236,7 @@ where
                         let sastr = String::from_utf8_lossy(array_view);
                         let sa: Vec<Vec<&str>> =
                             sastr.split(';').map(|t| t.split(',').collect()).collect();
-                        let mut sa_left_clip = sa.into_iter().map(|t| {
+                        let mut sa_left_clip = sa.into_iter().filter(|t| t.len() > 2).map(|t| {
                             let strand = t[2];
                             //let cigar = Cigar::from_raw(t[3]).soft_clipping(strand == "+");
                             let mut cigar = Cigar::new();
@@ -1250,7 +1251,7 @@ where
                             // split alignment on left
                             let mut bar = Rectangle::new(
                                 [(start, index), (start + 1, index + 1)],
-                                color.filled(),
+                                color.stroke_width(3)//.filled(),
                             );
                             bar.set_margin(0, 0, 0, 0);
                             bars.push(bar)
@@ -1261,7 +1262,7 @@ where
                             // split alignment on right
                             let mut bar = Rectangle::new(
                                 [(end - 1, index), (end, index + 1)],
-                                color.filled(),
+                                color.stroke_width(3)//.filled(),
                             );
                             bar.set_margin(0, 0, 0, 0);
                             bars.push(bar)
