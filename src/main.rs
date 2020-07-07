@@ -1232,48 +1232,63 @@ where
                     Some(TagValue::String(array_view, StringType::String)) => {
                         // assert!(array_view.int_type() == IntegerType::U32);
                         let current_left_clip =
-                            bam.cigar().soft_clipping(bam.flag().is_reverse_strand());
+                            bam.cigar().soft_clipping(!bam.flag().is_reverse_strand());
                         let sastr = String::from_utf8_lossy(array_view);
                         let sa: Vec<Vec<&str>> =
                             sastr.split(';').map(|t| t.split(',').collect()).collect();
-                        let mut sa_left_clip = sa.into_iter().filter(|t| t.len() > 2).map(|t| {
-                            let strand = t[2];
-                            //let cigar = Cigar::from_raw(t[3]).soft_clipping(strand == "+");
-                            let mut cigar = Cigar::new();
-                            cigar.extend_from_text(t[3].bytes());
-                            cigar.soft_clipping(strand == "+")
-                        });
-                        let is_smaller = sa_left_clip.find(|t| t < &current_left_clip).is_some();
-                        let is_larger = sa_left_clip.find(|t| t > &current_left_clip).is_some();
-                        if (is_smaller && !bam.flag().is_reverse_strand())
-                            || (is_larger && bam.flag().is_reverse_strand())
+                        let mut sa_left_clip: Vec<u32> = sa
+                            .into_iter()
+                            .filter(|t| t.len() > 2)
+                            .map(|t| {
+                                let strand = t[2];
+                                //let cigar = Cigar::from_raw(t[3]).soft_clipping(strand == "+");
+                                let mut cigar = Cigar::new();
+                                cigar.extend_from_text(t[3].bytes());
+                                eprintln!("{:?}", cigar.soft_clipping(strand == "+"));
+
+                                cigar.soft_clipping(strand == "+")
+                            })
+                            .collect();
+                        let is_smaller = sa_left_clip
+                            .iter()
+                            .find(|t| t < &&current_left_clip)
+                            .is_some();
+                        let is_larger = sa_left_clip
+                            .iter()
+                            .find(|t| t > &&current_left_clip)
+                            .is_some();
+                        let color = RGBColor(120,85,43);
+                        if ((is_smaller && !bam.flag().is_reverse_strand())
+                            || (is_larger && bam.flag().is_reverse_strand())) && bam.start() as u64 > range.start() 
                         {
                             // split alignment on left
                             let mut bar = Rectangle::new(
                                 [(start, index), (start + 1, index + 1)],
-                                color.stroke_width(3)//.filled(),
+                                color.stroke_width(10), //.filled(),
                             );
                             bar.set_margin(0, 0, 0, 0);
                             bars.push(bar)
                         }
-                        if (is_larger && !bam.flag().is_reverse_strand())
-                            || (is_smaller && bam.flag().is_reverse_strand())
+                        if ((is_larger && !bam.flag().is_reverse_strand())
+                            || (is_smaller && bam.flag().is_reverse_strand())) && (bam.calculate_end() as u64) < range.end()
                         {
                             // split alignment on right
                             let mut bar = Rectangle::new(
                                 [(end - 1, index), (end, index + 1)],
-                                color.stroke_width(3)//.filled(),
+                                color.stroke_width(10), //.filled(),
                             );
                             bar.set_margin(0, 0, 0, 0);
                             bars.push(bar)
                         }
-                        eprintln!(
-                            "SA = {}, {}, {}, {}",
+                        /*eprintln!(
+                            "SA = {}, {:?},
+                             {}, {}, {}",
                             String::from_utf8_lossy(array_view),
+                            sa_left_clip,
                             is_smaller,
                             is_larger,
                             bam.flag().is_reverse_strand()
-                        );
+                        );*/
                     }
                     // Some(TagValue::)
                     Some(_) => {} // panic!("Unexpected type"),
