@@ -935,13 +935,14 @@ where
     let mut index_list = Vec::with_capacity(list.len());
     if packing {
         if split {
-            // let mut end_map = HashMap::new();
+            let mut end_map = HashMap::new();
             list.sort_by(|a, b| {
                 a.0.cmp(&b.0)
                     .then(a.1.name().cmp(&b.1.name()))
                     .then(a.1.start().cmp(&b.1.start()))
             });
             list.iter().group_by(|elt| elt.0).into_iter().for_each(|t| {
+                let sample_id = t.0.clone();
                 t.1.group_by(|elt| elt.1.name()).into_iter().for_each(|s| {
                     let items: Vec<&(u64, Record)> = s.1.into_iter().collect();
                     if items.len() > 1 {
@@ -953,7 +954,8 @@ where
                         .1
                         .tags_mut()
                         .push_num(b"PE", last.1.calculate_end());*/
-                        // end_map.insert((t.0.clone(), s.0), last.1.calculate_end().clone());
+                        // end_map.insert((t.0.clone(), s.0.clone()), last.1.calculate_end().clone());
+                        end_map.insert((sample_id, s.0), last.1.calculate_end());
                     }
                 })
                 //group.into_iter().for_each(|t| {})
@@ -1332,7 +1334,7 @@ where
                             // split alignment on right
                             let mut bar = Rectangle::new(
                                 [(end - 1, index), (end, index + 1)],
-                                color.stroke_width(10), //.filled(),
+                                color.stroke_width(2), //.filled(),
                             );
                             bar.set_margin(0, 0, 0, 0);
                             bars.push(bar)
