@@ -1236,18 +1236,19 @@ where
                         let sastr = String::from_utf8_lossy(array_view);
                         let sa: Vec<Vec<&str>> =
                             sastr.split(';').map(|t| t.split(',').collect()).collect();
-                        let mut sa_left_clip: Vec<u32> = sa
+                        let sa_left_clip: Vec<u32> = sa
                             .into_iter()
                             .filter(|t| t.len() > 2)
                             .map(|t| {
                                 let strand = t[2];
                                 //let cigar = Cigar::from_raw(t[3]).soft_clipping(strand == "+");
                                 let mut cigar = Cigar::new();
-                                cigar.extend_from_text(t[3].bytes());
-                                eprintln!("{:?}", cigar.soft_clipping(strand == "+"));
+                                cigar.extend_from_text(t[3].bytes()).ok()?;
+                                //eprintln!("{:?}", cigar.soft_clipping(strand == "+"));
 
-                                cigar.soft_clipping(strand == "+")
+                                Some(cigar.soft_clipping(strand == "+"))
                             })
+                            .filter_map(|t| t)
                             .collect();
                         let is_smaller = sa_left_clip
                             .iter()
@@ -1257,9 +1258,10 @@ where
                             .iter()
                             .find(|t| t > &&current_left_clip)
                             .is_some();
-                        let color = RGBColor(120,85,43);
+                        let color = RGBColor(120, 85, 43);
                         if ((is_smaller && !bam.flag().is_reverse_strand())
-                            || (is_larger && bam.flag().is_reverse_strand())) && bam.start() as u64 > range.start() 
+                            || (is_larger && bam.flag().is_reverse_strand()))
+                            && bam.start() as u64 > range.start()
                         {
                             // split alignment on left
                             let mut bar = Rectangle::new(
@@ -1270,7 +1272,8 @@ where
                             bars.push(bar)
                         }
                         if ((is_larger && !bam.flag().is_reverse_strand())
-                            || (is_smaller && bam.flag().is_reverse_strand())) && (bam.calculate_end() as u64) < range.end()
+                            || (is_smaller && bam.flag().is_reverse_strand()))
+                            && (bam.calculate_end() as u64) < range.end()
                         {
                             // split alignment on right
                             let mut bar = Rectangle::new(
