@@ -892,6 +892,7 @@ where
         .and_then(|a| {
             Some(
                 csv::ReaderBuilder::new()
+                    .delimiter(b'\t')
                     .has_headers(false)
                     .from_reader(File::open(a).ok()?),
             )
@@ -1064,6 +1065,7 @@ where
         for i in graph.records() {
             let k = i?;
             //btree.insert(k[0].to_string(), (k[1].parse::<u64>()?, k[2].parse::<u64>()?));
+            //eprintln!("{:?}", k);
             let item = btree.entry(k[0].to_string()).or_insert(vec![]);
             item.push((k[1].parse::<u64>()?, k[2].parse::<u64>()?));
             //vec.push((k[0].to_string(), k[1].parse::<u64>()?, k[2].parse::<u64>()?))
@@ -1131,36 +1133,38 @@ where
         .enumerate()
         .for_each(|(key, value)| {
             value.1.into_iter().for_each(|(node_id, _pos)| {
-                let points = node_id_dict[&node_id];
-                if points.1 > range.start() && points.0 < range.end() {
-                    let start = if points.0 > range.start() {
-                        points.0
-                    } else {
-                        range.start()
-                    };
-                    let end = if points.1 < range.end() {
-                        points.1
-                    } else {
-                        range.end()
-                    };
-                    let stroke = Palette99::pick(node_id as usize);
-                    let mut bar2 = Rectangle::new(
-                        [(start, prev_index + key), (end, prev_index + key + 1)],
-                        stroke.stroke_width(2),
-                    );
-                    bar2.set_margin(1, 1, 0, 0);
-                    // prev_index += 1;
-                    chart
-                        .draw_series(LineSeries::new(
-                            vec![(start, prev_index + key + 1), (end, prev_index + key + 1)],
+                let points = node_id_dict.get(&node_id); // [&node_id];
+                if let Some(points) = points {
+                    if points.1 > range.start() && points.0 < range.end() {
+                        let start = if points.0 > range.start() {
+                            points.0
+                        } else {
+                            range.start()
+                        };
+                        let end = if points.1 < range.end() {
+                            points.1
+                        } else {
+                            range.end()
+                        };
+                        let stroke = Palette99::pick(node_id as usize);
+                        let mut bar2 = Rectangle::new(
+                            [(start, prev_index + key), (end, prev_index + key + 1)],
                             stroke.stroke_width(2),
-                        ))
-                        .unwrap()
-                        .label(format!("{}", node_id))
-                        .legend(move |(x, y)| {
-                            Rectangle::new([(x - 5, y - 5), (x + 5, y + 5)], stroke.filled())
-                        });
-                    //Some(bar2)
+                        );
+                        bar2.set_margin(1, 1, 0, 0);
+                        // prev_index += 1;
+                        chart
+                            .draw_series(LineSeries::new(
+                                vec![(start, prev_index + key + 1), (end, prev_index + key + 1)],
+                                stroke.stroke_width(2),
+                            ))
+                            .unwrap()
+                            .label(format!("{}", node_id))
+                            .legend(move |(x, y)| {
+                                Rectangle::new([(x - 5, y - 5), (x + 5, y + 5)], stroke.filled())
+                            });
+                        //Some(bar2)
+                    }
                 }
             })
         });
