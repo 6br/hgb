@@ -1,7 +1,13 @@
 extern crate log;
 
 use bam;
-use bam::{Record, RecordWriter};
+use bam::{
+    record::{
+        tags::{IntegerType, StringType, TagValue},
+        Cigar,
+    },
+    Record, RecordWriter,
+};
 use clap::{App, Arg, ArgMatches};
 use env_logger;
 use genomic_range::StringRegion;
@@ -14,7 +20,7 @@ use plotters::prelude::*;
 use rayon::prelude::*;
 use std::{
     collections::{BTreeMap, BinaryHeap},
-    fs::File,
+    fs::{self, File},
     io,
     path::Path,
     time::Instant,
@@ -130,8 +136,15 @@ fn main() {
                 .arg(Arg::new("quality").short('q').about("Quality"))
                 .arg(Arg::new("x").short('x').takes_value(true).about("x"))
                 .arg(Arg::new("y").short('y').takes_value(true).about("y"))
-                .arg(Arg::new("no-insertion").short('s').about("No-md"))
+                .arg(Arg::new("split-alignment").short('s').about("No-md"))
+                .arg(Arg::new("no-insertion").short('z').about("No-md"))
                 // .arg(Arg::new("insertion").short('').about("No-md"))
+                .arg(
+                    Arg::new("graph")
+                        .short('g')
+                        .takes_value(true)
+                        .about("graph"),
+                )
                 .arg(
                     Arg::new("output")
                         .short('o')
@@ -284,7 +297,14 @@ fn main() {
                 .arg(Arg::new("quality").short('q').about("Quality"))
                 .arg(Arg::new("x").short('x').takes_value(true).about("x"))
                 .arg(Arg::new("y").short('y').takes_value(true).about("y"))
-                .arg(Arg::new("no-insertion").short('s').about("No-md"))
+                .arg(Arg::new("split-alignment").short('s').about("No-md"))
+                .arg(Arg::new("no-insertion").short('z').about("No-md"))
+                .arg(
+                    Arg::new("graph")
+                        .short('g')
+                        .takes_value(true)
+                        .about("graph"),
+                )
                 // .arg(Arg::new("insertion").short('').about("No-md"))
                 .arg(
                     Arg::new("output")
@@ -857,6 +877,7 @@ where
     let quality = matches.is_present("quality");
     let legend = matches.is_present("legend");
     let insertion = !matches.is_present("no-insertion");
+    let split = matches.is_present("split-alignment");
     let x = matches
         .value_of("x")
         .and_then(|a| a.parse::<u32>().ok())
@@ -865,6 +886,17 @@ where
         .value_of("x")
         .and_then(|a| a.parse::<u32>().ok())
         .unwrap_or(15u32);
+    let graph = matches
+        .value_of("graph")
+        //.and_then(|a| fs::read_to_string(a).ok())
+        .and_then(|a| {
+            Some(
+                csv::ReaderBuilder::new()
+                    .has_headers(false)
+                    .from_reader(File::open(a).ok()?),
+            )
+        });
+    //.and_then(|a| Some(a.split("\n").map(|t| t.split("\t").collect()).collect()));
     list.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.start().cmp(&b.1.start())));
     /*
     let iterator = if packing {
@@ -964,8 +996,36 @@ where
             })
     }
     eprintln!("{:?}", compressed_list);
+    /*
+    let axis = if let Some(graph) = graph {
+        graph.into_iter().collect().unique_by(|s| s[0]).count() // group_by(|elt| elt[0]).count() as usize
+    } else {
+        0usize
+    };*/
+    let axis = if let Some(mut graph) = graph {
+        // let mut vec = vec![];
+        let mut btree = BTreeMap::new();
+        for i in graph.records() {
+            let k = i?;
+            //btree.insert(k[0].to_string(), (k[1].parse::<u64>()?, k[2].parse::<u64>()?));
+            let item = btree.entry(k[0].to_string()).or_insert(vec![]);
+            item.push((k[1].parse::<u64>()?, k[2].parse::<u64>()?));
+            //vec.push((k[0].to_string(), k[1].parse::<u64>()?, k[2].parse::<u64>()?))
+        }
+        //btree
+        btree
+    //        graph.into_iter().collect().unique_by(|s| s[0]).count() // group_by(|elt| elt[0]).count() as usize
+    } else {
+        BTreeMap::new()
+        //vec![]
+    };
+    let axis_count = axis.len(); //into_iter().unique_by(|s| s.0).count();
 
-    let root = BitMapBackend::new(output, (x, 40 + (prev_index as u32) * y)).into_drawing_area();
+    let root = BitMapBackend::new(
+        output,
+        (x, 40 + (prev_index as u32 + axis_count as u32) * y),
+    )
+    .into_drawing_area();
     root.fill(&WHITE)?;
     let root = root.margin(10, 10, 10, 10);
     // After this point, we should be able to draw construct a chart context
@@ -987,6 +1047,103 @@ where
         // We can also change the format of the label text
         .x_label_formatter(&|x| format!("{:.3}", x))
         .draw()?;
+
+    let mut node_id_dict: BTreeMap<u64, (u64, u64)> = BTreeMap::new();
+    let mut prev_pos = std::u64::MAX;
+    let mut prev_node_id = 0u64;
+
+    // We assume that axis[&range.path] includes all node id to be serialized.
+    axis[&range.path]
+        .iter()
+        //.filter(|t| t.0 == range.path)
+        .for_each(|(node_id, pos)| {
+            if prev_pos > *pos {
+            } else {
+                node_id_dict.insert(prev_node_id, (prev_pos, *pos));
+            }
+            prev_pos = *pos;
+            prev_node_id = *node_id;
+        });
+    //node_id_dict[&prev_node_id] = (prev_pos, range.end());
+    node_id_dict.insert(prev_node_id, (prev_pos, range.end()));
+
+    // Draw graph axis if there is graph information.
+    axis.into_iter()
+        //.group_by(|elt| elt.0.as_str())
+        //.into_iter()
+        .enumerate()
+        .for_each(|(key, value)| {
+            value.1.into_iter().for_each(|(node_id, _pos)| {
+                let points = node_id_dict[&node_id];
+                if points.1 > range.start() && points.0 < range.end() {
+                    let start = if points.0 > range.start() {
+                        points.0
+                    } else {
+                        range.start()
+                    };
+                    let end = if points.1 < range.end() {
+                        points.1
+                    } else {
+                        range.end()
+                    };
+                    let stroke = Palette99::pick(node_id as usize);
+                    let mut bar2 = Rectangle::new(
+                        [(start, prev_index + key), (end, prev_index + key + 1)],
+                        stroke.stroke_width(2),
+                    );
+                    bar2.set_margin(1, 1, 0, 0);
+                    // prev_index += 1;
+                    chart
+                        .draw_series(LineSeries::new(
+                            vec![(start, prev_index + key + 1), (end, prev_index + key + 1)],
+                            stroke.stroke_width(2),
+                        ))
+                        .unwrap()
+                        .label(format!("{}", node_id))
+                        .legend(move |(x, y)| {
+                            Rectangle::new([(x - 5, y - 5), (x + 5, y + 5)], stroke.filled())
+                        });
+                    //Some(bar2)
+                }
+            })
+        });
+    /*
+    chart.draw_series(
+        axis.into_iter()
+            //.group_by(|elt| elt.0.as_str())
+            //.into_iter()
+            .enumerate()
+            .map(|(key, value)| {
+                value.1.into_iter().map(|(node_id, _pos)| {
+                    let points = node_id_dict[&node_id];
+                    if points.1 > range.start() && points.0 < range.end() {
+                        let start = if points.0 > range.start() {
+                            points.0
+                        } else {
+                            range.start()
+                        };
+                        let end = if points.1 < range.end() {
+                            points.1
+                        } else {
+                            range.end()
+                        };
+                        let stroke = Palette99::pick(node_id as usize);
+                        let mut bar2 = Rectangle::new(
+                            [(start, prev_index + key), (end, prev_index + key + 1)],
+                            stroke.stroke_width(2),
+                        );
+                        bar2.set_margin(1, 1, 0, 0);
+                        // prev_index += 1;
+                        Some(bar2)
+                    } else {
+                        None
+                    }
+                })
+            })
+            .flatten()
+            .filter_map(|s| s)
+    )?;
+    */
 
     if legend {
         //list2.sort_by(|a, b| a.0.cmp(&b.0));
@@ -1069,6 +1226,59 @@ where
             // eprintln!("{:?}", [(start, index), (end, index + 1)]);
             bars.push(bar);
             //let mut bars =  //, bar2];
+            if split {
+                match bam.tags().get(b"SA") {
+                    Some(TagValue::String(array_view, StringType::String)) => {
+                        // assert!(array_view.int_type() == IntegerType::U32);
+                        let current_left_clip =
+                            bam.cigar().soft_clipping(bam.flag().is_reverse_strand());
+                        let sastr = String::from_utf8_lossy(array_view);
+                        let sa: Vec<Vec<&str>> =
+                            sastr.split(';').map(|t| t.split(',').collect()).collect();
+                        let mut sa_left_clip = sa.into_iter().map(|t| {
+                            let strand = t[2];
+                            //let cigar = Cigar::from_raw(t[3]).soft_clipping(strand == "+");
+                            let mut cigar = Cigar::new();
+                            cigar.extend_from_text(t[3].bytes());
+                            cigar.soft_clipping(strand == "+")
+                        });
+                        let is_smaller = sa_left_clip.find(|t| t < &current_left_clip).is_some();
+                        let is_larger = sa_left_clip.find(|t| t > &current_left_clip).is_some();
+                        if (is_smaller && !bam.flag().is_reverse_strand())
+                            || (is_larger && bam.flag().is_reverse_strand())
+                        {
+                            // split alignment on left
+                            let mut bar = Rectangle::new(
+                                [(start, index), (start + 1, index + 1)],
+                                color.filled(),
+                            );
+                            bar.set_margin(0, 0, 0, 0);
+                            bars.push(bar)
+                        }
+                        if (is_larger && !bam.flag().is_reverse_strand())
+                            || (is_smaller && bam.flag().is_reverse_strand())
+                        {
+                            // split alignment on right
+                            let mut bar = Rectangle::new(
+                                [(end - 1, index), (end, index + 1)],
+                                color.filled(),
+                            );
+                            bar.set_margin(0, 0, 0, 0);
+                            bars.push(bar)
+                        }
+                        eprintln!(
+                            "SA = {}, {}, {}, {}",
+                            String::from_utf8_lossy(array_view),
+                            is_smaller,
+                            is_larger,
+                            bam.flag().is_reverse_strand()
+                        );
+                    }
+                    // Some(TagValue::)
+                    Some(_) => {} // panic!("Unexpected type"),
+                    _ => {}
+                }
+            }
             if legend {
             } else {
                 let mut bar2 =
