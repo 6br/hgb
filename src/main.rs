@@ -937,30 +937,39 @@ where
     if packing {
         if split {
             let mut end_map = HashMap::new();
-            list.sort_by(|a, b| {
-                a.0.cmp(&b.0)
-                    .then(a.1.name().cmp(&b.1.name()))
-                    .then(a.1.start().cmp(&b.1.start()))
-            });
-            list.iter().group_by(|elt| elt.0).into_iter().for_each(|t| {
-                let sample_id = t.0.clone();
-                t.1.group_by(|elt| elt.1.name()).into_iter().for_each(|s| {
-                    let items: Vec<&(u64, Record)> = s.1.into_iter().collect();
-                    if items.len() > 1 {
-                        let last: &(u64, Record) =
-                            items.iter().max_by_key(|t| t.1.calculate_end()).unwrap();
-                        /*items
-                        .get_mut(0)
-                        .unwrap()
-                        .1
-                        .tags_mut()
-                        .push_num(b"PE", last.1.calculate_end());*/
-                        // end_map.insert((t.0.clone(), s.0.clone()), last.1.calculate_end().clone());
-                        end_map.insert((sample_id, s.0), last.1.calculate_end());
-                    }
-                })
-                //group.into_iter().for_each(|t| {})
-            });
+            
+                let new_list = {
+                    list.sort_by(|a, b| {
+                        a.0.cmp(&b.0)
+                            .then(a.1.name().cmp(&b.1.name()))
+                            .then(a.1.start().cmp(&b.1.start()))
+                    });
+                    list.clone()
+                };
+                new_list
+                    .iter()
+                    .group_by(|elt| elt.0)
+                    .into_iter()
+                    .for_each(|t| {
+                        let sample_id = t.0.clone();
+                        t.1.group_by(|elt| elt.1.name()).into_iter().for_each(|s| {
+                            let items: Vec<&(u64, Record)> = s.1.into_iter().collect();
+                            if items.len() > 1 {
+                                let last: &(u64, Record) =
+                                    items.iter().max_by_key(|t| t.1.calculate_end()).unwrap();
+                                /*items
+                                .get_mut(0)
+                                .unwrap()
+                                .1
+                                .tags_mut()
+                                .push_num(b"PE", last.1.calculate_end());*/
+                                // end_map.insert((t.0.clone(), s.0.clone()), last.1.calculate_end().clone());
+                                end_map.insert((sample_id, s.0), last.1.calculate_end());
+                            }
+                        })
+                        //group.into_iter().for_each(|t| {})
+                    });
+            
             list.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.start().cmp(&b.1.start())));
 
             list.iter().group_by(|elt| elt.0).into_iter().for_each(|t| {
@@ -968,7 +977,14 @@ where
                 let mut packing = vec![0u64];
                 let mut name_index = HashMap::new();
                 prev_index += 1;
+                let sample_id = t.0;
                 (t.1).for_each(|k| {
+                    let end = if let Some(end) = end_map.get(&(sample_id, k.1.name())) {
+                        *end
+                    } else {
+                        k.1.calculate_end()
+                    };
+
                     let index = if let Some(index) = name_index.get(k.1.name()) {
                         *index
                     } else if let Some(index) = packing
@@ -976,10 +992,10 @@ where
                         .enumerate()
                         .find(|(_, item)| **item < k.1.start() as u64)
                     {
-                        *index.1 = k.1.calculate_end() as u64;
+                        *index.1 = end as u64;
                         index.0
                     } else {
-                        packing.push(k.1.calculate_end() as u64);
+                        packing.push(end as u64);
                         prev_index += 1;
                         packing.len() - 1
                     };
@@ -1077,7 +1093,7 @@ where
         BTreeMap::new()
         //vec![]
     };
-    let axis_count = axis.len(); //into_iter().unique_by(|s| s.0).count();
+    let axis_count = axis.len() + 1; //into_iter().unique_by(|s| s.0).count();
 
     let root = BitMapBackend::new(
         output,
@@ -1132,6 +1148,7 @@ where
         //.into_iter()
         .enumerate()
         .for_each(|(key, value)| {
+            let path_name = value.0.clone();
             value.1.into_iter().for_each(|(node_id, _pos)| {
                 let points = node_id_dict.get(&node_id); // [&node_id];
                 if let Some(points) = points {
@@ -1156,10 +1173,10 @@ where
                         chart
                             .draw_series(LineSeries::new(
                                 vec![(start, prev_index + key + 1), (end, prev_index + key + 1)],
-                                stroke.stroke_width(2),
+                                stroke.stroke_width(y / 2),
                             ))
                             .unwrap()
-                            .label(format!("{}", node_id))
+                            .label(format!("{}: {}", path_name, node_id))
                             .legend(move |(x, y)| {
                                 Rectangle::new([(x - 5, y - 5), (x + 5, y + 5)], stroke.filled())
                             });
