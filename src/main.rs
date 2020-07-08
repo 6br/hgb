@@ -998,7 +998,12 @@ where
                     };
                     if let Some(end) = end_map.get(&(sample_id, k.1.name())) {
                         if None == name_index.get(k.1.name()) {
-                            supplementary_list.push((index + last_prev_index, end.0, end.1));
+                            supplementary_list.push((
+                                k.1.name(),
+                                index + last_prev_index,
+                                end.0,
+                                end.1,
+                            ));
                         }
                     }
                     index_list.push(index + last_prev_index);
@@ -1113,7 +1118,10 @@ where
         .x_label_area_size(20)
         .y_label_area_size(40)
         // Finally attach a coordinate on the drawing area and make a chart context
-        .build_ranged((range.start() - 1)..(range.end() + 1), 0..(1 + prev_index + axis_count))?;
+        .build_ranged(
+            (range.start() - 1)..(range.end() + 1),
+            0..(1 + prev_index + axis_count),
+        )?;
     // Then we can draw a mesh
     chart
         .configure_mesh()
@@ -1272,6 +1280,20 @@ where
             },
         ))?;
     */
+
+    // For each supplementary alignment:
+    for i in supplementary_list {
+        let stroke = BLACK;
+        chart
+            .draw_series(LineSeries::new(
+                vec![(i.2 as u64, i.1), (i.3 as u64, i.1)],
+                stroke.stroke_width(y / 2),
+            ))?
+            .label(format!("{}", String::from_utf8_lossy(i.0)))
+            .legend(move |(x, y)| {
+                Rectangle::new([(x - 5, y - 5), (x + 5, y + 5)], stroke.filled())
+            });
+    }
 
     // For each alignment:
 
