@@ -391,11 +391,6 @@ fn bam_vis(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::error:
                     // Here all threads can be used, but I suspect that runs double
                     //reader2.fetch()
                     let ref_id = reader2.header().reference_id(string_range.path.as_ref());
-                    //                    let closure = |x: &str| reader.reference_id(x);
-                    //                   let string_range = StringRegion::new(range).unwrap();
-                    //                    let reference_name = &string_range.path;
-
-                    //                    let range = Region::convert(&string_range, closure).unwrap();
                     let viewer = reader2
                         .fetch(&bam::bam_reader::Region::new(
                             ref_id.unwrap(),
@@ -407,7 +402,19 @@ fn bam_vis(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::error:
                         list.push((index as u64, record.unwrap()));
                     }
                 }
-                bam_record_vis(matches, string_range, list, |idx| Some(bam_files[idx]))?;
+                let mut ann = vec![];
+                if let Some(bed_files) = matches.values_of("bed") {
+                    // let bed_files: Vec<_> = matches.values_of("bed").unwrap().collect();
+                    let bed_files: Vec<&str> = bed_files.collect();
+                    for (idx, bed_path) in bed_files.iter().enumerate() {
+                        info!("Loading {}", bed_path);
+                        let mut reader = bed::Reader::from_file(bed_path).unwrap();
+                        for record in reader.records() {
+                            ann.push((idx as u64, record?));
+                        }
+                    }
+                }
+                bam_record_vis(matches, string_range, list, ann, |idx| Some(bam_files[idx]))?;
             }
         }
     }
@@ -815,6 +822,7 @@ fn vis_query(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::erro
                     end0.subsec_nanos() / 1_000_000
                 );
                 let mut list = vec![];
+                let mut ann = vec![];
                 //let mut list2 = vec![];
                 //let mut samples = BTreeMap::new();
                 let _ = viewer.into_iter().for_each(|t| {
@@ -827,11 +835,16 @@ fn vis_query(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::erro
                             || std::mem::discriminant(&format_type) == std::mem::discriminant(&data)
                         {
                             match data {
-                                Format::Range(_rec) => {
-                                    /*let mut writer = bed::Writer::new(&mut output);
-                                    for i in rec.to_record(&reference_name) {
-                                        writer.write(&i).unwrap();
-                                    }*/
+                                Format::Range(rec) => {
+                                    //let mut writer = bed::Writer::new(&mut output);
+                                    for i in rec.to_record(&string_range.path) {
+                                        if !filter
+                                            || (i.end() as u64 > range.start()
+                                                && range.end() > i.start() as u64)
+                                        {
+                                            ann.push((sample_id, i))
+                                        }
+                                    }
                                 }
                                 Format::Alignment(Alignment::Object(rec)) => {
                                     for i in rec {
@@ -853,7 +866,7 @@ fn vis_query(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::erro
                         }
                     }
                 });
-                bam_record_vis(matches, string_range, list, |idx| {
+                bam_record_vis(matches, string_range, list, ann, |idx| {
                     reader.header().get_name(idx).and_then(|t| Some(t.as_str()))
                 })?;
             }
@@ -866,6 +879,7 @@ fn bam_record_vis<'a, F>(
     matches: &ArgMatches,
     range: StringRegion,
     mut list: Vec<(u64, Record)>,
+    mut annotation: Vec<(u64, bed::Record)>,
     lambda: F,
 ) -> Result<(), Box<dyn std::error::Error>>
 where
@@ -935,84 +949,92 @@ where
     let mut compressed_list = vec![];
     let mut index_list = Vec::with_capacity(list.len());
     let mut supplementary_list = vec![];
-    if packing {
-        if split {
-            let mut end_map = HashMap::new();
+    if split {
+        let mut end_map = HashMap::new();
 
-            let new_list = {
-                list.sort_by(|a, b| {
-                    a.0.cmp(&b.0)
-                        .then(a.1.name().cmp(&b.1.name()))
-                        .then(a.1.start().cmp(&b.1.start()))
-                });
-                list.clone()
-            };
-            new_list
-                .iter()
-                .group_by(|elt| elt.0)
-                .into_iter()
-                .for_each(|t| {
-                    let sample_id = t.0.clone();
-                    t.1.group_by(|elt| elt.1.name()).into_iter().for_each(|s| {
-                        let items: Vec<&(u64, Record)> = s.1.into_iter().collect();
-                        if items.len() > 1 {
-                            let last: &(u64, Record) =
-                                items.iter().max_by_key(|t| t.1.calculate_end()).unwrap();
-                            end_map.insert(
-                                (sample_id, s.0),
-                                (items[0].1.calculate_end(), last.1.start(), last.1.calculate_end()),
-                            );
-                        }
-                    })
-                    //group.into_iter().for_each(|t| {})
-                });
-
-            list.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.start().cmp(&b.1.start())));
-
-            list.iter().group_by(|elt| elt.0).into_iter().for_each(|t| {
-                // let mut heap = BinaryHeap::<(i64, usize)>::new();
-                let mut packing = vec![0u64];
-                let mut name_index = HashMap::new();
-                prev_index += 1;
-                let sample_id = t.0;
-                (t.1).for_each(|k| {
-                    let end = if let Some(end) = end_map.get(&(sample_id, k.1.name())) {
-                        end.2
-                    } else {
-                        k.1.calculate_end()
-                    };
-
-                    let index = if let Some(index) = name_index.get(k.1.name()) {
-                        *index
-                    } else if let Some(index) = packing
-                        .iter_mut()
-                        .enumerate()
-                        .find(|(_, item)| **item < k.1.start() as u64)
-                    {
-                        *index.1 = end as u64;
-                        index.0
-                    } else {
-                        packing.push(end as u64);
-                        prev_index += 1;
-                        packing.len() - 1
-                    };
-                    if let Some(end) = end_map.get(&(sample_id, k.1.name())) {
-                        if None == name_index.get(k.1.name()) {
-                            supplementary_list.push((
-                                k.1.name(),
-                                index + last_prev_index,
-                                end.0,
-                                end.1,
-                            ));
-                        }
-                    }
-                    index_list.push(index + last_prev_index);
-                    name_index.insert(k.1.name(), index);
-                });
-                compressed_list.push((t.0, prev_index));
-                last_prev_index = prev_index;
+        let new_list = {
+            list.sort_by(|a, b| {
+                a.0.cmp(&b.0)
+                    .then(a.1.name().cmp(&b.1.name()))
+                    .then(a.1.start().cmp(&b.1.start()))
             });
-        } else {
+            list.clone()
+        };
+        new_list
+            .iter()
+            .group_by(|elt| elt.0)
+            .into_iter()
+            .for_each(|t| {
+                let sample_id = t.0.clone();
+                t.1.group_by(|elt| elt.1.name()).into_iter().for_each(|s| {
+                    let items: Vec<&(u64, Record)> = s.1.into_iter().collect();
+                    if items.len() > 1 {
+                        let last: &(u64, Record) =
+                            items.iter().max_by_key(|t| t.1.calculate_end()).unwrap();
+                        end_map.insert(
+                            (sample_id, s.0),
+                            (
+                                items[0].1.calculate_end(),
+                                last.1.start(),
+                                last.1.calculate_end(),
+                            ),
+                        );
+                    }
+                })
+                //group.into_iter().for_each(|t| {})
+            });
+
+        list.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.start().cmp(&b.1.start())));
+
+        list.iter().group_by(|elt| elt.0).into_iter().for_each(|t| {
+            // let mut heap = BinaryHeap::<(i64, usize)>::new();
+            let mut packing_vec = vec![0u64];
+            let mut name_index = HashMap::new();
+            prev_index += 1;
+            let sample_id = t.0;
+            (t.1).for_each(|k| {
+                let end = if let Some(end) = end_map.get(&(sample_id, k.1.name())) {
+                    end.2
+                } else {
+                    if packing {
+                        k.1.calculate_end()
+                    } else {
+                        range.end() as i32
+                    }
+                };
+
+                let index = if let Some(index) = name_index.get(k.1.name()) {
+                    *index
+                } else if let Some(index) = packing_vec
+                    .iter_mut()
+                    .enumerate()
+                    .find(|(_, item)| **item < k.1.start() as u64)
+                {
+                    *index.1 = end as u64;
+                    index.0
+                } else {
+                    packing_vec.push(end as u64);
+                    prev_index += 1;
+                    packing_vec.len() - 1
+                };
+                if let Some(end) = end_map.get(&(sample_id, k.1.name())) {
+                    if None == name_index.get(k.1.name()) {
+                        supplementary_list.push((
+                            k.1.name(),
+                            index + last_prev_index,
+                            end.0,
+                            end.1,
+                        ));
+                    }
+                }
+                index_list.push(index + last_prev_index);
+                name_index.insert(k.1.name(), index);
+            });
+            compressed_list.push((t.0, prev_index));
+            last_prev_index = prev_index;
+        });
+    } else {
+        if packing {
             list.iter().group_by(|elt| elt.0).into_iter().for_each(|t| {
                 // let mut heap = BinaryHeap::<(i64, usize)>::new();
                 let mut packing = vec![0u64];
@@ -1059,21 +1081,20 @@ where
                 //(t.0, ((t.1).0, (t.1).1))
                 // .collect::<&(u64, Record)>(). // collect::<Vec<(usize, (u64, Record))>>
             });
+        } else {
+            index_list = (0..list.len()).collect();
+            // list.sort_by(|a, b| a.0.cmp(&b.0));
+            // eprintln!("{}", list.len());
+            list.iter().group_by(|elt| elt.0).into_iter().for_each(
+                |(sample_sequential_id, sample)| {
+                    let count = sample.count();
+                    prev_index += count;
+                    // compressed_list.push(prev_index);
+                    // compressed_list.insert(sample_sequential_id, prev_index);
+                    compressed_list.push((sample_sequential_id, prev_index));
+                },
+            )
         }
-    } else {
-        index_list = (0..list.len()).collect();
-        // list.sort_by(|a, b| a.0.cmp(&b.0));
-        // eprintln!("{}", list.len());
-        list.iter()
-            .group_by(|elt| elt.0)
-            .into_iter()
-            .for_each(|(sample_sequential_id, sample)| {
-                let count = sample.count();
-                prev_index += count;
-                // compressed_list.push(prev_index);
-                // compressed_list.insert(sample_sequential_id, prev_index);
-                compressed_list.push((sample_sequential_id, prev_index));
-            })
     }
     eprintln!("{:?}", compressed_list);
     /*
@@ -1290,9 +1311,9 @@ where
                 stroke.stroke_width(y / 2),
             ))?
             .label(format!("{}", String::from_utf8_lossy(i.0)));
-            /*.legend(move |(x, y)| {
-                Rectangle::new([(x - 5, y - 5), (x + 5, y + 5)], stroke.filled())
-            });*/
+        /*.legend(move |(x, y)| {
+            Rectangle::new([(x - 5, y - 5), (x + 5, y + 5)], stroke.filled())
+        });*/
     }
 
     // For each alignment:
