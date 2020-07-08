@@ -679,7 +679,7 @@ fn split(matches: &ArgMatches, threads: u16) -> () {
             .unwrap();
 
         let viewer = reader2.full();
-        for record in viewer {}
+        for _record in viewer {}
     }
 }
 
@@ -827,7 +827,7 @@ fn vis_query(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::erro
                             || std::mem::discriminant(&format_type) == std::mem::discriminant(&data)
                         {
                             match data {
-                                Format::Range(rec) => {
+                                Format::Range(_rec) => {
                                     /*let mut writer = bed::Writer::new(&mut output);
                                     for i in rec.to_record(&reference_name) {
                                         writer.write(&i).unwrap();
@@ -934,42 +934,39 @@ where
     //let mut compressed_list = BTreeMap::<u64, usize>::new();
     let mut compressed_list = vec![];
     let mut index_list = Vec::with_capacity(list.len());
+    let mut supplementary_list = vec![];
     if packing {
         if split {
             let mut end_map = HashMap::new();
-            
-                let new_list = {
-                    list.sort_by(|a, b| {
-                        a.0.cmp(&b.0)
-                            .then(a.1.name().cmp(&b.1.name()))
-                            .then(a.1.start().cmp(&b.1.start()))
-                    });
-                    list.clone()
-                };
-                new_list
-                    .iter()
-                    .group_by(|elt| elt.0)
-                    .into_iter()
-                    .for_each(|t| {
-                        let sample_id = t.0.clone();
-                        t.1.group_by(|elt| elt.1.name()).into_iter().for_each(|s| {
-                            let items: Vec<&(u64, Record)> = s.1.into_iter().collect();
-                            if items.len() > 1 {
-                                let last: &(u64, Record) =
-                                    items.iter().max_by_key(|t| t.1.calculate_end()).unwrap();
-                                /*items
-                                .get_mut(0)
-                                .unwrap()
-                                .1
-                                .tags_mut()
-                                .push_num(b"PE", last.1.calculate_end());*/
-                                // end_map.insert((t.0.clone(), s.0.clone()), last.1.calculate_end().clone());
-                                end_map.insert((sample_id, s.0), last.1.calculate_end());
-                            }
-                        })
-                        //group.into_iter().for_each(|t| {})
-                    });
-            
+
+            let new_list = {
+                list.sort_by(|a, b| {
+                    a.0.cmp(&b.0)
+                        .then(a.1.name().cmp(&b.1.name()))
+                        .then(a.1.start().cmp(&b.1.start()))
+                });
+                list.clone()
+            };
+            new_list
+                .iter()
+                .group_by(|elt| elt.0)
+                .into_iter()
+                .for_each(|t| {
+                    let sample_id = t.0.clone();
+                    t.1.group_by(|elt| elt.1.name()).into_iter().for_each(|s| {
+                        let items: Vec<&(u64, Record)> = s.1.into_iter().collect();
+                        if items.len() > 1 {
+                            let last: &(u64, Record) =
+                                items.iter().max_by_key(|t| t.1.calculate_end()).unwrap();
+                            end_map.insert(
+                                (sample_id, s.0),
+                                (items[0].1.start(), last.1.calculate_end()),
+                            );
+                        }
+                    })
+                    //group.into_iter().for_each(|t| {})
+                });
+
             list.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.start().cmp(&b.1.start())));
 
             list.iter().group_by(|elt| elt.0).into_iter().for_each(|t| {
@@ -980,7 +977,7 @@ where
                 let sample_id = t.0;
                 (t.1).for_each(|k| {
                     let end = if let Some(end) = end_map.get(&(sample_id, k.1.name())) {
-                        *end
+                        end.1
                     } else {
                         k.1.calculate_end()
                     };
@@ -999,6 +996,11 @@ where
                         prev_index += 1;
                         packing.len() - 1
                     };
+                    if let Some(end) = end_map.get(&(sample_id, k.1.name())) {
+                        if None == name_index.get(k.1.name()) {
+                            supplementary_list.push((index + last_prev_index, end.0, end.1));
+                        }
+                    }
                     index_list.push(index + last_prev_index);
                     name_index.insert(k.1.name(), index);
                 });
@@ -1111,7 +1113,7 @@ where
         .x_label_area_size(20)
         .y_label_area_size(40)
         // Finally attach a coordinate on the drawing area and make a chart context
-        .build_ranged((range.start() - 1)..(range.end() + 1), 0..(1 + prev_index))?;
+        .build_ranged((range.start() - 1)..(range.end() + 1), 0..(1 + prev_index + axis_count))?;
     // Then we can draw a mesh
     chart
         .configure_mesh()
