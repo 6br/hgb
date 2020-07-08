@@ -960,7 +960,7 @@ where
                                 items.iter().max_by_key(|t| t.1.calculate_end()).unwrap();
                             end_map.insert(
                                 (sample_id, s.0),
-                                (items[0].1.start(), last.1.calculate_end()),
+                                (items[0].1.calculate_end(), last.1.start(), last.1.calculate_end()),
                             );
                         }
                     })
@@ -977,7 +977,7 @@ where
                 let sample_id = t.0;
                 (t.1).for_each(|k| {
                     let end = if let Some(end) = end_map.get(&(sample_id, k.1.name())) {
-                        end.1
+                        end.2
                     } else {
                         k.1.calculate_end()
                     };
@@ -1100,7 +1100,7 @@ where
         BTreeMap::new()
         //vec![]
     };
-    let axis_count = axis.len() + 1; //into_iter().unique_by(|s| s.0).count();
+    let axis_count = axis.len(); //into_iter().unique_by(|s| s.0).count();
 
     let root = BitMapBackend::new(
         output,
