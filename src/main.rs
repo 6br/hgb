@@ -1289,10 +1289,10 @@ where
                 vec![(i.2 as u64, i.1), (i.3 as u64, i.1)],
                 stroke.stroke_width(y / 2),
             ))?
-            .label(format!("{}", String::from_utf8_lossy(i.0)))
-            .legend(move |(x, y)| {
+            .label(format!("{}", String::from_utf8_lossy(i.0)));
+            /*.legend(move |(x, y)| {
                 Rectangle::new([(x - 5, y - 5), (x + 5, y + 5)], stroke.filled())
-            });
+            });*/
     }
 
     // For each alignment:
