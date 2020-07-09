@@ -145,6 +145,7 @@ fn main() {
                 .arg(Arg::new("y").short('y').takes_value(true).about("y"))
                 .arg(Arg::new("split-alignment").short('s').about("No-md"))
                 .arg(Arg::new("no-insertion").short('z').about("No-md"))
+                .arg(Arg::new("only-split-alignment").short('u').about("No-md"))
                 // .arg(Arg::new("insertion").short('').about("No-md"))
                 .arg(
                     Arg::new("graph")
@@ -305,6 +306,7 @@ fn main() {
                 .arg(Arg::new("x").short('x').takes_value(true).about("x"))
                 .arg(Arg::new("y").short('y').takes_value(true).about("y"))
                 .arg(Arg::new("split-alignment").short('s').about("No-md"))
+                .arg(Arg::new("only-split-alignment").short('u').about("No-md"))
                 .arg(Arg::new("no-insertion").short('z').about("No-md"))
                 .arg(
                     Arg::new("graph")
@@ -906,6 +908,7 @@ where
     let legend = matches.is_present("legend");
     let insertion = !matches.is_present("no-insertion");
     let split = matches.is_present("split-alignment");
+    let split_only = matches.is_present("only-split-alignment");
     let x = matches
         .value_of("x")
         .and_then(|a| a.parse::<u32>().ok())
@@ -1000,6 +1003,13 @@ where
             });
 
         list.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.start().cmp(&b.1.start())));
+
+        if split_only {
+            list = list
+                .into_iter()
+                .filter(|(sample_id, record)| end_map.contains_key(&(*sample_id, record.name())))
+                .collect();
+        }
 
         list.iter().group_by(|elt| elt.0).into_iter().for_each(|t| {
             // let mut heap = BinaryHeap::<(i64, usize)>::new();
