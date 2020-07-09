@@ -913,6 +913,7 @@ where
         });
     //.and_then(|a| Some(a.split("\n").map(|t| t.split("\t").collect()).collect()));
     list.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.start().cmp(&b.1.start())));
+    annotation.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.start().cmp(&b.1.start())));
     /*
     let iterator = if packing {
         // (0..).zip(list.iter())
@@ -993,14 +994,12 @@ where
             prev_index += 1;
             let sample_id = t.0;
             (t.1).for_each(|k| {
-                let end = if let Some(end) = end_map.get(&(sample_id, k.1.name())) {
+                let end = if packing {
+                    k.1.calculate_end()
+                } else if let Some(end) = end_map.get(&(sample_id, k.1.name())) {
                     end.2
                 } else {
-                    if packing {
-                        k.1.calculate_end()
-                    } else {
-                        range.end() as i32
-                    }
+                    range.end() as i32
                 };
 
                 let index = if let Some(index) = name_index.get(k.1.name()) {
@@ -1122,10 +1121,28 @@ where
         //vec![]
     };
     let axis_count = axis.len(); //into_iter().unique_by(|s| s.0).count();
+                                 /*
+                                 let annotation = {
+                                     let mut btree = BTreeMap::new();
+                                     for i in annotation {
+                                         //let k = i?;
+                                         //btree.insert(k[0].to_string(), (k[1].parse::<u64>()?, k[2].parse::<u64>()?));
+                                         //eprintln!("{:?}", k);
+                                         let item = btree.entry(i.0).or_insert(vec![]);
+                                         item.push((i.1.name().clone(), i.1.chrom(), i.1.start(), i.1.end()));
+                                         //vec.push((k[0].to_string(), k[1].parse::<u64>()?, k[2].parse::<u64>()?))
+                                     }
+                                     //btree
+                                     btree
+                                 };*/
+    let annotation_count = annotation.iter().unique_by(|s| s.0).count(); // annotation.len();
 
     let root = BitMapBackend::new(
         output,
-        (x, 40 + (prev_index as u32 + axis_count as u32) * y),
+        (
+            x,
+            40 + (prev_index as u32 + axis_count as u32 + annotation_count as u32) * y,
+        ),
     )
     .into_drawing_area();
     root.fill(&WHITE)?;
@@ -1172,6 +1189,49 @@ where
         //node_id_dict[&prev_node_id] = (prev_pos, range.end());
         node_id_dict.insert(prev_node_id, (prev_pos, range.end()));
     }
+
+    // Draw annotation axis if there is graph information.
+    annotation
+        .into_iter()
+        .group_by(|elt| elt.0)
+        .into_iter()
+        .enumerate()
+        .for_each(|(key, value)| {
+            // let sample = value.0.clone();
+            value.1.into_iter().for_each(|(_index, record)| {
+                let end = record.end();
+                let start = record.start();
+                if end > range.start() && start < range.end() {
+                    let start = if start > range.start() {
+                        start
+                    } else {
+                        range.start()
+                    };
+                    let end = if end < range.end() { end } else { range.end() };
+                    let stroke = Palette99::pick(key as usize);
+                    /*let mut bar2 = Rectangle::new(
+                        [(start, prev_index + key), (end, prev_index + key + 1)],
+                        stroke.stroke_width(2),
+                    );
+                    bar2.set_margin(1, 1, 0, 0);*/
+                    // prev_index += 1;
+                    chart
+                        .draw_series(LineSeries::new(
+                            vec![
+                                (start, prev_index + key + axis_count + 1),
+                                (end, prev_index + key + axis_count + 1),
+                            ],
+                            stroke.stroke_width(y),
+                        ))
+                        .unwrap()
+                        .label(format!("{}", record.name().unwrap_or(&"")))
+                        .legend(move |(x, y)| {
+                            Rectangle::new([(x - 5, y - 5), (x + 5, y + 5)], stroke.filled())
+                        });
+                    //Some(bar2)
+                }
+            })
+        });
 
     // Draw graph axis if there is graph information.
     axis.into_iter()
