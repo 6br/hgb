@@ -897,7 +897,7 @@ where
         .and_then(|a| a.parse::<u32>().ok())
         .unwrap_or(1280u32);
     let y = matches
-        .value_of("x")
+        .value_of("y")
         .and_then(|a| a.parse::<u32>().ok())
         .unwrap_or(15u32);
     let graph = matches
