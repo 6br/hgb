@@ -1344,7 +1344,7 @@ where
             chart
                 .draw_series(LineSeries::new(
                     vec![(range.start() - 1, count), (range.end() + 1, count)],
-                    &Palette99::pick(idx),
+                    Palette99::pick(idx).stroke_width(7),
                 ))?
                 .label(format!("{}", lambda(idx).unwrap_or(&idx.to_string())))
                 .legend(move |(x, y)| {
@@ -1370,7 +1370,7 @@ where
                             (range.start() - 1, prev_index),
                             (range.end() + 1, prev_index + count),
                         ],
-                        stroke.stroke_width(5), // filled(), //stroke_width(100),
+                        stroke.stroke_width(7), // filled(), //stroke_width(100),
                     );
                     bar2.set_margin(1, 0, 0, 0);
                     prev_index += count;
