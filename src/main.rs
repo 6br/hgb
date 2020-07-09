@@ -1390,18 +1390,27 @@ where
     }
 
     // For each supplementary alignment:
-    for i in supplementary_list {
+    /*for i in supplementary_list {
         let stroke = BLACK;
-        chart
-            .draw_series(LineSeries::new(
-                vec![(i.2 as u64, i.1), (i.3 as u64, i.1)],
-                stroke.stroke_width(y / 2),
-            ))?
-            .label(format!("{}", String::from_utf8_lossy(i.0)));
-        /*.legend(move |(x, y)| {
+        /*chart.draw_series(LineSeries::new(
+            vec![(i.2 as u64, i.1), (i.3 as u64, i.1)],
+            stroke.stroke_width(y / 2),
+        ))?;*/
+
+        /*.label(format!("{}", String::from_utf8_lossy(i.0)));
+        .legend(move |(x, y)| {
             Rectangle::new([(x - 5, y - 5), (x + 5, y + 5)], stroke.filled())
         });*/
-    }
+    }*/
+    chart.draw_series(supplementary_list.iter().map(|i| {
+        let stroke = BLACK;
+        let mut bar2 = Rectangle::new(
+            [(i.2 as u64, i.1), (i.3 as u64, i.1)],
+            stroke.stroke_width(y / 2), // filled(), //stroke_width(100),
+        );
+        bar2.set_margin(y / 4, y / 4, 0, 0);
+        bar2
+    }))?;
 
     // For each alignment:
     let series = {
