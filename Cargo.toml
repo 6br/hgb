@@ -29,6 +29,7 @@ genomic_range = { git = "https://github.com/6br/genomic_range" }
 itertools = "*"
 libflate = "1.0.0"
 log = "0.4.8"
+multimap = "*"
 numpress = "1.1.0"
 plotters = { git = "https://github.com/38/plotters.git", default-features = false, features = ["svg", "line_series","image_encoder", "ttf"] }
 #plotters = "^0.2.15"
