@@ -73,6 +73,13 @@ fn main() {
                         .about("sorted bed"),
                 )
                 .arg(
+                    Arg::new("gff")
+                        .short('g')
+                        .takes_value(true)
+                        .multiple(true)
+                        .about("sorted gff"),
+                )
+                .arg(
                     Arg::new("chrom")
                         .short('c')
                         .takes_value(true)
@@ -301,9 +308,9 @@ fn main() {
                 .arg(Arg::new("no-insertion").short('z').about("No-md"))
                 .arg(
                     Arg::new("graph")
-                        .short('g')
+                        .short('c')
                         .takes_value(true)
-                        .about("graph"),
+                        .about("graph csv (tab-separated)"),
                 )
                 // .arg(Arg::new("insertion").short('').about("No-md"))
                 .arg(
@@ -318,6 +325,13 @@ fn main() {
                         .takes_value(true)
                         .multiple(true)
                         .about("sorted bam"),
+                )
+                .arg(
+                    Arg::new("gff")
+                        .short('g')
+                        .takes_value(true)
+                        .multiple(true)
+                        .about("sorted bed"),
                 ),
         )
         .subcommand(
@@ -1483,7 +1497,7 @@ where
             if legend {
             } else {
                 let mut bar2 =
-                    Rectangle::new([(start, index), (end, index + 1)], stroke.stroke_width(1));
+                    Rectangle::new([(start, index), (end, index + 1)], stroke.stroke_width(2));
                 bar2.set_margin(1, 1, 0, 0);
                 //vec![bar,bar2]
                 bars.push(bar2);
