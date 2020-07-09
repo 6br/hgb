@@ -1355,26 +1355,29 @@ where
                 });
             //prev_index += count;
         }
+    } else {
+        // For each sample:
+
+        let mut prev_index = 0;
+        chart.draw_series(
+            compressed_list
+                .into_iter()
+                .map(|(sample_sequential_id, sample)| {
+                    let count = sample;
+                    let stroke = Palette99::pick(sample_sequential_id as usize);
+                    let mut bar2 = Rectangle::new(
+                        [
+                            (range.start() - 1, prev_index),
+                            (range.end() + 1, prev_index + count),
+                        ],
+                        stroke.stroke_width(5), // filled(), //stroke_width(100),
+                    );
+                    bar2.set_margin(1, 0, 0, 0);
+                    prev_index += count;
+                    bar2
+                }),
+        )?;
     }
-    // For each sample:
-    /*
-        chart.draw_series(list2.into_iter().group_by(|elt| elt.0).into_iter().map(
-            |(sample_sequential_id, sample)| {
-                let count = sample.count();
-                let stroke = Palette99::pick(sample_sequential_id as usize);
-                let mut bar2 = Rectangle::new(
-                    [
-                        (range.start(), prev_index),
-                        (range.end(), prev_index + count),
-                    ],
-                    stroke.stroke_width(100),
-                );
-                bar2.set_margin(1, 0, 0, 0);
-                prev_index += count;
-                bar2
-            },
-        ))?;
-    */
 
     // For each supplementary alignment:
     for i in supplementary_list {
@@ -1391,7 +1394,6 @@ where
     }
 
     // For each alignment:
-
     let series = {
         //list.into_iter().enumerate().map(|(index, data)| {
         let mut bars = vec![];
@@ -1493,15 +1495,15 @@ where
                     Some(_) => {} // panic!("Unexpected type"),
                     _ => {}
                 }
-            }
-            if legend {
-            } else {
-                let mut bar2 =
-                    Rectangle::new([(start, index), (end, index + 1)], stroke.stroke_width(2));
-                bar2.set_margin(1, 1, 0, 0);
-                //vec![bar,bar2]
-                bars.push(bar2);
-            };
+            } /*
+              if legend {
+              } else {
+                  let mut bar2 =
+                      Rectangle::new([(start, index), (end, index + 1)], stroke.stroke_width(2));
+                  bar2.set_margin(1, 1, 0, 0);
+                  //vec![bar,bar2]
+                  bars.push(bar2);
+              };*/
             if !no_cigar {
                 let mut prev_ref = bam.start() as u64;
                 let mut prev_pixel_ref = start;
