@@ -3,7 +3,7 @@ extern crate log;
 use bam;
 use bam::{
     record::{
-        tags::{IntegerType, StringType, TagValue},
+        tags::{StringType, TagValue},
         Cigar,
     },
     Record, RecordWriter,
@@ -19,8 +19,8 @@ use plotters::prelude::Palette;
 use plotters::prelude::*;
 use rayon::prelude::*;
 use std::{
-    collections::{BTreeMap, BinaryHeap, HashMap},
-    fs::{self, File},
+    collections::{BTreeMap, HashMap},
+    fs::File,
     io,
     path::Path,
     time::Instant,
