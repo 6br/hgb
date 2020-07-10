@@ -1014,6 +1014,7 @@ where
                                 items[0].1.calculate_end(),
                                 last.1.start(),
                                 last.1.calculate_end(),
+                                items.len()
                             ),
                         );
                     }
@@ -1075,6 +1076,7 @@ where
                         supplementary_list.push((
                             k.1.name(),
                             index + last_prev_index,
+                            index + last_prev_index + end.3,
                             end.0,
                             end.1,
                         ));
@@ -1423,7 +1425,7 @@ where
     /*for i in supplementary_list {
         let stroke = BLACK;
         /*chart.draw_series(LineSeries::new(
-            vec![(i.2 as u64, i.1), (i.3 as u64, i.1)],
+            vec![(i.3 as u64, i.1), (i.4 as u64, i.1)],
             stroke.stroke_width(y / 2),
         ))?;*/
 
@@ -1435,8 +1437,8 @@ where
     chart.draw_series(supplementary_list.iter().map(|i| {
         let stroke = BLACK;
         let mut bar2 = Rectangle::new(
-            [(i.2 as u64, i.1), (i.3 as u64, i.1)],
-            stroke.filled(), // (y / 4), // filled(), //stroke_width(100),
+            [(i.3 as u64, i.1), (i.4 as u64, i.2)],
+            stroke.stroke_width(2), // filled(), // (y / 4), // filled(), //stroke_width(100),
         );
         bar2.set_margin(y / 4, y / 4, 0, 0);
         bar2
