@@ -1024,9 +1024,11 @@ where
 
         if sort_by_name {
             list.sort_by(|a, b| {
-                a.0.cmp(&b.0)
-                    .then(a.1.name().cmp(&b.1.name()))
-                    .then(a.1.start().cmp(&b.1.start()))
+                a.0.cmp(&b.0).then(a.1.name().cmp(&b.1.name())).then(
+                    a.1.cigar()
+                        .soft_clipping(!a.1.flag().is_reverse_strand())
+                        .cmp(&b.1.cigar().soft_clipping(!a.1.flag().is_reverse_strand())),
+                )
             });
         } else {
             list.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.start().cmp(&b.1.start())));
