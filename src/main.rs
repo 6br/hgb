@@ -1014,7 +1014,7 @@ where
                                 items[0].1.calculate_end(),
                                 last.1.start(),
                                 last.1.calculate_end(),
-                                items.len()
+                                items.len(),
                             ),
                         );
                     }
@@ -1046,7 +1046,7 @@ where
             prev_index += 1;
             let sample_id = t.0;
             (t.1).enumerate().for_each(|(e, k)| {
-                let end = if !packing || sort_by_name {
+                let end = if !packing {
                     range.end() as i32
                 } else if let Some(end) = end_map.get(&(sample_id, k.1.name())) {
                     end.2
