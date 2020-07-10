@@ -151,6 +151,11 @@ fn main() {
                         .short('N')
                         .about("Sort-by-name (read-id)"),
                 )
+                .arg(
+                    Arg::new("sort-by-cigar")
+                        .short('C')
+                        .about("Sort-by-cigar (read-id)"),
+                )
                 // .arg(Arg::new("insertion").short('').about("No-md"))
                 .arg(
                     Arg::new("graph")
@@ -315,6 +320,11 @@ fn main() {
                 .arg(
                     Arg::new("sort-by-name")
                         .short('N')
+                        .about("Sort-by-name (read-id)"),
+                )
+                .arg(
+                    Arg::new("sort-by-cigar")
+                        .short('C')
                         .about("Sort-by-name (read-id)"),
                 )
                 .arg(Arg::new("no-insertion").short('z').about("No-md"))
@@ -920,6 +930,7 @@ where
     let split = matches.is_present("split-alignment");
     let split_only = matches.is_present("only-split-alignment");
     let sort_by_name = matches.is_present("sort-by-name");
+    let sort_by_cigar = matches.is_present("sort-by-cigar");
     let x = matches
         .value_of("x")
         .and_then(|a| a.parse::<u32>().ok())
@@ -1023,6 +1034,15 @@ where
             });
 
         if sort_by_name {
+            if sort_by_cigar {
+                list.sort_by(|a, b| {
+                    a.0.cmp(&b.0).then(a.1.name().cmp(&b.1.name())).then(
+                        a.1.cigar()
+                        .soft_clipping(!a.1.flag().is_reverse_strand())
+                        .cmp(&b.1.cigar().soft_clipping(!a.1.flag().is_reverse_strand()))
+                    )
+                });
+            } else {
             list.sort_by(|a, b| {
                 a.0.cmp(&b.0).then(a.1.name().cmp(&b.1.name())).then(
                     /*a.1.cigar()
@@ -1031,6 +1051,7 @@ where
                     a.1.aligned_query_start().cmp(&b.1.aligned_query_start()),
                 )
             });
+        }
         } else {
             list.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.start().cmp(&b.1.start())));
         }
