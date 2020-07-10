@@ -146,6 +146,11 @@ fn main() {
                 .arg(Arg::new("split-alignment").short('s').about("No-md"))
                 .arg(Arg::new("no-insertion").short('z').about("No-md"))
                 .arg(Arg::new("only-split-alignment").short('u').about("No-md"))
+                .arg(
+                    Arg::new("sort-by-name")
+                        .short('N')
+                        .about("Sort-by-name (read-id)"),
+                )
                 // .arg(Arg::new("insertion").short('').about("No-md"))
                 .arg(
                     Arg::new("graph")
@@ -307,6 +312,11 @@ fn main() {
                 .arg(Arg::new("y").short('y').takes_value(true).about("y"))
                 .arg(Arg::new("split-alignment").short('s').about("No-md"))
                 .arg(Arg::new("only-split-alignment").short('u').about("No-md"))
+                .arg(
+                    Arg::new("sort-by-name")
+                        .short('N')
+                        .about("Sort-by-name (read-id)"),
+                )
                 .arg(Arg::new("no-insertion").short('z').about("No-md"))
                 .arg(
                     Arg::new("graph")
@@ -909,6 +919,7 @@ where
     let insertion = !matches.is_present("no-insertion");
     let split = matches.is_present("split-alignment");
     let split_only = matches.is_present("only-split-alignment");
+    let sort_by_name = matches.is_present("sort-by-name");
     let x = matches
         .value_of("x")
         .and_then(|a| a.parse::<u32>().ok())
@@ -929,7 +940,15 @@ where
             )
         });
     //.and_then(|a| Some(a.split("\n").map(|t| t.split("\t").collect()).collect()));
-    list.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.start().cmp(&b.1.start())));
+    if sort_by_name {
+        list.sort_by(|a, b| {
+            a.0.cmp(&b.0)
+                .then(a.1.name().cmp(&b.1.name()))
+                .then(a.1.start().cmp(&b.1.start()))
+        });
+    } else {
+        list.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.start().cmp(&b.1.start())));
+    }
     annotation.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.start().cmp(&b.1.start())));
     /*
     let iterator = if packing {
@@ -1002,7 +1021,15 @@ where
                 //group.into_iter().for_each(|t| {})
             });
 
-        list.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.start().cmp(&b.1.start())));
+        if sort_by_name {
+            list.sort_by(|a, b| {
+                a.0.cmp(&b.0)
+                    .then(a.1.name().cmp(&b.1.name()))
+                    .then(a.1.start().cmp(&b.1.start()))
+            });
+        } else {
+            list.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.start().cmp(&b.1.start())));
+        }
 
         if split_only {
             list = list
@@ -1017,16 +1044,19 @@ where
             let mut name_index = HashMap::new();
             prev_index += 1;
             let sample_id = t.0;
-            (t.1).for_each(|k| {
-                let end = if packing {
-                    k.1.calculate_end()
+            (t.1).enumerate().for_each(|(e, k)| {
+                let end = if !packing || sort_by_name {
+                    range.end() as i32
                 } else if let Some(end) = end_map.get(&(sample_id, k.1.name())) {
                     end.2
                 } else {
-                    range.end() as i32
+                    k.1.calculate_end()
                 };
 
-                let index = if let Some(index) = name_index.get(k.1.name()) {
+                let index = if sort_by_name {
+                    prev_index += 1;
+                    e
+                } else if let Some(index) = name_index.get(k.1.name()) {
                     *index
                 } else if let Some(index) = packing_vec
                     .iter_mut()
@@ -1461,7 +1491,11 @@ where
                                 //let cigar = Cigar::from_raw(t[3]).soft_clipping(strand == "+");
                                 let mut cigar = Cigar::new();
                                 cigar.extend_from_text(t[3].bytes()).ok()?;
-                                //eprintln!("{:?}", cigar.soft_clipping(strand == "+"));
+                                /*eprintln!(
+                                    "{:?} {:?}",
+                                    cigar.hard_clipping(strand == "-"),
+                                    cigar.soft_clipping(strand == "-")
+                                );*/
 
                                 Some(cigar.soft_clipping(strand == "+"))
                             })
