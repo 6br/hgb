@@ -154,7 +154,7 @@ fn main() {
                 .arg(
                     Arg::new("sort-by-cigar")
                         .short('C')
-                        .about("Sort-by-cigar (read-id)"),
+                        .about("Display split alignment name"),
                 )
                 // .arg(Arg::new("insertion").short('').about("No-md"))
                 .arg(
@@ -1034,21 +1034,33 @@ where
             });
 
         if sort_by_name {
-            if sort_by_cigar {
+            if false { // sort_by_cigar {
                 list.sort_by(|a, b| {
                     a.0.cmp(&b.0).then(a.1.name().cmp(&b.1.name())).then(
-                        a.1.cigar()
-                            .soft_clipping(!a.1.flag().is_reverse_strand())
-                            .cmp(&b.1.cigar().soft_clipping(!a.1.flag().is_reverse_strand())),
+                        (a.1.cigar()
+                            .soft_clipping(!a.1.flag().is_reverse_strand()) + a.1.cigar()
+                            .hard_clipping(!a.1.flag().is_reverse_strand()))
+                            .cmp(&((b.1.cigar().soft_clipping(!b.1.flag().is_reverse_strand())) + 
+                            (b.1.cigar().hard_clipping(!b.1.flag().is_reverse_strand())) )
+                        ),
                     )
                 });
             } else {
                 list.sort_by(|a, b| {
+                    /*
                     a.0.cmp(&b.0).then(a.1.name().cmp(&b.1.name())).then(
                         /*a.1.cigar()
                         .soft_clipping(!a.1.flag().is_reverse_strand())
                         .cmp(&b.1.cigar().soft_clipping(!a.1.flag().is_reverse_strand())),*/
                         a.1.aligned_query_start().cmp(&b.1.aligned_query_start()),
+                    )*/
+                    a.0.cmp(&b.0).then(a.1.name().cmp(&b.1.name())).then(
+                        (a.1.cigar()
+                            .soft_clipping(true) + a.1.cigar()
+                            .hard_clipping(true))
+                            .cmp(&((b.1.cigar().soft_clipping(true)) + 
+                            (b.1.cigar().hard_clipping(true)) )
+                        ),
                     )
                 });
             }
@@ -1450,18 +1462,20 @@ where
     }
 
     // For each supplementary alignment:
-    /*for i in supplementary_list {
-        let stroke = BLACK;
-        /*chart.draw_series(LineSeries::new(
-            vec![(i.3 as u64, i.1), (i.4 as u64, i.1)],
+    
+    if sort_by_cigar {
+    for (idx, i) in supplementary_list.iter().enumerate() {
+        let stroke = Palette99::pick(idx as usize);
+        // let stroke_color = BLACK;
+        chart.draw_series(LineSeries::new(
+            vec![(i.3 as u64, i.1), (i.4 as u64, i.2)],
             stroke.stroke_width(y / 2),
-        ))?;*/
-
-        /*.label(format!("{}", String::from_utf8_lossy(i.0)));
+        ))?.label(format!("{}", String::from_utf8_lossy(i.0)))
         .legend(move |(x, y)| {
             Rectangle::new([(x - 5, y - 5), (x + 5, y + 5)], stroke.filled())
-        });*/
-    }*/
+        });
+    }
+} else {
     chart.draw_series(supplementary_list.iter().map(|i| {
         let stroke = BLACK;
         let mut bar2 = Rectangle::new(
@@ -1471,7 +1485,7 @@ where
         bar2.set_margin(y / 4, y / 4, 0, 0);
         bar2
     }))?;
-
+}
     // For each alignment:
     let series = {
         //list.into_iter().enumerate().map(|(index, data)| {
@@ -1509,7 +1523,7 @@ where
                     Some(TagValue::String(array_view, StringType::String)) => {
                         // assert!(array_view.int_type() == IntegerType::U32);
                         let current_left_clip =
-                            bam.cigar().soft_clipping(!bam.flag().is_reverse_strand());
+                            bam.cigar().soft_clipping(!bam.flag().is_reverse_strand()) + bam.cigar().hard_clipping(!bam.flag().is_reverse_strand());
                         let sastr = String::from_utf8_lossy(array_view);
                         let sa: Vec<Vec<&str>> =
                             sastr.split(';').map(|t| t.split(',').collect()).collect();
@@ -1521,10 +1535,12 @@ where
                                 //let cigar = Cigar::from_raw(t[3]).soft_clipping(strand == "+");
                                 let mut cigar = Cigar::new();
                                 cigar.extend_from_text(t[3].bytes()).ok()?;
-                                /*eprintln!(
-                                    "{:?} {:?}",
-                                    cigar.hard_clipping(strand == "-"),
-                                    cigar.soft_clipping(strand == "-")
+                                /*
+                                eprintln!(
+                                    "{} {:?} {:?}",
+                                    String::from_utf8_lossy(bam.name()),
+                                    current_left_clip,
+                                    cigar.soft_clipping(strand == "+"),
                                 );*/
 
                                 Some(cigar.soft_clipping(strand == "+"))
