@@ -1278,7 +1278,7 @@ where
         .enumerate()
         .for_each(|(key, value)| {
             // let sample = value.0.clone();
-            value.1.into_iter().for_each(|(_index, record)| {
+            value.1.into_iter().for_each(|(index, record)| {
                 let end = record.end();
                 let start = record.start();
                 if end > range.start() && start < range.end() {
@@ -1288,7 +1288,7 @@ where
                         range.start()
                     };
                     let end = if end < range.end() { end } else { range.end() };
-                    let stroke = Palette99::pick(key as usize);
+                    let stroke = Palette99::pick(index as usize);
                     /*let mut bar2 = Rectangle::new(
                         [(start, prev_index + key), (end, prev_index + key + 1)],
                         stroke.stroke_width(2),
