@@ -1038,20 +1038,20 @@ where
                 list.sort_by(|a, b| {
                     a.0.cmp(&b.0).then(a.1.name().cmp(&b.1.name())).then(
                         a.1.cigar()
-                        .soft_clipping(!a.1.flag().is_reverse_strand())
-                        .cmp(&b.1.cigar().soft_clipping(!a.1.flag().is_reverse_strand()))
+                            .soft_clipping(!a.1.flag().is_reverse_strand())
+                            .cmp(&b.1.cigar().soft_clipping(!a.1.flag().is_reverse_strand())),
                     )
                 });
             } else {
-            list.sort_by(|a, b| {
-                a.0.cmp(&b.0).then(a.1.name().cmp(&b.1.name())).then(
-                    /*a.1.cigar()
-                    .soft_clipping(!a.1.flag().is_reverse_strand())
-                    .cmp(&b.1.cigar().soft_clipping(!a.1.flag().is_reverse_strand())),*/
-                    a.1.aligned_query_start().cmp(&b.1.aligned_query_start()),
-                )
-            });
-        }
+                list.sort_by(|a, b| {
+                    a.0.cmp(&b.0).then(a.1.name().cmp(&b.1.name())).then(
+                        /*a.1.cigar()
+                        .soft_clipping(!a.1.flag().is_reverse_strand())
+                        .cmp(&b.1.cigar().soft_clipping(!a.1.flag().is_reverse_strand())),*/
+                        a.1.aligned_query_start().cmp(&b.1.aligned_query_start()),
+                    )
+                });
+            }
         } else {
             list.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.start().cmp(&b.1.start())));
         }
@@ -1238,7 +1238,7 @@ where
         // Finally attach a coordinate on the drawing area and make a chart context
         .build_ranged(
             (range.start() - 1)..(range.end() + 1),
-            0..(1 + prev_index + axis_count),
+            0..(1 + prev_index + axis_count + annotation_count),
         )?;
     // Then we can draw a mesh
     chart
@@ -1278,39 +1278,43 @@ where
         .enumerate()
         .for_each(|(key, value)| {
             // let sample = value.0.clone();
-            value.1.into_iter().for_each(|(index, record)| {
-                let end = record.end();
-                let start = record.start();
-                if end > range.start() && start < range.end() {
-                    let start = if start > range.start() {
-                        start
-                    } else {
-                        range.start()
-                    };
-                    let end = if end < range.end() { end } else { range.end() };
-                    let stroke = Palette99::pick(index as usize);
-                    /*let mut bar2 = Rectangle::new(
-                        [(start, prev_index + key), (end, prev_index + key + 1)],
-                        stroke.stroke_width(2),
-                    );
-                    bar2.set_margin(1, 1, 0, 0);*/
-                    // prev_index += 1;
-                    chart
-                        .draw_series(LineSeries::new(
-                            vec![
-                                (start, prev_index + key + axis_count + 1),
-                                (end, prev_index + key + axis_count + 1),
-                            ],
-                            stroke.stroke_width(y),
-                        ))
-                        .unwrap()
-                        .label(format!("{}", record.name().unwrap_or(&"")))
-                        .legend(move |(x, y)| {
-                            Rectangle::new([(x - 5, y - 5), (x + 5, y + 5)], stroke.filled())
-                        });
-                    //Some(bar2)
-                }
-            })
+            value
+                .1
+                .into_iter()
+                .enumerate()
+                .for_each(|(index, (_, record))| {
+                    let end = record.end();
+                    let start = record.start();
+                    if end > range.start() && start < range.end() {
+                        let start = if start > range.start() {
+                            start
+                        } else {
+                            range.start()
+                        };
+                        let end = if end < range.end() { end } else { range.end() };
+                        let stroke = Palette99::pick(index as usize);
+                        /*let mut bar2 = Rectangle::new(
+                            [(start, prev_index + key), (end, prev_index + key + 1)],
+                            stroke.stroke_width(2),
+                        );
+                        bar2.set_margin(1, 1, 0, 0);*/
+                        // prev_index += 1;
+                        chart
+                            .draw_series(LineSeries::new(
+                                vec![
+                                    (start, prev_index + key + axis_count + 1),
+                                    (end, prev_index + key + axis_count + 1),
+                                ],
+                                stroke.stroke_width(y),
+                            ))
+                            .unwrap()
+                            .label(format!("{}", record.name().unwrap_or(&"")))
+                            .legend(move |(x, y)| {
+                                Rectangle::new([(x - 5, y - 5), (x + 5, y + 5)], stroke.filled())
+                            });
+                        //Some(bar2)
+                    }
+                })
         });
 
     // Draw graph axis if there is graph information.
