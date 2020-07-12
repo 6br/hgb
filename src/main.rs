@@ -1313,10 +1313,10 @@ where
                         chart
                             .draw_series(LineSeries::new(
                                 vec![
-                                    (start, prev_index + key + axis_count),
-                                    (end, prev_index + key + axis_count),
+                                    (start, prev_index + key + axis_count + 1),
+                                    (end, prev_index + key + axis_count + 1),
                                 ],
-                                stroke.stroke_width(y),
+                                stroke.stroke_width(y/2),
                             ))
                             .unwrap()
                             .label(format!("{}", record.name().unwrap_or(&"")))
