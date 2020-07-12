@@ -1318,7 +1318,7 @@ where
                                     (start, prev_index + key + axis_count + 1),
                                     (end, prev_index + key + axis_count + 1),
                                 ],
-                                stroke.stroke_width(y / 4),
+                                stroke.stroke_width(2),
                             ))
                             .unwrap()
                             .label(format!("{}", record.name().unwrap_or(&"")))
