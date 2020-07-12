@@ -406,14 +406,6 @@ fn main() {
     }
 }
 
-fn create_lambda<'a>(arg: Option<Vec<&'a str>>) -> Box<Fn(usize) -> Option<&'a str>> {
-    if let Some(arr) = arg {
-        Box::new(move |x| Some(arr[x]))
-    } else {
-        Box::new(|x| None)
-    }
-}
-
 fn bam_vis(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::error::Error>> {
     // let output_path = matches.value_of("OUTPUT").unwrap();
 
@@ -421,11 +413,9 @@ fn bam_vis(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::error:
         let ranges: Vec<&str> = ranges.collect();
         for range in ranges {
             let string_range = StringRegion::new(range).unwrap();
-            let mut list: Vec<(u64, Record)> = vec![];
-            let mut lambda = |idx| Box::new(None);
             if let Some(bam_files) = matches.values_of("bam") {
                 let bam_files: Vec<&str> = bam_files.collect();
-                lambda = |idx| Box::new(Some(bam_files[idx]));
+                let mut list: Vec<(u64, Record)> = vec![];
                 println!("Input file: {:?}", bam_files);
                 for (index, bam_path) in bam_files.iter().enumerate() {
                     println!("Loading {}", bam_path);
@@ -449,20 +439,20 @@ fn bam_vis(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::error:
                         list.push((index as u64, record.unwrap()));
                     }
                 }
-            }
-            let mut ann = vec![];
-            if let Some(bed_files) = matches.values_of("bed") {
-                // let bed_files: Vec<_> = matches.values_of("bed").unwrap().collect();
-                let bed_files: Vec<&str> = bed_files.collect();
-                for (idx, bed_path) in bed_files.iter().enumerate() {
-                    info!("Loading {}", bed_path);
-                    let mut reader = bed::Reader::from_file(bed_path).unwrap();
-                    for record in reader.records() {
-                        ann.push((idx as u64, record?));
+                let mut ann = vec![];
+                if let Some(bed_files) = matches.values_of("bed") {
+                    // let bed_files: Vec<_> = matches.values_of("bed").unwrap().collect();
+                    let bed_files: Vec<&str> = bed_files.collect();
+                    for (idx, bed_path) in bed_files.iter().enumerate() {
+                        info!("Loading {}", bed_path);
+                        let mut reader = bed::Reader::from_file(bed_path).unwrap();
+                        for record in reader.records() {
+                            ann.push((idx as u64, record?));
+                        }
                     }
                 }
+                bam_record_vis(matches, string_range, list, ann, |idx| Some(bam_files[idx]))?;
             }
-            bam_record_vis(matches, string_range, list, ann, |idx| Some(bam_files[idx]))?;
         }
     }
     Ok(())
@@ -1251,6 +1241,7 @@ where
     let root = root.margin(10, 10, 10, 10);
     // After this point, we should be able to draw construct a chart context
     // let areas = root.split_by_breakpoints([], compressed_list);
+    eprintln!("{:?} {:?} {:?}", prev_index, axis_count, annotation_count);
     let mut chart = ChartBuilder::on(&root)
         // Set the caption of the chart
         .caption(format!("{}", range), ("sans-serif", 20).into_font())
@@ -1327,7 +1318,7 @@ where
                                     (start, prev_index + key + axis_count + 1),
                                     (end, prev_index + key + axis_count + 1),
                                 ],
-                                stroke.stroke_width(y / 2),
+                                stroke.stroke_width(y / 4),
                             ))
                             .unwrap()
                             .label(format!("{}", record.name().unwrap_or(&"")))
