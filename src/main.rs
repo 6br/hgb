@@ -1420,6 +1420,7 @@ where
             // Check that the sum of each group is +/- 4.
             // assert_eq!(4, group.iter().fold(0_i32, |a, b| a + b).abs());
             let count = *sample; //.count();
+            if count > 0 {
             let idx = *sample_sequential_id as usize;
             // let idx = sample.next().0;
             chart
@@ -1434,6 +1435,7 @@ where
                         Palette99::pick(idx).filled(),
                     )
                 });
+            }
             //prev_index += count;
         }
     } else {
