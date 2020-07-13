@@ -24,6 +24,7 @@ pub mod reader;
 #[no_mangle]
 pub mod twopass_alignment;
 pub mod writer;
+pub mod vis;
 
 use bam::IndexedReader;
 use checker_index::Index;
