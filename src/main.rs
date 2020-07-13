@@ -1233,7 +1233,7 @@ where
         output,
         (
             x,
-            40 + (prev_index as u32 + axis_count as u32 + annotation_count as u32) * y,
+            40 + (prev_index as u32 + axis_count as u32 + annotation_count as u32 * 2) * y,
         ),
     )
     .into_drawing_area();
@@ -1251,7 +1251,7 @@ where
         // Finally attach a coordinate on the drawing area and make a chart context
         .build_ranged(
             (range.start() - 1)..(range.end() + 1),
-            0..(1 + prev_index + axis_count + annotation_count),
+            0..(1 + prev_index + axis_count + annotation_count * 2),
         )?;
     // Then we can draw a mesh
     chart
@@ -1315,8 +1315,8 @@ where
                         chart
                             .draw_series(LineSeries::new(
                                 vec![
-                                    (start, prev_index + key + axis_count + 1),
-                                    (end, prev_index + key + axis_count + 1),
+                                    (start, prev_index + key * 2 + axis_count + 1),
+                                    (end, prev_index + key * 2 + axis_count + 1),
                                 ],
                                 stroke.stroke_width(2),
                             ))
