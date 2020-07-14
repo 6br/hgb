@@ -493,7 +493,7 @@ fn build(matches: &ArgMatches, threads: u16) -> () {
             info!("Loading {}", bed_path);
             let reader = bed::Reader::from_file(bed_path).unwrap();
             let set: Set<InvertedRecordBuilder, BufReader<File>> =
-                Set::<InvertedRecordBuilder, BufReader<File>>::new(reader, 1 as u64, &mut header)
+                Set::<InvertedRecordBuilder, BufReader<File>>::new(reader, i as u64, &mut header)
                     .unwrap();
             header.set_local_header(&bam::Header::new(), bed_path, i);
             i += 1;
