@@ -554,21 +554,22 @@ where
                 .map(|(sample_sequential_id, sample)| {
                     let count = sample;
                     if count > 0 {
-                    let stroke = Palette99::pick(sample_sequential_id as usize);
-                    let mut bar2 = Rectangle::new(
-                        [
-                            (range.start() - 1, prev_index),
-                            (range.end() + 1, prev_index + count),
-                        ],
-                        stroke.stroke_width(7), // filled(), //stroke_width(100),
-                    );
-                    bar2.set_margin(1, 0, 0, 0);
-                    prev_index += count;
-                    Some(bar2)
-                } else {
-                    None
-                }
-                }).filter_map(|t| t),
+                        let stroke = Palette99::pick(sample_sequential_id as usize);
+                        let mut bar2 = Rectangle::new(
+                            [
+                                (range.start() - 1, prev_index),
+                                (range.end() + 1, prev_index + count),
+                            ],
+                            stroke.stroke_width(7), // filled(), //stroke_width(100),
+                        );
+                        bar2.set_margin(1, 0, 0, 0);
+                        prev_index += count;
+                        Some(bar2)
+                    } else {
+                        None
+                    }
+                })
+                .filter_map(|t| t),
         )?;
     }
 
