@@ -1,22 +1,16 @@
 extern crate log;
 
 use bam;
-use bam::{
-    Record, RecordWriter,
-};
+use bam::{Record, RecordWriter};
 use clap::{App, Arg, ArgMatches};
 use env_logger;
 use genomic_range::StringRegion;
 
 use log::{debug, info};
 use rayon::prelude::*;
-use std::{
-    fs::File,
-    io,
-    path::Path,
-    time::Instant,
-};
+use std::{fs::File, io, path::Path, time::Instant};
 
+use ghi::bed;
 use ghi::binary::GhbWriter;
 use ghi::builder::InvertedRecordBuilder;
 use ghi::header::Header;
@@ -24,7 +18,6 @@ use ghi::index::{Chunk, Region, VirtualOffset};
 use ghi::range::Default;
 use ghi::range::{Format, InvertedRecordEntire, Set};
 use ghi::twopass_alignment::{Alignment, AlignmentBuilder};
-use ghi::bed;
 use ghi::vis::bam_record_vis;
 use ghi::writer::GhiWriter;
 use ghi::{reader::IndexedReader, IndexWriter};

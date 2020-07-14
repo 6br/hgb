@@ -553,6 +553,7 @@ where
                 .into_iter()
                 .map(|(sample_sequential_id, sample)| {
                     let count = sample;
+                    if count > 0 {
                     let stroke = Palette99::pick(sample_sequential_id as usize);
                     let mut bar2 = Rectangle::new(
                         [
@@ -563,8 +564,11 @@ where
                     );
                     bar2.set_margin(1, 0, 0, 0);
                     prev_index += count;
-                    bar2
-                }),
+                    Some(bar2)
+                } else {
+                    None
+                }
+                }).filter_map(|t| t),
         )?;
     }
 
