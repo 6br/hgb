@@ -461,7 +461,7 @@ where
                                     (start, prev_index + key * 2 + axis_count + 1),
                                     (end, prev_index + key * 2 + axis_count + 1),
                                 ],
-                                stroke.stroke_width(y / 2),
+                                stroke.stroke_width(y),
                             ))
                             .unwrap()
                             .label(format!("{}", record.name().unwrap_or(&"")))

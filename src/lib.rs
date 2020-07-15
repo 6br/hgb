@@ -23,8 +23,8 @@ pub mod range;
 pub mod reader;
 #[no_mangle]
 pub mod twopass_alignment;
-pub mod writer;
 pub mod vis;
+pub mod writer;
 
 use bam::IndexedReader;
 use checker_index::Index;
@@ -109,6 +109,11 @@ pub trait Builder {
     fn to_format(self) -> Format;
 }
 
+pub trait Annotation {
+    fn start(&self) -> u64;
+    fn end(&self) -> u64;
+    fn name(&self) -> &str;
+}
 #[cfg(test)]
 mod tests {
     use crate::bed;

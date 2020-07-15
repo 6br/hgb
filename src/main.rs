@@ -20,7 +20,7 @@ use ghi::range::{Format, InvertedRecordEntire, Set};
 use ghi::twopass_alignment::{Alignment, AlignmentBuilder};
 use ghi::vis::bam_record_vis;
 use ghi::writer::GhiWriter;
-use ghi::{reader::IndexedReader, IndexWriter};
+use ghi::{gff, reader::IndexedReader, IndexWriter};
 use io::{BufReader, Write};
 
 fn main() {
@@ -59,11 +59,11 @@ fn main() {
                         .about("sorted bed"),
                 )
                 .arg(
-                    Arg::new("gff")
+                    Arg::new("gff3")
                         .short('g')
                         .takes_value(true)
                         .multiple(true)
-                        .about("sorted gff"),
+                        .about("sorted gff3"),
                 )
                 .arg(
                     Arg::new("chrom")
@@ -336,7 +336,7 @@ fn main() {
                         .about("sorted bam"),
                 )
                 .arg(
-                    Arg::new("gff")
+                    Arg::new("gff3")
                         .short('g')
                         .takes_value(true)
                         .multiple(true)
@@ -433,7 +433,40 @@ fn bam_vis(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::error:
                         info!("Loading {}", bed_path);
                         let mut reader = bed::Reader::from_file(bed_path).unwrap();
                         for record in reader.records() {
-                            ann.push((idx as u64, record?));
+                            let record = record?;
+                            if record.end() > string_range.start()
+                                && record.start() < string_range.end()
+                                && record.chrom() == string_range.path
+                            {
+                                ann.push((idx as u64, record));
+                            }
+                        }
+                    }
+                }
+                if let Some(gff_files) = matches.values_of("gff3") {
+                    // let bed_files: Vec<_> = matches.values_of("bed").unwrap().collect();
+                    let gff_files: Vec<&str> = gff_files.collect();
+                    for (idx, gff_path) in gff_files.iter().enumerate() {
+                        info!("Loading {}", gff_path);
+                        let mut reader =
+                            gff::Reader::from_file(gff_path, gff::GffType::GFF3).unwrap();
+                        for gff_record in reader.records() {
+                            let gff = gff_record?;
+                            if *gff.end() > string_range.start()
+                                && *gff.start() < string_range.end()
+                                && gff.seqname() == string_range.path
+                            {
+                                let mut record = bed::Record::new();
+                                record.set_chrom(gff.seqname());
+                                record.set_start(*gff.start());
+                                record.set_end(*gff.end());
+                                record.set_name(&gff.attributes()["gene_id"]);
+                                record.set_score(&gff.score().unwrap_or(0).to_string());
+                                if let Some(strand) = gff.strand() {
+                                    record.push_aux(strand.strand_symbol()); // Strand
+                                }
+                                ann.push((idx as u64, record));
+                            }
                         }
                     }
                 }
