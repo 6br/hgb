@@ -19,6 +19,7 @@ use ghi::range::Default;
 use ghi::range::{Format, InvertedRecordEntire, Set};
 use ghi::twopass_alignment::{Alignment, AlignmentBuilder};
 use ghi::vis::bam_record_vis;
+use ghi::vis::Vis;
 use ghi::writer::GhiWriter;
 use ghi::{reader::IndexedReader, IndexWriter};
 use io::{BufReader, Write};
