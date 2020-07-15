@@ -395,13 +395,13 @@ fn main() {
 
 fn bam_vis(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::error::Error>> {
     // let output_path = matches.value_of("OUTPUT").unwrap();
-
-    if let Some(ranges) = matches.values_of("range") {
-        let ranges: Vec<&str> = ranges.collect();
-        for range in ranges {
-            let string_range = StringRegion::new(range).unwrap();
-            if let Some(bam_files) = matches.values_of("bam") {
-                let bam_files: Vec<&str> = bam_files.collect();
+    if let Some(bam_files) = matches.values_of("bam") {
+        let bam_files: Vec<&str> = bam_files.collect();
+        if let Some(ranges) = matches.values_of("range") {
+            let ranges: Vec<&str> = ranges.collect();
+            let mut vis: Vec<Vis> = Vec::with_capacity(ranges.len());
+            for range in ranges {
+                let string_range = StringRegion::new(range).unwrap();
                 let mut list: Vec<(u64, Record)> = vec![];
                 println!("Input file: {:?}", bam_files);
                 for (index, bam_path) in bam_files.iter().enumerate() {
@@ -438,8 +438,9 @@ fn bam_vis(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::error:
                         }
                     }
                 }
-                bam_record_vis(matches, string_range, list, ann, |idx| Some(bam_files[idx]))?;
+                vis.push(Vis::new(string_range, list, ann));
             }
+            bam_record_vis(matches, vis, |idx| Some(bam_files[idx]))?;
         }
     }
     Ok(())
@@ -808,6 +809,7 @@ fn vis_query(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::erro
             IndexedReader::from_path_with_additional_threads(o, threads - 1).unwrap();
         if let Some(ranges) = matches.values_of("range") {
             let ranges: Vec<&str> = ranges.collect();
+            let mut vis = Vec::with_capacity(ranges.len());
             for range in ranges {
                 eprintln!("{}", range);
                 let start = Instant::now();
@@ -890,10 +892,11 @@ fn vis_query(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::erro
                         }
                     }
                 });
-                bam_record_vis(matches, string_range, list, ann, |idx| {
-                    reader.header().get_name(idx).and_then(|t| Some(t.as_str()))
-                })?;
+                vis.push(Vis::new(string_range, list, ann));
             }
+            bam_record_vis(matches, vis, |idx| {
+                reader.header().get_name(idx).and_then(|t| Some(t.as_str()))
+            })?;
         }
     }
     Ok(())
