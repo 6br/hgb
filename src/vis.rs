@@ -9,12 +9,51 @@ use genomic_range::StringRegion;
 use itertools::Itertools;
 use plotters::coord::ReverseCoordTranslate;
 use plotters::prelude::Palette;
+//use plotters::prelude::RGBAColor;
+use plotters::style::{RGBColor, RGBAColor};
 use plotters::prelude::*;
 use rayon::prelude::*;
 use std::{
     collections::{BTreeMap, HashMap},
     fs::File,
 };
+
+macro_rules! predefined_color {
+    ($name:ident, $r:expr, $g:expr, $b:expr, $doc:expr) => {
+        #[doc = $doc]
+        pub const $name: RGBColor = RGBColor($r, $g, $b);
+    };
+/*
+    ($name:ident, $r:expr, $g:expr, $b:expr, $a: expr, $doc:expr) => {
+        #[doc = $doc]
+        let $name: RGBAColor = RGBColor($r, $g, $b).mix($a);
+    }*/
+}
+
+predefined_color!(
+    NEG_COL,
+    150,
+    150,
+    230,
+    /*0.75,*/
+    "The predefined negative-str color"
+);
+predefined_color!(
+    POS_COL,
+    230,
+    150,
+    150,
+    /*0.75,*/
+    "The predefined positive-str color"
+);
+predefined_color!(INS_COL, 138, 94, 161, "The predefined insertion color");
+predefined_color!(SPL_COL, 120, 85, 43, "The predefined split-alignment color");
+predefined_color!(N_COL, 80, 80, 80, "The predefined N color");
+predefined_color!(A_COL, 0, 200, 0, "The predefined A color");
+predefined_color!(C_COL, 0, 0, 200, "The predefined C color");
+predefined_color!(T_COL, 255, 0, 40, "The predefined T color");
+predefined_color!(G_COL, 209, 113, 5, "The predefined G color");
+//RGBColor();
 
 pub fn bam_record_vis<'a, F>(
     matches: &ArgMatches,
@@ -422,7 +461,7 @@ where
                                     (start, prev_index + key * 2 + axis_count + 1),
                                     (end, prev_index + key * 2 + axis_count + 1),
                                 ],
-                                stroke.stroke_width(2),
+                                stroke.stroke_width(y/2),
                             ))
                             .unwrap()
                             .label(format!("{}", record.name().unwrap_or(&"")))
@@ -560,7 +599,7 @@ where
                                 (range.start() - 1, prev_index),
                                 (range.end() + 1, prev_index + count),
                             ],
-                            stroke.stroke_width(7), // filled(), //stroke_width(100),
+                            stroke.stroke_width(5), // filled(), //stroke_width(100),
                         );
                         bar2.set_margin(1, 0, 0, 0);
                         prev_index += count;
@@ -609,11 +648,11 @@ where
             //for (index, data) in list.iter().enumerate() {
             let bam = data.1;
             let color = if bam.flag().is_reverse_strand() {
-                CYAN
+                NEG_COL
             } else {
-                RED
-            };
-            let stroke = Palette99::pick(data.0 as usize); //.unwrap(); //if data.0 % 2 == 0 { CYAN } else { GREEN };
+                POS_COL
+            }.mix(0.8);
+            let _stroke = Palette99::pick(data.0 as usize); //.unwrap(); //if data.0 % 2 == 0 { CYAN } else { GREEN };
             let start = if bam.start() as u64 > range.start() {
                 bam.start() as u64
             } else {
@@ -627,7 +666,7 @@ where
             /*chart
             .draw_series(LineSeries::new(vec![(start, index), (end, index)], &color))?;*/
             let mut bar = Rectangle::new([(start, index), (end, index + 1)], color.filled());
-            bar.set_margin(1, 1, 0, 0);
+            bar.set_margin(2, 2, 0, 0);
 
             // eprintln!("{:?}", [(start, index), (end, index + 1)]);
             bars.push(bar);
@@ -670,7 +709,7 @@ where
                             .iter()
                             .find(|t| t > &&current_left_clip)
                             .is_some();
-                        let color = RGBColor(120, 85, 43);
+                        let color = SPL_COL;
                         if ((is_smaller && !bam.flag().is_reverse_strand())
                             || (is_larger && bam.flag().is_reverse_strand()))
                             && bam.start() as u64 > range.start()
@@ -745,7 +784,7 @@ where
                                                 //bar.set_margin(0, 0, 0, 3);
                                                 //bars.push(bar);
                                                 //prev_ref = 0;
-                                                color = Some(MAGENTA);
+                                                color = Some(INS_COL);
                                             }
                                         } else if entry.is_deletion() {
                                             prev_ref = entry.ref_pos_nt().unwrap().0 as u64;
@@ -774,11 +813,11 @@ where
                                             if prev_ref >= range.start() as u64 {
                                                 let record_nt = entry.record_pos_nt().unwrap().1;
                                                 color = match record_nt as char {
-                                                    'A' => Some(GREEN), //RED,
-                                                    'C' => Some(BLUE),  // BLUE,
-                                                    'G' => Some(YELLOW),
-                                                    'T' => Some(RED), //GREEN,
-                                                    _ => Some(BLACK),
+                                                    'A' => Some(A_COL), //RED,
+                                                    'C' => Some(C_COL),  // BLUE,
+                                                    'G' => Some(G_COL),
+                                                    'T' => Some(T_COL), //GREEN,
+                                                    _ => Some(N_COL),
                                                 };
 
                                                 /*let mut bar =
@@ -799,7 +838,7 @@ where
                                             ],
                                             color.filled(),
                                         );
-                                        bar.set_margin(2, 2, 0, 0);
+                                        bar.set_margin(3, 3, 0, 0);
                                         /*if prev_pixel_ref < start || end < prev_ref {
                                             eprintln!("{:?}", [(prev_pixel_ref, index), (prev_ref, index + 1)]);
                                         }*/
@@ -838,7 +877,7 @@ where
                                                 ],
                                                 RGBColor(*qual * 5, *qual * 5, *qual * 5).filled(),
                                             );
-                                            bar.set_margin(2, 2, 0, 0);
+                                            bar.set_margin(3, 3, 0, 0);
                                             bars.push(bar);
                                         }
                                     }
@@ -857,7 +896,7 @@ where
                                             ],
                                             WHITE.filled(),
                                         );
-                                        bar.set_margin(2, 2, 0, 0);
+                                        bar.set_margin(3, 3, 0, 0);
                                         prev_ref = reference as u64;
                                         bars.push(bar);
                                     }
@@ -870,10 +909,10 @@ where
                                     if prev_ref > range.start() as u64 && insertion {
                                         let mut bar = Rectangle::new(
                                             [(prev_ref, index), (prev_ref + 1, index + 1)],
-                                            MAGENTA.stroke_width(1),
+                                            INS_COL.stroke_width(1),
                                         );
                                         // eprintln!("{:?}", [(prev_ref, index), (prev_ref + 1, index + 1)]);
-                                        bar.set_margin(0, 0, 0, 5);
+                                        bar.set_margin(1, 1, 0, 5);
                                         bars.push(bar);
                                         prev_ref = 0;
                                     }
