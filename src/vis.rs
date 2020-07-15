@@ -157,32 +157,33 @@ where
 
     if split {
         let mut end_map = HashMap::new();
-        {
-            new_list
-                .into_iter()
-                .group_by(|elt| elt.0)
-                .into_iter()
-                .for_each(|t| {
-                    let sample_id = t.0.clone();
-                    t.1.group_by(|&elt| elt.1.name()).into_iter().for_each(|s| {
-                        let items: Vec<(u64, Record, usize)> = s.1.into_iter().collect();
-                        if items.len() > 1 {
-                            let last: &(u64, Record, usize) =
-                                items.iter().max_by_key(|t| t.1.calculate_end()).unwrap();
-                            end_map.insert(
-                                (sample_id, s.0),
-                                (
-                                    items[0].1.calculate_end(), // The end of first item
-                                    last.1.start(),             // The start of last item
-                                    last.1.calculate_end(),     // The end of last item
-                                    items.len(), // How many alignments correspond to one read
-                                ),
-                            );
-                        }
-                    })
-                    //group.into_iter().for_each(|t| {})
-                });
-        }
+
+        let tmp_list = new_list.clone();
+        tmp_list
+            .iter()
+            .group_by(|elt| elt.0)
+            .into_iter()
+            .for_each(|t| {
+                let sample_id = t.0.clone();
+                t.1.group_by(|&elt| elt.1.name()).into_iter().for_each(|s| {
+                    let items: Vec<&(u64, Record, usize)> = s.1.into_iter().collect();
+                    if items.len() > 1 {
+                        let last: &(u64, Record, usize) =
+                            items.iter().max_by_key(|t| t.1.calculate_end()).unwrap();
+                        end_map.insert(
+                            (sample_id, s.0),
+                            (
+                                items[0].1.calculate_end(), // The end of first item
+                                last.1.start(),             // The start of last item
+                                last.1.calculate_end(),     // The end of last item
+                                items.len(), // How many alignments correspond to one read
+                            ),
+                        );
+                    }
+                })
+                //group.into_iter().for_each(|t| {})
+            });
+
         if sort_by_name {
             if false {
                 // sort_by_cigar {
@@ -432,8 +433,9 @@ where
     for (index, area) in areas.iter().enumerate() {
         let range = &vis[index].range;
         let index_list = vis[index].index_list.lock().unwrap();
-        let annotation = vis[index].annotation.lock().unwrap();
-        let list = vis[index].list.lock().unwrap();
+        let list = &*vis[index].list.lock().unwrap();
+        let annotation = &*vis[index].annotation.lock().unwrap();
+
         // let
         let mut chart = ChartBuilder::on(&area)
             // Set the caption of the chart
@@ -527,7 +529,7 @@ where
             });
 
         // Draw graph axis if there is graph information.
-        axis.into_iter()
+        axis.iter()
             //.group_by(|elt| elt.0.as_str())
             //.into_iter()
             .enumerate()
@@ -547,7 +549,7 @@ where
                             } else {
                                 range.end()
                             };
-                            let stroke = Palette99::pick(node_id as usize);
+                            let stroke = Palette99::pick(*node_id as usize);
                             let mut bar2 = Rectangle::new(
                                 [(start, prev_index + key), (end, prev_index + key + 1)],
                                 stroke.stroke_width(2),
@@ -645,11 +647,11 @@ where
             let mut prev_index = 0;
             chart.draw_series(
                 compressed_list
-                    .into_iter()
+                    .iter()
                     .map(|(sample_sequential_id, sample)| {
-                        let count = sample;
+                        let count = *sample;
                         if count > 0 {
-                            let stroke = Palette99::pick(sample_sequential_id as usize);
+                            let stroke = Palette99::pick(*sample_sequential_id as usize);
                             let mut bar2 = Rectangle::new(
                                 [
                                     (range.start() - 1, prev_index),
@@ -699,10 +701,10 @@ where
         let series = {
             //list.into_iter().enumerate().map(|(index, data)| {
             let mut bars = vec![];
-            (*index_list).iter().zip(*list).for_each(|(&index, data)| {
+            (*index_list).iter().zip(list).for_each(|(&index, data)| {
                 //chart.draw_series(index_list.into_par_iter().zip(list).map(|(index, data)| {
                 //for (index, data) in list.iter().enumerate() {
-                let bam = data.1;
+                let bam = &data.1;
                 let color = if bam.flag().is_reverse_strand() {
                     CYAN
                 } else {
