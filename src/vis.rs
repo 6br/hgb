@@ -10,8 +10,8 @@ use itertools::Itertools;
 use plotters::coord::ReverseCoordTranslate;
 use plotters::prelude::Palette;
 //use plotters::prelude::RGBAColor;
-use plotters::style::{RGBColor, RGBAColor};
 use plotters::prelude::*;
+use plotters::style::{RGBAColor, RGBColor};
 use rayon::prelude::*;
 use std::{
     collections::{BTreeMap, HashMap},
@@ -461,7 +461,7 @@ where
                                     (start, prev_index + key * 2 + axis_count + 1),
                                     (end, prev_index + key * 2 + axis_count + 1),
                                 ],
-                                stroke.stroke_width(y/2),
+                                stroke.stroke_width(y / 2),
                             ))
                             .unwrap()
                             .label(format!("{}", record.name().unwrap_or(&"")))
@@ -651,7 +651,8 @@ where
                 NEG_COL
             } else {
                 POS_COL
-            }.mix(0.8);
+            }
+            .mix(0.8);
             let _stroke = Palette99::pick(data.0 as usize); //.unwrap(); //if data.0 % 2 == 0 { CYAN } else { GREEN };
             let start = if bam.start() as u64 > range.start() {
                 bam.start() as u64
@@ -814,7 +815,7 @@ where
                                                 let record_nt = entry.record_pos_nt().unwrap().1;
                                                 color = match record_nt as char {
                                                     'A' => Some(A_COL), //RED,
-                                                    'C' => Some(C_COL),  // BLUE,
+                                                    'C' => Some(C_COL), // BLUE,
                                                     'G' => Some(G_COL),
                                                     'T' => Some(T_COL), //GREEN,
                                                     _ => Some(N_COL),
