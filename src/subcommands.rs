@@ -5,7 +5,7 @@ use genomic_range::StringRegion;
 
 use log::{debug, info};
 // use rayon::prelude::*;
-use std::{collections::BTreeMap, fs::File, io, path::Path, time::Instant};
+use std::{collections::BTreeMap, fs::File, io, path::Path};
 
 use ghi::bed;
 use ghi::binary::GhbWriter;
@@ -85,7 +85,6 @@ pub fn bam_vis(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::er
                 }
 
                 if let Some(bed_files) = matches.values_of("bed") {
-                    // let bed_files: Vec<_> = matches.values_of("bed").unwrap().collect();
                     let bed_files: Vec<&str> = bed_files.collect();
                     for (_idx, bed_path) in bed_files.iter().enumerate() {
                         info!("Loading {}", bed_path);
@@ -103,7 +102,6 @@ pub fn bam_vis(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::er
                     }
                 }
                 if let Some(gff_files) = matches.values_of("gff3") {
-                    // let bed_files: Vec<_> = matches.values_of("bed").unwrap().collect();
                     let gff_files: Vec<&str> = gff_files.collect();
                     for (_idx, gff_path) in gff_files.iter().enumerate() {
                         info!("Loading {}", gff_path);
@@ -503,8 +501,8 @@ pub fn vis_query(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::
         if let Some(ranges) = matches.values_of("range") {
             let ranges: Vec<&str> = ranges.collect();
             for range in ranges {
-                eprintln!("{}", range);
-                let start = Instant::now();
+                eprintln!("Retrieving: {}", range);
+                // let start = Instant::now();
                 let closure = |x: &str| reader.reference_id(x);
                 let string_range = StringRegion::new(range).unwrap();
                 let _reference_name = &string_range.path;
@@ -533,12 +531,12 @@ pub fn vis_query(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::
                 };
                 let output = io::BufWriter::with_capacity(1048576, out_writer);*/
 
-                let end0 = start.elapsed();
+                /*let end0 = start.elapsed();
                 eprintln!(
                     "{}.{:03} sec.",
                     end0.as_secs(),
                     end0.subsec_nanos() / 1_000_000
-                );
+                );*/
                 let mut list = vec![];
                 let mut ann = vec![];
                 //let mut list2 = vec![];
@@ -554,7 +552,6 @@ pub fn vis_query(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::
                         {
                             match data {
                                 Format::Range(rec) => {
-                                    //let mut writer = bed::Writer::new(&mut output);
                                     for i in rec.to_record(&string_range.path) {
                                         if !filter
                                             || (i.end() as u64 > range.start()
@@ -573,9 +570,6 @@ pub fn vis_query(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::
                                             if !i.flag().is_secondary() {
                                                 list.push((sample_id, i));
                                             }
-                                            //list2.push((sample_id, true));
-                                            //samples.insert(sample_id, true);
-                                            //list.insert(sample_id, i);
                                         }
                                     }
                                 }

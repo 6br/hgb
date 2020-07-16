@@ -1144,6 +1144,10 @@ where
         let coverages = coverage.split_evenly((frequency.len(), 1));
         for (i, (sample_sequential_id, values)) in frequency.iter().enumerate() {
             let idx = *sample_sequential_id as usize;
+            let y_max = match max_coverage {
+                Some(a) => a,
+                _ => values.iter().map(|t| t.1).max().unwrap_or(1),
+            };
             let mut chart = ChartBuilder::on(&coverages[i])
                 // Set the caption of the chart
                 //.caption(format!("{}", range), ("sans-serif", 20).into_font())
@@ -1153,7 +1157,7 @@ where
                 // Finally attach a coordinate on the drawing area and make a chart context
                 .build_ranged(
                     (range.start() - 1)..(range.end() + 1),
-                    0..values.iter().map(|t| t.1).max().unwrap_or(1),
+                    0..y_max,
                 )?;
             chart
                 .configure_mesh()
