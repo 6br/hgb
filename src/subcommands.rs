@@ -4,7 +4,7 @@ use clap::ArgMatches;
 use genomic_range::StringRegion;
 
 use log::{debug, info};
-use rayon::prelude::*;
+// use rayon::prelude::*;
 use std::{collections::BTreeMap, fs::File, io, path::Path, time::Instant};
 
 use ghi::bed;
@@ -396,7 +396,7 @@ pub fn split(matches: &ArgMatches, threads: u16) -> () {
             .and_then(|a| a.parse::<u8>().ok())
             .unwrap_or(6u8);
         let header = bam_header;
-        let mut writer = bam::bam_writer::BamWriterBuilder::new()
+        let mut _writer = bam::bam_writer::BamWriterBuilder::new()
             .additional_threads(threads - 1)
             .compression_level(clevel)
             .write_header(true)

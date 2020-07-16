@@ -359,14 +359,14 @@ fn main() {
                     Arg::new("output")
                         .short('o')
                         .takes_value(true)
-                        .about("Output format"),
+                        .about("Output file (.bmp / .png)"),
                 )
                 .arg(
                     Arg::new("bam")
                         .short('a')
                         .takes_value(true)
                         .multiple(true)
-                        .about("sorted bam"),
+                        .about("Sorted Bam to display alignment"),
                 )
                 .arg(
                     Arg::new("gff3")
@@ -377,7 +377,7 @@ fn main() {
                 )
                 .arg(
                     Arg::new("INPUT")
-                        .about("Sets the input file to use")
+                        .about("GHB format ")
                         .index(1),
                 ),
         )
@@ -426,8 +426,8 @@ fn main() {
     } else if let Some(ref matches) = matches.subcommand_matches("bin") {
         bin(matches, threads);
     } else if let Some(ref matches) = matches.subcommand_matches("vis") {
-        eprintln!("{:?}", matches.is_present("input"));
-        match matches.is_present("input") {
+        eprintln!("{:?}", matches.is_present("INPUT"));
+        match matches.is_present("INPUT") {
             true => vis_query(matches, threads).unwrap(),
             false => bam_vis(matches, threads).unwrap(),
         }

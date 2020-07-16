@@ -122,7 +122,7 @@ pub trait Annotation {
 pub enum VisPreset {
     Auto,       // Switch presets Depends on range length.
     Base,       // all cigars and insertions, compatible with IGV
-    Gene,       // Only length and split alignment 
+    Gene,       // Only length and split alignment
     OnlySV,     // Split alignment enabled mode
     Qual,       // Quality mode
     Chromosome, // Only coverages.
