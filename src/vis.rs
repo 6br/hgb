@@ -103,7 +103,9 @@ where
     F: Fn(usize) -> Option<&'a str>,
 {
     let output = matches.value_of("output").unwrap();
-
+    let max_coverage = matches
+        .value_of("max-coverage")
+        .and_then(|a| a.parse::<u32>().ok());
     let x = matches
         .value_of("x")
         .and_then(|a| a.parse::<u32>().ok())
@@ -150,6 +152,10 @@ where
         let coverages = root.split_evenly((frequency.len(), 1));
         for (i, (sample_sequential_id, values)) in frequency.iter().enumerate() {
             let idx = *sample_sequential_id as usize;
+            let y_max = match max_coverage {
+                Some(a) => a,
+                _ => values.iter().map(|t| t.1).max().unwrap_or(1),
+            };
             let mut chart = ChartBuilder::on(&coverages[i])
                 // Set the caption of the chart
                 //.caption(format!("{}", range), ("sans-serif", 20).into_font())
@@ -157,10 +163,7 @@ where
                 .x_label_area_size(20)
                 .y_label_area_size(40)
                 // Finally attach a coordinate on the drawing area and make a chart context
-                .build_ranged(
-                    (range.start() - 1)..(range.end() + 1),
-                    0..values.iter().map(|t| t.1).max().unwrap_or(1),
-                )?;
+                .build_ranged((range.start() - 1)..(range.end() + 1), 0..y_max)?;
             chart
                 .configure_mesh()
                 // We can customize the maximum number of labels allowed for each axis
@@ -199,7 +202,7 @@ pub fn bam_record_vis<'a, F>(
     range: StringRegion,
     mut list: Vec<(u64, Record)>,
     mut annotation: Vec<(u64, bed::Record)>,
-    //mut frequency: BTreeMap<(u64, Vec<[u64;2]>)>
+    mut frequency: BTreeMap<u64, Vec<(u64, u32)>>,
     lambda: F,
 ) -> Result<(), Box<dyn std::error::Error>>
 where
@@ -221,6 +224,9 @@ where
     if hide_alignment {
         return frequency_vis(matches, range, list, lambda);
     }
+    let max_coverage = matches
+        .value_of("max-coverage")
+        .and_then(|a| a.parse::<u32>().ok());
     let x = matches
         .value_of("x")
         .and_then(|a| a.parse::<u32>().ok())
@@ -256,7 +262,7 @@ where
     }
 
     // Calculate coverage; it won't work on sort_by_name
-    let mut frequency = BTreeMap::new(); // Vec::with_capacity();
+    // let mut frequency = BTreeMap::new(); // Vec::with_capacity();
     if pileup {
         list.iter().group_by(|elt| elt.0).into_iter().for_each(|t| {
             let mut line = vec![];

@@ -135,6 +135,12 @@ fn main() {
                         .takes_value(true)
                         .about("yf"),
                 )
+                .arg(
+                    Arg::new("max-coverage")
+                        .short('m')
+                        .takes_value(true)
+                        .about("Max coverage"),
+                )
                 .arg(Arg::new("split-alignment").short('s').about("No-md"))
                 .arg(Arg::new("no-insertion").short('z').about("No-md"))
                 .arg(Arg::new("only-split-alignment").short('u').about("No-md"))
@@ -328,6 +334,12 @@ fn main() {
                         .takes_value(true)
                         .about("yf"),
                 )
+                .arg(
+                    Arg::new("max-coverage")
+                        .short('m')
+                        .takes_value(true)
+                        .about("Max coverage"),
+                )
                 .arg(Arg::new("split-alignment").short('s').about("No-md"))
                 .arg(Arg::new("only-split-alignment").short('u').about("No-md"))
                 .arg(
@@ -479,16 +491,16 @@ fn bam_vis(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::error:
                                 && record.start() < string_range.end()
                                 && record.chrom() == string_range.path
                             {
-                                values.push([
+                                values.push((
                                     record.start(),
                                     record
                                         .score()
-                                        .and_then(|t| t.parse::<u64>().ok())
+                                        .and_then(|t| t.parse::<u32>().ok())
                                         .unwrap_or(0),
-                                ]);
+                                ));
                             }
                         }
-                        freq.insert(idx, values);
+                        freq.insert(idx as u64, values);
                         idx += 1;
                     }
                 }
@@ -539,7 +551,9 @@ fn bam_vis(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::error:
                         idx += 1;
                     }
                 }
-                bam_record_vis(matches, string_range, list, ann, |idx| Some(bam_files[idx]))?;
+                bam_record_vis(matches, string_range, list, ann, freq, |idx| {
+                    Some(bam_files[idx])
+                })?;
             }
         }
     }
@@ -991,7 +1005,7 @@ fn vis_query(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::erro
                         }
                     }
                 });
-                bam_record_vis(matches, string_range, list, ann, |idx| {
+                bam_record_vis(matches, string_range, list, ann, BTreeMap::new(), |idx| {
                     reader.header().get_name(idx).and_then(|t| Some(t.as_str()))
                 })?;
             }
