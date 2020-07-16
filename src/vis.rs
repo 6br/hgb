@@ -571,51 +571,7 @@ where
         40 + (prev_index as u32 + axis_count as u32 + annotation_count as u32 * 2) * y,
     );
     eprintln!("{:?} {:?} {:?}", prev_index, axis_count, annotation_count);
-    if frequency.len() > 0 {
-        let coverages = coverage.split_evenly((frequency.len(), 1));
-        for (i, (sample_sequential_id, values)) in frequency.iter().enumerate() {
-            let idx = *sample_sequential_id as usize;
-            let mut chart = ChartBuilder::on(&coverages[i])
-                // Set the caption of the chart
-                //.caption(format!("{}", range), ("sans-serif", 20).into_font())
-                // Set the size of the label region
-                .x_label_area_size(0)
-                .y_label_area_size(40)
-                // Finally attach a coordinate on the drawing area and make a chart context
-                .build_ranged(
-                    (range.start() - 1)..(range.end() + 1),
-                    0..values.iter().map(|t| t.1).max().unwrap_or(1),
-                )?;
-            chart
-                .configure_mesh()
-                // We can customize the maximum number of labels allowed for each axis
-                //.x_labels(5)
-                // .y_labels(4)
-                .y_label_style(("sans-serif", 12).into_font())
-                // We can also change the format of the label text
-                // .x_label_formatter(&|x| format!("{:.3}", x))
-                .draw()?;
-            let color = Palette99::pick(idx); // BLUE
-            chart
-                .draw_series(
-                    Histogram::vertical(&chart)
-                        .style(color.filled())
-                        .data(values.iter().map(|t| *t)),
-                )?
-                .label(format!("{}", lambda(idx).unwrap_or(&idx.to_string())))
-                .legend(move |(x, y)| {
-                    Rectangle::new(
-                        [(x - 5, y - 5), (x + 5, y + 5)],
-                        Palette99::pick(idx).filled(),
-                    )
-                });
-            chart
-                .configure_series_labels()
-                .background_style(&WHITE.mix(0.8))
-                .border_style(&BLACK)
-                .draw()?;
-        }
-    }
+
     let mut chart = ChartBuilder::on(&alignment)
         // Set the caption of the chart
         .caption(format!("{}", range), ("sans-serif", 20).into_font())
@@ -884,6 +840,7 @@ where
             bar2
         }))?;
     }
+    let mut split_frequency = vec![];
     // For each alignment:
     let series = {
         //list.into_iter().enumerate().map(|(index, data)| {
@@ -966,7 +923,8 @@ where
                                 color.stroke_width(3), //.filled(),
                             );
                             bar.set_margin(0, 0, 0, 0);
-                            bars.push(bar)
+                            bars.push(bar);
+                            split_frequency.push((data.0, (start, 1)));
                         }
                         if ((is_larger && !bam.flag().is_reverse_strand())
                             || (is_smaller && bam.flag().is_reverse_strand()))
@@ -978,7 +936,8 @@ where
                                 color.stroke_width(2), //.filled(),
                             );
                             bar.set_margin(0, 0, 0, 0);
-                            bars.push(bar)
+                            bars.push(bar);
+                            split_frequency.push((data.0, (end, 1)));
                         }
                         /*eprintln!(
                             "SA = {}, {:?},
@@ -1175,6 +1134,68 @@ where
         bars
     };
     chart.draw_series(series)?;
+
+    if frequency.len() > 0 {
+        let coverages = coverage.split_evenly((frequency.len(), 1));
+        for (i, (sample_sequential_id, values)) in frequency.iter().enumerate() {
+            let idx = *sample_sequential_id as usize;
+            let mut chart = ChartBuilder::on(&coverages[i])
+                // Set the caption of the chart
+                //.caption(format!("{}", range), ("sans-serif", 20).into_font())
+                // Set the size of the label region
+                .x_label_area_size(0)
+                .y_label_area_size(40)
+                // Finally attach a coordinate on the drawing area and make a chart context
+                .build_ranged(
+                    (range.start() - 1)..(range.end() + 1),
+                    0..values.iter().map(|t| t.1).max().unwrap_or(1),
+                )?;
+            chart
+                .configure_mesh()
+                // We can customize the maximum number of labels allowed for each axis
+                //.x_labels(5)
+                // .y_labels(4)
+                .y_label_style(("sans-serif", 12).into_font())
+                // We can also change the format of the label text
+                // .x_label_formatter(&|x| format!("{:.3}", x))
+                .draw()?;
+            let color = Palette99::pick(idx); // BLUE
+            chart
+                .draw_series(
+                    Histogram::vertical(&chart)
+                        .style(color.filled())
+                        .data(values.iter().map(|t| *t)),
+                )?
+                .label(format!("{}", lambda(idx).unwrap_or(&idx.to_string())))
+                .legend(move |(x, y)| {
+                    Rectangle::new(
+                        [(x - 5, y - 5), (x + 5, y + 5)],
+                        Palette99::pick(idx).filled(),
+                    )
+                });
+
+            chart.draw_series(
+                Histogram::vertical(&chart).style(SPL_COL.filled()).data(
+                    split_frequency
+                        .iter()
+                        .filter(|&&t| t.0 == *sample_sequential_id)
+                        .map(|t| t.1),
+                ),
+            )?;
+            /*.label(format!("{}", lambda(idx).unwrap_or(&idx.to_string())))
+            .legend(move |(x, y)| {
+                Rectangle::new(
+                    [(x - 5, y - 5), (x + 5, y + 5)],
+                    Palette99::pick(idx).filled(),
+                )
+            });*/
+            chart
+                .configure_series_labels()
+                .background_style(&WHITE.mix(0.8))
+                .border_style(&BLACK)
+                .draw()?;
+        }
+    }
 
     if legend {
         chart

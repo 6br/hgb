@@ -32,7 +32,10 @@ use io::Seek;
 use range::InvertedRecord;
 use range::{Format, Record};
 use std::io;
-use std::io::{Read, Result, Write};
+use std::{
+    io::{Read, Result, Write},
+    str::FromStr,
+};
 
 /// A trait for writing records.
 pub trait ChunkWriter<R: Read + Seek> {
@@ -114,6 +117,47 @@ pub trait Annotation {
     fn end(&self) -> u64;
     fn name(&self) -> &str;
 }
+/*
+// Visualization Presets
+pub enum VisPreset {
+    Auto,       // Switch presets Depends on range length.
+    Base,       // all cigars and insertions, compatible with IGV
+    Gene,       // Only length and split alignment 
+    OnlySV,     // Split alignment enabled mode
+    Qual,       // Quality mode
+    Chromosome, // Only coverages.
+}
+
+impl VisPreset {
+    pub fn augment(range: StringRange) -> VisPreset {
+        let diff = range.end() - range.start();
+        if diff < 10000 {
+            VisPreset::Base
+        } else if diff < 100000 {
+
+        } else {
+            VisPreset::Chromosome
+        }
+    }
+}
+
+// Implement the trait
+impl FromStr for VisPreset {
+    type Err = &'static str;
+
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        match s {
+            "gene" => Ok(VisPreset::Gene),
+            "auto" => Ok(VisPreset::Auto),
+            "base" => Ok(VisPreset::Base),
+            "chrom" => Ok(VisPreset::Chromosome),
+            "sv" => Ok(VisPreset::OnlySV),
+            "qual" => Ok(VisPreset::Qual),
+            _ => Ok(VisPreset::Auto),
+        }
+    }
+}
+*/
 #[cfg(test)]
 mod tests {
     use crate::bed;
