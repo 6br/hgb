@@ -8,7 +8,7 @@ use genomic_range::StringRegion;
 
 use log::{debug, info};
 use rayon::prelude::*;
-use std::{fs::File, io, path::Path, time::Instant};
+use std::{collections::BTreeMap, fs::File, io, path::Path, time::Instant};
 
 use ghi::bed;
 use ghi::binary::GhbWriter;
@@ -129,9 +129,22 @@ fn main() {
                 .arg(Arg::new("quality").short('q').about("Quality"))
                 .arg(Arg::new("x").short('x').takes_value(true).about("x"))
                 .arg(Arg::new("y").short('y').takes_value(true).about("y"))
+                .arg(
+                    Arg::new("freq-height")
+                        .short('Y')
+                        .takes_value(true)
+                        .about("yf"),
+                )
                 .arg(Arg::new("split-alignment").short('s').about("No-md"))
                 .arg(Arg::new("no-insertion").short('z').about("No-md"))
                 .arg(Arg::new("only-split-alignment").short('u').about("No-md"))
+                .arg(
+                    Arg::new("hide-alignment")
+                        .short('A')
+                        .about("Hide alignment"),
+                )
+                .arg(Arg::new("all-bases").short('B').about("Show all bases"))
+                .arg(Arg::new("pileup").short('P').about("Show coverage plot"))
                 .arg(
                     Arg::new("sort-by-name")
                         .short('N')
@@ -294,6 +307,13 @@ fn main() {
                         .multiple(true)
                         .about("annotation sample to fetch"),
                 )
+                .arg(
+                    Arg::new("frequency")
+                        .short('F')
+                        .takes_value(true)
+                        .multiple(true)
+                        .about("sorted bed for coverage plot"),
+                )
                 .arg(Arg::new("filter").short('f').about("Pre-filter"))
                 .arg(Arg::new("binary").short('b').about("Binary"))
                 .arg(Arg::new("no-cigar").short('n').about("Binary"))
@@ -302,6 +322,12 @@ fn main() {
                 .arg(Arg::new("quality").short('q').about("Quality"))
                 .arg(Arg::new("x").short('x').takes_value(true).about("x"))
                 .arg(Arg::new("y").short('y').takes_value(true).about("y"))
+                .arg(
+                    Arg::new("freq-height")
+                        .short('Y')
+                        .takes_value(true)
+                        .about("yf"),
+                )
                 .arg(Arg::new("split-alignment").short('s').about("No-md"))
                 .arg(Arg::new("only-split-alignment").short('u').about("No-md"))
                 .arg(
@@ -314,7 +340,18 @@ fn main() {
                         .short('C')
                         .about("Sort-by-name (read-id)"),
                 )
-                .arg(Arg::new("no-insertion").short('z').about("No-md"))
+                .arg(Arg::new("no-insertion").short('z').about("No insertion"))
+                .arg(
+                    Arg::new("hide-alignment")
+                        .short('A')
+                        .about("Hide alignment"),
+                )
+                .arg(Arg::new("all-bases").short('B').about("Show all bases"))
+                .arg(
+                    Arg::new("pileup")
+                        .short('P')
+                        .about("Show pileup as coverage plot"),
+                )
                 .arg(
                     Arg::new("graph")
                         .short('c')
@@ -426,10 +463,40 @@ fn bam_vis(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::error:
                     }
                 }
                 let mut ann = vec![];
+                let mut idx = bam_files.len();
+                let mut freq = BTreeMap::new();
+                if let Some(freq_files) = matches.values_of("frequency") {
+                    // let bed_files: Vec<_> = matches.values_of("bed").unwrap().collect();
+                    // frequency bed file needs to be (start, score).
+                    let freq_files: Vec<&str> = freq_files.collect();
+                    for (_idx, bed_path) in freq_files.iter().enumerate() {
+                        info!("Loading {}", bed_path);
+                        let mut reader = bed::Reader::from_file(bed_path).unwrap();
+                        let mut values = vec![];
+                        for record in reader.records() {
+                            let record = record?;
+                            if record.end() > string_range.start()
+                                && record.start() < string_range.end()
+                                && record.chrom() == string_range.path
+                            {
+                                values.push([
+                                    record.start(),
+                                    record
+                                        .score()
+                                        .and_then(|t| t.parse::<u64>().ok())
+                                        .unwrap_or(0),
+                                ]);
+                            }
+                        }
+                        freq.insert(idx, values);
+                        idx += 1;
+                    }
+                }
+
                 if let Some(bed_files) = matches.values_of("bed") {
                     // let bed_files: Vec<_> = matches.values_of("bed").unwrap().collect();
                     let bed_files: Vec<&str> = bed_files.collect();
-                    for (idx, bed_path) in bed_files.iter().enumerate() {
+                    for (_idx, bed_path) in bed_files.iter().enumerate() {
                         info!("Loading {}", bed_path);
                         let mut reader = bed::Reader::from_file(bed_path).unwrap();
                         for record in reader.records() {
@@ -441,12 +508,13 @@ fn bam_vis(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::error:
                                 ann.push((idx as u64, record));
                             }
                         }
+                        idx += 1;
                     }
                 }
                 if let Some(gff_files) = matches.values_of("gff3") {
                     // let bed_files: Vec<_> = matches.values_of("bed").unwrap().collect();
                     let gff_files: Vec<&str> = gff_files.collect();
-                    for (idx, gff_path) in gff_files.iter().enumerate() {
+                    for (_idx, gff_path) in gff_files.iter().enumerate() {
                         info!("Loading {}", gff_path);
                         let mut reader =
                             gff::Reader::from_file(gff_path, gff::GffType::GFF3).unwrap();
@@ -468,6 +536,7 @@ fn bam_vis(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::error:
                                 ann.push((idx as u64, record));
                             }
                         }
+                        idx += 1;
                     }
                 }
                 bam_record_vis(matches, string_range, list, ann, |idx| Some(bam_files[idx]))?;

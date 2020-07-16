@@ -3,13 +3,14 @@ use bam::record::{
     tags::{StringType, TagValue},
     Cigar,
 };
-use bam::Record;
+use bam::{Record, RecordReader};
 use clap::ArgMatches;
 use genomic_range::StringRegion;
 use itertools::Itertools;
 use plotters::coord::ReverseCoordTranslate;
 use plotters::prelude::Palette;
 //use plotters::prelude::RGBAColor;
+use bio_types::strand::Strand;
 use plotters::prelude::*;
 use plotters::style::{RGBAColor, RGBColor};
 use rayon::prelude::*;
@@ -55,26 +56,54 @@ predefined_color!(T_COL, 255, 0, 40, "The predefined T color");
 predefined_color!(G_COL, 209, 113, 5, "The predefined G color");
 //RGBColor();
 
-pub fn bam_record_vis<'a, F>(
+//newtype RecordIter<'a> = std::slice::Iter<'a, (u64, Record)>;
+struct RecordIter<'a, I: Iterator<Item = &'a (u64, Record)>>(I);
+
+impl<'a, I> RecordReader for RecordIter<'a, I>
+where
+    I: Iterator<Item = &'a (u64, Record)>,
+{
+    fn read_into(&mut self, record: &mut Record) -> std::io::Result<bool> {
+        if let Some(next_record) = self.0.next() {
+            // record = next_record.1;
+            std::mem::replace(record, next_record.1.clone());
+            Ok(true)
+        } else {
+            Ok(false)
+        }
+    }
+
+    fn pause(&mut self) {}
+}
+
+/// Iterator over records.
+impl<'a, I> Iterator for RecordIter<'a, I>
+where
+    I: Iterator<Item = &'a (u64, Record)>,
+{
+    type Item = std::io::Result<Record>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let mut record = Record::new();
+        match self.read_into(&mut record) {
+            Ok(true) => Some(Ok(record)),
+            Ok(false) => None,
+            Err(e) => Some(Err(e)),
+        }
+    }
+}
+
+pub fn frequency_vis<'a, F>(
     matches: &ArgMatches,
     range: StringRegion,
     mut list: Vec<(u64, Record)>,
-    mut annotation: Vec<(u64, bed::Record)>,
     lambda: F,
 ) -> Result<(), Box<dyn std::error::Error>>
 where
     F: Fn(usize) -> Option<&'a str>,
 {
-    let no_cigar = matches.is_present("no-cigar");
     let output = matches.value_of("output").unwrap();
-    let packing = matches.is_present("packing");
-    let quality = matches.is_present("quality");
-    let legend = matches.is_present("legend");
-    let insertion = !matches.is_present("no-insertion");
-    let split = matches.is_present("split-alignment");
-    let split_only = matches.is_present("only-split-alignment");
-    let sort_by_name = matches.is_present("sort-by-name");
-    let sort_by_cigar = matches.is_present("sort-by-cigar");
+
     let x = matches
         .value_of("x")
         .and_then(|a| a.parse::<u32>().ok())
@@ -83,6 +112,127 @@ where
         .value_of("y")
         .and_then(|a| a.parse::<u32>().ok())
         .unwrap_or(15u32);
+    let freq_size = matches
+        .value_of("freq-height")
+        .and_then(|a| a.parse::<u32>().ok())
+        .unwrap_or(100u32);
+
+    list.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.start().cmp(&b.1.start())));
+    // Calculate coverage; it won't work on sort_by_name
+    let mut frequency = BTreeMap::new(); // Vec::with_capacity();
+    list.iter().group_by(|elt| elt.0).into_iter().for_each(|t| {
+        let mut line = vec![];
+        for column in
+            bam::Pileup::with_filter(&mut RecordIter(t.1), |record| record.flag().no_bits(1796))
+        {
+            let column = column.unwrap();
+            /*println!("Column at {}:{}, {} records", column.ref_id(),
+            column.ref_pos() + 1, column.entries().len());*/
+            // Should we have sparse occurrence table?
+            // eprintln!("{:?} {:?}",  range.path, lambda(column.ref_id() as usize).unwrap_or(&column.ref_id().to_string()));
+            // lambda(column.ref_id() as usize).unwrap_or(&column.ref_id().to_string())
+            // == range.path
+            // &&
+            if range.start <= column.ref_pos() as u64 && column.ref_pos() as u64 <= range.end {
+                line.push((column.ref_pos() as u64, column.entries().len() as u32));
+            }
+        }
+        // eprintln!("{:?}", line);
+        frequency.insert(t.0, line);
+    });
+    let root =
+        BitMapBackend::new(output, (x, frequency.len() as u32 * freq_size)).into_drawing_area();
+    root.fill(&WHITE)?;
+    let root = root.margin(10, 10, 10, 10);
+    // After this point, we should be able to draw construct a chart context
+    // let areas = root.split_by_breakpoints([], compressed_list);
+    if frequency.len() > 0 {
+        let coverages = root.split_evenly((frequency.len(), 1));
+        for (i, (sample_sequential_id, values)) in frequency.iter().enumerate() {
+            let idx = *sample_sequential_id as usize;
+            let mut chart = ChartBuilder::on(&coverages[i])
+                // Set the caption of the chart
+                //.caption(format!("{}", range), ("sans-serif", 20).into_font())
+                // Set the size of the label region
+                .x_label_area_size(20)
+                .y_label_area_size(40)
+                // Finally attach a coordinate on the drawing area and make a chart context
+                .build_ranged(
+                    (range.start() - 1)..(range.end() + 1),
+                    0..values.iter().map(|t| t.1).max().unwrap_or(1),
+                )?;
+            chart
+                .configure_mesh()
+                // We can customize the maximum number of labels allowed for each axis
+                //.x_labels(5)
+                // .y_labels(4)
+                .y_label_style(("sans-serif", 12).into_font())
+                // We can also change the format of the label text
+                .x_label_formatter(&|x| format!("{:.3}", x))
+                .draw()?;
+            let color = Palette99::pick(idx); // BLUE
+            chart
+                .draw_series(
+                    Histogram::vertical(&chart)
+                        .style(color.filled())
+                        .data(values.iter().map(|t| *t)),
+                )?
+                .label(format!("{}", lambda(idx).unwrap_or(&idx.to_string())))
+                .legend(move |(x, y)| {
+                    Rectangle::new(
+                        [(x - 5, y - 5), (x + 5, y + 5)],
+                        Palette99::pick(idx).filled(),
+                    )
+                });
+            chart
+                .configure_series_labels()
+                .background_style(&WHITE.mix(0.8))
+                .border_style(&BLACK)
+                .draw()?;
+        }
+    }
+    Ok(())
+}
+
+pub fn bam_record_vis<'a, F>(
+    matches: &ArgMatches,
+    range: StringRegion,
+    mut list: Vec<(u64, Record)>,
+    mut annotation: Vec<(u64, bed::Record)>,
+    //mut frequency: BTreeMap<(u64, Vec<[u64;2]>)>
+    lambda: F,
+) -> Result<(), Box<dyn std::error::Error>>
+where
+    F: Fn(usize) -> Option<&'a str>,
+{
+    let diff = range.end() - range.start();
+    let output = matches.value_of("output").unwrap();
+    let no_cigar = matches.is_present("no-cigar");
+    let packing = matches.is_present("packing");
+    let quality = matches.is_present("quality");
+    let legend = matches.is_present("legend");
+    let insertion = !matches.is_present("no-insertion");
+    let split = matches.is_present("split-alignment");
+    let split_only = matches.is_present("only-split-alignment");
+    let sort_by_name = matches.is_present("sort-by-name");
+    let sort_by_cigar = matches.is_present("sort-by-cigar");
+    let pileup = matches.is_present("pileup");
+    let hide_alignment = matches.is_present("hide-alignment");
+    if hide_alignment {
+        return frequency_vis(matches, range, list, lambda);
+    }
+    let x = matches
+        .value_of("x")
+        .and_then(|a| a.parse::<u32>().ok())
+        .unwrap_or(1280u32);
+    let y = matches
+        .value_of("y")
+        .and_then(|a| a.parse::<u32>().ok())
+        .unwrap_or(15u32);
+    let freq_size = matches
+        .value_of("freq-height")
+        .and_then(|a| a.parse::<u32>().ok())
+        .unwrap_or(50u32);
     let graph = matches
         .value_of("graph")
         //.and_then(|a| fs::read_to_string(a).ok())
@@ -104,6 +254,32 @@ where
     } else {
         list.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.start().cmp(&b.1.start())));
     }
+
+    // Calculate coverage; it won't work on sort_by_name
+    let mut frequency = BTreeMap::new(); // Vec::with_capacity();
+    if pileup {
+        list.iter().group_by(|elt| elt.0).into_iter().for_each(|t| {
+            let mut line = vec![];
+            for column in
+                bam::Pileup::with_filter(&mut RecordIter(t.1), |record| record.flag().no_bits(1796))
+            {
+                let column = column.unwrap();
+                /*println!("Column at {}:{}, {} records", column.ref_id(),
+                column.ref_pos() + 1, column.entries().len());*/
+                // Should we have sparse occurrence table?
+                // eprintln!("{:?} {:?}",  range.path, lambda(column.ref_id() as usize).unwrap_or(&column.ref_id().to_string()));
+                // lambda(column.ref_id() as usize).unwrap_or(&column.ref_id().to_string())
+                // == range.path
+                // &&
+                if range.start <= column.ref_pos() as u64 && column.ref_pos() as u64 <= range.end {
+                    line.push((column.ref_pos() as u64, column.entries().len() as u32));
+                }
+            }
+            // eprintln!("{:?}", line);
+            frequency.insert(t.0, line);
+        });
+    }
+
     annotation.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.start().cmp(&b.1.start())));
     /*
     let iterator = if packing {
@@ -376,7 +552,8 @@ where
         output,
         (
             x,
-            40 + (prev_index as u32 + axis_count as u32 + annotation_count as u32 * 2) * y,
+            40 + (prev_index as u32 + axis_count as u32 + annotation_count as u32 * 2) * y
+                + frequency.len() as u32 * freq_size,
         ),
     )
     .into_drawing_area();
@@ -384,8 +561,56 @@ where
     let root = root.margin(10, 10, 10, 10);
     // After this point, we should be able to draw construct a chart context
     // let areas = root.split_by_breakpoints([], compressed_list);
+    let (alignment, coverage) = root.split_vertically(
+        40 + (prev_index as u32 + axis_count as u32 + annotation_count as u32 * 2) * y,
+    );
     eprintln!("{:?} {:?} {:?}", prev_index, axis_count, annotation_count);
-    let mut chart = ChartBuilder::on(&root)
+    if frequency.len() > 0 {
+        let coverages = coverage.split_evenly((frequency.len(), 1));
+        for (i, (sample_sequential_id, values)) in frequency.iter().enumerate() {
+            let idx = *sample_sequential_id as usize;
+            let mut chart = ChartBuilder::on(&coverages[i])
+                // Set the caption of the chart
+                //.caption(format!("{}", range), ("sans-serif", 20).into_font())
+                // Set the size of the label region
+                .x_label_area_size(0)
+                .y_label_area_size(40)
+                // Finally attach a coordinate on the drawing area and make a chart context
+                .build_ranged(
+                    (range.start() - 1)..(range.end() + 1),
+                    0..values.iter().map(|t| t.1).max().unwrap_or(1),
+                )?;
+            chart
+                .configure_mesh()
+                // We can customize the maximum number of labels allowed for each axis
+                //.x_labels(5)
+                // .y_labels(4)
+                .y_label_style(("sans-serif", 12).into_font())
+                // We can also change the format of the label text
+                // .x_label_formatter(&|x| format!("{:.3}", x))
+                .draw()?;
+            let color = Palette99::pick(idx); // BLUE
+            chart
+                .draw_series(
+                    Histogram::vertical(&chart)
+                        .style(color.filled())
+                        .data(values.iter().map(|t| *t)),
+                )?
+                .label(format!("{}", lambda(idx).unwrap_or(&idx.to_string())))
+                .legend(move |(x, y)| {
+                    Rectangle::new(
+                        [(x - 5, y - 5), (x + 5, y + 5)],
+                        Palette99::pick(idx).filled(),
+                    )
+                });
+            chart
+                .configure_series_labels()
+                .background_style(&WHITE.mix(0.8))
+                .border_style(&BLACK)
+                .draw()?;
+        }
+    }
+    let mut chart = ChartBuilder::on(&alignment)
         // Set the caption of the chart
         .caption(format!("{}", range), ("sans-serif", 20).into_font())
         // Set the size of the label region
@@ -426,7 +651,7 @@ where
         node_id_dict.insert(prev_node_id, (prev_pos, range.end()));
     }
 
-    // Draw annotation axis if there is graph information.
+    // Draw annotation if there is bed-compatible annotation.
     annotation
         .into_iter()
         .group_by(|elt| elt.0)
@@ -449,6 +674,11 @@ where
                         };
                         let end = if end < range.end() { end } else { range.end() };
                         let stroke = Palette99::pick(index as usize);
+                        let outer_stroke = match record.strand() {
+                            Some(Strand::Forward) => POS_COL.mix(0.8),
+                            Some(Strand::Reverse) => NEG_COL.mix(0.8),
+                            _ => TRANSPARENT,
+                        };
                         /*let mut bar2 = Rectangle::new(
                             [(start, prev_index + key), (end, prev_index + key + 1)],
                             stroke.stroke_width(2),
@@ -461,7 +691,16 @@ where
                                     (start, prev_index + key * 2 + axis_count + 1),
                                     (end, prev_index + key * 2 + axis_count + 1),
                                 ],
-                                stroke.stroke_width(y),
+                                outer_stroke.stroke_width(y),
+                            ))
+                            .unwrap();
+                        chart
+                            .draw_series(LineSeries::new(
+                                vec![
+                                    (start, prev_index + key * 2 + axis_count + 1),
+                                    (end, prev_index + key * 2 + axis_count + 1),
+                                ],
+                                stroke.stroke_width(y / 3 * 4),
                             ))
                             .unwrap()
                             .label(format!("{}", record.name().unwrap_or(&"")))
