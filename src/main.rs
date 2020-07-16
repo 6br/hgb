@@ -10,7 +10,9 @@ fn main() {
     let matches = App::new("GHB/GHI genomic data visualization tool")
         .version("0.1")
         .author("6br. ")
-        .about("Command-line visualization tool for read alignment, ranged annotation and frequency.")
+        .about(
+            "Command-line visualization tool for read alignment, ranged annotation and frequency.",
+        )
         .arg(
             Arg::new("verbose")
                 .short('v')
@@ -104,7 +106,7 @@ fn main() {
                 )
                 .arg(Arg::new("filter").short('f').about("Pre-filter"))
                 .arg(Arg::new("binary").short('b').about("Binary"))
-/*                .arg(Arg::new("vis").short('v').about("Binary"))
+                /*                .arg(Arg::new("vis").short('v').about("Binary"))
                 .arg(Arg::new("no-cigar").short('n').about("Binary"))
                 .arg(Arg::new("packing").short('p').about("Binary"))
                 .arg(Arg::new("legend").short('l').about("Legend"))
@@ -278,7 +280,7 @@ fn main() {
                         .short('L')
                         .multiple(true)
                         .takes_value(true)
-                        .about("sorted bam"),
+                        .about("A subset of sorted bed to display as annotation track"),
                 )
                 .arg(
                     Arg::new("type")
@@ -286,21 +288,21 @@ fn main() {
                         .takes_value(true)
                         // .default_value("default")
                         .possible_values(&["alignment", "range", "default"])
-                        .about("annotation type to fetch"),
+                        .about("The type of GHB data structure to display (used for debugging.)"),
                 )
                 .arg(
                     Arg::new("id")
                         .short('i')
                         .takes_value(true)
                         .multiple(true)
-                        .about("annotation sample to fetch"),
+                        .about("Indices on GHB data structure to display (used for debugging.)"),
                 )
                 .arg(
                     Arg::new("frequency")
                         .short('F')
                         .takes_value(true)
                         .multiple(true)
-                        .about("sorted bed for coverage plot"),
+                        .about("A subset of sorted bed for coverage plot (used start and score)"),
                 )
                 .arg(Arg::new("filter").short('f').about("Pre-filter"))
                 .arg(Arg::new("binary").short('b').about("Binary"))
@@ -372,7 +374,8 @@ fn main() {
                         .takes_value(true)
                         .multiple(true)
                         .about("sorted bed"),
-                ).arg(
+                )
+                .arg(
                     Arg::new("INPUT")
                         .about("Sets the input file to use")
                         .index(1),
@@ -423,9 +426,10 @@ fn main() {
     } else if let Some(ref matches) = matches.subcommand_matches("bin") {
         bin(matches, threads);
     } else if let Some(ref matches) = matches.subcommand_matches("vis") {
+        eprintln!("{:?}", matches.is_present("input"));
         match matches.is_present("input") {
             true => vis_query(matches, threads).unwrap(),
-            false => bam_vis(matches, threads).unwrap()
+            false => bam_vis(matches, threads).unwrap(),
         }
     }
 }

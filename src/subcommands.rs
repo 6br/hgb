@@ -36,21 +36,18 @@ pub fn bam_vis(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::er
                     // let reader = bam::BamReader::from_path(bam_path, threads).unwrap();
                     let mut reader2 = bam::IndexedReader::build()
                         .additional_threads(threads - 1)
-                        .from_path(bam_path)
-                        .unwrap();
+                        .from_path(bam_path)?;
 
                     // Here all threads can be used, but I suspect that runs double
                     //reader2.fetch()
-                    let ref_id = reader2.header().reference_id(string_range.path.as_ref());
-                    let viewer = reader2
-                        .fetch(&bam::bam_reader::Region::new(
-                            ref_id.unwrap(),
-                            string_range.start as u32,
-                            string_range.end as u32,
-                        ))
-                        .unwrap();
+                    let ref_id = reader2.header().reference_id(string_range.path.as_ref())?;
+                    let viewer = reader2.fetch(&bam::bam_reader::Region::new(
+                        ref_id,
+                        string_range.start as u32,
+                        string_range.end as u32,
+                    ))?;
                     for record in viewer {
-                        list.push((index as u64, record.unwrap()));
+                        list.push((index as u64, record?));
                     }
                 }
                 let mut ann = vec![];
@@ -62,7 +59,7 @@ pub fn bam_vis(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::er
                     let freq_files: Vec<&str> = freq_files.collect();
                     for (_idx, bed_path) in freq_files.iter().enumerate() {
                         info!("Loading {}", bed_path);
-                        let mut reader = bed::Reader::from_file(bed_path).unwrap();
+                        let mut reader = bed::Reader::from_file(bed_path)?;
                         let mut values = vec![];
                         for record in reader.records() {
                             let record = record?;
@@ -89,7 +86,7 @@ pub fn bam_vis(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::er
                     let bed_files: Vec<&str> = bed_files.collect();
                     for (_idx, bed_path) in bed_files.iter().enumerate() {
                         info!("Loading {}", bed_path);
-                        let mut reader = bed::Reader::from_file(bed_path).unwrap();
+                        let mut reader = bed::Reader::from_file(bed_path)?;
                         for record in reader.records() {
                             let record = record?;
                             if record.end() > string_range.start()
