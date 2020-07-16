@@ -302,14 +302,13 @@ fn main() {
                         .short('F')
                         .takes_value(true)
                         .multiple(true)
-                        .about("A subset of sorted bed for coverage plot (used start and score)"),
+                        .about("A subset of sorted bed for coverage plot (start and score fields are used)"),
                 )
-                .arg(Arg::new("filter").short('f').about("Pre-filter"))
-                .arg(Arg::new("binary").short('b').about("Binary"))
-                .arg(Arg::new("no-cigar").short('n').about("Binary"))
-                .arg(Arg::new("packing").short('p').about("Binary"))
-                .arg(Arg::new("legend").short('l').about("Legend"))
-                .arg(Arg::new("quality").short('q').about("Quality"))
+                .arg(Arg::new("no-filter").short('f').about("Disable pre-filtering on loading BAM index (used for debugging)"))
+                .arg(Arg::new("no-cigar").short('n').about("Do not show cigar string"))
+                .arg(Arg::new("no-packing").short('p').about("Disable read packing"))
+                .arg(Arg::new("legend").short('l').about("Show legend"))
+                .arg(Arg::new("quality").short('q').about("Display reads by quality value"))
                 .arg(Arg::new("x").short('x').takes_value(true).about("x"))
                 .arg(Arg::new("y").short('y').takes_value(true).about("y"))
                 .arg(
@@ -348,6 +347,7 @@ fn main() {
                         .short('P')
                         .about("Show pileup as coverage plot"),
                 )
+                .arg(Arg::new("only-translocation").short('T').about("Show all bases"))
                 .arg(
                     Arg::new("graph")
                         .short('c')

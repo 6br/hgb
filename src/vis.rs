@@ -211,9 +211,9 @@ where
     let diff = range.end() - range.start();
     let output = matches.value_of("output").unwrap();
     let no_cigar = matches.is_present("no-cigar");
-    let packing = matches.is_present("packing");
+    let packing = !matches.is_present("no-packing");
     let quality = matches.is_present("quality");
-    let legend = matches.is_present("legend");
+    let legend = !matches.is_present("no-legend");
     let insertion = !matches.is_present("no-insertion");
     let split = matches.is_present("split-alignment");
     let split_only = matches.is_present("only-split-alignment");
@@ -221,6 +221,7 @@ where
     let sort_by_cigar = matches.is_present("sort-by-cigar");
     let pileup = matches.is_present("pileup");
     let hide_alignment = matches.is_present("hide-alignment");
+    let only_translocation = matches.is_present("only-translocation");
     if hide_alignment {
         return frequency_vis(matches, range, list, lambda);
     }
@@ -899,8 +900,11 @@ where
                                     current_left_clip,
                                     cigar.soft_clipping(strand == "+"),
                                 );*/
-
-                                Some(cigar.soft_clipping(strand == "+"))
+                                if only_translocation && t[0] == range.path {
+                                    None
+                                } else {
+                                    Some(cigar.soft_clipping(strand == "+"))
+                                }
                             })
                             .filter_map(|t| t)
                             .collect();
@@ -912,6 +916,7 @@ where
                             .iter()
                             .find(|t| t > &&current_left_clip)
                             .is_some();
+
                         let color = SPL_COL;
                         if ((is_smaller && !bam.flag().is_reverse_strand())
                             || (is_larger && bam.flag().is_reverse_strand()))
