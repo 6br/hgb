@@ -18,7 +18,7 @@ use ghi::twopass_alignment::{Alignment, AlignmentBuilder};
 use ghi::vis::bam_record_vis;
 use ghi::writer::GhiWriter;
 use ghi::{gff, reader::IndexedReader, IndexWriter};
-use io::{BufReader, Write};
+use io::{BufReader, Error, ErrorKind, Write};
 
 pub fn bam_vis(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::error::Error>> {
     // let output_path = matches.value_of("OUTPUT").unwrap();
@@ -40,7 +40,10 @@ pub fn bam_vis(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::er
 
                     // Here all threads can be used, but I suspect that runs double
                     //reader2.fetch()
-                    let ref_id = reader2.header().reference_id(string_range.path.as_ref())?;
+                    let ref_id = reader2
+                        .header()
+                        .reference_id(string_range.path.as_ref())
+                        .ok_or(Error::new(ErrorKind::Other, "Invalid reference id."))?;
                     let viewer = reader2.fetch(&bam::bam_reader::Region::new(
                         ref_id,
                         string_range.start as u32,
