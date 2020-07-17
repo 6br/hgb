@@ -287,6 +287,14 @@ fn main() {
                         .about("The type of GHB data structure to display (used for debugging.)"),
                 )
                 .arg(
+                    Arg::new("preset")
+                        .short('z')
+                        .takes_value(true)
+                        // .default_value("auto")
+                        .possible_values(&["","auto", "base", "gene", "chrom", "sv", "qual"])
+                        .about("Preset (always applied before other options)"),
+                )
+                .arg(
                     Arg::new("id")
                         .short('i')
                         .takes_value(true)
@@ -329,7 +337,7 @@ fn main() {
                 .arg(
                     Arg::new("sort-by-cigar")
                         .short('C')
-                        .about("Display each split-alignment connection as a line"),
+                        .about("Display each split-alignment connection as a colored line"),
                 )
                 .arg(Arg::new("no-insertion").short('I').about("Hide insertion callets on read alignments"))
                 .arg(

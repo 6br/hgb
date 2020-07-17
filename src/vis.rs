@@ -1,4 +1,4 @@
-use crate::bed;
+use crate::{bed, VisPreset};
 use bam::record::{
     tags::{StringType, TagValue},
     Cigar,
@@ -205,6 +205,8 @@ where
     F: Fn(usize) -> Option<&'a str>,
 {
     // let diff = range.end() - range.start();
+    let preset: VisPreset = matches.value_of_t("preset").unwrap_or_else(|e| e.exit());
+
     let output = matches.value_of("output").unwrap();
     let no_cigar = matches.is_present("no-cigar");
     let packing = !matches.is_present("no-packing");
@@ -561,7 +563,7 @@ where
         ),
     )
     .into_drawing_area();
-    let approximate_one_pixel = ((range.end() - range.start()) / x as u64) as u32;
+    let approximate_one_pixel = 1; //((range.end() - range.start()) / x as u64) as u32;
     root.fill(&WHITE)?;
     let root = root.margin(10, 10, 10, 10);
     // After this point, we should be able to draw construct a chart context
