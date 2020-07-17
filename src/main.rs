@@ -1,7 +1,7 @@
 extern crate log;
 pub mod subcommands;
 
-use clap::{App, AppSettings, Arg};
+use clap::{App, AppSettings, Arg, ArgSettings};
 use env_logger;
 use subcommands::*;
 
@@ -289,10 +289,12 @@ fn main() {
                 .arg(
                     Arg::new("preset")
                         .short('z')
-                        .takes_value(true)
+                        //.takes_value(true)
+                        // .empty_values(true)
                         // .default_value("auto")
+                        //.setting(ArgSettings::AllowEmptyValues)
                         .possible_values(&["","auto", "base", "gene", "chrom", "sv", "qual"])
-                        .about("Preset (always applied before other options)"),
+                        .about("Preset (always overwrites other options) ['auto', 'base', 'gene', 'chrom', 'sv', 'qual']"),
                 )
                 .arg(
                     Arg::new("id")

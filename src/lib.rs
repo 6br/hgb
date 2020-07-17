@@ -28,6 +28,7 @@ pub mod writer;
 
 use bam::IndexedReader;
 use checker_index::Index;
+use genomic_range::StringRegion;
 use io::Seek;
 use range::InvertedRecord;
 use range::{Format, Record};
@@ -36,7 +37,6 @@ use std::{
     io::{Read, Result, Write},
     str::FromStr,
 };
-use genomic_range::StringRegion;
 
 /// A trait for writing records.
 pub trait ChunkWriter<R: Read + Seek> {
@@ -119,7 +119,8 @@ pub trait Annotation {
     fn name(&self) -> &str;
 }
 
-// Visualization Presets
+/// Visualization Presets
+#[derive(Debug)]
 pub enum VisPreset {
     Auto,       // Switch presets Depends on range length.
     Base,       // all cigars and insertions, compatible with IGV
