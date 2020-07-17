@@ -12,8 +12,8 @@ use plotters::prelude::Palette;
 //use plotters::prelude::RGBAColor;
 use bio_types::strand::Strand;
 use plotters::prelude::*;
-use plotters::style::{RGBAColor, RGBColor};
-use rayon::prelude::*;
+use plotters::style::RGBColor;
+// use rayon::prelude::*;
 use std::{
     collections::{BTreeMap, HashMap},
     fs::File,
@@ -110,10 +110,6 @@ where
         .value_of("x")
         .and_then(|a| a.parse::<u32>().ok())
         .unwrap_or(1280u32);
-    let y = matches
-        .value_of("y")
-        .and_then(|a| a.parse::<u32>().ok())
-        .unwrap_or(15u32);
     let freq_size = matches
         .value_of("freq-height")
         .and_then(|a| a.parse::<u32>().ok())
@@ -208,7 +204,7 @@ pub fn bam_record_vis<'a, F>(
 where
     F: Fn(usize) -> Option<&'a str>,
 {
-    let diff = range.end() - range.start();
+    // let diff = range.end() - range.start();
     let output = matches.value_of("output").unwrap();
     let no_cigar = matches.is_present("no-cigar");
     let packing = !matches.is_present("no-packing");
@@ -220,6 +216,7 @@ where
     let sort_by_name = matches.is_present("sort-by-name");
     let sort_by_cigar = matches.is_present("sort-by-cigar");
     let pileup = matches.is_present("pileup");
+    let all_bases = matches.is_present("all-bases");
     let hide_alignment = matches.is_present("hide-alignment");
     let only_translocation = matches.is_present("only-translocation");
     if hide_alignment {
@@ -1013,6 +1010,16 @@ where
                                             if prev_ref > range.end() as u64 {
                                                 break;
                                             }
+                                            if prev_ref >= range.start() as u64 && all_bases {
+                                                let record_nt = entry.record_pos_nt().unwrap().1;
+                                                color = match record_nt as char {
+                                                    'A' => Some(A_COL), //RED,
+                                                    'C' => Some(C_COL), // BLUE,
+                                                    'G' => Some(G_COL),
+                                                    'T' => Some(T_COL), //GREEN,
+                                                    _ => Some(N_COL),
+                                                };
+                                            }
                                         } else {
                                             /* Mismatch */
                                             prev_ref = entry.ref_pos_nt().unwrap().0 as u64;
@@ -1155,10 +1162,7 @@ where
                 .x_label_area_size(0)
                 .y_label_area_size(40)
                 // Finally attach a coordinate on the drawing area and make a chart context
-                .build_ranged(
-                    (range.start() - 1)..(range.end() + 1),
-                    0..y_max,
-                )?;
+                .build_ranged((range.start() - 1)..(range.end() + 1), 0..y_max)?;
             chart
                 .configure_mesh()
                 // We can customize the maximum number of labels allowed for each axis

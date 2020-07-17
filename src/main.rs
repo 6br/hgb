@@ -302,13 +302,13 @@ fn main() {
                 .arg(Arg::new("no-packing").short('p').about("Disable read packing"))
                 .arg(Arg::new("legend").short('l').about("Show legend"))
                 .arg(Arg::new("quality").short('q').about("Display reads by quality value"))
-                .arg(Arg::new("x").short('x').takes_value(true).about("x"))
-                .arg(Arg::new("y").short('y').takes_value(true).about("y"))
+                .arg(Arg::new("x").short('x').takes_value(true).about("The width of image"))
+                .arg(Arg::new("y").short('y').takes_value(true).about("The height of each read alignment"))
                 .arg(
                     Arg::new("freq-height")
                         .short('Y')
                         .takes_value(true)
-                        .about("yf"),
+                        .about("The height of each coverage track"),
                 )
                 .arg(
                     Arg::new("max-coverage")
@@ -316,8 +316,8 @@ fn main() {
                         .takes_value(true)
                         .about("Max coverage value on coverage track"),
                 )
-                .arg(Arg::new("split-alignment").short('s').about("No-md"))
-                .arg(Arg::new("only-split-alignment").short('u').about("No-md"))
+                .arg(Arg::new("split-alignment").short('s').about("Display split alignments in the same "))
+                .arg(Arg::new("only-split-alignment").short('u').about("Display only split alignments or mate-paired reads on alignment track"))
                 .arg(
                     Arg::new("sort-by-name")
                         .short('N')
@@ -326,7 +326,7 @@ fn main() {
                 .arg(
                     Arg::new("sort-by-cigar")
                         .short('C')
-                        .about("Sort alignments by cigar (read-id)"),
+                        .about("Display each split-alignment connection as a line"),
                 )
                 .arg(Arg::new("no-insertion").short('I').about("Hide insertion callets on read alignments"))
                 .arg(
@@ -377,7 +377,7 @@ fn main() {
                 )
                 .arg(
                     Arg::new("INPUT")
-                        .about("[Input] GHB format to display both alignment and annotation tracks")
+                        .about("(Optional) GHB format to display both alignment and annotation tracks")
                         .index(1),
                 ),
         )
