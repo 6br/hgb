@@ -36,6 +36,7 @@ use std::{
     io::{Read, Result, Write},
     str::FromStr,
 };
+use genomic_range::StringRegion;
 
 /// A trait for writing records.
 pub trait ChunkWriter<R: Read + Seek> {
@@ -117,7 +118,7 @@ pub trait Annotation {
     fn end(&self) -> u64;
     fn name(&self) -> &str;
 }
-/*
+
 // Visualization Presets
 pub enum VisPreset {
     Auto,       // Switch presets Depends on range length.
@@ -129,12 +130,12 @@ pub enum VisPreset {
 }
 
 impl VisPreset {
-    pub fn augment(range: StringRange) -> VisPreset {
+    pub fn augment(range: StringRegion) -> VisPreset {
         let diff = range.end() - range.start();
-        if diff < 10000 {
+        if diff <= 10000 {
             VisPreset::Base
-        } else if diff < 100000 {
-
+        } else if diff <= 100000 {
+            VisPreset::Gene
         } else {
             VisPreset::Chromosome
         }
@@ -157,7 +158,7 @@ impl FromStr for VisPreset {
         }
     }
 }
-*/
+
 #[cfg(test)]
 mod tests {
     use crate::bed;

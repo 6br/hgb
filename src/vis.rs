@@ -561,6 +561,7 @@ where
         ),
     )
     .into_drawing_area();
+    let approximate_one_pixel = ((range.end() - range.start()) / x as u64) as u32;
     root.fill(&WHITE)?;
     let root = root.margin(10, 10, 10, 10);
     // After this point, we should be able to draw construct a chart context
@@ -922,11 +923,11 @@ where
                             // split alignment on left
                             let mut bar = Rectangle::new(
                                 [(start, index), (start + 1, index + 1)],
-                                color.stroke_width(3), //.filled(),
+                                color.stroke_width(2), //.filled(),
                             );
                             bar.set_margin(0, 0, 0, 0);
                             bars.push(bar);
-                            split_frequency.push((data.0, (start, 1)));
+                            split_frequency.push((data.0, (start, approximate_one_pixel)));
                         }
                         if ((is_larger && !bam.flag().is_reverse_strand())
                             || (is_smaller && bam.flag().is_reverse_strand()))
@@ -939,7 +940,7 @@ where
                             );
                             bar.set_margin(0, 0, 0, 0);
                             bars.push(bar);
-                            split_frequency.push((data.0, (end, 1)));
+                            split_frequency.push((data.0, (end, approximate_one_pixel)));
                         }
                         /*eprintln!(
                             "SA = {}, {:?},

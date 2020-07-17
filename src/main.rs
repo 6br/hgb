@@ -1,13 +1,16 @@
 extern crate log;
 pub mod subcommands;
 
-use clap::{App, Arg};
+use clap::{App, AppSettings, Arg};
 use env_logger;
 use subcommands::*;
 
 fn main() {
     env_logger::init();
     let matches = App::new("GHB/GHI genomic data visualization tool")
+        // .setting(AppSettings::ArgsNegateSubcommands)
+        .setting(AppSettings::SubcommandRequiredElseHelp)
+        .setting(AppSettings::UnifiedHelpMessage)
         .version("0.1")
         .author("6br. ")
         .about(
