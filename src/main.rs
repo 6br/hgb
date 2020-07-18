@@ -279,6 +279,13 @@ fn main() {
                         .about("Genomic range to visualize. Format is chr:from-to."),
                 )
                 .arg(
+                    Arg::new("prefetch-range")
+                        .short('R')
+                        .takes_value(true)
+                        .multiple(true)
+                        .about("Genomic range to pre-fetch. Optional. The same order as range option. Format is chr:from-to."),
+                )
+                .arg(
                     Arg::new("type")
                         .short('t')
                         .takes_value(true)
@@ -312,7 +319,7 @@ fn main() {
                 )
                 .arg(Arg::new("no-filter").short('f').about("Disable pre-filtering on loading BAM index (used for debugging)"))
                 .arg(Arg::new("no-cigar").short('n').about("Do not show cigar string"))
-                .arg(Arg::new("no-ruler").short('R').about("Do not show y-axis ruler"))
+                .arg(Arg::new("no-scale").short('S').about("Do not show y-axis scale"))
                 .arg(Arg::new("no-packing").short('p').about("Disable read packing"))
                 .arg(Arg::new("legend").short('l').about("Show legend"))
                 .arg(Arg::new("quality").short('q').about("Display reads by quality value"))
