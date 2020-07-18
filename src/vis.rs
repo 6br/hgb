@@ -141,7 +141,7 @@ where
     let root =
         BitMapBackend::new(output, (x, frequency.len() as u32 * freq_size)).into_drawing_area();
     root.fill(&WHITE)?;
-    let root = root.margin(10, 10, 10, 10);
+    let root = root.margin(10, 10, 0, 0);
     // After this point, we should be able to draw construct a chart context
     // let areas = root.split_by_breakpoints([], compressed_list);
     if frequency.len() > 0 {
@@ -207,7 +207,7 @@ where
     // let diff = range.end() - range.start();
     let preset: Option<VisPreset> = matches.value_of_t("preset").ok(); // .unwrap_or_else(|e| e.exit());
     eprintln!("Preset: {:?}", preset);
-
+    let no_margin = matches.is_present("no-ruler");
     let output = matches.value_of("output").unwrap();
     let no_cigar = matches.is_present("no-cigar");
     let packing = !matches.is_present("no-packing");
@@ -416,7 +416,7 @@ where
                     k.1.calculate_end()
                 };
 
-                let index = if sort_by_name {
+                let mut index = if sort_by_name {
                     prev_index += 1;
                     e
                 } else if let Some(index) = name_index.get(k.1.name()) {
@@ -444,9 +444,17 @@ where
                         ));
                     }
                 }
+                if let Some(max_cov) = max_coverage {
+                    if index > max_cov as usize {
+                        index = max_cov as usize;
+                    }
+                }
                 index_list.push(index + last_prev_index);
                 name_index.insert(k.1.name(), index);
             });
+            if let Some(max_cov) = max_coverage {
+                prev_index = max_cov as usize + last_prev_index;
+            }
             compressed_list.push((t.0, prev_index));
             last_prev_index = prev_index;
         });
@@ -457,7 +465,7 @@ where
                 let mut packing = vec![0u64];
                 prev_index += 1;
                 (t.1).for_each(|k| {
-                    let index = if let Some(index) = packing
+                    let mut index = if let Some(index) = packing
                         .iter_mut()
                         .enumerate()
                         .find(|(_, item)| **item < k.1.start() as u64)
@@ -485,6 +493,12 @@ where
                            index
                        };*/
                     //let index =
+                    if let Some(max_cov) = max_coverage {
+                        if index > max_cov as usize {
+                            index = max_cov as usize;
+                            prev_index = max_cov as usize + last_prev_index;
+                        }
+                    }
                     index_list.push(index + last_prev_index);
                     // eprintln!("{:?}", packing);
                     //(index, (k.0, k.1))
@@ -492,6 +506,9 @@ where
                     // compressed_list.push(prev_index);
                     //compressed_list.insert(t.0, prev_index);
                     //prev_index += 1;
+                if let Some(max_cov) = max_coverage {
+                    prev_index = max_cov as usize + last_prev_index;
+                }
                 compressed_list.push((t.0, prev_index));
                 //eprintln!("{:?} {:?} {:?}", compressed_list, packing, index_list);
                 last_prev_index = prev_index;
@@ -499,7 +516,9 @@ where
                 // .collect::<&(u64, Record)>(). // collect::<Vec<(usize, (u64, Record))>>
             });
         } else {
+            // Now does not specify the maximal length by max_coverage.
             index_list = (0..list.len()).collect();
+
             // list.sort_by(|a, b| a.0.cmp(&b.0));
             // eprintln!("{}", list.len());
             list.iter().group_by(|elt| elt.0).into_iter().for_each(
@@ -566,20 +585,21 @@ where
     .into_drawing_area();
     let approximate_one_pixel = 1; //((range.end() - range.start()) / x as u64) as u32;
     root.fill(&WHITE)?;
-    let root = root.margin(10, 10, 10, 10);
+    let root = root.margin(10, 10, 0, 0);
     // After this point, we should be able to draw construct a chart context
     // let areas = root.split_by_breakpoints([], compressed_list);
     let (alignment, coverage) = root.split_vertically(
         40 + (prev_index as u32 + axis_count as u32 + annotation_count as u32 * 2) * y,
     );
     eprintln!("{:?} {:?} {:?}", prev_index, axis_count, annotation_count);
+    let y_area_size = if no_margin { 0 } else { 40 };
 
     let mut chart = ChartBuilder::on(&alignment)
         // Set the caption of the chart
         .caption(format!("{}", range), ("sans-serif", 20).into_font())
         // Set the size of the label region
         .x_label_area_size(20)
-        .y_label_area_size(40)
+        .y_label_area_size(y_area_size)
         // Finally attach a coordinate on the drawing area and make a chart context
         .build_ranged(
             (range.start() - 1)..(range.end() + 1),
@@ -1164,7 +1184,7 @@ where
                 //.caption(format!("{}", range), ("sans-serif", 20).into_font())
                 // Set the size of the label region
                 .x_label_area_size(0)
-                .y_label_area_size(40)
+                .y_label_area_size(y_area_size)
                 // Finally attach a coordinate on the drawing area and make a chart context
                 .build_ranged((range.start() - 1)..(range.end() + 1), 0..y_max)?;
             chart
@@ -1206,11 +1226,13 @@ where
                     Palette99::pick(idx).filled(),
                 )
             });*/
-            chart
-                .configure_series_labels()
-                .background_style(&WHITE.mix(0.8))
-                .border_style(&BLACK)
-                .draw()?;
+            if !no_margin {
+                chart
+                    .configure_series_labels()
+                    .background_style(&WHITE.mix(0.8))
+                    .border_style(&BLACK)
+                    .draw()?;
+            }
         }
     }
 

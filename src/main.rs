@@ -312,6 +312,7 @@ fn main() {
                 )
                 .arg(Arg::new("no-filter").short('f').about("Disable pre-filtering on loading BAM index (used for debugging)"))
                 .arg(Arg::new("no-cigar").short('n').about("Do not show cigar string"))
+                .arg(Arg::new("no-ruler").short('R').about("Do not show y-axis ruler"))
                 .arg(Arg::new("no-packing").short('p').about("Disable read packing"))
                 .arg(Arg::new("legend").short('l').about("Show legend"))
                 .arg(Arg::new("quality").short('q').about("Display reads by quality value"))
