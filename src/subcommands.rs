@@ -5,8 +5,6 @@ use genomic_range::StringRegion;
 
 use log::{debug, info};
 // use rayon::prelude::*;
-use std::{collections::BTreeMap, fs::File, io, path::Path};
-
 use ghi::bed;
 use ghi::binary::GhbWriter;
 use ghi::builder::InvertedRecordBuilder;
@@ -19,14 +17,37 @@ use ghi::vis::bam_record_vis;
 use ghi::writer::GhiWriter;
 use ghi::{gff, reader::IndexedReader, IndexWriter};
 use io::{BufReader, Error, ErrorKind, Write};
+use itertools::EitherOrBoth::{Both, Left};
+use itertools::Itertools;
+use std::{collections::BTreeMap, fs::File, io, path::Path};
 
 pub fn bam_vis(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::error::Error>> {
     // let output_path = matches.value_of("OUTPUT").unwrap();
 
     if let Some(ranges) = matches.values_of("range") {
         let ranges: Vec<&str> = ranges.collect();
-        for range in ranges {
+        let prefetch_ranges: Vec<&str> = matches
+            .values_of("prefetch-range")
+            .and_then(|t| Some(t.collect()))
+            .unwrap_or(vec![]);
+        /*let ranged_zip = if let Some(prefetch_ranges) = prefetch_ranges {
+            ranges.into_iter().zip(prefetch_ranges)
+        } else {
+            ranges.into_iter().zip(ranges.clone())
+        };*/
+        for eob in ranges.into_iter().zip_longest(prefetch_ranges) {
+            let (prefetch_str, range) = match eob {
+                Both(a, b) => (a, b),
+                Left(a) => (a, a),
+                _ => panic!("Range is not specified."),
+            };
             let string_range = StringRegion::new(range).unwrap();
+            let prefetch_range = StringRegion::new(prefetch_str).unwrap();
+            /*let prefetch_range = if let Some(prefetch_ranges) = prefetch_ranges {
+                StringRegion::new(prefetch_ranges[index])?
+            } else {
+                string_range
+            };*/
             if let Some(bam_files) = matches.values_of("bam") {
                 let bam_files: Vec<&str> = bam_files.collect();
                 let mut list: Vec<(u64, Record)> = vec![];
@@ -42,12 +63,12 @@ pub fn bam_vis(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::er
                     //reader2.fetch()
                     let ref_id = reader2
                         .header()
-                        .reference_id(string_range.path.as_ref())
+                        .reference_id(prefetch_range.path.as_ref())
                         .ok_or(Error::new(ErrorKind::Other, "Invalid reference id."))?;
                     let viewer = reader2.fetch(&bam::bam_reader::Region::new(
                         ref_id,
-                        string_range.start as u32,
-                        string_range.end as u32,
+                        prefetch_range.start as u32,
+                        prefetch_range.end as u32,
                     ))?;
                     for record in viewer {
                         list.push((index as u64, record?));
@@ -66,9 +87,9 @@ pub fn bam_vis(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::er
                         let mut values = vec![];
                         for record in reader.records() {
                             let record = record?;
-                            if record.end() > string_range.start()
-                                && record.start() < string_range.end()
-                                && record.chrom() == string_range.path
+                            if record.end() > prefetch_range.start()
+                                && record.start() < prefetch_range.end()
+                                && record.chrom() == prefetch_range.path
                             {
                                 values.push((
                                     record.start(),
@@ -91,9 +112,9 @@ pub fn bam_vis(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::er
                         let mut reader = bed::Reader::from_file(bed_path)?;
                         for record in reader.records() {
                             let record = record?;
-                            if record.end() > string_range.start()
-                                && record.start() < string_range.end()
-                                && record.chrom() == string_range.path
+                            if record.end() > prefetch_range.start()
+                                && record.start() < prefetch_range.end()
+                                && record.chrom() == prefetch_range.path
                             {
                                 ann.push((idx as u64, record));
                             }
@@ -109,9 +130,9 @@ pub fn bam_vis(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::er
                             gff::Reader::from_file(gff_path, gff::GffType::GFF3).unwrap();
                         for gff_record in reader.records() {
                             let gff = gff_record?;
-                            if *gff.end() > string_range.start()
-                                && *gff.start() < string_range.end()
-                                && gff.seqname() == string_range.path
+                            if *gff.end() > prefetch_range.start()
+                                && *gff.start() < prefetch_range.end()
+                                && gff.seqname() == prefetch_range.path
                             {
                                 let mut record = bed::Record::new();
                                 record.set_chrom(gff.seqname());
@@ -498,16 +519,34 @@ pub fn vis_query(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::
     if let Some(o) = matches.value_of("INPUT") {
         let mut reader: IndexedReader<BufReader<File>> =
             IndexedReader::from_path_with_additional_threads(o, threads - 1).unwrap();
+
         if let Some(ranges) = matches.values_of("range") {
             let ranges: Vec<&str> = ranges.collect();
-            for range in ranges {
-                eprintln!("Retrieving: {}", range);
+            let prefetch_ranges: Vec<&str> = matches
+                .values_of("prefetch-range")
+                .and_then(|t| Some(t.collect()))
+                .unwrap_or(vec![]);
+            /*let ranged_zip = if let Some(prefetch_ranges) = prefetch_ranges {
+                ranges.into_iter().zip(prefetch_ranges)
+            } else {
+                ranges.into_iter().zip(ranges.clone())
+            };*/
+            for eob in ranges.into_iter().zip_longest(prefetch_ranges) {
+                let (prefetch_str, range) = match eob {
+                    Both(a, b) => (a, b),
+                    Left(a) => (a, a),
+                    _ => panic!("Range is not specified."),
+                };
+                let string_range = StringRegion::new(range).unwrap();
+                let prefetch_range = StringRegion::new(prefetch_str).unwrap();
+
+                eprintln!("Retrieving: {} (prefetch: {})", range, prefetch_range);
                 // let start = Instant::now();
                 let closure = |x: &str| reader.reference_id(x);
-                let string_range = StringRegion::new(range).unwrap();
+
                 let _reference_name = &string_range.path;
 
-                let range = Region::convert(&string_range, closure).unwrap();
+                let range = Region::convert(&prefetch_range, closure).unwrap();
                 let viewer = reader.fetch(&range).unwrap();
 
                 let sample_ids_opt: Option<Vec<u64>> = matches
@@ -552,7 +591,7 @@ pub fn vis_query(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::
                         {
                             match data {
                                 Format::Range(rec) => {
-                                    for i in rec.to_record(&string_range.path) {
+                                    for i in rec.to_record(&prefetch_range.path) {
                                         if !filter
                                             || (i.end() as u64 > range.start()
                                                 && range.end() > i.start() as u64)
