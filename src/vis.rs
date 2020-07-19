@@ -208,6 +208,7 @@ where
     let preset: Option<VisPreset> = matches.value_of_t("preset").ok(); // .unwrap_or_else(|e| e.exit());
     eprintln!("Preset: {:?}", preset);
     let no_margin = matches.is_present("no-ruler");
+    let prefetch_range = matches.is_present("prefetch-range");
     let output = matches.value_of("output").unwrap();
     let no_cigar = matches.is_present("no-cigar");
     let packing = !matches.is_present("no-packing");
@@ -867,306 +868,313 @@ where
     let series = {
         //list.into_iter().enumerate().map(|(index, data)| {
         let mut bars = vec![];
-        index_list.into_iter().zip(list).for_each(|(index, data)| {
-            //chart.draw_series(index_list.into_par_iter().zip(list).map(|(index, data)| {
-            //for (index, data) in list.iter().enumerate() {
-            let bam = data.1;
-            let color = if bam.flag().is_reverse_strand() {
-                NEG_COL
-            } else {
-                POS_COL
-            }
-            .mix(0.8);
-            let _stroke = Palette99::pick(data.0 as usize); //.unwrap(); //if data.0 % 2 == 0 { CYAN } else { GREEN };
-            let start = if bam.start() as u64 > range.start() {
-                bam.start() as u64
-            } else {
-                range.start()
-            };
-            let end = if bam.calculate_end() as u64 > range.end() {
-                range.end()
-            } else {
-                bam.calculate_end() as u64
-            };
-            /*chart
-            .draw_series(LineSeries::new(vec![(start, index), (end, index)], &color))?;*/
-            let mut bar = Rectangle::new([(start, index), (end, index + 1)], color.filled());
-            bar.set_margin(2, 2, 0, 0);
-
-            // eprintln!("{:?}", [(start, index), (end, index + 1)]);
-            bars.push(bar);
-            //let mut bars =  //, bar2];
-            if split {
-                match bam.tags().get(b"SA") {
-                    Some(TagValue::String(array_view, StringType::String)) => {
-                        // assert!(array_view.int_type() == IntegerType::U32);
-                        let current_left_clip =
-                            bam.cigar().soft_clipping(!bam.flag().is_reverse_strand())
-                                + bam.cigar().hard_clipping(!bam.flag().is_reverse_strand());
-                        let sastr = String::from_utf8_lossy(array_view);
-                        let sa: Vec<Vec<&str>> =
-                            sastr.split(';').map(|t| t.split(',').collect()).collect();
-                        let sa_left_clip: Vec<u32> = sa
-                            .into_iter()
-                            .filter(|t| t.len() > 2)
-                            .map(|t| {
-                                let strand = t[2];
-                                //let cigar = Cigar::from_raw(t[3]).soft_clipping(strand == "+");
-                                let mut cigar = Cigar::new();
-                                cigar.extend_from_text(t[3].bytes()).ok()?;
-                                /*
-                                eprintln!(
-                                    "{} {:?} {:?}",
-                                    String::from_utf8_lossy(bam.name()),
-                                    current_left_clip,
-                                    cigar.soft_clipping(strand == "+"),
-                                );*/
-                                if only_translocation && t[0] == range.path {
-                                    None
-                                } else {
-                                    Some(cigar.soft_clipping(strand == "+"))
-                                }
-                            })
-                            .filter_map(|t| t)
-                            .collect();
-                        let is_smaller = sa_left_clip
-                            .iter()
-                            .find(|t| t < &&current_left_clip)
-                            .is_some();
-                        let is_larger = sa_left_clip
-                            .iter()
-                            .find(|t| t > &&current_left_clip)
-                            .is_some();
-
-                        let color = SPL_COL;
-                        if ((is_smaller && !bam.flag().is_reverse_strand())
-                            || (is_larger && bam.flag().is_reverse_strand()))
-                            && bam.start() as u64 > range.start()
-                        {
-                            // split alignment on left
-                            let mut bar = Rectangle::new(
-                                [(start, index), (start + 1, index + 1)],
-                                color.stroke_width(2), //.filled(),
-                            );
-                            bar.set_margin(0, 0, 0, 0);
-                            bars.push(bar);
-                            split_frequency.push((data.0, (start, approximate_one_pixel)));
-                        }
-                        if ((is_larger && !bam.flag().is_reverse_strand())
-                            || (is_smaller && bam.flag().is_reverse_strand()))
-                            && (bam.calculate_end() as u64) < range.end()
-                        {
-                            // split alignment on right
-                            let mut bar = Rectangle::new(
-                                [(end - 1, index), (end, index + 1)],
-                                color.stroke_width(2), //.filled(),
-                            );
-                            bar.set_margin(0, 0, 0, 0);
-                            bars.push(bar);
-                            split_frequency.push((data.0, (end, approximate_one_pixel)));
-                        }
-                        /*eprintln!(
-                            "SA = {}, {:?},
-                             {}, {}, {}",
-                            String::from_utf8_lossy(array_view),
-                            sa_left_clip,
-                            is_smaller,
-                            is_larger,
-                            bam.flag().is_reverse_strand()
-                        );*/
-                    }
-                    // Some(TagValue::)
-                    Some(_) => {} // panic!("Unexpected type"),
-                    _ => {}
+        index_list
+            .into_iter()
+            .zip(list)
+            .filter(|(_,data)| (data.1.start() as u64) < range.end() && (data.1.calculate_end() as u64) > range.start())
+            .for_each(|(index, data)| {
+                //chart.draw_series(index_list.into_par_iter().zip(list).map(|(index, data)| {
+                //for (index, data) in list.iter().enumerate() {
+                let bam = data.1;
+                let color = if bam.flag().is_reverse_strand() {
+                    NEG_COL
+                } else {
+                    POS_COL
                 }
-            } /*
-              if legend {
-              } else {
-                  let mut bar2 =
-                      Rectangle::new([(start, index), (end, index + 1)], stroke.stroke_width(2));
-                  bar2.set_margin(1, 1, 0, 0);
-                  //vec![bar,bar2]
-                  bars.push(bar2);
-              };*/
-            if !no_cigar {
-                let mut prev_ref = bam.start() as u64;
-                let mut prev_pixel_ref = start;
-                let left_top = chart.as_coord_spec().translate(&(start, index));
-                let right_bottom = chart.as_coord_spec().translate(&(end, index + 1));
+                .mix(0.8);
+                let _stroke = Palette99::pick(data.0 as usize); //.unwrap(); //if data.0 % 2 == 0 { CYAN } else { GREEN };
+                let start = if bam.start() as u64 > range.start() {
+                    bam.start() as u64
+                } else {
+                    range.start()
+                };
+                let end = if bam.calculate_end() as u64 > range.end() {
+                    range.end()
+                } else {
+                    bam.calculate_end() as u64
+                };
+                /*chart
+                .draw_series(LineSeries::new(vec![(start, index), (end, index)], &color))?;*/
+                let mut bar = Rectangle::new([(start, index), (end, index + 1)], color.filled());
+                bar.set_margin(2, 2, 0, 0);
 
-                //if let Ok(mut a) = bam.alignment_entries() {
-                match (quality, bam.alignment_entries()) {
-                    (false, Ok(mut a)) => {
-                        for i in left_top.0 + 1..right_bottom.0 {
-                            /*let k = {
-                                let from = chart.into_coord_trans();
-                                from((i, left_top.1))
-                            };*/
-                            let k = chart.as_coord_spec().reverse_translate((i, left_top.1));
-                            let mut color = None;
-                            if let Some(k) = k {
-                                while k.0 > prev_ref {
-                                    let entry = a.next();
-                                    if let Some(entry) = entry {
-                                        if entry.is_insertion() {
-                                            if prev_ref >= range.start() as u64 && insertion {
-                                                //let mut bar = Rectangle::new([(prev_ref, index), (prev_ref+1, index + 1)], MAGENTA.stroke_width(1));
-                                                //eprintln!("{:?}", [(prev_ref, index), (prev_ref + 1, index + 1)]);
-                                                //bar.set_margin(0, 0, 0, 3);
-                                                //bars.push(bar);
-                                                //prev_ref = 0;
-                                                color = Some(INS_COL);
-                                            }
-                                        } else if entry.is_deletion() {
-                                            prev_ref = entry.ref_pos_nt().unwrap().0 as u64;
-                                            if prev_ref > range.end() as u64 {
-                                                break;
-                                            }
-                                            if prev_ref >= range.start() as u64 {
-                                                //let mut bar = Rectangle::new([(prev_ref , index), (prev_ref + 1, index + 1)], WHITE.filled());
-                                                //bar.set_margin(2, 2, 0, 0);
-                                                //eprintln!("{:?}", [(prev_ref, index), (prev_ref + 1, index + 1)]);
-                                                //bars.push(bar);
-                                                color = Some(WHITE);
-                                            }
-                                        } else if entry.is_seq_match() {
-                                            prev_ref = entry.ref_pos_nt().unwrap().0 as u64;
-                                            if prev_ref > range.end() as u64 {
-                                                break;
-                                            }
-                                            if prev_ref >= range.start() as u64 && all_bases {
-                                                let record_nt = entry.record_pos_nt().unwrap().1;
-                                                color = match record_nt as char {
-                                                    'A' => Some(A_COL), //RED,
-                                                    'C' => Some(C_COL), // BLUE,
-                                                    'G' => Some(G_COL),
-                                                    'T' => Some(T_COL), //GREEN,
-                                                    _ => Some(N_COL),
-                                                };
-                                            }
-                                        } else {
-                                            /* Mismatch */
-                                            prev_ref = entry.ref_pos_nt().unwrap().0 as u64;
+                // eprintln!("{:?}", [(start, index), (end, index + 1)]);
+                bars.push(bar);
+                //let mut bars =  //, bar2];
+                if split {
+                    match bam.tags().get(b"SA") {
+                        Some(TagValue::String(array_view, StringType::String)) => {
+                            // assert!(array_view.int_type() == IntegerType::U32);
+                            let current_left_clip =
+                                bam.cigar().soft_clipping(!bam.flag().is_reverse_strand())
+                                    + bam.cigar().hard_clipping(!bam.flag().is_reverse_strand());
+                            let sastr = String::from_utf8_lossy(array_view);
+                            let sa: Vec<Vec<&str>> =
+                                sastr.split(';').map(|t| t.split(',').collect()).collect();
+                            let sa_left_clip: Vec<u32> = sa
+                                .into_iter()
+                                .filter(|t| t.len() > 2)
+                                .map(|t| {
+                                    let strand = t[2];
+                                    //let cigar = Cigar::from_raw(t[3]).soft_clipping(strand == "+");
+                                    let mut cigar = Cigar::new();
+                                    cigar.extend_from_text(t[3].bytes()).ok()?;
+                                    /*
+                                    eprintln!(
+                                        "{} {:?} {:?}",
+                                        String::from_utf8_lossy(bam.name()),
+                                        current_left_clip,
+                                        cigar.soft_clipping(strand == "+"),
+                                    );*/
+                                    if only_translocation && t[0] == range.path {
+                                        None
+                                    } else {
+                                        Some(cigar.soft_clipping(strand == "+"))
+                                    }
+                                })
+                                .filter_map(|t| t)
+                                .collect();
+                            let is_smaller = sa_left_clip
+                                .iter()
+                                .find(|t| t < &&current_left_clip)
+                                .is_some();
+                            let is_larger = sa_left_clip
+                                .iter()
+                                .find(|t| t > &&current_left_clip)
+                                .is_some();
 
-                                            if prev_ref > range.end() as u64 {
-                                                break;
-                                            }
-                                            if prev_ref >= range.start() as u64 {
-                                                let record_nt = entry.record_pos_nt().unwrap().1;
-                                                color = match record_nt as char {
-                                                    'A' => Some(A_COL), //RED,
-                                                    'C' => Some(C_COL), // BLUE,
-                                                    'G' => Some(G_COL),
-                                                    'T' => Some(T_COL), //GREEN,
-                                                    _ => Some(N_COL),
-                                                };
+                            let color = SPL_COL;
+                            if ((is_smaller && !bam.flag().is_reverse_strand())
+                                || (is_larger && bam.flag().is_reverse_strand()))
+                                && bam.start() as u64 > range.start()
+                            {
+                                // split alignment on left
+                                let mut bar = Rectangle::new(
+                                    [(start, index), (start + 1, index + 1)],
+                                    color.stroke_width(2), //.filled(),
+                                );
+                                bar.set_margin(0, 0, 0, 0);
+                                bars.push(bar);
+                                split_frequency.push((data.0, (start, approximate_one_pixel)));
+                            }
+                            if ((is_larger && !bam.flag().is_reverse_strand())
+                                || (is_smaller && bam.flag().is_reverse_strand()))
+                                && (bam.calculate_end() as u64) < range.end()
+                            {
+                                // split alignment on right
+                                let mut bar = Rectangle::new(
+                                    [(end - 1, index), (end, index + 1)],
+                                    color.stroke_width(2), //.filled(),
+                                );
+                                bar.set_margin(0, 0, 0, 0);
+                                bars.push(bar);
+                                split_frequency.push((data.0, (end, approximate_one_pixel)));
+                            }
+                            /*eprintln!(
+                                "SA = {}, {:?},
+                                 {}, {}, {}",
+                                String::from_utf8_lossy(array_view),
+                                sa_left_clip,
+                                is_smaller,
+                                is_larger,
+                                bam.flag().is_reverse_strand()
+                            );*/
+                        }
+                        // Some(TagValue::)
+                        Some(_) => {} // panic!("Unexpected type"),
+                        _ => {}
+                    }
+                } /*
+                  if legend {
+                  } else {
+                      let mut bar2 =
+                          Rectangle::new([(start, index), (end, index + 1)], stroke.stroke_width(2));
+                      bar2.set_margin(1, 1, 0, 0);
+                      //vec![bar,bar2]
+                      bars.push(bar2);
+                  };*/
+                if !no_cigar {
+                    let mut prev_ref = bam.start() as u64;
+                    let mut prev_pixel_ref = start;
+                    let left_top = chart.as_coord_spec().translate(&(start, index));
+                    let right_bottom = chart.as_coord_spec().translate(&(end, index + 1));
 
-                                                /*let mut bar =
-                                                Rectangle::new([(prev_ref as u64, index), (prev_ref as u64 + 1, index + 1)], color.filled());
-                                                bar.set_margin(2, 2, 0, 0);
-                                                //eprintln!("{:?}", [(prev_ref, index), (prev_ref + 1, index + 1)]);
-                                                bars.push(bar);*/
+                    //if let Ok(mut a) = bam.alignment_entries() {
+                    match (quality, bam.alignment_entries()) {
+                        (false, Ok(mut a)) => {
+                            for i in left_top.0 + 1..right_bottom.0 {
+                                /*let k = {
+                                    let from = chart.into_coord_trans();
+                                    from((i, left_top.1))
+                                };*/
+                                let k = chart.as_coord_spec().reverse_translate((i, left_top.1));
+                                let mut color = None;
+                                if let Some(k) = k {
+                                    while k.0 > prev_ref {
+                                        let entry = a.next();
+                                        if let Some(entry) = entry {
+                                            if entry.is_insertion() {
+                                                if prev_ref >= range.start() as u64 && insertion {
+                                                    //let mut bar = Rectangle::new([(prev_ref, index), (prev_ref+1, index + 1)], MAGENTA.stroke_width(1));
+                                                    //eprintln!("{:?}", [(prev_ref, index), (prev_ref + 1, index + 1)]);
+                                                    //bar.set_margin(0, 0, 0, 3);
+                                                    //bars.push(bar);
+                                                    //prev_ref = 0;
+                                                    color = Some(INS_COL);
+                                                }
+                                            } else if entry.is_deletion() {
+                                                prev_ref = entry.ref_pos_nt().unwrap().0 as u64;
+                                                if prev_ref > range.end() as u64 {
+                                                    break;
+                                                }
+                                                if prev_ref >= range.start() as u64 {
+                                                    //let mut bar = Rectangle::new([(prev_ref , index), (prev_ref + 1, index + 1)], WHITE.filled());
+                                                    //bar.set_margin(2, 2, 0, 0);
+                                                    //eprintln!("{:?}", [(prev_ref, index), (prev_ref + 1, index + 1)]);
+                                                    //bars.push(bar);
+                                                    color = Some(WHITE);
+                                                }
+                                            } else if entry.is_seq_match() {
+                                                prev_ref = entry.ref_pos_nt().unwrap().0 as u64;
+                                                if prev_ref > range.end() as u64 {
+                                                    break;
+                                                }
+                                                if prev_ref >= range.start() as u64 && all_bases {
+                                                    let record_nt =
+                                                        entry.record_pos_nt().unwrap().1;
+                                                    color = match record_nt as char {
+                                                        'A' => Some(A_COL), //RED,
+                                                        'C' => Some(C_COL), // BLUE,
+                                                        'G' => Some(G_COL),
+                                                        'T' => Some(T_COL), //GREEN,
+                                                        _ => Some(N_COL),
+                                                    };
+                                                }
+                                            } else {
+                                                /* Mismatch */
+                                                prev_ref = entry.ref_pos_nt().unwrap().0 as u64;
+
+                                                if prev_ref > range.end() as u64 {
+                                                    break;
+                                                }
+                                                if prev_ref >= range.start() as u64 {
+                                                    let record_nt =
+                                                        entry.record_pos_nt().unwrap().1;
+                                                    color = match record_nt as char {
+                                                        'A' => Some(A_COL), //RED,
+                                                        'C' => Some(C_COL), // BLUE,
+                                                        'G' => Some(G_COL),
+                                                        'T' => Some(T_COL), //GREEN,
+                                                        _ => Some(N_COL),
+                                                    };
+
+                                                    /*let mut bar =
+                                                    Rectangle::new([(prev_ref as u64, index), (prev_ref as u64 + 1, index + 1)], color.filled());
+                                                    bar.set_margin(2, 2, 0, 0);
+                                                    //eprintln!("{:?}", [(prev_ref, index), (prev_ref + 1, index + 1)]);
+                                                    bars.push(bar);*/
+                                                }
                                             }
                                         }
                                     }
-                                }
-                                if prev_ref >= range.start() as u64 {
-                                    if let Some(color) = color {
-                                        let mut bar = Rectangle::new(
-                                            [
-                                                (prev_pixel_ref as u64, index),
-                                                (prev_ref as u64, index + 1),
-                                            ],
-                                            color.filled(),
-                                        );
-                                        bar.set_margin(3, 3, 0, 0);
-                                        /*if prev_pixel_ref < start || end < prev_ref {
-                                            eprintln!("{:?}", [(prev_pixel_ref, index), (prev_ref, index + 1)]);
-                                        }*/
-                                        bars.push(bar);
+                                    if prev_ref >= range.start() as u64 {
+                                        if let Some(color) = color {
+                                            let mut bar = Rectangle::new(
+                                                [
+                                                    (prev_pixel_ref as u64, index),
+                                                    (prev_ref as u64, index + 1),
+                                                ],
+                                                color.filled(),
+                                            );
+                                            bar.set_margin(3, 3, 0, 0);
+                                            /*if prev_pixel_ref < start || end < prev_ref {
+                                                eprintln!("{:?}", [(prev_pixel_ref, index), (prev_ref, index + 1)]);
+                                            }*/
+                                            bars.push(bar);
+                                        }
+                                        prev_pixel_ref = k.0;
                                     }
-                                    prev_pixel_ref = k.0;
                                 }
+                                /*if let Some((record_pos, record_nt)) = entry.record_pos_nt() {
+                                    print!("{} {}", record_pos, record_nt as char);
+                                } else {
+                                    print!("-");
+                                }
+                                print!(", ");
+                                if let Some((ref_pos, ref_nt)) = entry.ref_pos_nt() {
+                                    println!("{} {}", ref_pos, ref_nt as char);
+                                } else {
+                                    println!("-");
+                                }*/
                             }
-                            /*if let Some((record_pos, record_nt)) = entry.record_pos_nt() {
-                                print!("{} {}", record_pos, record_nt as char);
-                            } else {
-                                print!("-");
-                            }
-                            print!(", ");
-                            if let Some((ref_pos, ref_nt)) = entry.ref_pos_nt() {
-                                println!("{} {}", ref_pos, ref_nt as char);
-                            } else {
-                                println!("-");
-                            }*/
                         }
-                    }
-                    _ => {
-                        for entry in bam.aligned_pairs() {
-                            match entry {
-                                // (Seq_idx, ref_idx)
-                                (Some(_record), Some(reference)) => {
-                                    if prev_ref > range.start() as u64 && quality {
-                                        if let Some(qual) =
-                                            bam.qualities().raw().get(_record as usize)
-                                        {
-                                            //                                            eprintln!("{:?}", RGBColor(*qual*5, *qual*5, *qual*5));
+                        _ => {
+                            for entry in bam.aligned_pairs() {
+                                match entry {
+                                    // (Seq_idx, ref_idx)
+                                    (Some(_record), Some(reference)) => {
+                                        if prev_ref > range.start() as u64 && quality {
+                                            if let Some(qual) =
+                                                bam.qualities().raw().get(_record as usize)
+                                            {
+                                                //                                            eprintln!("{:?}", RGBColor(*qual*5, *qual*5, *qual*5));
+                                                let mut bar = Rectangle::new(
+                                                    [
+                                                        (reference as u64, index),
+                                                        (reference as u64 + 1, index + 1),
+                                                    ],
+                                                    RGBColor(*qual * 5, *qual * 5, *qual * 5)
+                                                        .filled(),
+                                                );
+                                                bar.set_margin(3, 3, 0, 0);
+                                                bars.push(bar);
+                                            }
+                                        }
+                                        prev_ref = reference as u64;
+                                        if reference > range.end() as u32 {
+                                            break;
+                                        }
+                                    }
+                                    (None, Some(reference)) => {
+                                        //Deletion
+                                        if reference > range.start() as u32 && !quality {
                                             let mut bar = Rectangle::new(
                                                 [
                                                     (reference as u64, index),
                                                     (reference as u64 + 1, index + 1),
                                                 ],
-                                                RGBColor(*qual * 5, *qual * 5, *qual * 5).filled(),
+                                                WHITE.filled(),
                                             );
                                             bar.set_margin(3, 3, 0, 0);
+                                            prev_ref = reference as u64;
                                             bars.push(bar);
                                         }
+                                        if reference >= range.end() as u32 {
+                                            break;
+                                        }
                                     }
-                                    prev_ref = reference as u64;
-                                    if reference > range.end() as u32 {
-                                        break;
+                                    (Some(_record), None) => {
+                                        //Insertion
+                                        if prev_ref > range.start() as u64 && insertion {
+                                            let mut bar = Rectangle::new(
+                                                [(prev_ref, index), (prev_ref + 1, index + 1)],
+                                                INS_COL.stroke_width(1),
+                                            );
+                                            // eprintln!("{:?}", [(prev_ref, index), (prev_ref + 1, index + 1)]);
+                                            bar.set_margin(1, 1, 0, 5);
+                                            bars.push(bar);
+                                            prev_ref = 0;
+                                        }
+                                        // eprintln!("{}", prev_ref)
                                     }
+                                    _ => {}
                                 }
-                                (None, Some(reference)) => {
-                                    //Deletion
-                                    if reference > range.start() as u32 && !quality {
-                                        let mut bar = Rectangle::new(
-                                            [
-                                                (reference as u64, index),
-                                                (reference as u64 + 1, index + 1),
-                                            ],
-                                            WHITE.filled(),
-                                        );
-                                        bar.set_margin(3, 3, 0, 0);
-                                        prev_ref = reference as u64;
-                                        bars.push(bar);
-                                    }
-                                    if reference >= range.end() as u32 {
-                                        break;
-                                    }
-                                }
-                                (Some(_record), None) => {
-                                    //Insertion
-                                    if prev_ref > range.start() as u64 && insertion {
-                                        let mut bar = Rectangle::new(
-                                            [(prev_ref, index), (prev_ref + 1, index + 1)],
-                                            INS_COL.stroke_width(1),
-                                        );
-                                        // eprintln!("{:?}", [(prev_ref, index), (prev_ref + 1, index + 1)]);
-                                        bar.set_margin(1, 1, 0, 5);
-                                        bars.push(bar);
-                                        prev_ref = 0;
-                                    }
-                                    // eprintln!("{}", prev_ref)
-                                }
-                                _ => {}
                             }
                         }
                     }
                 }
-            }
-            //}).flatten().collect::<Vec<_>>())?;
-        });
+                //}).flatten().collect::<Vec<_>>())?;
+            });
         bars
     };
     chart.draw_series(series)?;
