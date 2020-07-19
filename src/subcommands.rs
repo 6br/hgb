@@ -36,7 +36,7 @@ pub fn bam_vis(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::er
             ranges.into_iter().zip(ranges.clone())
         };*/
         for eob in ranges.into_iter().zip_longest(prefetch_ranges) {
-            let (prefetch_str, range) = match eob {
+            let (range,prefetch_str) = match eob {
                 Both(a, b) => (a, b),
                 Left(a) => (a, a),
                 _ => panic!("Range is not specified."),
@@ -532,7 +532,7 @@ pub fn vis_query(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::
                 ranges.into_iter().zip(ranges.clone())
             };*/
             for eob in ranges.into_iter().zip_longest(prefetch_ranges) {
-                let (prefetch_str, range) = match eob {
+                let (range, prefetch_str) = match eob {
                     Both(a, b) => (a, b),
                     Left(a) => (a, a),
                     _ => panic!("Range is not specified."),
