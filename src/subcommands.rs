@@ -71,8 +71,9 @@ pub fn bam_vis(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::er
                         prefetch_range.end as u32,
                     ))?;
                     for record in viewer {
+                        let record = record?;
                         if !record.flag().is_secondary() {
-                            list.push((index as u64, record?));
+                            list.push((index as u64, record));
                         }
                     }
                 }
