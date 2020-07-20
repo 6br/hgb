@@ -223,6 +223,7 @@ where
     let all_bases = matches.is_present("all-bases");
     let hide_alignment = matches.is_present("hide-alignment");
     let only_translocation = matches.is_present("only-translocation");
+    let square = matches.is_present("square");
     if hide_alignment {
         return frequency_vis(matches, range, list, lambda);
     }
@@ -575,12 +576,14 @@ where
                                  };*/
     let annotation_count = annotation.iter().unique_by(|s| s.0).count(); // annotation.len();
 
+    let y_len = 40 + (prev_index as u32 + axis_count as u32 + annotation_count as u32 * 2) * y
+    + frequency.len() as u32 * freq_size;
+    let x_len = if {square} {y} else {x};
+
     let root = BitMapBackend::new(
         output,
         (
-            x,
-            40 + (prev_index as u32 + axis_count as u32 + annotation_count as u32 * 2) * y
-                + frequency.len() as u32 * freq_size,
+            x_len,y_len
         ),
     )
     .into_drawing_area();
