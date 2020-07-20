@@ -207,7 +207,7 @@ where
     // let diff = range.end() - range.start();
     let preset: Option<VisPreset> = matches.value_of_t("preset").ok(); // .unwrap_or_else(|e| e.exit());
     eprintln!("Preset: {:?}", preset);
-    let no_margin = matches.is_present("no-ruler");
+    let no_margin = matches.is_present("no-scale");
     let prefetch_range = matches.is_present("prefetch-range");
     let output = matches.value_of("output").unwrap();
     let no_cigar = matches.is_present("no-cigar");
