@@ -871,7 +871,10 @@ where
         index_list
             .into_iter()
             .zip(list)
-            .filter(|(_,data)| (data.1.start() as u64) < range.end() && (data.1.calculate_end() as u64) > range.start())
+            .filter(|(_, data)| {
+                (data.1.start() as u64) < range.end()
+                    && (data.1.calculate_end() as u64) > range.start()
+            })
             .for_each(|(index, data)| {
                 //chart.draw_series(index_list.into_par_iter().zip(list).map(|(index, data)| {
                 //for (index, data) in list.iter().enumerate() {
