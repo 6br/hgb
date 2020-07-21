@@ -12,286 +12,7 @@ use bam::Record;
 
 fn id_to_range<'a>(range: &StringRegion, args: &Vec<String>, zoom: i64, path: i64) -> (ArgMatches, StringRegion) {
 
-    let app = App::new("GHB/GHI genomic data visualization tool")
-    // .setting(AppSettings::ArgsNegateSubcommands)
-    .version("0.1")
-    .author("6br. ")
-    .about(
-        "Command-line visualization tool for read alignment, ranged annotation and frequency.",
-    )
-    .arg(
-        Arg::new("verbose")
-            .short('v')
-            .multiple(true)
-            .about("Sets the level of verbosity"),
-    )
-    .arg(
-        Arg::new("threads")
-            .short('t')
-            .default_value("1")
-            .about("Sets the number of threads"),
-    )
-    .subcommand(
-        App::new("build")
-            .about("construct GHB and GHI index from bam/")
-            .arg(
-                Arg::new("bam")
-                    .short('a')
-                    .takes_value(true)
-                    .multiple(true)
-                    .about("sorted bam"),
-            )
-            .arg(
-                Arg::new("bed")
-                    .short('b')
-                    .takes_value(true)
-                    .multiple(true)
-                    .about("sorted bed"),
-            )
-            .arg(
-                Arg::new("gff3")
-                    .short('g')
-                    .takes_value(true)
-                    .multiple(true)
-                    .about("sorted gff3"),
-            )
-            .arg(
-                Arg::new("chrom")
-                    .short('c')
-                    .takes_value(true)
-                    .about("chroms.sizes"),
-            )
-            .arg(Arg::new("force").short('f').about("Outputs only header"))
-            .arg(
-                Arg::new("OUTPUT")
-                    .about("Sets the output file to use")
-                    .takes_value(true)
-                    .required(true)
-                    .index(1),
-            ), /*.arg(Arg::new("gff")
-               .short('g')
-               .multiple(true)
-               .about("sorted gff"))*/
-    )
-    .subcommand(
-        App::new("query")
-            .about("construct GHB and GHI index from bam/")
-            .arg(
-                Arg::new("range")
-                    .short('r')
-                    .takes_value(true)
-                    .multiple(true)
-                    .about("sorted bam"),
-            )
-            .arg(
-                Arg::new("bed")
-                    .short('L')
-                    .takes_value(true)
-                    .about("sorted bam"),
-            )
-            .arg(
-                Arg::new("compression")
-                    .short('c')
-                    .takes_value(true)
-                    .about("compression level"),
-            )
-            .arg(
-                Arg::new("type")
-                    .short('t')
-                    .takes_value(true)
-                    // .default_value("default")
-                    .possible_values(&["alignment", "range", "default"])
-                    .about("annotation type to fetch"),
-            )
-            .arg(
-                Arg::new("id")
-                    .short('i')
-                    .takes_value(true)
-                    .multiple(true)
-                    .about("annotation sample to fetch"),
-            )
-            .arg(Arg::new("filter").short('f').about("Pre-filter"))
-            .arg(Arg::new("binary").short('b').about("Binary"))
-            /*                .arg(Arg::new("vis").short('v').about("Binary"))
-            .arg(Arg::new("no-cigar").short('n').about("Binary"))
-            .arg(Arg::new("packing").short('p').about("Binary"))
-            .arg(Arg::new("legend").short('l').about("Legend"))
-            .arg(Arg::new("quality").short('q').about("Quality"))
-            .arg(Arg::new("x").short('x').takes_value(true).about("x"))
-            .arg(Arg::new("y").short('y').takes_value(true).about("y"))
-            .arg(
-                Arg::new("freq-height")
-                    .short('Y')
-                    .takes_value(true)
-                    .about("yf"),
-            )
-            .arg(
-                Arg::new("max-coverage")
-                    .short('m')
-                    .takes_value(true)
-                    .about("Max coverage"),
-            )
-            .arg(Arg::new("split-alignment").short('s').about("No-md"))
-            .arg(Arg::new("no-insertion").short('z').about("No-md"))
-            .arg(Arg::new("only-split-alignment").short('u').about("No-md"))
-            .arg(
-                Arg::new("hide-alignment")
-                    .short('A')
-                    .about("Hide alignment"),
-            )
-            .arg(Arg::new("all-bases").short('B').about("Show all bases"))
-            .arg(Arg::new("pileup").short('P').about("Show coverage plot"))
-            .arg(
-                Arg::new("sort-by-name")
-                    .short('N')
-                    .about("Sort-by-name (read-id)"),
-            )
-            .arg(
-                Arg::new("sort-by-cigar")
-                    .short('C')
-                    .about("Display split alignment name"),
-            )
-            // .arg(Arg::new("insertion").short('').about("No-md"))
-            .arg(
-                Arg::new("graph")
-                    .short('g')
-                    .takes_value(true)
-                    .about("graph"),
-            )*/
-            .arg(
-                Arg::new("output")
-                    .short('o')
-                    .takes_value(true)
-                    .about("Output format"),
-            )
-            .arg(
-                Arg::new("INPUT")
-                    .about("Sets the input file to use")
-                    .required(true)
-                    .index(1),
-            ),
-    )
-    .subcommand(
-        App::new("decompose")
-            .about("extract bam/bed from GHB and GHI index: (*) Now it needs to ")
-            .arg(
-                Arg::new("id")
-                    .short('i')
-                    .takes_value(true)
-                    //            .multiple(true)
-                    .about("annotation sample to fetch (alignment | annotation)"),
-            )
-            .arg(Arg::new("header").short('z').about("Outputs only header"))
-            .arg(
-                Arg::new("INPUT")
-                    .about("Sets the input file to use")
-                    .required(true)
-                    .index(1),
-            )
-            .arg(
-                Arg::new("output")
-                    .short('o')
-                    .takes_value(true)
-                    .about("Output format"),
-            ),
-    )
-    .subcommand(
-        App::new("bin")
-            .about("extract bam/bed from GHB and GHI index: (*) Now it needs to ")
-            .arg(
-                Arg::new("id")
-                    .short('i')
-                    .takes_value(true)
-                    //            .multiple(true)
-                    .about("annotation sample to fetch (alignment | annotation)"),
-            )
-            .arg(
-                Arg::new("INPUT")
-                    .about("Sets the input file to use")
-                    .required(true)
-                    .index(1),
-            )
-            .arg(
-                Arg::new("bin")
-                    .short('b')
-                    .takes_value(true)
-                    //            .multiple(true)
-                    .about("annotation sample to fetch (alignment | annotation)"),
-            )
-            .arg(
-                Arg::new("start")
-                    .short('s')
-                    .takes_value(true)
-                    //            .multiple(true)
-                    .about("annotation sample to fetch (alignment | annotation)"),
-            )
-            .arg(
-                Arg::new("end")
-                    .short('e')
-                    .takes_value(true)
-                    //            .multiple(true)
-                    .about("annotation sample to fetch (alignment | annotation)"),
-            )
-            .arg(
-                Arg::new("ref_id")
-                    .short('c')
-                    .takes_value(true)
-                    //            .multiple(true)
-                    .about("annotation sample to fetch (alignment | annotation)"),
-            )
-            .arg(
-                Arg::new("range")
-                    .short('r')
-                    .takes_value(true)
-                    .multiple(true)
-                    .about("sorted bam"),
-            )
-            .arg(
-                Arg::new("layer")
-                    .short('l')
-                    .takes_value(true)
-                    .about("sorted bam"),
-            )
-            .arg(
-                Arg::new("output")
-                    .short('o')
-                    .takes_value(true)
-                    .about("Output format"),
-            ),
-    )
-    .subcommand(
-        App::new("server")
-            .about("start the web server.")
-            .arg(Arg::new("web").short('w').about("bind host and port"))
-            .arg(
-                Arg::new("range")
-                    .short('r')
-                    .takes_value(true)
-                    .multiple(true)
-                    .about("sorted bam"),
-            )
-            .arg(
-                Arg::new("max-coverage")
-                    .short('m')
-                    .takes_value(true)
-                    .about("Max coverage value on coverage track"),
-            )
-            .arg(
-                Arg::new("bam")
-                    .short('a')
-                    .takes_value(true)
-                    .multiple(true)
-                    .about("sorted bam"),
-            )
-            .arg(
-                Arg::new("INPUT")
-                    .about("Sets the input file to use")
-                    .required(true)
-                    .index(1),
-            ),
-    )
-    .subcommand(
-        App::new("vis")
+    let app = App::new("vis")
             .about("Visualize GHB and other genomic data")
             .arg(
                 Arg::new("range")
@@ -424,24 +145,7 @@ fn id_to_range<'a>(range: &StringRegion, args: &Vec<String>, zoom: i64, path: i6
                 Arg::new("INPUT")
                     .about("(Optional) GHB format to display both alignment and annotation tracks")
                     .index(1),
-            ),
-    )
-    .subcommand(
-        App::new("split")
-            .about("start the web server.")
-            .arg(
-                Arg::new("output")
-                    .short('o')
-                    .takes_value(true)
-                    .about("Output format"),
-            )
-            .arg(
-                Arg::new("INPUT")
-                    .about("Sets the input file to use")
-                    .required(true)
-                    .index(1),
-            ),
-    );
+            );
     let prefetch_max = 25000000;
     let criteria = 1000000;
     let x_width = prefetch_max / criteria * (740);
@@ -510,10 +214,29 @@ impl Vis {
     }
 }
 
+struct DZI {
+    Image: Image
+}
+
+struct Image {
+    xmlns: String,
+    Format: String,
+    Overlap: u64,
+    TileSize: u64,
+    Size: Size
+}
+
+struct Size {
+    height: u64,
+    width: u64
+}
+
 #[actix_rt::main]
-pub async fn server(matches: &'static ArgMatches, range: StringRegion, args: Vec<String>, list: Vec<(u64, Record)>, annotation: Vec<(u64, bed::Record)>, freq: BTreeMap<u64, Vec<(u64, u32)>>, threads: u16) -> std::io::Result<()> {
+pub async fn server(matches: ArgMatches, range: StringRegion, args: Vec<String>, list: Vec<(u64, Record)>, annotation: Vec<(u64, bed::Record)>, freq: BTreeMap<u64, Vec<(u64, u32)>>, threads: u16) -> std::io::Result<()> {
 
     use actix_web::{web, HttpServer};
+
+    let bind = matches.value_of("web").unwrap_or(&"0.0.0.0:4000");
 
     // Create some global state prior to building the server
     //#[allow(clippy::mutex_atomic)] // it's intentional.
@@ -523,8 +246,8 @@ pub async fn server(matches: &'static ArgMatches, range: StringRegion, args: Vec
         let counter = Arc::new(Vis::new(range.clone(), args.clone(), list.clone(), annotation.clone(), freq.clone()));
 
         actix_web::App::new().data(counter).route("/{zoom:.*}/{filename:.*}.png", web::get().to(index))
-    })
-        .bind("0.0.0.0:4000")?
+        })
+        .bind(bind)?
         .workers(threads as usize)
         .run()
         .await

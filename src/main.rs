@@ -474,7 +474,7 @@ fn main() {
         eprintln!("{:?}", matches.is_present("INPUT"));
         match matches.is_present("INPUT") {
             true => vis_query(matches, args, threads).unwrap(),
-            false => bam_vis(matches, threads).unwrap(),
+            false => bam_vis(matches, args, threads).unwrap(),
         }
     } else if let Some(ref matches) = matches.subcommand_matches("server") {
     }

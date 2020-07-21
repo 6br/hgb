@@ -5,6 +5,7 @@ use genomic_range::StringRegion;
 
 use log::{debug, info};
 // use rayon::prelude::*;
+use crate::server::server;
 use ghi::bed;
 use ghi::binary::GhbWriter;
 use ghi::builder::InvertedRecordBuilder;
@@ -21,7 +22,11 @@ use itertools::EitherOrBoth::{Both, Left};
 use itertools::Itertools;
 use std::{collections::BTreeMap, fs::File, io, path::Path};
 
-pub fn bam_vis(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::error::Error>> {
+pub fn bam_vis(
+    matches: &ArgMatches,
+    args: Vec<String>,
+    threads: u16,
+) -> Result<(), Box<dyn std::error::Error>> {
     // let output_path = matches.value_of("OUTPUT").unwrap();
 
     if let Some(ranges) = matches.values_of("range") {
@@ -152,9 +157,21 @@ pub fn bam_vis(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::er
                         idx += 1;
                     }
                 }
-                bam_record_vis(matches, string_range, list, ann, freq, |idx| {
-                    Some(bam_files[idx])
-                })?;
+                if matches.is_present("web") {
+                    server(
+                        matches.clone(),
+                        string_range,
+                        args.clone(),
+                        list,
+                        ann,
+                        freq,
+                        threads,
+                    )?;
+                } else {
+                    bam_record_vis(matches, string_range, list, ann, freq, |idx| {
+                        Some(bam_files[idx])
+                    })?;
+                }
             }
         }
     }
@@ -624,9 +641,21 @@ pub fn vis_query(
                         }
                     }
                 });
-                bam_record_vis(matches, string_range, list, ann, BTreeMap::new(), |idx| {
-                    reader.header().get_name(idx).and_then(|t| Some(t.as_str()))
-                })?;
+                if matches.is_present("web") {
+                    server(
+                        matches.clone(),
+                        string_range,
+                        args.clone(),
+                        list,
+                        ann,
+                        BTreeMap::new(),
+                        threads,
+                    )?;
+                } else {
+                    bam_record_vis(matches, string_range, list, ann, BTreeMap::new(), |idx| {
+                        reader.header().get_name(idx).and_then(|t| Some(t.as_str()))
+                    })?;
+                }
             }
         }
     }
