@@ -216,37 +216,37 @@ pub struct Vis<'a> {
 
 // #[derive(Copy)]
 pub struct Vis {
-    range: StringRegion, args: Vec<String>, list: Vec<(u64, Record)>, annotation: Vec<(u64, bed::Record)>, freq: BTreeMap<u64, Vec<(u64, u32)>>
+    range: StringRegion, args: Vec<String>, list: Vec<(u64, Record)>, annotation: Vec<(u64, bed::Record)>, freq: BTreeMap<u64, Vec<(u64, u32)>>, dzi: DZI
 }
 
 impl Vis {
-    fn new(range: StringRegion, args: Vec<String>, list: Vec<(u64, Record)>, annotation: Vec<(u64, bed::Record)>, freq: BTreeMap<u64, Vec<(u64, u32)>>) -> Vis {
-        Vis{range, args, list, annotation, freq}
+    fn new(range: StringRegion, args: Vec<String>, list: Vec<(u64, Record)>, annotation: Vec<(u64, bed::Record)>, freq: BTreeMap<u64, Vec<(u64, u32)>>, dzi: DZI) -> Vis {
+        Vis{range, args, list, annotation, freq, dzi}
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 struct DZI {
     Image: Image
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 struct Image {
     xmlns: String,
     Format: String,
     Overlap: u64,
-    TileSize: u64,
+    TileSize: u32,
     Size: Size
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 struct Size {
     height: u32,
     width: u32
 }
 
 #[actix_rt::main]
-pub async fn server(matches: ArgMatches, range: StringRegion, args: Vec<String>, list: Vec<(u64, Record)>, annotation: Vec<(u64, bed::Record)>, freq: BTreeMap<u64, Vec<(u64, u32)>>, threads: u16) -> std::io::Result<()> {
+pub async fn server(matches: ArgMatches, range: StringRegion, prefetch_range: StringRegion, args: Vec<String>, list: Vec<(u64, Record)>, annotation: Vec<(u64, bed::Record)>, freq: BTreeMap<u64, Vec<(u64, u32)>>, threads: u16) -> std::io::Result<()> {
 
     use actix_web::{web, HttpServer};
 
@@ -256,15 +256,17 @@ pub async fn server(matches: ArgMatches, range: StringRegion, args: Vec<String>,
         .and_then(|a| a.parse::<u32>().ok())
         .unwrap_or(1280u32);
     let diff = range.end - range.start;
-    // let all = matches
-    let size = Size{height: x, width: x};
+    let all = prefetch_range.end - prefetch_range.start;
+    let size = Size{height: x, width: (all as u32 / diff as u32 + 1) * x};
+    let image = Image{xmlns: "http://schemas.microsoft.com/deepzoom/2008".to_string(), Format: "png".to_string(), Overlap: 0, TileSize: x, Size: size};
+    let dzi = DZI{Image: image};
     
     // Create some global state prior to building the server
     //#[allow(clippy::mutex_atomic)] // it's intentional.
     //let counter1 = web::Data::new(Mutex::new((matches.clone(), range, list, annotation, freq)));
     HttpServer::new(move || {
         //let counter = Cell::new(Vis::new( range.clone(),args.clone(), list.clone(), annotation.clone(), freq.clone()));
-        let counter = Arc::new(Vis::new(range.clone(), args.clone(), list.clone(), annotation.clone(), freq.clone()));
+        let counter = Arc::new(Vis::new(range.clone(), args.clone(), list.clone(), annotation.clone(), freq.clone(), dzi.clone()));
 
         actix_web::App::new().data(counter).route("/{zoom:.*}/{filename:.*}.png", web::get().to(index))
         })

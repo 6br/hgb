@@ -160,7 +160,7 @@ pub fn bam_vis(
                 if matches.is_present("web") {
                     server(
                         matches.clone(),
-                        string_range,
+                        string_range,prefetch_range,
                         args.clone(),
                         list,
                         ann,
@@ -644,7 +644,7 @@ pub fn vis_query(
                 if matches.is_present("web") {
                     server(
                         matches.clone(),
-                        string_range,
+                        string_range,prefetch_range,
                         args.clone(),
                         list,
                         ann,
