@@ -141,7 +141,7 @@ where
     let root =
         BitMapBackend::new(output, (x, frequency.len() as u32 * freq_size)).into_drawing_area();
     root.fill(&WHITE)?;
-    let root = root.margin(10, 10, 0, 0);
+    let root = root.margin(0, 0, 0, 0);
     // After this point, we should be able to draw construct a chart context
     // let areas = root.split_by_breakpoints([], compressed_list);
     if frequency.len() > 0 {
@@ -584,7 +584,7 @@ where
     let root = BitMapBackend::new(output, (x_len, y_len)).into_drawing_area();
     let approximate_one_pixel = 1; //((range.end() - range.start()) / x as u64) as u32;
     root.fill(&WHITE)?;
-    let root = root.margin(10, 10, 0, 0);
+    let root = root.margin(0, 0, 0, 0);
     // After this point, we should be able to draw construct a chart context
     // let areas = root.split_by_breakpoints([], compressed_list);
     let top_margin = if no_margin { 0 } else { 40 };
