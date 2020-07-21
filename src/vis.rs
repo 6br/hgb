@@ -119,7 +119,7 @@ where
     // Calculate coverage; it won't work on sort_by_name
     let mut frequency = BTreeMap::new(); // Vec::with_capacity();
     list.iter().group_by(|elt| elt.0).into_iter().for_each(|t| {
-        let mut line = vec![];
+        let mut line = Vec::with_capacity((range.end - range.start + 1) as usize);
         for column in
             bam::Pileup::with_filter(&mut RecordIter(t.1), |record| record.flag().no_bits(1796))
         {
@@ -268,7 +268,7 @@ where
     // let mut frequency = BTreeMap::new(); // Vec::with_capacity();
     if pileup {
         list.iter().group_by(|elt| elt.0).into_iter().for_each(|t| {
-            let mut line = vec![];
+            let mut line = Vec::with_capacity((range.end - range.start + 1) as usize);
             for column in
                 bam::Pileup::with_filter(&mut RecordIter(t.1), |record| record.flag().no_bits(1796))
             {
