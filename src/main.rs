@@ -336,7 +336,13 @@ fn main() {
                     Arg::new("max-coverage")
                         .short('m')
                         .takes_value(true)
-                        .about("Max coverage value on coverage track"),
+                        .about("Maximum coverage value on coverage track"),
+                )
+                .arg(
+                    Arg::new("min-read-length")
+                        .short('M')
+                        .takes_value(true)
+                        .about("Mininum read length on coverage/alignment track"),
                 )
                 .arg(
                     Arg::new("x-scale")
