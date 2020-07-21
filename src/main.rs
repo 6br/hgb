@@ -261,7 +261,7 @@ fn main() {
         .subcommand(
             App::new("server")
                 .about("start the web server.")
-                .arg(Arg::new("bind").short('b').about("bind"))
+                .arg(Arg::new("web").short('w').about("bind host and port"))
                 .arg(
                     Arg::new("range")
                         .short('r')
@@ -476,6 +476,6 @@ fn main() {
             false => bam_vis(matches, threads).unwrap(),
         }
     } else if let Some(ref matches) = matches.subcommand_matches("server") {
-        server(&app, matches, threads);
+
     }
 }
