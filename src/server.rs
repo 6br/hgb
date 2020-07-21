@@ -2,7 +2,7 @@
 use actix_files::NamedFile;
 
 use actix_web::http::header::{ContentDisposition, DispositionType};
-use actix_web::{HttpRequest, Result, web, Responder};
+use actix_web::{HttpRequest, Result, web, Responder, error};
 use std::{sync::{Arc, Mutex}, path::PathBuf, cell::Cell, collections::BTreeMap};
 use clap::{App,  ArgMatches, Arg};
 use ghi::{bed, vis::bam_record_vis};
@@ -182,6 +182,9 @@ async fn get_dzi(data: web::Data<Arc<Vis>>) -> impl Responder {
 async fn index(data: web::Data<Arc<Vis>>, req: HttpRequest) -> Result<NamedFile> {
     let zoom: i64 = req.match_info().query("zoom").parse().unwrap();
     let path: i64 = req.match_info().query("filename").parse().unwrap();// .parse().unwrap();
+    if zoom <= 10 {
+        return Err(error::ErrorBadRequest("zoom level is not appropriate"));
+    }
     match NamedFile::open(format!("{}/{}_0.png", zoom, path)) {
         Ok(file) => Ok(file
             .use_last_modified(true)
@@ -218,14 +221,16 @@ pub struct Vis<'a> {
     suppl_list: Mutex<Vec<(&'a [u8], usize, usize, usize, usize)>>,
 }*/
 
+
+
 // #[derive(Copy)]
 pub struct Vis {
-    range: StringRegion, args: Vec<String>, list: Vec<(u64, Record)>, annotation: Vec<(u64, bed::Record)>, freq: BTreeMap<u64, Vec<(u64, u32)>>, dzi: DZI
+    range: StringRegion, args: Vec<String>, list: Vec<(u64, Record)>, annotation: Vec<(u64, bed::Record)>, freq: BTreeMap<u64, Vec<(u64, u32)>>, dzi: DZI, params: Param
 }
 
 impl Vis {
-    fn new(range: StringRegion, args: Vec<String>, list: Vec<(u64, Record)>, annotation: Vec<(u64, bed::Record)>, freq: BTreeMap<u64, Vec<(u64, u32)>>, dzi: DZI) -> Vis {
-        Vis{range, args, list, annotation, freq, dzi}
+    fn new(range: StringRegion, args: Vec<String>, list: Vec<(u64, Record)>, annotation: Vec<(u64, bed::Record)>, freq: BTreeMap<u64, Vec<(u64, u32)>>, dzi: DZI, params: Param) -> Vis {
+        Vis{range, args, list, annotation, freq, dzi, params}
     }
 }
 
@@ -248,12 +253,26 @@ struct Size {
     height: u32,
     width: u32
 }
+#[derive(Debug, Clone)]
+pub struct Param {
+    x_scale: u32,
+    max_y: u32,
+    prefetch_max: u64,
+    criteria: u64,
+    max_zoom: u32,
+}
+
+const fn num_bits<T>() -> usize { std::mem::size_of::<T>() * 8 }
+
+fn log_2(x: i32) -> u32 {
+    assert!(x > 0);
+    num_bits::<i32>() as u32 - x.leading_zeros() - 1
+}
 
 #[actix_rt::main]
 pub async fn server(matches: ArgMatches, range: StringRegion, prefetch_range: StringRegion, args: Vec<String>, list: Vec<(u64, Record)>, annotation: Vec<(u64, bed::Record)>, freq: BTreeMap<u64, Vec<(u64, u32)>>, threads: u16) -> std::io::Result<()> {
 
     use actix_web::{web, HttpServer};
-
     let bind = matches.value_of("web").unwrap_or(&"0.0.0.0:4000");
     let x = matches
         .value_of("x")
@@ -268,6 +287,9 @@ pub async fn server(matches: ArgMatches, range: StringRegion, prefetch_range: St
         .value_of("x-scale")
         .and_then(|a| a.parse::<u32>().ok())
         .unwrap_or(20u32);
+    let x_width = all as u32 / diff as u32 * x;
+    let max_zoom = log_2(x_width as i32);
+    let params = Param{x_scale, max_y:x, prefetch_max: all, max_zoom, criteria:diff};
     
     // Create some global state prior to building the server
     //#[allow(clippy::mutex_atomic)] // it's intentional.
@@ -275,9 +297,9 @@ pub async fn server(matches: ArgMatches, range: StringRegion, prefetch_range: St
 
     HttpServer::new(move || {
         //let counter = Cell::new(Vis::new( range.clone(),args.clone(), list.clone(), annotation.clone(), freq.clone()));
-        let counter = Arc::new(Vis::new(range.clone(), args.clone(), list.clone(), annotation.clone(), freq.clone(), dzi.clone()));
+        let counter = Arc::new(Vis::new(range.clone(), args.clone(), list.clone(), annotation.clone(), freq.clone(), dzi.clone(), params.clone()));
 
-        actix_web::App::new().app_data(counter).route("genome.dzi", web::get().to(get_dzi)).route("/{zoom:.*}/{filename:.*}.png", web::get().to(index))
+        actix_web::App::new().data(counter).route("genome.dzi", web::get().to(get_dzi)).route("/{zoom:.*}/{filename:.*}.png", web::get().to(index))
         })
         .bind(bind)?
         .workers(threads as usize)
