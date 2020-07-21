@@ -1,9 +1,11 @@
 extern crate log;
 pub mod subcommands;
+pub mod server;
 
 use clap::{App, AppSettings, Arg, ArgSettings};
 use env_logger;
 use subcommands::*;
+use server::*;
 
 fn main() {
     env_logger::init();
@@ -259,8 +261,27 @@ fn main() {
         .subcommand(
             App::new("server")
                 .about("start the web server.")
-                .arg(Arg::new("host").short('i').about("host"))
-                .arg(Arg::new("port").short('p').about("port"))
+                .arg(Arg::new("bind").short('b').about("bind"))
+                .arg(
+                    Arg::new("range")
+                        .short('r')
+                        .takes_value(true)
+                        .multiple(true)
+                        .about("sorted bam"),
+                )
+                .arg(
+                    Arg::new("max-coverage")
+                        .short('m')
+                        .takes_value(true)
+                        .about("Max coverage value on coverage track"),
+                )
+                .arg(
+                    Arg::new("bam")
+                        .short('a')
+                        .takes_value(true)
+                        .multiple(true)
+                        .about("sorted bam"),
+                )
                 .arg(
                     Arg::new("INPUT")
                         .about("Sets the input file to use")
@@ -453,5 +474,7 @@ fn main() {
             true => vis_query(matches, threads).unwrap(),
             false => bam_vis(matches, threads).unwrap(),
         }
+    } else if let Some(ref matches) = matches.subcommand_matches("server") {
+        server(matches, threads);
     }
 }
