@@ -579,7 +579,7 @@ where
     let y_len = 40
         + (prev_index as u32 + axis_count as u32 + annotation_count as u32 * 2) * y
         + frequency.len() as u32 * freq_size;
-    let x_len = if { square } { y_len } else { x };
+    let x_len = if square { y_len } else { x };
 
     let root = BitMapBackend::new(output, (x_len, y_len)).into_drawing_area();
     let approximate_one_pixel = 1; //((range.end() - range.start()) / x as u64) as u32;
