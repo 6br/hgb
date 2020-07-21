@@ -163,11 +163,11 @@ fn id_to_range<'a>(range: &StringRegion, args: &Vec<String>, zoom: i64, path: i6
     let scalex_default = 20;
     let path = path * (max_zoom - zoom);
     let mut b: Vec<String> = if criteria * (max_zoom - zoom) > 4000000 {
-         vec!["-A".to_string(), "-Y".to_string(), (max_y / (max_zoom-zoom)).to_string(), "-y".to_string(), (y / (max_zoom-zoom)).to_string(), "-n".to_string(), "-I".to_string()]
+        vec!["vis".to_string(), "-A".to_string(), "-Y".to_string(), (max_y / (max_zoom-zoom)).to_string(), "-y".to_string(), (y / (max_zoom-zoom)).to_string(), "-n".to_string(), "-I".to_string()]
     } else if criteria * (max_zoom - zoom) <= 2000000 {
-        vec!["-Y".to_string(), (freq_y / (max_zoom-zoom)).to_string(), "-y".to_string(), (y / (max_zoom-zoom)).to_string(), "-X".to_string(), (scalex_default / (max_zoom-zoom)).to_string()]
+        vec!["vis".to_string(), "-Y".to_string(), (freq_y / (max_zoom-zoom)).to_string(), "-y".to_string(), (y / (max_zoom-zoom)).to_string(), "-X".to_string(), (scalex_default / (max_zoom-zoom)).to_string()]
     } else {
-        vec!["-Y".to_string(), (freq_y / (max_zoom-zoom)).to_string(), "-y".to_string(), (y / (max_zoom-zoom)).to_string(), "-X".to_string(), (scalex_default / (max_zoom-zoom)).to_string(), "-n".to_string(), "-I".to_string()]
+        vec!["vis".to_string(), "-Y".to_string(), (freq_y / (max_zoom-zoom)).to_string(), "-y".to_string(), (y / (max_zoom-zoom)).to_string(), "-X".to_string(), (scalex_default / (max_zoom-zoom)).to_string(), "-n".to_string(), "-I".to_string()]
     };
     b.extend(args.clone());
     let matches = app.get_matches_from(b);
