@@ -2,7 +2,7 @@
 use actix_files::NamedFile;
 
 use actix_web::http::header::{ContentDisposition, DispositionType};
-use actix_web::{HttpRequest, Result, web};
+use actix_web::{HttpRequest, Result, web, Responder};
 use std::{sync::{Arc, Mutex}, path::PathBuf, cell::Cell, collections::BTreeMap};
 use clap::{App,  ArgMatches, Arg};
 use ghi::{bed, vis::bam_record_vis};
@@ -175,6 +175,10 @@ fn id_to_range<'a>(range: &StringRegion, args: &Vec<String>, zoom: i64, path: i6
     (matches, StringRegion::new(&format!("{}:{}-{}", range.path, criteria * path + 1, criteria * (path + 1)).to_string()).unwrap())
 }
 
+async fn get_dzi(data: web::Data<Arc<Vis>>) -> impl Responder {
+    return web::Json(data.dzi.clone());
+}
+
 async fn index(data: web::Data<Arc<Vis>>, req: HttpRequest) -> Result<NamedFile> {
     let zoom: i64 = req.match_info().query("zoom").parse().unwrap();
     let path: i64 = req.match_info().query("filename").parse().unwrap();// .parse().unwrap();
@@ -260,15 +264,20 @@ pub async fn server(matches: ArgMatches, range: StringRegion, prefetch_range: St
     let size = Size{height: x, width: (all as u32 / diff as u32 + 1) * x};
     let image = Image{xmlns: "http://schemas.microsoft.com/deepzoom/2008".to_string(), Format: "png".to_string(), Overlap: 0, TileSize: x, Size: size};
     let dzi = DZI{Image: image};
+    let x_scale = matches
+        .value_of("x-scale")
+        .and_then(|a| a.parse::<u32>().ok())
+        .unwrap_or(20u32);
     
     // Create some global state prior to building the server
     //#[allow(clippy::mutex_atomic)] // it's intentional.
     //let counter1 = web::Data::new(Mutex::new((matches.clone(), range, list, annotation, freq)));
+
     HttpServer::new(move || {
         //let counter = Cell::new(Vis::new( range.clone(),args.clone(), list.clone(), annotation.clone(), freq.clone()));
         let counter = Arc::new(Vis::new(range.clone(), args.clone(), list.clone(), annotation.clone(), freq.clone(), dzi.clone()));
 
-        actix_web::App::new().data(counter).route("/{zoom:.*}/{filename:.*}.png", web::get().to(index))
+        actix_web::App::new().app_data(counter).route("genome.dzi", web::get().to(get_dzi)).route("/{zoom:.*}/{filename:.*}.png", web::get().to(index))
         })
         .bind(bind)?
         .workers(threads as usize)
