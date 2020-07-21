@@ -5,7 +5,7 @@ pub mod server;
 use clap::{App, AppSettings, Arg, ArgSettings};
 use env_logger;
 use subcommands::*;
-use server::*;
+use server::server;
 
 fn main() {
     env_logger::init();
@@ -347,6 +347,7 @@ fn main() {
                 .arg(Arg::new("quality").short('q').about("Display reads by quality value"))
                 .arg(Arg::new("x").short('x').takes_value(true).about("The width of image"))
                 .arg(Arg::new("y").short('y').takes_value(true).about("The height of each read alignment"))
+                .arg(Arg::new("web").short('w').takes_value(true).about("Serve the web server"))
                 .arg(
                     Arg::new("freq-height")
                         .short('Y')
