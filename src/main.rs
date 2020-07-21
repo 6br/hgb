@@ -6,6 +6,7 @@ use clap::{App, AppSettings, Arg, ArgSettings};
 use env_logger;
 use subcommands::*;
 use server::server;
+use std::env;
 
 fn main() {
     env_logger::init();
@@ -442,7 +443,7 @@ fn main() {
                 ),
         );
     let matches = app.get_matches();
-
+    let args: Vec<String> = env::args().collect();
     let threads = matches
         .value_of("threads")
         .and_then(|t| t.parse::<u16>().ok())
@@ -457,9 +458,9 @@ fn main() {
         build(matches, threads);
     } else if let Some(ref matches) = matches.subcommand_matches("query") {
         match matches.is_present("binary") {
-            true => bam_query(matches, threads),
+            true => bam_query(matches, args, threads),
             false => match matches.is_present("vis") {
-                true => vis_query(matches, threads).unwrap(),
+                true => vis_query(matches, args, threads).unwrap(),
                 false => query(matches, threads),
             },
         }
@@ -472,10 +473,9 @@ fn main() {
     } else if let Some(ref matches) = matches.subcommand_matches("vis") {
         eprintln!("{:?}", matches.is_present("INPUT"));
         match matches.is_present("INPUT") {
-            true => vis_query(matches, threads).unwrap(),
+            true => vis_query(matches, args, threads).unwrap(),
             false => bam_vis(matches, threads).unwrap(),
         }
     } else if let Some(ref matches) = matches.subcommand_matches("server") {
-
     }
 }

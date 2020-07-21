@@ -430,7 +430,7 @@ pub fn split(matches: &ArgMatches, threads: u16) -> () {
     }
 }
 
-pub fn bam_query(matches: &ArgMatches, threads: u16) -> () {
+pub fn bam_query(matches: &ArgMatches, args: Vec<String>, threads: u16) -> () {
     if let Some(o) = matches.value_of("INPUT") {
         let mut reader: IndexedReader<BufReader<File>> =
             IndexedReader::from_path_with_additional_threads(o, threads - 1).unwrap();
@@ -518,7 +518,11 @@ pub fn bam_query(matches: &ArgMatches, threads: u16) -> () {
     }
 }
 
-pub fn vis_query(matches: &ArgMatches, threads: u16) -> Result<(), Box<dyn std::error::Error>> {
+pub fn vis_query(
+    matches: &ArgMatches,
+    args: Vec<String>,
+    threads: u16,
+) -> Result<(), Box<dyn std::error::Error>> {
     if let Some(o) = matches.value_of("INPUT") {
         let mut reader: IndexedReader<BufReader<File>> =
             IndexedReader::from_path_with_additional_threads(o, threads - 1).unwrap();
