@@ -10,9 +10,8 @@ use ghi::{bed, vis::bam_record_vis};
 use genomic_range::StringRegion;
 use bam::Record;
 
-fn id_to_range<'a>(range: StringRegion, args: Vec<String>, zoom: i64, path: i64) -> (&'a ArgMatches, StringRegion) {
-    let b = vec!["-y".to_string(), ];
-    let args: Vec<String> = args.into_iter().chain(b.into_iter()).collect(); 
+fn id_to_range<'a>(range: &StringRegion, args: &Vec<String>, zoom: i64, path: i64) -> (ArgMatches, StringRegion) {
+
     let app = App::new("GHB/GHI genomic data visualization tool")
     // .setting(AppSettings::ArgsNegateSubcommands)
     .version("0.1")
@@ -443,10 +442,22 @@ fn id_to_range<'a>(range: StringRegion, args: Vec<String>, zoom: i64, path: i64)
                     .index(1),
             ),
     );
-
-    let matches = app.get_matches_from(args);
+    let prefetch_max = 25000000;
     let criteria = 1000000;
-    (&matches, StringRegion::new(&format!("{}:{}-{}", range.path, criteria * path + 1, criteria * (path + 1)).to_string()).unwrap())
+    let x_width = prefetch_max / criteria * (740);
+    // Here 2**17 < x_width < 2**18 so maxZoom should be 18+ 1;
+    let max_zoom = 19;
+    let freq_y = 100;
+    let y = 40;
+    let path = path * (max_zoom - zoom);
+    if criteria * (19 - zoom) > 4000000 {
+
+    }
+    let mut b: Vec<String> = vec!["-Y".to_string(), (freq_y / (max_zoom-zoom)).to_string(), "-y".to_string(), (y / (max_zoom-zoom)).to_string()];
+    b.extend(args.clone());
+    let matches = app.get_matches_from(b);
+    // let args: Vec<String> = args.into_iter().chain(b.into_iter()).collect(); 
+    (matches, StringRegion::new(&format!("{}:{}-{}", range.path, criteria * path + 1, criteria * (path + 1)).to_string()).unwrap())
 }
 
 async fn index(data: web::Data<Arc<Vis>>, req: HttpRequest) -> Result<NamedFile> {
@@ -467,7 +478,7 @@ async fn index(data: web::Data<Arc<Vis>>, req: HttpRequest) -> Result<NamedFile>
             let freq = &data.freq;
 
             // let arg_vec = vec!["ghb", "vis", "-t", "1", "-r",  "parse"];
-            bam_record_vis(matches, string_range, list.to_vec(), ann.to_vec(), BTreeMap::new(), |_| None).unwrap();
+            bam_record_vis(&matches, string_range, list.to_vec(), ann.to_vec(), BTreeMap::new(), |_| None).unwrap();
             // bam_vis(matches, 1);
             Ok(NamedFile::open(format!("{}/{}_0.png", zoom, path))?
                 .use_last_modified(true)
@@ -502,14 +513,14 @@ impl Vis {
 #[actix_rt::main]
 pub async fn server(matches: &'static ArgMatches, range: StringRegion, args: Vec<String>, list: Vec<(u64, Record)>, annotation: Vec<(u64, bed::Record)>, freq: BTreeMap<u64, Vec<(u64, u32)>>, threads: u16) -> std::io::Result<()> {
 
-    use actix_web::{web, App, HttpServer};
+    use actix_web::{web, HttpServer};
 
     // Create some global state prior to building the server
     //#[allow(clippy::mutex_atomic)] // it's intentional.
     //let counter1 = web::Data::new(Mutex::new((matches.clone(), range, list, annotation, freq)));
     HttpServer::new(move || {
         //let counter = Cell::new(Vis::new( range.clone(),args.clone(), list.clone(), annotation.clone(), freq.clone()));
-        let counter = Arc::new(Vis::new(range, args, list, annotation, freq));
+        let counter = Arc::new(Vis::new(range.clone(), args.clone(), list.clone(), annotation.clone(), freq.clone()));
 
         actix_web::App::new().data(counter).route("/{zoom:.*}/{filename:.*}.png", web::get().to(index))
     })
