@@ -2,7 +2,7 @@
 use actix_files::NamedFile;
 
 use actix_web::http::header::{ContentDisposition, DispositionType};
-use actix_web::{HttpRequest, Result, web, Responder, error};
+use actix_web::{HttpRequest, Result, web, Responder, error, middleware::Logger};
 use std::{sync::{Arc, Mutex}, path::PathBuf, cell::Cell, collections::BTreeMap};
 use clap::{App,  ArgMatches, Arg};
 use ghi::{bed, vis::bam_record_vis};
@@ -172,6 +172,7 @@ fn id_to_range<'a>(range: &StringRegion, args: &Vec<String>, zoom: u64, path: u6
     let mut args = args.clone();
     args.extend(b); //b.extend(args.clone());
     args.remove(0);
+    args = args.into_iter().skip_while(|t| t != "vis").collect();
     eprintln!("{:?}", args);
     //b.insert(0, "vis".to_string());
     let matches = app.get_matches_from(args);
@@ -315,8 +316,9 @@ pub async fn server(matches: ArgMatches, range: StringRegion, prefetch_range: St
         //let counter = Cell::new(Vis::new( range.clone(),args.clone(), list.clone(), annotation.clone(), freq.clone()));
 
         let counter = Arc::new(Vis::new(range.clone(), args.clone(), list.clone(), annotation.clone(), freq.clone(), dzi.clone(), params.clone()));
-        actix_web::App::new().data(counter).route("genome.dzi", web::get().to(get_dzi)).route("/{zoom:.*}/{filename:.*}_0.png", web::get().to(index))
+        actix_web::App::new().data(counter).route("genome.dzi", web::get().to(get_dzi)).route("/{zoom:.*}/{filename:.*}_0.png", web::get().to(index)).wrap(Logger::default())
         })
+        
         .bind(bind)?
         .workers(threads as usize)
         .run()

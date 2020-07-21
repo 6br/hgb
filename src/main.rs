@@ -11,7 +11,7 @@ use server::server;
 use std::env;
 
 fn main() {
-    std::env::set_var("RUST_LOG", "actix_web=debug");
+    std::env::set_var("RUST_LOG", "actix_web=info");
     env_logger::init();
     let app = App::new("GHB/GHI genomic data visualization tool")
         // .setting(AppSettings::ArgsNegateSubcommands)
