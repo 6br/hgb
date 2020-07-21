@@ -747,7 +747,8 @@ where
                     NEG_COL
                 } else {
                     POS_COL
-                }.mix(0.8);
+                }
+                .mix(0.8);
                 let _stroke = Palette99::pick(data.0 as usize); //.unwrap(); //if data.0 % 2 == 0 { CYAN } else { GREEN };
                 let start = if bam.start() as u64 > range.start() {
                     bam.start() as u64
