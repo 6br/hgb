@@ -1,7 +1,7 @@
 extern crate log;
 pub mod subcommands;
 
-use clap::{App, AppSettings, Arg, ArgSettings};
+use clap::{App, AppSettings, Arg};
 use env_logger;
 use subcommands::*;
 
