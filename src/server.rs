@@ -10,7 +10,7 @@ use ghi::{bed, vis::bam_record_vis};
 use genomic_range::StringRegion;
 use bam::Record;
 
-fn id_to_range<'a>(range: &StringRegion, args: &Vec<String>, zoom: i64, path: i64) -> (ArgMatches, StringRegion) {
+fn id_to_range<'a>(range: &StringRegion, args: &Vec<String>, zoom: u64, path: u64) -> (ArgMatches, StringRegion) {
 
     let app = App::new("vis")
             .about("Visualize GHB and other genomic data")
@@ -172,7 +172,7 @@ fn id_to_range<'a>(range: &StringRegion, args: &Vec<String>, zoom: i64, path: i6
     b.extend(args.clone());
     let matches = app.get_matches_from(b);
     // let args: Vec<String> = args.into_iter().chain(b.into_iter()).collect(); 
-    (matches, StringRegion::new(&format!("{}:{}-{}", range.path, criteria * path + 1, criteria * (path + 1)).to_string()).unwrap())
+    (matches, StringRegion::new(&format!("{}:{}-{}", range.path, criteria * path + range.start, range.start + criteria * (path + 1)).to_string()).unwrap())
 }
 
 async fn get_dzi(data: web::Data<Arc<Vis>>) -> impl Responder {
@@ -180,11 +180,8 @@ async fn get_dzi(data: web::Data<Arc<Vis>>) -> impl Responder {
 }
 
 async fn index(data: web::Data<Arc<Vis>>, req: HttpRequest) -> Result<NamedFile> {
-    let zoom: i64 = req.match_info().query("zoom").parse().unwrap();
-    let path: i64 = req.match_info().query("filename").parse().unwrap();// .parse().unwrap();
-    if zoom <= 10 {
-        return Err(error::ErrorBadRequest("zoom level is not appropriate"));
-    }
+    let zoom: u64 = req.match_info().query("zoom").parse().unwrap();
+    let path: u64 = req.match_info().query("filename").parse().unwrap();// .parse().unwrap();
     match NamedFile::open(format!("{}/{}_0.png", zoom, path)) {
         Ok(file) => Ok(file
             .use_last_modified(true)
@@ -197,8 +194,11 @@ async fn index(data: web::Data<Arc<Vis>>, req: HttpRequest) -> Result<NamedFile>
             let (matches, string_range) = id_to_range(&data.range, &data.args, zoom, path);
             let list = &data.list;
             let ann = &data.annotation;
-            let freq = &data.freq;
-
+            let params = &data.params;
+            if zoom <= 10 || zoom > params.max_zoom as u64 {
+                return Err(error::ErrorBadRequest("zoom level is not appropriate"));
+            }
+            // If the end is exceeds the prefetch region, raise error.
             // let arg_vec = vec!["ghb", "vis", "-t", "1", "-r",  "parse"];
             bam_record_vis(&matches, string_range, list.to_vec(), ann.to_vec(), BTreeMap::new(), |_| None).unwrap();
             // bam_vis(matches, 1);
@@ -299,7 +299,7 @@ pub async fn server(matches: ArgMatches, range: StringRegion, prefetch_range: St
         //let counter = Cell::new(Vis::new( range.clone(),args.clone(), list.clone(), annotation.clone(), freq.clone()));
         let counter = Arc::new(Vis::new(range.clone(), args.clone(), list.clone(), annotation.clone(), freq.clone(), dzi.clone(), params.clone()));
 
-        actix_web::App::new().data(counter).route("genome.dzi", web::get().to(get_dzi)).route("/{zoom:.*}/{filename:.*}.png", web::get().to(index))
+        actix_web::App::new().data(counter).route("genome.dzi", web::get().to(get_dzi)).route("/{zoom:.*}/{filename:.*}_0.png", web::get().to(index))
         })
         .bind(bind)?
         .workers(threads as usize)
