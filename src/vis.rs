@@ -119,7 +119,7 @@ where
     // Calculate coverage; it won't work on sort_by_name
     let mut frequency = BTreeMap::new(); // Vec::with_capacity();
     list.iter().group_by(|elt| elt.0).into_iter().for_each(|t| {
-        let mut line = vec![];
+        let mut line = Vec::with_capacity((range.end - range.start + 1) as usize);
         for column in
             bam::Pileup::with_filter(&mut RecordIter(t.1), |record| record.flag().no_bits(1796))
         {
@@ -141,7 +141,7 @@ where
     let root =
         BitMapBackend::new(output, (x, frequency.len() as u32 * freq_size)).into_drawing_area();
     root.fill(&WHITE)?;
-    let root = root.margin(10, 10, 0, 0);
+    let root = root.margin(0, 0, 0, 0);
     // After this point, we should be able to draw construct a chart context
     // let areas = root.split_by_breakpoints([], compressed_list);
     if frequency.len() > 0 {
@@ -268,7 +268,7 @@ where
     // let mut frequency = BTreeMap::new(); // Vec::with_capacity();
     if pileup {
         list.iter().group_by(|elt| elt.0).into_iter().for_each(|t| {
-            let mut line = vec![];
+            let mut line = Vec::with_capacity((range.end - range.start + 1) as usize);
             for column in
                 bam::Pileup::with_filter(&mut RecordIter(t.1), |record| record.flag().no_bits(1796))
             {
@@ -579,31 +579,45 @@ where
     let y_len = 40
         + (prev_index as u32 + axis_count as u32 + annotation_count as u32 * 2) * y
         + frequency.len() as u32 * freq_size;
-    let x_len = if { square } { y_len } else { x };
+    let x_len = if square { y_len } else { x };
 
     let root = BitMapBackend::new(output, (x_len, y_len)).into_drawing_area();
     let approximate_one_pixel = 1; //((range.end() - range.start()) / x as u64) as u32;
     root.fill(&WHITE)?;
-    let root = root.margin(10, 10, 0, 0);
+    let root = root.margin(0, 0, 0, 0);
     // After this point, we should be able to draw construct a chart context
     // let areas = root.split_by_breakpoints([], compressed_list);
+    let top_margin = if no_margin { 0 } else { 40 };
     let (alignment, coverage) = root.split_vertically(
-        40 + (prev_index as u32 + axis_count as u32 + annotation_count as u32 * 2) * y,
+        top_margin + (prev_index as u32 + axis_count as u32 + annotation_count as u32 * 2) * y,
     );
     eprintln!("{:?} {:?} {:?}", prev_index, axis_count, annotation_count);
     let y_area_size = if no_margin { 0 } else { 40 };
 
-    let mut chart = ChartBuilder::on(&alignment)
-        // Set the caption of the chart
-        .caption(format!("{}", range), ("sans-serif", 20).into_font())
-        // Set the size of the label region
-        .x_label_area_size(20)
-        .y_label_area_size(y_area_size)
-        // Finally attach a coordinate on the drawing area and make a chart context
-        .build_ranged(
-            (range.start() - 1)..(range.end() + 1),
-            0..(1 + prev_index + axis_count + annotation_count * 2),
-        )?;
+    let mut chart = if no_margin {
+        ChartBuilder::on(&alignment)
+            // Set the caption of the chart
+            // Set the size of the label region
+            .x_label_area_size(20)
+            .y_label_area_size(y_area_size)
+            // Finally attach a coordinate on the drawing area and make a chart context
+            .build_ranged(
+                (range.start() - 1)..(range.end() + 1),
+                0..(1 + prev_index + axis_count + annotation_count * 2),
+            )?
+    } else {
+        ChartBuilder::on(&alignment)
+            // Set the caption of the chart
+            .caption(format!("{}", range), ("sans-serif", 20).into_font())
+            // Set the size of the label region
+            .x_label_area_size(20)
+            .y_label_area_size(y_area_size)
+            // Finally attach a coordinate on the drawing area and make a chart context
+            .build_ranged(
+                (range.start() - 1)..(range.end() + 1),
+                0..(1 + prev_index + axis_count + annotation_count * 2),
+            )?
+    };
     // Then we can draw a mesh
     chart
         .configure_mesh()
@@ -776,7 +790,7 @@ where
     )?;
     */
 
-    if legend {
+    if legend || no_margin {
         //list2.sort_by(|a, b| a.0.cmp(&b.0));
         // eprintln!("{}", list.len());
         // let mut prev_index = 0;
