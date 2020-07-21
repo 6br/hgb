@@ -154,7 +154,7 @@ fn id_to_range<'a>(range: &StringRegion, args: &Vec<String>, zoom: u64, path: u6
             );
     let prefetch_max = 25000000; // prefetch_range.end() - prefetch_range.start();
     let criteria = param.criteria; // range.end() - range.start();
-    let x_width = prefetch_max / criteria * (740); //max_x
+    // let x_width = prefetch_max / criteria * (740); //max_x
     // Here 2**17 < x_width < 2**18 so maxZoom should be 18+ 1;
     let max_zoom = 19;
     let max_y = param.max_y as u64;
@@ -195,7 +195,8 @@ async fn index(data: web::Data<Arc<Vis>>, req: HttpRequest) -> Result<NamedFile>
             let list = &data.list;
             let ann = &data.annotation;
             let params = &data.params;
-            if zoom <= 10 || zoom > params.max_zoom as u64 {
+            let min_zoom = 10;
+            if zoom <= min_zoom || zoom > params.max_zoom as u64 {
                 return Err(error::ErrorBadRequest("zoom level is not appropriate"));
             }
             let (matches, string_range) = id_to_range(&data.range, &data.args, zoom, path, params);
