@@ -234,6 +234,10 @@ where
         .value_of("x")
         .and_then(|a| a.parse::<u32>().ok())
         .unwrap_or(1280u32);
+    let x_scale = matches
+        .value_of("x-scale")
+        .and_then(|a| a.parse::<u32>().ok())
+        .unwrap_or(20u32);
     let y = matches
         .value_of("y")
         .and_then(|a| a.parse::<u32>().ok())
@@ -598,7 +602,7 @@ where
         ChartBuilder::on(&alignment)
             // Set the caption of the chart
             // Set the size of the label region
-            .x_label_area_size(20)
+            .x_label_area_size(x_scale)
             .y_label_area_size(y_area_size)
             // Finally attach a coordinate on the drawing area and make a chart context
             .build_ranged(

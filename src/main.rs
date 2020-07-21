@@ -361,6 +361,12 @@ fn main() {
                         .takes_value(true)
                         .about("Max coverage value on coverage track"),
                 )
+                .arg(
+                    Arg::new("x-scale")
+                        .short('X')
+                        .takes_value(true)
+                        .about("Size of x-scale legend"),
+                )
                 .arg(Arg::new("split-alignment").short('s').about("Display split alignments in the same "))
                 .arg(Arg::new("only-split-alignment").short('u').about("Display only split alignments or mate-paired reads on alignment track"))
                 .arg(
