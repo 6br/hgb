@@ -10,7 +10,7 @@ use ghi::{bed, vis::bam_record_vis};
 use genomic_range::StringRegion;
 use bam::Record;
 
-fn id_to_range<'a>(range: &StringRegion, args: &Vec<String>, zoom: u64, path: u64) -> (ArgMatches, StringRegion) {
+fn id_to_range<'a>(range: &StringRegion, args: &Vec<String>, zoom: u64, path: u64, param: &Param) -> (ArgMatches, StringRegion) {
 
     let app = App::new("vis")
             .about("Visualize GHB and other genomic data")
@@ -153,23 +153,24 @@ fn id_to_range<'a>(range: &StringRegion, args: &Vec<String>, zoom: u64, path: u6
                     .index(1),
             );
     let prefetch_max = 25000000; // prefetch_range.end() - prefetch_range.start();
-    let criteria = 1000000; // range.end() - range.start();
+    let criteria = param.criteria; // range.end() - range.start();
     let x_width = prefetch_max / criteria * (740); //max_x
     // Here 2**17 < x_width < 2**18 so maxZoom should be 18+ 1;
     let max_zoom = 19;
-    let max_y = 740;
-    let freq_y = 100;
-    let y = 40;
-    let scalex_default = 20;
+    let max_y = param.max_y as u64;
+    let freq_y = param.y_freq as u64;
+    let y = param.y as u64;
+    let scalex_default = param.x_scale as u64;
     let path = path * (max_zoom - zoom);
     let mut b: Vec<String> = if criteria * (max_zoom - zoom) > 4000000 {
-        vec!["vis".to_string(), "-A".to_string(), "-Y".to_string(), (max_y / (max_zoom-zoom)).to_string(), "-y".to_string(), (y / (max_zoom-zoom)).to_string(), "-n".to_string(), "-I".to_string()]
+        vec!["-A".to_string(), "-Y".to_string(), (max_y / (max_zoom-zoom)).to_string(), "-y".to_string(), (y / (max_zoom-zoom)).to_string(), "-n".to_string(), "-I".to_string()]
     } else if criteria * (max_zoom - zoom) <= 2000000 {
-        vec!["vis".to_string(), "-Y".to_string(), (freq_y / (max_zoom-zoom)).to_string(), "-y".to_string(), (y / (max_zoom-zoom)).to_string(), "-X".to_string(), (scalex_default / (max_zoom-zoom)).to_string()]
+        vec!["-Y".to_string(), (freq_y / (max_zoom-zoom)).to_string(), "-y".to_string(), (y / (max_zoom-zoom)).to_string(), "-X".to_string(), (scalex_default / (max_zoom-zoom)).to_string()]
     } else {
-        vec!["vis".to_string(), "-Y".to_string(), (freq_y / (max_zoom-zoom)).to_string(), "-y".to_string(), (y / (max_zoom-zoom)).to_string(), "-X".to_string(), (scalex_default / (max_zoom-zoom)).to_string(), "-n".to_string(), "-I".to_string()]
+        vec!["-Y".to_string(), (freq_y / (max_zoom-zoom)).to_string(), "-y".to_string(), (y / (max_zoom-zoom)).to_string(), "-X".to_string(), (scalex_default / (max_zoom-zoom)).to_string(), "-n".to_string(), "-I".to_string()]
     };
     b.extend(args.clone());
+    b.insert(0, "vis".to_string());
     let matches = app.get_matches_from(b);
     // let args: Vec<String> = args.into_iter().chain(b.into_iter()).collect(); 
     (matches, StringRegion::new(&format!("{}:{}-{}", range.path, criteria * path + range.start, range.start + criteria * (path + 1)).to_string()).unwrap())
@@ -191,13 +192,14 @@ async fn index(data: web::Data<Arc<Vis>>, req: HttpRequest) -> Result<NamedFile>
             })),
         _ => {
             let data = &*data; //(*data).lock().unwrap(); //get_mut();
-            let (matches, string_range) = id_to_range(&data.range, &data.args, zoom, path);
             let list = &data.list;
             let ann = &data.annotation;
             let params = &data.params;
             if zoom <= 10 || zoom > params.max_zoom as u64 {
                 return Err(error::ErrorBadRequest("zoom level is not appropriate"));
             }
+            let (matches, string_range) = id_to_range(&data.range, &data.args, zoom, path, params);
+
             // If the end is exceeds the prefetch region, raise error.
             // let arg_vec = vec!["ghb", "vis", "-t", "1", "-r",  "parse"];
             bam_record_vis(&matches, string_range, list.to_vec(), ann.to_vec(), BTreeMap::new(), |_| None).unwrap();
@@ -260,6 +262,8 @@ pub struct Param {
     prefetch_max: u64,
     criteria: u64,
     max_zoom: u32,
+    y_freq: u32,
+    y: u32,
 }
 
 const fn num_bits<T>() -> usize { std::mem::size_of::<T>() * 8 }
@@ -287,18 +291,26 @@ pub async fn server(matches: ArgMatches, range: StringRegion, prefetch_range: St
         .value_of("x-scale")
         .and_then(|a| a.parse::<u32>().ok())
         .unwrap_or(20u32);
+    let freq_size = matches
+        .value_of("freq-height")
+        .and_then(|a| a.parse::<u32>().ok())
+        .unwrap_or(50u32);
+    let y = matches
+        .value_of("y")
+        .and_then(|a| a.parse::<u32>().ok())
+        .unwrap_or(15u32);
     let x_width = all as u32 / diff as u32 * x;
     let max_zoom = log_2(x_width as i32);
-    let params = Param{x_scale, max_y:x, prefetch_max: all, max_zoom, criteria:diff};
+    let params = Param{x_scale, max_y:x, prefetch_max: all, max_zoom, criteria:diff, y_freq: freq_size, y};
     
     // Create some global state prior to building the server
     //#[allow(clippy::mutex_atomic)] // it's intentional.
     //let counter1 = web::Data::new(Mutex::new((matches.clone(), range, list, annotation, freq)));
 
-    HttpServer::new(move || {
+    HttpServer::new(move|| {
         //let counter = Cell::new(Vis::new( range.clone(),args.clone(), list.clone(), annotation.clone(), freq.clone()));
-        let counter = Arc::new(Vis::new(range.clone(), args.clone(), list.clone(), annotation.clone(), freq.clone(), dzi.clone(), params.clone()));
 
+        let counter = Arc::new(Vis::new(range.clone(), args.clone(), list.clone(), annotation.clone(), freq.clone(), dzi.clone(), params.clone()));
         actix_web::App::new().data(counter).route("genome.dzi", web::get().to(get_dzi)).route("/{zoom:.*}/{filename:.*}_0.png", web::get().to(index))
         })
         .bind(bind)?
