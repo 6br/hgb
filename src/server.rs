@@ -82,6 +82,12 @@ fn id_to_range<'a>(range: &StringRegion, args: &Vec<String>, zoom: i64, path: i6
                     .takes_value(true)
                     .about("Max coverage value on coverage track"),
             )
+            .arg(
+                Arg::new("x-scale")
+                    .short('X')
+                    .takes_value(true)
+                    .about("Size of x-scale legend"),
+            )
             .arg(Arg::new("split-alignment").short('s').about("Display split alignments in the same "))
             .arg(Arg::new("only-split-alignment").short('u').about("Display only split alignments or mate-paired reads on alignment track"))
             .arg(
@@ -146,18 +152,23 @@ fn id_to_range<'a>(range: &StringRegion, args: &Vec<String>, zoom: i64, path: i6
                     .about("(Optional) GHB format to display both alignment and annotation tracks")
                     .index(1),
             );
-    let prefetch_max = 25000000;
-    let criteria = 1000000;
-    let x_width = prefetch_max / criteria * (740);
+    let prefetch_max = 25000000; // prefetch_range.end() - prefetch_range.start();
+    let criteria = 1000000; // range.end() - range.start();
+    let x_width = prefetch_max / criteria * (740); //max_x
     // Here 2**17 < x_width < 2**18 so maxZoom should be 18+ 1;
     let max_zoom = 19;
+    let max_y = 740;
     let freq_y = 100;
     let y = 40;
+    let scalex_default = 20;
     let path = path * (max_zoom - zoom);
-    if criteria * (19 - zoom) > 4000000 {
-
-    }
-    let mut b: Vec<String> = vec!["-Y".to_string(), (freq_y / (max_zoom-zoom)).to_string(), "-y".to_string(), (y / (max_zoom-zoom)).to_string()];
+    let mut b: Vec<String> = if criteria * (max_zoom - zoom) > 4000000 {
+         vec!["-A".to_string(), "-Y".to_string(), (max_y / (max_zoom-zoom)).to_string(), "-y".to_string(), (y / (max_zoom-zoom)).to_string(), "-n".to_string(), "-I".to_string()]
+    } else if criteria * (max_zoom - zoom) <= 2000000 {
+        vec!["-Y".to_string(), (freq_y / (max_zoom-zoom)).to_string(), "-y".to_string(), (y / (max_zoom-zoom)).to_string(), "-X".to_string(), (scalex_default / (max_zoom-zoom)).to_string()]
+    } else {
+        vec!["-Y".to_string(), (freq_y / (max_zoom-zoom)).to_string(), "-y".to_string(), (y / (max_zoom-zoom)).to_string(), "-X".to_string(), (scalex_default / (max_zoom-zoom)).to_string(), "-n".to_string(), "-I".to_string()]
+    };
     b.extend(args.clone());
     let matches = app.get_matches_from(b);
     // let args: Vec<String> = args.into_iter().chain(b.into_iter()).collect(); 
@@ -214,10 +225,12 @@ impl Vis {
     }
 }
 
+#[derive(Debug, Serialize, Deserialize)]
 struct DZI {
     Image: Image
 }
 
+#[derive(Debug, Serialize, Deserialize)]
 struct Image {
     xmlns: String,
     Format: String,
@@ -226,9 +239,10 @@ struct Image {
     Size: Size
 }
 
+#[derive(Debug, Serialize, Deserialize)]
 struct Size {
-    height: u64,
-    width: u64
+    height: u32,
+    width: u32
 }
 
 #[actix_rt::main]
@@ -237,7 +251,14 @@ pub async fn server(matches: ArgMatches, range: StringRegion, args: Vec<String>,
     use actix_web::{web, HttpServer};
 
     let bind = matches.value_of("web").unwrap_or(&"0.0.0.0:4000");
-
+    let x = matches
+        .value_of("x")
+        .and_then(|a| a.parse::<u32>().ok())
+        .unwrap_or(1280u32);
+    let diff = range.end - range.start;
+    // let all = matches
+    let size = Size{height: x, width: x};
+    
     // Create some global state prior to building the server
     //#[allow(clippy::mutex_atomic)] // it's intentional.
     //let counter1 = web::Data::new(Mutex::new((matches.clone(), range, list, annotation, freq)));
