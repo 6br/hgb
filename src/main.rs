@@ -9,7 +9,7 @@ use server::server;
 
 fn main() {
     env_logger::init();
-    let matches = App::new("GHB/GHI genomic data visualization tool")
+    let app = App::new("GHB/GHI genomic data visualization tool")
         // .setting(AppSettings::ArgsNegateSubcommands)
         .setting(AppSettings::SubcommandRequiredElseHelp)
         .setting(AppSettings::UnifiedHelpMessage)
@@ -440,8 +440,8 @@ fn main() {
                         .required(true)
                         .index(1),
                 ),
-        )
-        .get_matches();
+        );
+    let matches = app.get_matches();
 
     let threads = matches
         .value_of("threads")
@@ -476,6 +476,6 @@ fn main() {
             false => bam_vis(matches, threads).unwrap(),
         }
     } else if let Some(ref matches) = matches.subcommand_matches("server") {
-        server(matches, threads);
+        server(&app, matches, threads);
     }
 }
