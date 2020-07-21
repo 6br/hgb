@@ -174,7 +174,7 @@ fn id_to_range<'a>(range: &StringRegion, args: &Vec<String>, zoom: u64, path: u6
     args.remove(0);
     eprintln!("{:?}", args);
     //b.insert(0, "vis".to_string());
-    let matches = app.get_matches_from(b);
+    let matches = app.get_matches_from(args);
     // let args: Vec<String> = args.into_iter().chain(b.into_iter()).collect(); 
     (matches, StringRegion::new(&format!("{}:{}-{}", range.path, criteria * path + range.start, range.start + criteria * (path + 1)).to_string()).unwrap())
 }
