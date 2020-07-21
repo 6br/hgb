@@ -576,17 +576,12 @@ where
                                  };*/
     let annotation_count = annotation.iter().unique_by(|s| s.0).count(); // annotation.len();
 
-    let y_len = 40 + (prev_index as u32 + axis_count as u32 + annotation_count as u32 * 2) * y
-    + frequency.len() as u32 * freq_size;
-    let x_len = if {square} {y_len} else {x};
+    let y_len = 40
+        + (prev_index as u32 + axis_count as u32 + annotation_count as u32 * 2) * y
+        + frequency.len() as u32 * freq_size;
+    let x_len = if { square } { y_len } else { x };
 
-    let root = BitMapBackend::new(
-        output,
-        (
-            x_len,y_len
-        ),
-    )
-    .into_drawing_area();
+    let root = BitMapBackend::new(output, (x_len, y_len)).into_drawing_area();
     let approximate_one_pixel = 1; //((range.end() - range.start()) / x as u64) as u32;
     root.fill(&WHITE)?;
     let root = root.margin(10, 10, 0, 0);
@@ -781,7 +776,7 @@ where
     )?;
     */
 
-    if legend {
+    if legend || no_margin {
         //list2.sort_by(|a, b| a.0.cmp(&b.0));
         // eprintln!("{}", list.len());
         // let mut prev_index = 0;
