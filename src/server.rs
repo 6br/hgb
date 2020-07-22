@@ -157,7 +157,7 @@ fn id_to_range<'a>(range: &StringRegion, args: &Vec<String>, zoom: u64, path: u6
     let criteria = param.criteria; // range.end() - range.start();
     // let x_width = prefetch_max / criteria * (740); //max_x
     // Here 2**17 < x_width < 2**18 so maxZoom should be 18+ 1;
-    let max_zoom = 18;
+    let max_zoom = param.max_zoom as u64; // 18;
     let max_y = param.max_y as u64;
     let freq_y = param.y_freq as u64;
     let y = param.y as u64;
@@ -198,14 +198,14 @@ async fn index(data: web::Data<Arc<Vis>>, req: HttpRequest) -> Result<NamedFile>
                 parameters: vec![],
             })),
         _ => {
-            fs::create_dir( format!("{}/{}", cache_dir, zoom));
+            fs::create_dir( format!("{}/{}", cache_dir, zoom)); //error is permitted.
             let data = &*data; //(*data).lock().unwrap(); //get_mut();
             let list = &data.list;
             let ann = &data.annotation;
             let params = &data.params;
-            let min_zoom = 12;
+            let min_zoom = 11;
             let path_string = format!("{}/{}/{}_0.png", cache_dir, zoom, path);
-            if zoom <= min_zoom || zoom > params.max_zoom as u64 {
+            if zoom < min_zoom || zoom > params.max_zoom as u64 {
                 return Err(error::ErrorBadRequest("zoom level is not appropriate"));
             }
             let (matches, string_range) = id_to_range(&data.range, &data.args, zoom, path, params, path_string.clone());
