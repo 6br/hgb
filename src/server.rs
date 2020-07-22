@@ -3,14 +3,14 @@ use actix_files::NamedFile;
 
 use actix_web::http::header::{ContentDisposition, DispositionType};
 use actix_web::{HttpRequest, Result, web, Responder, error, middleware::Logger};
-use std::{sync::{Arc, Mutex}, path::PathBuf, cell::Cell, collections::BTreeMap};
+use std::{sync::{Arc, Mutex}, path::PathBuf, cell::Cell, collections::BTreeMap, fs};
 use clap::{App,  ArgMatches, Arg, AppSettings};
 use ghi::{bed, vis::bam_record_vis};
 // use crate::subcommands::bam_vis;
 use genomic_range::StringRegion;
 use bam::Record;
 
-fn id_to_range<'a>(range: &StringRegion, args: &Vec<String>, zoom: u64, path: u64, param: &Param) -> (ArgMatches, StringRegion) {
+fn id_to_range<'a>(range: &StringRegion, args: &Vec<String>, zoom: u64, path: u64, param: &Param, path: String) -> (ArgMatches, StringRegion) {
 
     let app = App::new("vis")
             .setting(AppSettings::AllArgsOverrideSelf)
@@ -164,11 +164,11 @@ fn id_to_range<'a>(range: &StringRegion, args: &Vec<String>, zoom: u64, path: u6
     let scalex_default = param.x_scale as u64;
     let path = path * (max_zoom - zoom);
     let mut b: Vec<String> = if criteria * (max_zoom - zoom) > 4000000 {
-        vec!["-A".to_string(), "-Y".to_string(), (max_y / (max_zoom-zoom)).to_string(), "-y".to_string(), (y / (max_zoom-zoom)).to_string(), "-n".to_string(), "-I".to_string()]
+        vec!["-A".to_string(), "-Y".to_string(), (max_y / (max_zoom-zoom)).to_string(), "-y".to_string(), (y / (max_zoom-zoom)).to_string(), "-n".to_string(), "-I".to_string(), "-o".to_string(), path]
     } else if criteria * (max_zoom - zoom) <= 2000000 {
-        vec!["-Y".to_string(), (freq_y / (max_zoom-zoom)).to_string(), "-y".to_string(), (y / (max_zoom-zoom)).to_string(), "-X".to_string(), (scalex_default / (max_zoom-zoom)).to_string()]
+        vec!["-Y".to_string(), (freq_y / (max_zoom-zoom)).to_string(), "-y".to_string(), (y / (max_zoom-zoom)).to_string(), "-X".to_string(), (scalex_default / (max_zoom-zoom)).to_string(), "-o".to_string(), path]
     } else {
-        vec!["-Y".to_string(), (freq_y / (max_zoom-zoom)).to_string(), "-y".to_string(), (y / (max_zoom-zoom)).to_string(), "-X".to_string(), (scalex_default / (max_zoom-zoom)).to_string(), "-n".to_string(), "-I".to_string()]
+        vec!["-Y".to_string(), (freq_y / (max_zoom-zoom)).to_string(), "-y".to_string(), (y / (max_zoom-zoom)).to_string(), "-X".to_string(), (scalex_default / (max_zoom-zoom)).to_string(), "-n".to_string(), "-I".to_string(), "-o".to_string(), path]
     };
     let mut args = args.clone();
     args.extend(b); //b.extend(args.clone());
@@ -197,21 +197,26 @@ async fn index(data: web::Data<Arc<Vis>>, req: HttpRequest) -> Result<NamedFile>
                 parameters: vec![],
             })),
         _ => {
+            match fs::create_dir(zoom.to_string()) {
+                Err(e) => panic!("{}: {}", zoom.to_string(), e),
+                Ok(_) => {},
+            };
             let data = &*data; //(*data).lock().unwrap(); //get_mut();
             let list = &data.list;
             let ann = &data.annotation;
             let params = &data.params;
             let min_zoom = 10;
+            let path = format!("{}/{}_0.png", zoom, path);
             if zoom <= min_zoom || zoom > params.max_zoom as u64 {
                 return Err(error::ErrorBadRequest("zoom level is not appropriate"));
             }
-            let (matches, string_range) = id_to_range(&data.range, &data.args, zoom, path, params);
+            let (matches, string_range) = id_to_range(&data.range, &data.args, zoom, path, params, path);
 
             // If the end is exceeds the prefetch region, raise error.
             // let arg_vec = vec!["ghb", "vis", "-t", "1", "-r",  "parse"];
             bam_record_vis(&matches, string_range, list.to_vec(), ann.to_vec(), BTreeMap::new(), |_| None).unwrap();
             // bam_vis(matches, 1);
-            Ok(NamedFile::open(format!("{}/{}_0.png", zoom, path))?
+            Ok(NamedFile::open(path)?
                 .use_last_modified(true)
                 .set_content_disposition(ContentDisposition {
                     disposition: DispositionType::Attachment,
