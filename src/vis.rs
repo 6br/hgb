@@ -102,6 +102,8 @@ pub fn frequency_vis<'a, F>(
 where
     F: Fn(usize) -> Option<&'a str>,
 {
+    let no_margin = matches.is_present("no-scale");
+    let y_area_size = if no_margin { 0 } else { 40 };
     let output = matches.value_of("output").unwrap();
     let max_coverage = matches
         .value_of("max-coverage")
@@ -114,7 +116,10 @@ where
         .value_of("freq-height")
         .and_then(|a| a.parse::<u32>().ok())
         .unwrap_or(100u32);
-
+    let x_scale = matches
+        .value_of("x-scale")
+        .and_then(|a| a.parse::<u32>().ok())
+        .unwrap_or(20u32);
     list.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.start().cmp(&b.1.start())));
     // Calculate coverage; it won't work on sort_by_name
     let mut frequency = BTreeMap::new(); // Vec::with_capacity();
@@ -156,8 +161,8 @@ where
                 // Set the caption of the chart
                 //.caption(format!("{}", range), ("sans-serif", 20).into_font())
                 // Set the size of the label region
-                .x_label_area_size(20)
-                .y_label_area_size(40)
+                .x_label_area_size(x_scale)
+                .y_label_area_size(y_area_size)
                 // Finally attach a coordinate on the drawing area and make a chart context
                 .build_ranged((range.start() - 1)..(range.end() + 1), 0..y_max)?;
             chart
@@ -183,11 +188,13 @@ where
                         Palette99::pick(idx).filled(),
                     )
                 });
-            chart
-                .configure_series_labels()
-                .background_style(&WHITE.mix(0.8))
-                .border_style(&BLACK)
-                .draw()?;
+            if !no_margin {
+                chart
+                    .configure_series_labels()
+                    .background_style(&WHITE.mix(0.8))
+                    .border_style(&BLACK)
+                    .draw()?;
+            }
         }
     }
     Ok(())
@@ -579,8 +586,8 @@ where
                                      btree
                                  };*/
     let annotation_count = annotation.iter().unique_by(|s| s.0).count(); // annotation.len();
-
-    let y_len = 40
+    let top_margin = if no_margin { 0 } else { 40 };
+    let y_len = top_margin
         + (prev_index as u32 + axis_count as u32 + annotation_count as u32 * 2) * y
         + frequency.len() as u32 * freq_size;
     let x_len = if square { y_len } else { x };
@@ -591,7 +598,7 @@ where
     let root = root.margin(0, 0, 0, 0);
     // After this point, we should be able to draw construct a chart context
     // let areas = root.split_by_breakpoints([], compressed_list);
-    let top_margin = if no_margin { 0 } else { 40 };
+
     let (alignment, coverage) = root.split_vertically(
         top_margin + (prev_index as u32 + axis_count as u32 + annotation_count as u32 * 2) * y,
     );

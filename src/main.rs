@@ -365,6 +365,12 @@ fn main() {
                         .about("Maximum coverage value on coverage track"),
                 )
                 .arg(
+                    Arg::new("cache-dir")
+                        .short('d')
+                        .takes_value(true)
+                        .about("Cache directory for server (generated randomly if not specified)"),
+                )
+                .arg(
                     Arg::new("min-read-length")
                         .short('M')
                         .takes_value(true)

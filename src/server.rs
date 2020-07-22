@@ -1,6 +1,6 @@
 
 use actix_files::NamedFile;
-
+use rand::Rng;
 use actix_web::http::header::{ContentDisposition, DispositionType};
 use actix_web::{HttpRequest, Result, web, Responder, error, middleware::Logger};
 use std::{sync::{Arc, Mutex}, path::PathBuf, cell::Cell, collections::BTreeMap, fs};
@@ -157,25 +157,25 @@ fn id_to_range<'a>(range: &StringRegion, args: &Vec<String>, zoom: u64, path: u6
     let criteria = param.criteria; // range.end() - range.start();
     // let x_width = prefetch_max / criteria * (740); //max_x
     // Here 2**17 < x_width < 2**18 so maxZoom should be 18+ 1;
-    let max_zoom = 19;
+    let max_zoom = 18;
     let max_y = param.max_y as u64;
     let freq_y = param.y_freq as u64;
     let y = param.y as u64;
     let scalex_default = param.x_scale as u64;
-    let path = path * (max_zoom - zoom);
-    let mut b: Vec<String> = if criteria * (max_zoom - zoom) > 4000000 {
-        vec!["-A".to_string(), "-Y".to_string(), (max_y / (max_zoom-zoom)).to_string(), "-y".to_string(), (y / (max_zoom-zoom)).to_string(), "-n".to_string(), "-I".to_string(), "-o".to_string(), path_string]
-    } else if criteria * (max_zoom - zoom) <= 2000000 {
-        vec!["-Y".to_string(), (freq_y / (max_zoom-zoom)).to_string(), "-y".to_string(), (y / (max_zoom-zoom)).to_string(), "-X".to_string(), (scalex_default / (max_zoom-zoom)).to_string(), "-o".to_string(), path_string]
+    let path = path << (max_zoom - zoom);
+    let b: Vec<String> = if criteria << (max_zoom - zoom) >= 4000000 { // i.e. 2**22s
+        vec!["-A".to_string(), "-Y".to_string(), (max_y >> (max_zoom-zoom)).to_string(), "-y".to_string(), (y >> (max_zoom-zoom)).to_string(), "-n".to_string(), "-I".to_string(), "-o".to_string(), path_string, "-X".to_string(), (scalex_default >> (max_zoom-zoom)* (max_y / scalex_default)).to_string()]
+    } else if criteria << (max_zoom - zoom ) <= 2000000 {
+        vec!["-Y".to_string(), (freq_y >> (max_zoom-zoom)).to_string(), "-y".to_string(), (y >> (max_zoom-zoom)).to_string(), "-X".to_string(), (scalex_default >> (max_zoom-zoom)).to_string(), "-o".to_string(), path_string]
     } else {
-        vec!["-Y".to_string(), (freq_y / (max_zoom-zoom)).to_string(), "-y".to_string(), (y / (max_zoom-zoom)).to_string(), "-X".to_string(), (scalex_default / (max_zoom-zoom)).to_string(), "-n".to_string(), "-I".to_string(), "-o".to_string(), path_string]
+        vec!["-Y".to_string(), (freq_y >> (max_zoom-zoom)).to_string(), "-y".to_string(), (y >> (max_zoom-zoom)).to_string(), "-X".to_string(), (scalex_default >> (max_zoom-zoom)).to_string(), "-n".to_string(), "-I".to_string(), "-o".to_string(), path_string]
     };
     let mut args = args.clone();
     args.extend(b); //b.extend(args.clone());
     args.remove(0);
     args = args.into_iter().skip_while(|t| t != "vis").collect();
     //b.insert(0, "vis".to_string());
-    let range = StringRegion::new(&format!("{}:{}-{}", range.path, criteria * path + range.start, range.start + criteria * (path + 1)).to_string()).unwrap();
+    let range = StringRegion::new(&format!("{}:{}-{}", range.path, criteria * path + range.start, range.start + criteria * (path + 1)-1).to_string()).unwrap();
     eprintln!("{:?} {:?}", args, range);
     let matches = app.get_matches_from(args);
     // let args: Vec<String> = args.into_iter().chain(b.into_iter()).collect(); 
@@ -189,7 +189,8 @@ async fn get_dzi(data: web::Data<Arc<Vis>>) -> impl Responder {
 async fn index(data: web::Data<Arc<Vis>>, req: HttpRequest) -> Result<NamedFile> {
     let zoom: u64 = req.match_info().query("zoom").parse().unwrap();
     let path: u64 = req.match_info().query("filename").parse().unwrap();// .parse().unwrap();
-    match NamedFile::open(format!("{}/{}_0.png", zoom, path)) {
+    let cache_dir = &data.params.cache_dir;
+    match NamedFile::open(format!("{}/{}/{}_0.png", cache_dir, zoom, path)) {
         Ok(file) => Ok(file
             .use_last_modified(true)
             .set_content_disposition(ContentDisposition {
@@ -197,16 +198,13 @@ async fn index(data: web::Data<Arc<Vis>>, req: HttpRequest) -> Result<NamedFile>
                 parameters: vec![],
             })),
         _ => {
-            match fs::create_dir(zoom.to_string()) {
-                Err(e) => panic!("{}: {}", zoom.to_string(), e),
-                Ok(_) => {},
-            };
+            fs::create_dir( format!("{}/{}", cache_dir, zoom));
             let data = &*data; //(*data).lock().unwrap(); //get_mut();
             let list = &data.list;
             let ann = &data.annotation;
             let params = &data.params;
-            let min_zoom = 10;
-            let path_string = format!("{}/{}_0.png", zoom, path);
+            let min_zoom = 12;
+            let path_string = format!("{}/{}/{}_0.png", cache_dir, zoom, path);
             if zoom <= min_zoom || zoom > params.max_zoom as u64 {
                 return Err(error::ErrorBadRequest("zoom level is not appropriate"));
             }
@@ -276,6 +274,7 @@ pub struct Param {
     max_zoom: u32,
     y_freq: u32,
     y: u32,
+    cache_dir: String
 }
 
 const fn num_bits<T>() -> usize { std::mem::size_of::<T>() * 8 }
@@ -311,9 +310,19 @@ pub async fn server(matches: ArgMatches, range: StringRegion, prefetch_range: St
         .value_of("y")
         .and_then(|a| a.parse::<u32>().ok())
         .unwrap_or(15u32);
+    let mut rng = rand::thread_rng();
+    let cache_dir = matches
+        .value_of("cache-dir")
+        .and_then(|a| Some(a.to_string()))
+        .unwrap_or(rng.gen::<u32>().to_string());
+    
     let x_width = all as u32 / diff as u32 * x;
-    let max_zoom = log_2(x_width as i32);
-    let params = Param{x_scale, max_y:x, prefetch_max: all, max_zoom, criteria:diff, y_freq: freq_size, y};
+    let max_zoom = log_2(x_width as i32) + 1;
+    match fs::create_dir(&cache_dir) {
+        Err(e) => panic!("{}: {}", &cache_dir, e),
+        Ok(_) => {},
+    };
+    let params = Param{x_scale, max_y:x, prefetch_max: all, max_zoom, criteria:diff, y_freq: freq_size, y, cache_dir};
     eprintln!("{:?}", params);
     // Create some global state prior to building the server
     //#[allow(clippy::mutex_atomic)] // it's intentional.
