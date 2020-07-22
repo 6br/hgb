@@ -10,7 +10,7 @@ use ghi::{bed, vis::bam_record_vis};
 use genomic_range::StringRegion;
 use bam::Record;
 
-fn id_to_range<'a>(range: &StringRegion, args: &Vec<String>, zoom: u64, path: u64, param: &Param, path: String) -> (ArgMatches, StringRegion) {
+fn id_to_range<'a>(range: &StringRegion, args: &Vec<String>, zoom: u64, path: u64, param: &Param, path_string: String) -> (ArgMatches, StringRegion) {
 
     let app = App::new("vis")
             .setting(AppSettings::AllArgsOverrideSelf)
@@ -164,11 +164,11 @@ fn id_to_range<'a>(range: &StringRegion, args: &Vec<String>, zoom: u64, path: u6
     let scalex_default = param.x_scale as u64;
     let path = path * (max_zoom - zoom);
     let mut b: Vec<String> = if criteria * (max_zoom - zoom) > 4000000 {
-        vec!["-A".to_string(), "-Y".to_string(), (max_y / (max_zoom-zoom)).to_string(), "-y".to_string(), (y / (max_zoom-zoom)).to_string(), "-n".to_string(), "-I".to_string(), "-o".to_string(), path]
+        vec!["-A".to_string(), "-Y".to_string(), (max_y / (max_zoom-zoom)).to_string(), "-y".to_string(), (y / (max_zoom-zoom)).to_string(), "-n".to_string(), "-I".to_string(), "-o".to_string(), path_string]
     } else if criteria * (max_zoom - zoom) <= 2000000 {
-        vec!["-Y".to_string(), (freq_y / (max_zoom-zoom)).to_string(), "-y".to_string(), (y / (max_zoom-zoom)).to_string(), "-X".to_string(), (scalex_default / (max_zoom-zoom)).to_string(), "-o".to_string(), path]
+        vec!["-Y".to_string(), (freq_y / (max_zoom-zoom)).to_string(), "-y".to_string(), (y / (max_zoom-zoom)).to_string(), "-X".to_string(), (scalex_default / (max_zoom-zoom)).to_string(), "-o".to_string(), path_string]
     } else {
-        vec!["-Y".to_string(), (freq_y / (max_zoom-zoom)).to_string(), "-y".to_string(), (y / (max_zoom-zoom)).to_string(), "-X".to_string(), (scalex_default / (max_zoom-zoom)).to_string(), "-n".to_string(), "-I".to_string(), "-o".to_string(), path]
+        vec!["-Y".to_string(), (freq_y / (max_zoom-zoom)).to_string(), "-y".to_string(), (y / (max_zoom-zoom)).to_string(), "-X".to_string(), (scalex_default / (max_zoom-zoom)).to_string(), "-n".to_string(), "-I".to_string(), "-o".to_string(), path_string]
     };
     let mut args = args.clone();
     args.extend(b); //b.extend(args.clone());
@@ -206,17 +206,17 @@ async fn index(data: web::Data<Arc<Vis>>, req: HttpRequest) -> Result<NamedFile>
             let ann = &data.annotation;
             let params = &data.params;
             let min_zoom = 10;
-            let path = format!("{}/{}_0.png", zoom, path);
+            let path_string = format!("{}/{}_0.png", zoom, path);
             if zoom <= min_zoom || zoom > params.max_zoom as u64 {
                 return Err(error::ErrorBadRequest("zoom level is not appropriate"));
             }
-            let (matches, string_range) = id_to_range(&data.range, &data.args, zoom, path, params, path);
+            let (matches, string_range) = id_to_range(&data.range, &data.args, zoom, path, params, path_string.clone());
 
             // If the end is exceeds the prefetch region, raise error.
             // let arg_vec = vec!["ghb", "vis", "-t", "1", "-r",  "parse"];
             bam_record_vis(&matches, string_range, list.to_vec(), ann.to_vec(), BTreeMap::new(), |_| None).unwrap();
             // bam_vis(matches, 1);
-            Ok(NamedFile::open(path)?
+            Ok(NamedFile::open(path_string)?
                 .use_last_modified(true)
                 .set_content_disposition(ContentDisposition {
                     disposition: DispositionType::Attachment,
