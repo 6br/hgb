@@ -28,6 +28,10 @@ pub fn bam_vis(
     threads: u16,
 ) -> Result<(), Box<dyn std::error::Error>> {
     // let output_path = matches.value_of("OUTPUT").unwrap();
+    let min_read_len = matches
+        .value_of("min-read-length")
+        .and_then(|a| a.parse::<u32>().ok())
+        .unwrap_or(0u32);
 
     if let Some(ranges) = matches.values_of("range") {
         let ranges: Vec<&str> = ranges.collect();
@@ -77,7 +81,7 @@ pub fn bam_vis(
                     ))?;
                     for record in viewer {
                         let record = record?;
-                        if !record.flag().is_secondary() {
+                        if !record.flag().is_secondary() && record.query_len() > min_read_len {
                             list.push((index as u64, record));
                         }
                     }
@@ -541,6 +545,10 @@ pub fn vis_query(
     args: Vec<String>,
     threads: u16,
 ) -> Result<(), Box<dyn std::error::Error>> {
+    let min_read_len = matches
+        .value_of("min-read-length")
+        .and_then(|a| a.parse::<u32>().ok())
+        .unwrap_or(0u32);
     if let Some(o) = matches.value_of("INPUT") {
         let mut reader: IndexedReader<BufReader<File>> =
             IndexedReader::from_path_with_additional_threads(o, threads - 1).unwrap();
@@ -631,7 +639,9 @@ pub fn vis_query(
                                             || (i.calculate_end() as u64 > range.start()
                                                 && range.end() > i.start() as u64)
                                         {
-                                            if !i.flag().is_secondary() {
+                                            if !i.flag().is_secondary()
+                                                && i.query_len() > min_read_len
+                                            {
                                                 list.push((sample_id, i));
                                             }
                                         }
