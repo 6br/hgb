@@ -4,7 +4,7 @@ use actix_files::NamedFile;
 use actix_web::http::header::{ContentDisposition, DispositionType};
 use actix_web::{HttpRequest, Result, web, Responder, error, middleware::Logger};
 use std::{sync::{Arc, Mutex}, path::PathBuf, cell::Cell, collections::BTreeMap};
-use clap::{App,  ArgMatches, Arg};
+use clap::{App,  ArgMatches, Arg, AppSettings};
 use ghi::{bed, vis::bam_record_vis};
 // use crate::subcommands::bam_vis;
 use genomic_range::StringRegion;
@@ -13,6 +13,7 @@ use bam::Record;
 fn id_to_range<'a>(range: &StringRegion, args: &Vec<String>, zoom: u64, path: u64, param: &Param) -> (ArgMatches, StringRegion) {
 
     let app = App::new("vis")
+            .setting(AppSettings::AllArgsOverrideSelf)
             .about("Visualize GHB and other genomic data")
             .arg(
                 Arg::new("range")
@@ -173,11 +174,12 @@ fn id_to_range<'a>(range: &StringRegion, args: &Vec<String>, zoom: u64, path: u6
     args.extend(b); //b.extend(args.clone());
     args.remove(0);
     args = args.into_iter().skip_while(|t| t != "vis").collect();
-    eprintln!("{:?}", args);
     //b.insert(0, "vis".to_string());
+    let range = StringRegion::new(&format!("{}:{}-{}", range.path, criteria * path + range.start, range.start + criteria * (path + 1)).to_string()).unwrap();
+    eprintln!("{:?} {:?}", args, range);
     let matches = app.get_matches_from(args);
     // let args: Vec<String> = args.into_iter().chain(b.into_iter()).collect(); 
-    (matches, StringRegion::new(&format!("{}:{}-{}", range.path, criteria * path + range.start, range.start + criteria * (path + 1)).to_string()).unwrap())
+    (matches, range)
 }
 
 async fn get_dzi(data: web::Data<Arc<Vis>>) -> impl Responder {
