@@ -162,7 +162,7 @@ fn id_to_range<'a>(range: &StringRegion, args: &Vec<String>, zoom: u64, path: u6
     let freq_y = param.y_freq as u64;
     let y = param.y as u64;
     let scalex_default = param.x_scale as u64;
-    let path = path << (max_zoom - zoom);
+    // let path = path << (max_zoom - zoom);
     let b: Vec<String> = if criteria << (max_zoom - zoom) >= 4000000 { // i.e. 2**22s
         vec!["-A".to_string(), "-Y".to_string(), (max_y >> (max_zoom-zoom)).to_string(), "-y".to_string(), (y >> (max_zoom-zoom)).to_string(), "-n".to_string(), "-I".to_string(), "-o".to_string(), path_string, "-X".to_string(), ((scalex_default >> (max_zoom-zoom) )* (max_y / freq_y)).to_string()]
     } else if criteria << (max_zoom - zoom ) <= 2000000 {
@@ -175,7 +175,8 @@ fn id_to_range<'a>(range: &StringRegion, args: &Vec<String>, zoom: u64, path: u6
     args.remove(0);
     args = args.into_iter().skip_while(|t| t != "vis").collect();
     //b.insert(0, "vis".to_string());
-    let range = StringRegion::new(&format!("{}:{}-{}", range.path, criteria * path + range.start, range.start + criteria * (path + 1)-1).to_string()).unwrap();
+    let start =  (criteria << (max_zoom - zoom)) * path + range.start;
+    let range = StringRegion::new(&format!("{}:{}-{}", range.path, start, start + (criteria << (max_zoom - zoom)) - 1).to_string()).unwrap();
     eprintln!("{:?} {:?}", args, range);
     let matches = app.get_matches_from(args);
     // let args: Vec<String> = args.into_iter().chain(b.into_iter()).collect(); 
