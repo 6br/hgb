@@ -677,7 +677,7 @@ where
 
     // Draw annotation if there is bed-compatible annotation.
     annotation
-        .into_iter()
+        .iter()
         .group_by(|elt| elt.0)
         .into_iter()
         .enumerate()
