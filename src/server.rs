@@ -163,7 +163,7 @@ fn id_to_range<'a>(range: &StringRegion, args: &Vec<String>, zoom: u64, path: u6
     let y = param.y as u64;
     let scalex_default = param.x_scale as u64;
     // let path = path << (max_zoom - zoom);
-    let b: Vec<String> = if criteria << (max_zoom - zoom) >= 4000000 { // i.e. 2**22s
+    let b: Vec<String> = if criteria << (max_zoom - zoom) >= 3000000 { // i.e. 2**22s
         vec!["-A".to_string(), "-Y".to_string(), (max_y >> (max_zoom-zoom)).to_string(), "-y".to_string(), (y >> (max_zoom-zoom)).to_string(), "-n".to_string(), "-I".to_string(), "-o".to_string(), path_string, "-X".to_string(), ((scalex_default >> (max_zoom-zoom) )* (max_y / freq_y)).to_string()]
     } else if criteria << (max_zoom - zoom ) <= 200000 { // Base-pair level
         vec!["-Y".to_string(), (freq_y >> (max_zoom-zoom)).to_string(), "-y".to_string(), (y >> (max_zoom-zoom)).to_string(), "-X".to_string(), (scalex_default >> (max_zoom-zoom)).to_string(), "-o".to_string(), path_string]
@@ -206,8 +206,9 @@ async fn index(data: web::Data<Arc<Vis>>, req: HttpRequest) -> Result<NamedFile>
             let params = &data.params;
             let freq = &data.freq;
             let min_zoom = 11;
+            
             let path_string = format!("{}/{}/{}_0.png", cache_dir, zoom, path);
-            if zoom < min_zoom || zoom > params.max_zoom as u64 {
+            if zoom < min_zoom || zoom > max_zoom as u64 {
                 return Err(error::ErrorBadRequest("zoom level is not appropriate"));
             }
             let (matches, string_range) = id_to_range(&data.range, &data.args, zoom, path, params, path_string.clone());
@@ -319,7 +320,8 @@ pub async fn server(matches: ArgMatches, range: StringRegion, prefetch_range: St
         .unwrap_or(rng.gen::<u32>().to_string());
     
     let x_width = all as u32 / diff as u32 * x;
-    let max_zoom = log_2(x_width as i32) + 1;
+    let max_zoom = 18; // log_2(x_width as i32) + 1;
+
     match fs::create_dir(&cache_dir) {
         Err(e) => panic!("{}: {}", &cache_dir, e),
         Ok(_) => {},
