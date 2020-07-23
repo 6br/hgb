@@ -17,6 +17,7 @@ use plotters::style::RGBColor;
 use std::{
     collections::{BTreeMap, HashMap},
     fs::File,
+    time::Instant,
 };
 
 macro_rules! predefined_color {
@@ -211,6 +212,7 @@ pub fn bam_record_vis<'a, F>(
 where
     F: Fn(usize) -> Option<&'a str>,
 {
+    let start = Instant::now();
     // let diff = range.end() - range.start();
     let preset: Option<VisPreset> = matches.value_of_t("preset").ok(); // .unwrap_or_else(|e| e.exit());
     eprintln!("Preset: {:?}", preset);
@@ -299,6 +301,13 @@ where
             frequency.insert(t.0, line);
         });
     }
+
+    let endz = start.elapsed();
+    eprintln!(
+        "{}.{:03} sec.",
+        endz.as_secs(),
+        endz.subsec_nanos() / 1_000_000
+    );
 
     annotation.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.start().cmp(&b.1.start())));
     /*
@@ -585,6 +594,13 @@ where
                                      //btree
                                      btree
                                  };*/
+    let end0 = start.elapsed();
+    eprintln!(
+        "{}.{:03} sec.",
+        end0.as_secs(),
+        end0.subsec_nanos() / 1_000_000
+    );
+
     let annotation_count = annotation.iter().unique_by(|s| s.0).count(); // annotation.len();
     let top_margin = if no_margin { 0 } else { 40 };
     let y_len = top_margin
@@ -836,11 +852,11 @@ where
         let mut prev_index = 0;
         chart.draw_series(
             compressed_list
-                .into_iter()
+                .iter()
                 .map(|(sample_sequential_id, sample)| {
-                    let count = sample;
+                    let count = *sample;
                     if count > 0 {
-                        let stroke = Palette99::pick(sample_sequential_id as usize);
+                        let stroke = Palette99::pick(*sample_sequential_id as usize);
                         let mut bar2 = Rectangle::new(
                             [
                                 (range.start() - 1, prev_index),
@@ -892,16 +908,16 @@ where
         //list.into_iter().enumerate().map(|(index, data)| {
         let mut bars = vec![];
         index_list
-            .into_iter()
-            .zip(list)
+            .iter()
+            .zip(list.iter())
             .filter(|(_, data)| {
                 (data.1.start() as u64) < range.end()
                     && (data.1.calculate_end() as u64) > range.start()
             })
-            .for_each(|(index, data)| {
+            .for_each(|(&index, data)| {
                 //chart.draw_series(index_list.into_par_iter().zip(list).map(|(index, data)| {
                 //for (index, data) in list.iter().enumerate() {
-                let bam = data.1;
+                let bam = &data.1;
                 let color = if bam.flag().is_reverse_strand() {
                     NEG_COL
                 } else {
@@ -1204,6 +1220,12 @@ where
         bars
     };
     chart.draw_series(series)?;
+    let end1 = start.elapsed();
+    eprintln!(
+        "{}.{:03} sec.",
+        end1.as_secs(),
+        end1.subsec_nanos() / 1_000_000
+    );
 
     if frequency.len() > 0 {
         let coverages = coverage.split_evenly((frequency.len(), 1));
@@ -1277,5 +1299,12 @@ where
             .border_style(&BLACK)
             .draw()?;
     }
+    let end2 = start.elapsed();
+    eprintln!(
+        "{}.{:03} sec.",
+        end2.as_secs(),
+        end2.subsec_nanos() / 1_000_000
+    );
+
     Ok(())
 }
