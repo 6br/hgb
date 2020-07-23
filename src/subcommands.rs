@@ -838,7 +838,7 @@ where
         .unwrap_or(1u16);
     let pileup = matches.is_present("pileup");
 
-        // Calculate coverage; it won't work on sort_by_name
+    // Calculate coverage; it won't work on sort_by_name
     // let mut frequency = BTreeMap::new(); // Vec::with_capacity();
 
     if pileup {
@@ -877,6 +877,6 @@ where
             threads,
         )?;
     } else {
-        bam_record_vis(matches, range, list, ann, &freq, lambda)?;
+        bam_record_vis(matches, range, list, &ann, &freq, lambda)?;
     })
 }

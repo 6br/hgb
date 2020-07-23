@@ -107,6 +107,7 @@ pub fn frequency_vis<'a, F>(
     matches: &ArgMatches,
     range: StringRegion,
     mut list: Vec<(u64, Record)>,
+    frequency: &BTreeMap<u64, Vec<(u64, u32)>>,
     lambda: F,
 ) -> Result<(), Box<dyn std::error::Error>>
 where
@@ -132,27 +133,7 @@ where
         .unwrap_or(20u32);
     list.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.start().cmp(&b.1.start())));
     // Calculate coverage; it won't work on sort_by_name
-    let mut frequency = BTreeMap::new(); // Vec::with_capacity();
-    list.iter().group_by(|elt| elt.0).into_iter().for_each(|t| {
-        let mut line = Vec::with_capacity((range.end - range.start + 1) as usize);
-        for column in
-            bam::Pileup::with_filter(&mut RecordIter(t.1), |record| record.flag().no_bits(1796))
-        {
-            let column = column.unwrap();
-            /*println!("Column at {}:{}, {} records", column.ref_id(),
-            column.ref_pos() + 1, column.entries().len());*/
-            // Should we have sparse occurrence table?
-            // eprintln!("{:?} {:?}",  range.path, lambda(column.ref_id() as usize).unwrap_or(&column.ref_id().to_string()));
-            // lambda(column.ref_id() as usize).unwrap_or(&column.ref_id().to_string())
-            // == range.path
-            // &&
-            if range.start <= column.ref_pos() as u64 && column.ref_pos() as u64 <= range.end {
-                line.push((column.ref_pos() as u64, column.entries().len() as u32));
-            }
-        }
-        // eprintln!("{:?}", line);
-        frequency.insert(t.0, line);
-    });
+
     let root =
         BitMapBackend::new(output, (x, frequency.len() as u32 * freq_size)).into_drawing_area();
     root.fill(&WHITE)?;
@@ -214,7 +195,7 @@ pub fn bam_record_vis<'a, F>(
     matches: &ArgMatches,
     range: StringRegion,
     mut list: Vec<(u64, Record)>,
-    mut annotation: Vec<(u64, bed::Record)>,
+    annotation: &Vec<(u64, bed::Record)>,
     frequency: &BTreeMap<u64, Vec<(u64, u32)>>,
     lambda: F,
 ) -> Result<(), Box<dyn std::error::Error>>
@@ -243,7 +224,7 @@ where
     let only_translocation = matches.is_present("only-translocation");
     let square = matches.is_present("square");
     if hide_alignment {
-        return frequency_vis(matches, range, list, lambda);
+        return frequency_vis(matches, range, list, frequency, lambda);
     }
     let max_coverage = matches
         .value_of("max-coverage")
@@ -291,7 +272,6 @@ where
         endy.subsec_nanos() / 1_000_000
     );
 
-    
     /*
     let iterator = if packing {
         // (0..).zip(list.iter())

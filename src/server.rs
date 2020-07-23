@@ -208,6 +208,7 @@ async fn index(data: web::Data<Arc<Vis>>, req: HttpRequest) -> Result<NamedFile>
             let min_zoom = 11;
             
             let path_string = format!("{}/{}/{}_0.png", cache_dir, zoom, path);
+            let max_zoom = (&data.params).max_zoom as u64;
             if zoom < min_zoom || zoom > max_zoom as u64 {
                 return Err(error::ErrorBadRequest("zoom level is not appropriate"));
             }
@@ -215,7 +216,7 @@ async fn index(data: web::Data<Arc<Vis>>, req: HttpRequest) -> Result<NamedFile>
 
             // If the end is exceeds the prefetch region, raise error.
             // let arg_vec = vec!["ghb", "vis", "-t", "1", "-r",  "parse"];
-            bam_record_vis(&matches, string_range, list.to_vec(), ann.to_vec(), freq,  |_| None).unwrap();
+            bam_record_vis(&matches, string_range, list.to_vec(), ann, freq,  |_| None).unwrap();
             // bam_vis(matches, 1);
             Ok(NamedFile::open(path_string)?
                 .use_last_modified(true)
@@ -320,7 +321,7 @@ pub async fn server(matches: ArgMatches, range: StringRegion, prefetch_range: St
         .unwrap_or(rng.gen::<u32>().to_string());
     
     let x_width = all as u32 / diff as u32 * x;
-    let max_zoom = 18; // log_2(x_width as i32) + 1;
+    let max_zoom = 18; //log_2(x_width as i32) + 1;
 
     match fs::create_dir(&cache_dir) {
         Err(e) => panic!("{}: {}", &cache_dir, e),
