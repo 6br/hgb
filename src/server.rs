@@ -3,7 +3,7 @@ use actix_files::NamedFile;
 use rand::Rng;
 use actix_web::http::header::{ContentDisposition, DispositionType};
 use actix_web::{HttpRequest, Result, web, Responder, error, middleware::Logger};
-use std::{sync::Arc,  collections::BTreeMap, fs};
+use std::{sync::{RwLock, Arc},  collections::BTreeMap, fs};
 use clap::{App,  ArgMatches, Arg, AppSettings};
 use ghi::{bed, vis::bam_record_vis};
 // use crate::subcommands::bam_vis;
@@ -183,13 +183,14 @@ fn id_to_range<'a>(range: &StringRegion, args: &Vec<String>, zoom: u64, path: u6
     (matches, range)
 }
 
-async fn get_dzi(data: web::Data<Arc<Vis>>) -> impl Responder {
-    return web::Json(data.dzi.clone());
+async fn get_dzi(data: web::Data<RwLock<Vis>>) -> impl Responder {
+    return web::Json(data.read().unwrap().dzi.clone());
 }
 
-async fn index(data: web::Data<Arc<Vis>>, req: HttpRequest) -> Result<NamedFile> {
+async fn index(data: web::Data<RwLock<Vis>>, req: HttpRequest) -> Result<NamedFile> {
     let zoom: u64 = req.match_info().query("zoom").parse().unwrap();
     let path: u64 = req.match_info().query("filename").parse().unwrap();// .parse().unwrap();
+    let data = data.read().unwrap();
     let cache_dir = &data.params.cache_dir;
     match NamedFile::open(format!("{}/{}/{}_0.png", cache_dir, zoom, path)) {
         Ok(file) => Ok(file
@@ -328,7 +329,7 @@ pub async fn server(matches: ArgMatches, range: StringRegion, prefetch_range: St
         Ok(_) => {},
     };
     let params = Param{x_scale, max_y:x, prefetch_max: all, max_zoom, criteria:diff, y_freq: freq_size, y, cache_dir};
-    eprintln!("{:?}", params);
+    eprintln!("{:?}, threads:{}", params, threads);
     // Create some global state prior to building the server
     //#[allow(clippy::mutex_atomic)] // it's intentional.
     //let counter1 = web::Data::new(Mutex::new((matches.clone(), range, list, annotation, freq)));
@@ -336,7 +337,7 @@ pub async fn server(matches: ArgMatches, range: StringRegion, prefetch_range: St
     HttpServer::new(move|| {
         //let counter = Cell::new(Vis::new( range.clone(),args.clone(), list.clone(), annotation.clone(), freq.clone()));
 
-        let counter = Arc::new(Vis::new(range.clone(), args.clone(), list.clone(), annotation.clone(), freq.clone(), dzi.clone(), params.clone()));
+        let counter = RwLock::new(Vis::new(range.clone(), args.clone(), list.clone(), annotation.clone(), freq.clone(), dzi.clone(), params.clone()));
         actix_web::App::new().data(counter).route("genome.dzi", web::get().to(get_dzi)).route("/{zoom:.*}/{filename:.*}_0.png", web::get().to(index)).wrap(Logger::default())
         })
         
