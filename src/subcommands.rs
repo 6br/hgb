@@ -823,7 +823,7 @@ pub fn bam_record_vis_pre_calculate<'a, F>(
     matches: &ArgMatches,
     range: StringRegion,
     prefetch_range: StringRegion,
-    args: Vec<String>,
+    args: &Vec<String>,
     mut list: Vec<(u64, Record)>,
     mut ann: Vec<(u64, bed::Record)>,
     mut freq: BTreeMap<u64, Vec<(u64, u32)>>,
