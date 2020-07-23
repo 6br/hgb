@@ -167,9 +167,12 @@ where
             let color = Palette99::pick(idx); // BLUE
             chart
                 .draw_series(
-                    Histogram::vertical(&chart)
-                        .style(color.filled())
-                        .data(values.iter().map(|t| *t)),
+                    Histogram::vertical(&chart).style(color.filled()).data(
+                        values
+                            .iter()
+                            .filter(|t| t.0 >= range.start() && t.0 < range.end())
+                            .map(|t| *t),
+                    ),
                 )?
                 .label(format!("{}", lambda(idx).unwrap_or(&idx.to_string())))
                 .legend(move |(x, y)| {
@@ -1218,7 +1221,7 @@ where
                 .draw_series(
                     Histogram::vertical(&chart)
                         .style(color.filled())
-                        .data(values.iter().map(|t| *t)),
+                        .data(values.iter().filter(|t| t.0 >= range.start() && t.0 < range.end()).map(|t| *t)),
                 )?
                 .label(format!("{}", lambda(idx).unwrap_or(&idx.to_string())))
                 .legend(move |(x, y)| {

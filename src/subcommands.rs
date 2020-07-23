@@ -843,7 +843,7 @@ where
 
     if pileup {
         list.iter().group_by(|elt| elt.0).into_iter().for_each(|t| {
-            let mut line = Vec::with_capacity((range.end - range.start + 1) as usize);
+            let mut line = Vec::with_capacity((prefetch_range.end - prefetch_range.start + 1) as usize);
             for column in bam::Pileup::with_filter(&mut RecordIter::new(t.1), |record| {
                 record.flag().no_bits(1796)
             }) {
@@ -855,7 +855,7 @@ where
                 // lambda(column.ref_id() as usize).unwrap_or(&column.ref_id().to_string())
                 // == range.path
                 // &&
-                if range.start <= column.ref_pos() as u64 && column.ref_pos() as u64 <= range.end {
+                if prefetch_range.start <= column.ref_pos() as u64 && column.ref_pos() as u64 <= prefetch_range.end {
                     line.push((column.ref_pos() as u64, column.entries().len() as u32));
                 }
             }
