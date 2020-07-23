@@ -15,7 +15,6 @@ use plotters::style::RGBColor;
 // use rayon::prelude::*;
 use std::{
     collections::{BTreeMap, HashMap},
-    env::Args,
     fs::File,
     time::Instant,
 };
@@ -105,7 +104,7 @@ where
 
 pub fn frequency_vis<'a, F>(
     matches: &ArgMatches,
-    range: StringRegion,
+    range: &StringRegion,
     mut list: Vec<(u64, Record)>,
     frequency: &BTreeMap<u64, Vec<(u64, u32)>>,
     lambda: F,
@@ -218,13 +217,13 @@ where
     let split_only = matches.is_present("only-split-alignment");
     let sort_by_name = matches.is_present("sort-by-name");
     let sort_by_cigar = matches.is_present("sort-by-cigar");
-    let pileup = matches.is_present("pileup");
+    // let pileup = matches.is_present("pileup");
     let all_bases = matches.is_present("all-bases");
     let hide_alignment = matches.is_present("hide-alignment");
     let only_translocation = matches.is_present("only-translocation");
     let square = matches.is_present("square");
     if hide_alignment {
-        return frequency_vis(matches, range, list, frequency, lambda);
+        return frequency_vis(matches, &range, list, frequency, lambda);
     }
     let max_coverage = matches
         .value_of("max-coverage")

@@ -3,7 +3,7 @@ use actix_files::NamedFile;
 use rand::Rng;
 use actix_web::http::header::{ContentDisposition, DispositionType};
 use actix_web::{HttpRequest, Result, web, Responder, error, middleware::Logger};
-use std::{sync::{Arc, Mutex}, path::PathBuf, cell::Cell, collections::BTreeMap, fs};
+use std::{sync::Arc,  collections::BTreeMap, fs};
 use clap::{App,  ArgMatches, Arg, AppSettings};
 use ghi::{bed, vis::bam_record_vis};
 // use crate::subcommands::bam_vis;
