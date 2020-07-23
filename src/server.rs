@@ -205,7 +205,7 @@ async fn index(data: web::Data<Arc<Vis>>, req: HttpRequest) -> Result<NamedFile>
             let ann = &data.annotation;
             let params = &data.params;
             let freq = &data.freq;
-            let min_zoom = 11;
+            let min_zoom = 12;
             
             let path_string = format!("{}/{}/{}_0.png", cache_dir, zoom, path);
             let max_zoom = (&data.params).max_zoom as u64;
