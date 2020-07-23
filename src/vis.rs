@@ -282,8 +282,6 @@ where
                 .then(a.1.name().cmp(&b.1.name()))
                 .then(a.1.start().cmp(&b.1.start()))
         });
-    } else {
-        list.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.start().cmp(&b.1.start())));
     }
 
     let endy = start.elapsed();
@@ -293,17 +291,7 @@ where
         endy.subsec_nanos() / 1_000_000
     );
 
-    // Calculate coverage; it won't work on sort_by_name
-    // let mut frequency = BTreeMap::new(); // Vec::with_capacity();
-
-    let endz = start.elapsed();
-    eprintln!(
-        "{}.{:03} sec.",
-        endz.as_secs(),
-        endz.subsec_nanos() / 1_000_000
-    );
-
-    annotation.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.start().cmp(&b.1.start())));
+    
     /*
     let iterator = if packing {
         // (0..).zip(list.iter())

@@ -837,6 +837,10 @@ where
         .and_then(|t| t.parse::<u16>().ok())
         .unwrap_or(1u16);
     let pileup = matches.is_present("pileup");
+
+        // Calculate coverage; it won't work on sort_by_name
+    // let mut frequency = BTreeMap::new(); // Vec::with_capacity();
+
     if pileup {
         list.iter().group_by(|elt| elt.0).into_iter().for_each(|t| {
             let mut line = Vec::with_capacity((range.end - range.start + 1) as usize);
@@ -859,6 +863,8 @@ where
             freq.insert(t.0, line);
         });
     }
+    ann.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.start().cmp(&b.1.start())));
+    list.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.start().cmp(&b.1.start())));
     Ok(if matches.is_present("web") {
         server(
             matches.clone(),
