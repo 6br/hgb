@@ -204,6 +204,7 @@ async fn index(data: web::Data<Arc<Vis>>, req: HttpRequest) -> Result<NamedFile>
             let list = &data.list;
             let ann = &data.annotation;
             let params = &data.params;
+            let freq = &data.freq;
             let min_zoom = 11;
             let path_string = format!("{}/{}/{}_0.png", cache_dir, zoom, path);
             if zoom < min_zoom || zoom > params.max_zoom as u64 {
@@ -213,7 +214,7 @@ async fn index(data: web::Data<Arc<Vis>>, req: HttpRequest) -> Result<NamedFile>
 
             // If the end is exceeds the prefetch region, raise error.
             // let arg_vec = vec!["ghb", "vis", "-t", "1", "-r",  "parse"];
-            bam_record_vis(&matches, string_range, list.to_vec(), ann.to_vec(), BTreeMap::new(), |_| None).unwrap();
+            bam_record_vis(&matches, string_range, list.to_vec(), ann.to_vec(), freq,  |_| None).unwrap();
             // bam_vis(matches, 1);
             Ok(NamedFile::open(path_string)?
                 .use_last_modified(true)

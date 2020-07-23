@@ -4,18 +4,18 @@ use bam::record::{
     Cigar,
 };
 use bam::{Record, RecordReader};
+use bio_types::strand::Strand;
 use clap::ArgMatches;
 use genomic_range::StringRegion;
 use itertools::Itertools;
 use plotters::coord::ReverseCoordTranslate;
 use plotters::prelude::Palette;
-//use plotters::prelude::RGBAColor;
-use bio_types::strand::Strand;
 use plotters::prelude::*;
 use plotters::style::RGBColor;
 // use rayon::prelude::*;
 use std::{
     collections::{BTreeMap, HashMap},
+    env::Args,
     fs::File,
     time::Instant,
 };
@@ -58,7 +58,16 @@ predefined_color!(G_COL, 209, 113, 5, "The predefined G color");
 //RGBColor();
 
 //newtype RecordIter<'a> = std::slice::Iter<'a, (u64, Record)>;
-struct RecordIter<'a, I: Iterator<Item = &'a (u64, Record)>>(I);
+pub struct RecordIter<'a, I: Iterator<Item = &'a (u64, Record)>>(I);
+
+impl<'a, I> RecordIter<'a, I>
+where
+    I: Iterator<Item = &'a (u64, Record)>,
+{
+    pub fn new(item: I) -> Self {
+        RecordIter(item)
+    }
+}
 
 impl<'a, I> RecordReader for RecordIter<'a, I>
 where
@@ -206,7 +215,7 @@ pub fn bam_record_vis<'a, F>(
     range: StringRegion,
     mut list: Vec<(u64, Record)>,
     mut annotation: Vec<(u64, bed::Record)>,
-    mut frequency: BTreeMap<u64, Vec<(u64, u32)>>,
+    frequency: &BTreeMap<u64, Vec<(u64, u32)>>,
     lambda: F,
 ) -> Result<(), Box<dyn std::error::Error>>
 where
@@ -277,30 +286,15 @@ where
         list.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.start().cmp(&b.1.start())));
     }
 
+    let endy = start.elapsed();
+    eprintln!(
+        "{}.{:03} sec.",
+        endy.as_secs(),
+        endy.subsec_nanos() / 1_000_000
+    );
+
     // Calculate coverage; it won't work on sort_by_name
     // let mut frequency = BTreeMap::new(); // Vec::with_capacity();
-    if pileup {
-        list.iter().group_by(|elt| elt.0).into_iter().for_each(|t| {
-            let mut line = Vec::with_capacity((range.end - range.start + 1) as usize);
-            for column in
-                bam::Pileup::with_filter(&mut RecordIter(t.1), |record| record.flag().no_bits(1796))
-            {
-                let column = column.unwrap();
-                /*println!("Column at {}:{}, {} records", column.ref_id(),
-                column.ref_pos() + 1, column.entries().len());*/
-                // Should we have sparse occurrence table?
-                // eprintln!("{:?} {:?}",  range.path, lambda(column.ref_id() as usize).unwrap_or(&column.ref_id().to_string()));
-                // lambda(column.ref_id() as usize).unwrap_or(&column.ref_id().to_string())
-                // == range.path
-                // &&
-                if range.start <= column.ref_pos() as u64 && column.ref_pos() as u64 <= range.end {
-                    line.push((column.ref_pos() as u64, column.entries().len() as u32));
-                }
-            }
-            // eprintln!("{:?}", line);
-            frequency.insert(t.0, line);
-        });
-    }
 
     let endz = start.elapsed();
     eprintln!(

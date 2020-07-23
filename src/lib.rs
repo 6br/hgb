@@ -19,6 +19,7 @@ pub mod compression;
 pub mod gff;
 pub mod header;
 pub mod index;
+//pub mod server;
 pub mod range;
 pub mod reader;
 #[no_mangle]

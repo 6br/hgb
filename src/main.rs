@@ -7,7 +7,6 @@ pub mod server;
 use clap::{App, AppSettings, Arg};
 use env_logger;
 use subcommands::*;
-use server::server;
 use std::env;
 
 fn main() {
@@ -468,7 +467,7 @@ fn main() {
     let threads = matches
         .value_of("threads")
         .and_then(|t| t.parse::<u16>().ok())
-        .unwrap();
+        .unwrap_or(1u16);
 
     rayon::ThreadPoolBuilder::new()
         .num_threads(threads as usize - 1)

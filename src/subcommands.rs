@@ -14,13 +14,13 @@ use ghi::index::{Chunk, Region, VirtualOffset};
 use ghi::range::Default;
 use ghi::range::{Format, InvertedRecordEntire, Set};
 use ghi::twopass_alignment::{Alignment, AlignmentBuilder};
-use ghi::vis::bam_record_vis;
+use ghi::vis::{bam_record_vis, RecordIter};
 use ghi::writer::GhiWriter;
 use ghi::{gff, reader::IndexedReader, IndexWriter};
 use io::{BufReader, Error, ErrorKind, Write};
 use itertools::EitherOrBoth::{Both, Left};
 use itertools::Itertools;
-use std::{collections::BTreeMap, fs::File, io, path::Path};
+use std::{collections::BTreeMap, env::Args, fs::File, io, path::Path};
 
 pub fn bam_vis(
     matches: &ArgMatches,
@@ -161,6 +161,17 @@ pub fn bam_vis(
                         idx += 1;
                     }
                 }
+                bam_record_vis_pre_calculate(
+                    matches,
+                    string_range,
+                    prefetch_range,
+                    args,
+                    list,
+                    ann,
+                    freq,
+                    |idx| Some(bam_files[idx]),
+                )?;
+                /*
                 if matches.is_present("web") {
                     server(
                         matches.clone(),
@@ -176,7 +187,7 @@ pub fn bam_vis(
                     bam_record_vis(matches, string_range, list, ann, freq, |idx| {
                         Some(bam_files[idx])
                     })?;
-                }
+                }*/
             }
         }
     }
@@ -652,6 +663,17 @@ pub fn vis_query(
                         }
                     }
                 });
+                bam_record_vis_pre_calculate(
+                    matches,
+                    string_range,
+                    prefetch_range,
+                    args,
+                    list,
+                    ann,
+                    BTreeMap::new(),
+                    |idx| reader.header().get_name(idx).and_then(|t| Some(t.as_str())),
+                )?;
+                /*
                 if matches.is_present("web") {
                     server(
                         matches.clone(),
@@ -667,7 +689,7 @@ pub fn vis_query(
                     bam_record_vis(matches, string_range, list, ann, BTreeMap::new(), |idx| {
                         reader.header().get_name(idx).and_then(|t| Some(t.as_str()))
                     })?;
-                }
+                }*/
             }
         }
     }
@@ -795,4 +817,60 @@ pub fn bin(matches: &ArgMatches, threads: u16) -> () {
             }
         });
     }
+}
+
+pub fn bam_record_vis_pre_calculate<'a, F>(
+    matches: &ArgMatches,
+    range: StringRegion,
+    prefetch_range: StringRegion,
+    args: Vec<String>,
+    mut list: Vec<(u64, Record)>,
+    mut ann: Vec<(u64, bed::Record)>,
+    mut freq: BTreeMap<u64, Vec<(u64, u32)>>,
+    lambda: F,
+) -> Result<(), Box<dyn std::error::Error>>
+where
+    F: Fn(usize) -> Option<&'a str>,
+{
+    let threads = matches
+        .value_of("threads")
+        .and_then(|t| t.parse::<u16>().ok())
+        .unwrap_or(1u16);
+    let pileup = matches.is_present("pileup");
+    if pileup {
+        list.iter().group_by(|elt| elt.0).into_iter().for_each(|t| {
+            let mut line = Vec::with_capacity((range.end - range.start + 1) as usize);
+            for column in bam::Pileup::with_filter(&mut RecordIter::new(t.1), |record| {
+                record.flag().no_bits(1796)
+            }) {
+                let column = column.unwrap();
+                /*println!("Column at {}:{}, {} records", column.ref_id(),
+                column.ref_pos() + 1, column.entries().len());*/
+                // Should we have sparse occurrence table?
+                // eprintln!("{:?} {:?}",  range.path, lambda(column.ref_id() as usize).unwrap_or(&column.ref_id().to_string()));
+                // lambda(column.ref_id() as usize).unwrap_or(&column.ref_id().to_string())
+                // == range.path
+                // &&
+                if range.start <= column.ref_pos() as u64 && column.ref_pos() as u64 <= range.end {
+                    line.push((column.ref_pos() as u64, column.entries().len() as u32));
+                }
+            }
+            // eprintln!("{:?}", line);
+            freq.insert(t.0, line);
+        });
+    }
+    Ok(if matches.is_present("web") {
+        server(
+            matches.clone(),
+            range,
+            prefetch_range,
+            args.clone(),
+            list,
+            ann,
+            freq,
+            threads,
+        )?;
+    } else {
+        bam_record_vis(matches, range, list, ann, &freq, lambda)?;
+    })
 }
