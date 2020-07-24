@@ -169,6 +169,7 @@ pub fn bam_vis(
                     list,
                     ann,
                     freq,
+                    threads,
                     |idx| Some(bam_files[idx]),
                 )?;
                 /*
@@ -670,7 +671,7 @@ pub fn vis_query(
                     &args,
                     list,
                     ann,
-                    BTreeMap::new(),
+                    BTreeMap::new(),threads,
                     |idx| reader.header().get_name(idx).and_then(|t| Some(t.as_str())),
                 )?;
                 /*
@@ -827,15 +828,16 @@ pub fn bam_record_vis_pre_calculate<'a, F>(
     mut list: Vec<(u64, Record)>,
     mut ann: Vec<(u64, bed::Record)>,
     mut freq: BTreeMap<u64, Vec<(u64, u32)>>,
+    threads: u16,
     lambda: F,
 ) -> Result<(), Box<dyn std::error::Error>>
 where
     F: Fn(usize) -> Option<&'a str>,
 {
-    let threads = matches
+    /*let threads = matches
         .value_of("threads")
         .and_then(|t| t.parse::<u16>().ok())
-        .unwrap_or(1u16);
+        .unwrap_or(1u16);*/
     let pileup = matches.is_present("pileup");
 
     // Calculate coverage; it won't work on sort_by_name
