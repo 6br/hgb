@@ -105,7 +105,6 @@ where
 pub fn frequency_vis<'a, F>(
     matches: &ArgMatches,
     range: &StringRegion,
-    mut list: Vec<(u64, Record)>,
     frequency: &BTreeMap<u64, Vec<(u64, u32)>>,
     lambda: F,
 ) -> Result<(), Box<dyn std::error::Error>>
@@ -130,7 +129,7 @@ where
         .value_of("x-scale")
         .and_then(|a| a.parse::<u32>().ok())
         .unwrap_or(20u32);
-    list.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.start().cmp(&b.1.start())));
+    // list.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.start().cmp(&b.1.start())));
     // Calculate coverage; it won't work on sort_by_name
 
     let root =
@@ -226,7 +225,7 @@ where
     let only_translocation = matches.is_present("only-translocation");
     let square = matches.is_present("square");
     if hide_alignment {
-        return frequency_vis(matches, &range, list, frequency, lambda);
+        return frequency_vis(matches, &range,  frequency, lambda);
     }
     let max_coverage = matches
         .value_of("max-coverage")
