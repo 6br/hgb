@@ -206,7 +206,7 @@ async fn index(data: web::Data<RwLock<Vis>>, list: web::Data<Vec<(u64, Record)>>
             let ann = &data.annotation;
             let params = &data.params;
             let freq = &data.freq;
-            let min_zoom = 12;
+            let min_zoom = 13;
             
             let path_string = format!("{}/{}/{}_0.png", cache_dir, zoom, path);
             let max_zoom = (&data.params).max_zoom as u64;
