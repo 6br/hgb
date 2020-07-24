@@ -478,7 +478,7 @@ fn main() {
         build(matches, threads);
     } else if let Some(ref matches) = matches.subcommand_matches("query") {
         match matches.is_present("binary") {
-            true => bam_query(matches, args, threads),
+            true => bam_query(matches, threads),
             false => match matches.is_present("vis") {
                 true => vis_query(matches, args, threads).unwrap(),
                 false => query(matches, threads),

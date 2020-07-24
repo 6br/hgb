@@ -183,14 +183,16 @@ fn id_to_range<'a>(range: &StringRegion, args: &Vec<String>, zoom: u64, path: u6
     (matches, range)
 }
 
-async fn get_dzi(data: web::Data<RwLock<Vis>>) -> impl Responder {
-    return web::Json(data.read().unwrap().dzi.clone());
+async fn get_dzi(data: web::Data<Item>) -> impl Responder {
+    return web::Json(data.vis.read().unwrap().dzi.clone());
 }
 
-async fn index(data: web::Data<RwLock<Vis>>, req: HttpRequest) -> Result<NamedFile> {
+async fn index(data: web::Data<RwLock<Item>>, req: HttpRequest) -> Result<NamedFile> {
     let zoom: u64 = req.match_info().query("zoom").parse().unwrap();
     let path: u64 = req.match_info().query("filename").parse().unwrap();// .parse().unwrap();
     let data = data.read().unwrap();
+    let list = &data.list;
+    let data = &*data.vis.read().unwrap(); //(*data).lock().unwrap(); //get_mut();
     let cache_dir = &data.params.cache_dir;
     match NamedFile::open(format!("{}/{}/{}_0.png", cache_dir, zoom, path)) {
         Ok(file) => Ok(file
@@ -201,8 +203,6 @@ async fn index(data: web::Data<RwLock<Vis>>, req: HttpRequest) -> Result<NamedFi
             })),
         _ => {
             fs::create_dir( format!("{}/{}", cache_dir, zoom)); //error is permitted.
-            let data = &*data; //(*data).lock().unwrap(); //get_mut();
-            let list = &data.list;
             let ann = &data.annotation;
             let params = &data.params;
             let freq = &data.freq;
@@ -240,15 +240,20 @@ pub struct Vis<'a> {
 
 
 
-// #[derive(Copy)]
+#[derive(Clone)]
 pub struct Vis {
-    range: StringRegion, args: Vec<String>, list: Vec<(u64, Record)>, annotation: Vec<(u64, bed::Record)>, freq: BTreeMap<u64, Vec<(u64, u32)>>, dzi: DZI, params: Param
+    range: StringRegion, args: Vec<String>, annotation: Vec<(u64, bed::Record)>, freq: BTreeMap<u64, Vec<(u64, u32)>>, dzi: DZI, params: Param
 }
 
 impl Vis {
-    fn new(range: StringRegion, args: Vec<String>, list: Vec<(u64, Record)>, annotation: Vec<(u64, bed::Record)>, freq: BTreeMap<u64, Vec<(u64, u32)>>, dzi: DZI, params: Param) -> Vis {
-        Vis{range, args, list, annotation, freq, dzi, params}
+    fn new(range: StringRegion, args: Vec<String>, annotation: Vec<(u64, bed::Record)>, freq: BTreeMap<u64, Vec<(u64, u32)>>, dzi: DZI, params: Param) -> Vis {
+        Vis{range, args, annotation, freq, dzi, params}
     }
+}
+
+pub struct Item {
+    list: Vec<(u64, Record)>,
+    vis: Arc<RwLock<Vis>>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -333,16 +338,16 @@ pub async fn server(matches: ArgMatches, range: StringRegion, prefetch_range: St
     // Create some global state prior to building the server
     //#[allow(clippy::mutex_atomic)] // it's intentional.
     //let counter1 = web::Data::new(Mutex::new((matches.clone(), range, list, annotation, freq)));
+    // let counter = RwLock::new(Vis::new(range.clone(), args.clone(), list.clone(), annotation.clone(), freq.clone(), dzi.clone(), params.clone()));
+    let counter = Arc::new(RwLock::new(Vis::new(range, args, annotation, freq, dzi, params)));
 
     HttpServer::new(move|| {
+        let list = list.clone();
         //let counter = Cell::new(Vis::new( range.clone(),args.clone(), list.clone(), annotation.clone(), freq.clone()));
-
-        let counter = RwLock::new(Vis::new(range.clone(), args.clone(), list.clone(), annotation.clone(), freq.clone(), dzi.clone(), params.clone()));
-        actix_web::App::new().data(counter).route("genome.dzi", web::get().to(get_dzi)).route("/{zoom:.*}/{filename:.*}_0.png", web::get().to(index)).wrap(Logger::default())
-        })
-        
-        .bind(bind)?
-        .workers(threads as usize)
-        .run()
-        .await
+        actix_web::App::new().data(web::Data::new(Item{list: list, vis: counter.clone()})).route("genome.dzi", web::get().to(get_dzi)).route("/{zoom:.*}/{filename:.*}_0.png", web::get().to(index)).wrap(Logger::default())
+    })
+    .bind(bind)?
+    .workers(threads as usize)
+    .run()
+    .await
 }

@@ -463,7 +463,7 @@ pub fn split(matches: &ArgMatches, threads: u16) -> () {
     }
 }
 
-pub fn bam_query(matches: &ArgMatches, args: Vec<String>, threads: u16) -> () {
+pub fn bam_query(matches: &ArgMatches, threads: u16) -> () {
     if let Some(o) = matches.value_of("INPUT") {
         let mut reader: IndexedReader<BufReader<File>> =
             IndexedReader::from_path_with_additional_threads(o, threads - 1).unwrap();
@@ -843,7 +843,8 @@ where
 
     if pileup {
         list.iter().group_by(|elt| elt.0).into_iter().for_each(|t| {
-            let mut line = Vec::with_capacity((prefetch_range.end - prefetch_range.start + 1) as usize);
+            let mut line =
+                Vec::with_capacity((prefetch_range.end - prefetch_range.start + 1) as usize);
             for column in bam::Pileup::with_filter(&mut RecordIter::new(t.1), |record| {
                 record.flag().no_bits(1796)
             }) {
@@ -855,7 +856,9 @@ where
                 // lambda(column.ref_id() as usize).unwrap_or(&column.ref_id().to_string())
                 // == range.path
                 // &&
-                if prefetch_range.start <= column.ref_pos() as u64 && column.ref_pos() as u64 <= prefetch_range.end {
+                if prefetch_range.start <= column.ref_pos() as u64
+                    && column.ref_pos() as u64 <= prefetch_range.end
+                {
                     line.push((column.ref_pos() as u64, column.entries().len() as u32));
                 }
             }
