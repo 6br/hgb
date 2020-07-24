@@ -340,10 +340,10 @@ pub async fn server(matches: ArgMatches, range: StringRegion, prefetch_range: St
     //let counter1 = web::Data::new(Mutex::new((matches.clone(), range, list, annotation, freq)));
     // let counter = RwLock::new(Vis::new(range.clone(), args.clone(), list.clone(), annotation.clone(), freq.clone(), dzi.clone(), params.clone()));
     //let counter = Arc::new(RwLock::new(Vis::new(range, args, annotation, freq, dzi, params)));
-    #[allow(clippy::mutex_atomic)] 
+    //#[allow(clippy::mutex_atomic)] 
     let counter = web::Data::new(RwLock::new(Vis::new(range, args, annotation, freq, dzi, params)));
 
-
+    //https://github.com/actix/examples/blob/master/state/src/main.rs
     HttpServer::new(move|| {
         let list = list.clone();
         //let counter = Arc::new(RwLock::new(Item{list: list, vis: Vis::new(range, args, annotation, freq, dzi, params)}));
