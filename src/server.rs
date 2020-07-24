@@ -183,16 +183,16 @@ fn id_to_range<'a>(range: &StringRegion, args: &Vec<String>, zoom: u64, path: u6
     (matches, range)
 }
 
-async fn get_dzi(data: web::Data<Item>) -> impl Responder {
-    return web::Json(data.vis.read().unwrap().dzi.clone());
+async fn get_dzi(data: web::Data<RwLock<Vis>>) -> impl Responder {
+    return web::Json(data.read().unwrap().dzi.clone());
 }
 
-async fn index(data: web::Data<RwLock<Item>>, req: HttpRequest) -> Result<NamedFile> {
+async fn index(data: web::Data<RwLock<Vis>>, list: web::Data<Vec<(u64, Record)>>, req: HttpRequest) -> Result<NamedFile> {
     let zoom: u64 = req.match_info().query("zoom").parse().unwrap();
     let path: u64 = req.match_info().query("filename").parse().unwrap();// .parse().unwrap();
     let data = data.read().unwrap();
-    let list = &data.list;
-    let data = &*data.vis.read().unwrap(); //(*data).lock().unwrap(); //get_mut();
+    // printlnlet list = &data.list;
+    //let data = data.read().unwrap().vis; //(*data).lock().unwrap(); //get_mut();
     let cache_dir = &data.params.cache_dir;
     match NamedFile::open(format!("{}/{}/{}_0.png", cache_dir, zoom, path)) {
         Ok(file) => Ok(file
@@ -253,7 +253,7 @@ impl Vis {
 
 pub struct Item {
     list: Vec<(u64, Record)>,
-    vis: Arc<RwLock<Vis>>,
+    vis: Vis,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -339,12 +339,16 @@ pub async fn server(matches: ArgMatches, range: StringRegion, prefetch_range: St
     //#[allow(clippy::mutex_atomic)] // it's intentional.
     //let counter1 = web::Data::new(Mutex::new((matches.clone(), range, list, annotation, freq)));
     // let counter = RwLock::new(Vis::new(range.clone(), args.clone(), list.clone(), annotation.clone(), freq.clone(), dzi.clone(), params.clone()));
-    let counter = Arc::new(RwLock::new(Vis::new(range, args, annotation, freq, dzi, params)));
+    //let counter = Arc::new(RwLock::new(Vis::new(range, args, annotation, freq, dzi, params)));
+    #[allow(clippy::mutex_atomic)] 
+    let counter = web::Data::new(RwLock::new(Vis::new(range, args, annotation, freq, dzi, params)));
+
 
     HttpServer::new(move|| {
         let list = list.clone();
+        //let counter = Arc::new(RwLock::new(Item{list: list, vis: Vis::new(range, args, annotation, freq, dzi, params)}));
         //let counter = Cell::new(Vis::new( range.clone(),args.clone(), list.clone(), annotation.clone(), freq.clone()));
-        actix_web::App::new().data(web::Data::new(Item{list: list, vis: counter.clone()})).route("genome.dzi", web::get().to(get_dzi)).route("/{zoom:.*}/{filename:.*}_0.png", web::get().to(index)).wrap(Logger::default())
+        actix_web::App::new().data(list).app_data(counter.clone()).route("genome.dzi", web::get().to(get_dzi)).route("/{zoom:.*}/{filename:.*}_0.png", web::get().to(index)).wrap(Logger::default())
     })
     .bind(bind)?
     .workers(threads as usize)

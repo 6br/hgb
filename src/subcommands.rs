@@ -671,7 +671,8 @@ pub fn vis_query(
                     &args,
                     list,
                     ann,
-                    BTreeMap::new(),threads,
+                    BTreeMap::new(),
+                    threads,
                     |idx| reader.header().get_name(idx).and_then(|t| Some(t.as_str())),
                 )?;
                 /*
@@ -835,9 +836,9 @@ where
     F: Fn(usize) -> Option<&'a str>,
 {
     /*let threads = matches
-        .value_of("threads")
-        .and_then(|t| t.parse::<u16>().ok())
-        .unwrap_or(1u16);*/
+    .value_of("threads")
+    .and_then(|t| t.parse::<u16>().ok())
+    .unwrap_or(1u16);*/
     let pileup = matches.is_present("pileup");
 
     // Calculate coverage; it won't work on sort_by_name
