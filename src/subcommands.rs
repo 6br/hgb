@@ -20,7 +20,13 @@ use ghi::{gff, reader::IndexedReader, IndexWriter};
 use io::{BufReader, Error, ErrorKind, Write};
 use itertools::EitherOrBoth::{Both, Left};
 use itertools::Itertools;
-use std::{collections::BTreeMap, env::Args, fs::File, io, path::Path};
+use std::{
+    collections::{BTreeMap, HashMap},
+    env::Args,
+    fs::File,
+    io,
+    path::Path,
+};
 
 pub fn bam_vis(
     matches: &ArgMatches,
@@ -840,7 +846,13 @@ where
     .and_then(|t| t.parse::<u16>().ok())
     .unwrap_or(1u16);*/
     let pileup = matches.is_present("pileup");
-
+    let split_only = matches.is_present("only-split-alignment");
+    let sort_by_name = matches.is_present("sort-by-name");
+    let packing = !matches.is_present("no-packing");
+    let split = matches.is_present("split-alignment");
+    let max_coverage = matches
+        .value_of("max-coverage")
+        .and_then(|a| a.parse::<u32>().ok());
     // Calculate coverage; it won't work on sort_by_name
     // let mut frequency = BTreeMap::new(); // Vec::with_capacity();
 
@@ -871,6 +883,232 @@ where
     }
     ann.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.start().cmp(&b.1.start())));
     list.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.start().cmp(&b.1.start())));
+
+    if sort_by_name {
+        list.sort_by(|a, b| {
+            a.0.cmp(&b.0)
+                .then(a.1.name().cmp(&b.1.name()))
+                .then(a.1.start().cmp(&b.1.start()))
+        });
+    }
+
+    // Packing for each genome
+    let mut prev_index = 0;
+    let mut last_prev_index = 0;
+    //let mut compressed_list = BTreeMap::<u64, usize>::new();
+    let mut compressed_list = vec![];
+    let mut index_list = Vec::with_capacity(list.len());
+    let mut supplementary_list = vec![];
+    if split {
+        let mut end_map = HashMap::new();
+
+        let new_list = {
+            list.sort_by(|a, b| {
+                a.0.cmp(&b.0)
+                    .then(a.1.name().cmp(&b.1.name()))
+                    .then(a.1.start().cmp(&b.1.start()))
+            });
+            list.clone()
+        };
+        new_list
+            .iter()
+            .group_by(|elt| elt.0)
+            .into_iter()
+            .for_each(|t| {
+                let sample_id = t.0.clone();
+                t.1.group_by(|elt| elt.1.name()).into_iter().for_each(|s| {
+                    let items: Vec<&(u64, Record)> = s.1.into_iter().collect();
+                    if items.len() > 1 {
+                        let last: &(u64, Record) =
+                            items.iter().max_by_key(|t| t.1.calculate_end()).unwrap();
+                        end_map.insert(
+                            (sample_id, s.0),
+                            (
+                                items[0].1.calculate_end(),
+                                last.1.start(),
+                                last.1.calculate_end(),
+                                items.len(),
+                            ),
+                        );
+                    }
+                })
+                //group.into_iter().for_each(|t| {})
+            });
+
+        if sort_by_name {
+            if false {
+                // sort_by_cigar {
+                list.sort_by(|a, b| {
+                    a.0.cmp(&b.0).then(a.1.name().cmp(&b.1.name())).then(
+                        (a.1.cigar().soft_clipping(!a.1.flag().is_reverse_strand())
+                            + a.1.cigar().hard_clipping(!a.1.flag().is_reverse_strand()))
+                        .cmp(
+                            &((b.1.cigar().soft_clipping(!b.1.flag().is_reverse_strand()))
+                                + (b.1.cigar().hard_clipping(!b.1.flag().is_reverse_strand()))),
+                        ),
+                    )
+                });
+            } else {
+                list.sort_by(|a, b| {
+                    /*
+                    a.0.cmp(&b.0).then(a.1.name().cmp(&b.1.name())).then(
+                        /*a.1.cigar()
+                        .soft_clipping(!a.1.flag().is_reverse_strand())
+                        .cmp(&b.1.cigar().soft_clipping(!a.1.flag().is_reverse_strand())),*/
+                        a.1.aligned_query_start().cmp(&b.1.aligned_query_start()),
+                    )*/
+                    a.0.cmp(&b.0).then(a.1.name().cmp(&b.1.name())).then(
+                        (a.1.cigar().soft_clipping(true) + a.1.cigar().hard_clipping(true)).cmp(
+                            &((b.1.cigar().soft_clipping(true))
+                                + (b.1.cigar().hard_clipping(true))),
+                        ),
+                    )
+                });
+            }
+        } else {
+            list.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.start().cmp(&b.1.start())));
+        }
+
+        if split_only {
+            list = list
+                .into_iter()
+                .filter(|(sample_id, record)| end_map.contains_key(&(*sample_id, record.name())))
+                .collect();
+        }
+
+        list.iter().group_by(|elt| elt.0).into_iter().for_each(|t| {
+            // let mut heap = BinaryHeap::<(i64, usize)>::new();
+            let mut packing_vec = vec![0u64];
+            let mut name_index = HashMap::new();
+            prev_index += 1;
+            let sample_id = t.0;
+            (t.1).enumerate().for_each(|(e, k)| {
+                let end = if !packing {
+                    range.end() as i32
+                } else if let Some(end) = end_map.get(&(sample_id, k.1.name())) {
+                    end.2
+                } else {
+                    k.1.calculate_end()
+                };
+
+                let mut index = if sort_by_name {
+                    prev_index += 1;
+                    e
+                } else if let Some(index) = name_index.get(k.1.name()) {
+                    *index
+                } else if let Some(index) = packing_vec
+                    .iter_mut()
+                    .enumerate()
+                    .find(|(_, item)| **item < k.1.start() as u64)
+                {
+                    *index.1 = end as u64;
+                    index.0
+                } else {
+                    packing_vec.push(end as u64);
+                    prev_index += 1;
+                    packing_vec.len() - 1
+                };
+                if let Some(end) = end_map.get(&(sample_id, k.1.name())) {
+                    if None == name_index.get(k.1.name()) {
+                        supplementary_list.push((
+                            k.1.name(),
+                            index + last_prev_index,
+                            index + last_prev_index + end.3,
+                            end.0,
+                            end.1,
+                        ));
+                    }
+                }
+                if let Some(max_cov) = max_coverage {
+                    if index > max_cov as usize {
+                        index = max_cov as usize;
+                    }
+                }
+                index_list.push(index + last_prev_index);
+                name_index.insert(k.1.name(), index);
+            });
+            if let Some(max_cov) = max_coverage {
+                prev_index = max_cov as usize + last_prev_index;
+            }
+            compressed_list.push((t.0, prev_index));
+            last_prev_index = prev_index;
+        });
+    } else {
+        if packing {
+            list.iter().group_by(|elt| elt.0).into_iter().for_each(|t| {
+                // let mut heap = BinaryHeap::<(i64, usize)>::new();
+                let mut packing = vec![0u64];
+                prev_index += 1;
+                (t.1).for_each(|k| {
+                    let mut index = if let Some(index) = packing
+                        .iter_mut()
+                        .enumerate()
+                        .find(|(_, item)| **item < k.1.start() as u64)
+                    {
+                        //packing[index.0] = k.1.calculate_end() as u64;
+                        *index.1 = k.1.calculate_end() as u64;
+                        index.0
+                    } else {
+                        packing.push(k.1.calculate_end() as u64);
+                        prev_index += 1;
+                        packing.len() - 1
+                        //prev_index - 1
+                    }; /*
+                       let index: usize = if heap.peek() != None
+                           && -heap.peek().unwrap().0 < k.1.start() as i64
+                       {
+                           let hp = heap.pop().unwrap();
+                           // let index = hp.1;
+                           heap.push((-k.1.calculate_end() as i64, hp.1));
+                           hp.1
+                       } else {
+                           let index = prev_index;
+                           prev_index += 1;
+                           heap.push((-k.1.calculate_end() as i64, index));
+                           index
+                       };*/
+                    //let index =
+                    if let Some(max_cov) = max_coverage {
+                        if index > max_cov as usize {
+                            index = max_cov as usize;
+                            prev_index = max_cov as usize + last_prev_index;
+                        }
+                    }
+                    index_list.push(index + last_prev_index);
+                    // eprintln!("{:?}", packing);
+                    //(index, (k.0, k.1))
+                }); //.collect::<Vec<(usize, (u64, Record))>>()
+                    // compressed_list.push(prev_index);
+                    //compressed_list.insert(t.0, prev_index);
+                    //prev_index += 1;
+                if let Some(max_cov) = max_coverage {
+                    prev_index = max_cov as usize + last_prev_index;
+                }
+                compressed_list.push((t.0, prev_index));
+                //eprintln!("{:?} {:?} {:?}", compressed_list, packing, index_list);
+                last_prev_index = prev_index;
+                //(t.0, ((t.1).0, (t.1).1))
+                // .collect::<&(u64, Record)>(). // collect::<Vec<(usize, (u64, Record))>>
+            });
+        } else {
+            // Now does not specify the maximal length by max_coverage.
+            index_list = (0..list.len()).collect();
+
+            // list.sort_by(|a, b| a.0.cmp(&b.0));
+            // eprintln!("{}", list.len());
+            list.iter().group_by(|elt| elt.0).into_iter().for_each(
+                |(sample_sequential_id, sample)| {
+                    let count = sample.count();
+                    prev_index += count;
+                    // compressed_list.push(prev_index);
+                    // compressed_list.insert(sample_sequential_id, prev_index);
+                    compressed_list.push((sample_sequential_id, prev_index));
+                },
+            )
+        }
+    }
+    eprintln!("{:?}", compressed_list);
+
     Ok(if matches.is_present("web") {
         server(
             matches.clone(),
@@ -883,6 +1121,17 @@ where
             threads,
         )?;
     } else {
-        bam_record_vis(matches, range, list, &ann, &freq, lambda)?;
+        bam_record_vis(
+            matches,
+            range,
+            list,
+            &ann,
+            &freq,
+            &compressed_list,
+            &index_list,
+            prev_index,
+            &supplementary_list,
+            lambda,
+        )?;
     })
 }
