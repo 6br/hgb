@@ -1118,6 +1118,10 @@ where
             list,
             ann,
             freq,
+            compressed_list,
+            index_list,
+            prev_index,
+            supplementary_list,
             threads,
         )?;
     } else {

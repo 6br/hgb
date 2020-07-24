@@ -183,11 +183,11 @@ fn id_to_range<'a>(range: &StringRegion, args: &Vec<String>, zoom: u64, path: u6
     (matches, range)
 }
 
-async fn get_dzi(data: web::Data<RwLock<Vis>>) -> impl Responder {
+async fn get_dzi<'a>(data: web::Data<RwLock<Vis<'a>>>) -> impl Responder {
     return web::Json(data.read().unwrap().dzi.clone());
 }
 
-async fn index(data: web::Data<RwLock<Vis>>, list: web::Data<Vec<(u64, Record)>>, req: HttpRequest) -> Result<NamedFile> {
+async fn index<'a>(data: web::Data<RwLock<Vis<'a>>>, list: web::Data<Vec<(u64, Record)>>, req: HttpRequest) -> Result<NamedFile> {
     let zoom: u64 = req.match_info().query("zoom").parse().unwrap();
     let path: u64 = req.match_info().query("filename").parse().unwrap();// .parse().unwrap();
     let data = data.read().unwrap();
@@ -206,6 +206,11 @@ async fn index(data: web::Data<RwLock<Vis>>, list: web::Data<Vec<(u64, Record)>>
             let ann = &data.annotation;
             let params = &data.params;
             let freq = &data.freq;
+            let compressed_list = &data.compressed_list;
+            let index_list = &data.index_list;
+            let supplementary_list = &data.supplementary_list;
+            let prev_index = data.prev_index;
+
             let min_zoom = 13;
             
             let path_string = format!("{}/{}/{}_0.png", cache_dir, zoom, path);
@@ -217,7 +222,7 @@ async fn index(data: web::Data<RwLock<Vis>>, list: web::Data<Vec<(u64, Record)>>
 
             // If the end is exceeds the prefetch region, raise error.
             // let arg_vec = vec!["ghb", "vis", "-t", "1", "-r",  "parse"];
-            bam_record_vis(&matches, string_range, list.to_vec(), ann, freq,  |_| None).unwrap();
+            bam_record_vis(&matches, string_range, list.to_vec(), ann, freq, compressed_list, index_list, prev_index, supplementary_list,|_| None).unwrap();
             // bam_vis(matches, 1);
             Ok(NamedFile::open(path_string)?
                 .use_last_modified(true)
@@ -241,13 +246,19 @@ pub struct Vis<'a> {
 
 
 #[derive(Clone)]
-pub struct Vis {
-    range: StringRegion, args: Vec<String>, annotation: Vec<(u64, bed::Record)>, freq: BTreeMap<u64, Vec<(u64, u32)>>, dzi: DZI, params: Param
+pub struct Vis<'a> {
+    range: StringRegion, args: Vec<String>, annotation: Vec<(u64, bed::Record)>, freq: BTreeMap<u64, Vec<(u64, u32)>>,     compressed_list: Vec<(u64, usize)>,
+    index_list: Vec<usize>,
+    prev_index: usize,
+    supplementary_list: Vec<(&'a[u8], usize, usize, i32, i32)>,dzi: DZI, params: Param
 }
 
-impl Vis {
-    fn new(range: StringRegion, args: Vec<String>, annotation: Vec<(u64, bed::Record)>, freq: BTreeMap<u64, Vec<(u64, u32)>>, dzi: DZI, params: Param) -> Vis {
-        Vis{range, args, annotation, freq, dzi, params}
+impl<'a> Vis<'a> {
+    fn new(range: StringRegion, args: Vec<String>, annotation: Vec<(u64, bed::Record)>, freq: BTreeMap<u64, Vec<(u64, u32)>>,     compressed_list: Vec<(u64, usize)>,
+    index_list: Vec<usize>,
+    prev_index: usize,
+    supplementary_list: Vec<(&[u8], usize, usize, i32, i32)>,dzi: DZI, params: Param) -> Vis {
+        Vis{range, args, annotation, freq, compressed_list, index_list, prev_index, supplementary_list, dzi, params}
     }
 }
 
@@ -295,7 +306,10 @@ fn log_2(x: i32) -> u32 {
 }
 
 #[actix_rt::main]
-pub async fn server(matches: ArgMatches, range: StringRegion, prefetch_range: StringRegion, args: Vec<String>, list: Vec<(u64, Record)>, annotation: Vec<(u64, bed::Record)>, freq: BTreeMap<u64, Vec<(u64, u32)>>, threads: u16) -> std::io::Result<()> {
+pub async fn server(matches: ArgMatches, range: StringRegion, prefetch_range: StringRegion, args: Vec<String>, list: Vec<(u64, Record)>, annotation: Vec<(u64, bed::Record)>, freq: BTreeMap<u64, Vec<(u64, u32)>>,     compressed_list: Vec<(u64, usize)>,
+index_list: Vec<usize>,
+prev_index: usize,
+supplementary_list: Vec<(&[u8], usize, usize, i32, i32)>,threads: u16) -> std::io::Result<()> {
 
     use actix_web::{web, HttpServer};
     let bind = matches.value_of("web").unwrap_or(&"0.0.0.0:4000");
@@ -341,7 +355,7 @@ pub async fn server(matches: ArgMatches, range: StringRegion, prefetch_range: St
     // let counter = RwLock::new(Vis::new(range.clone(), args.clone(), list.clone(), annotation.clone(), freq.clone(), dzi.clone(), params.clone()));
     //let counter = Arc::new(RwLock::new(Vis::new(range, args, annotation, freq, dzi, params)));
     //#[allow(clippy::mutex_atomic)] 
-    let counter = web::Data::new(RwLock::new(Vis::new(range, args, annotation, freq, dzi, params)));
+    let counter = web::Data::new(RwLock::new(Vis::new(range, args, annotation, freq, compressed_list, index_list, prev_index, supplementary_list,dzi, params)));
 
     //https://github.com/actix/examples/blob/master/state/src/main.rs
     HttpServer::new(move|| {
