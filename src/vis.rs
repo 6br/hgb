@@ -225,7 +225,7 @@ where
     let only_translocation = matches.is_present("only-translocation");
     let square = matches.is_present("square");
     if hide_alignment {
-        return frequency_vis(matches, &range,  frequency, lambda);
+        return frequency_vis(matches, &range, frequency, lambda);
     }
     let max_coverage = matches
         .value_of("max-coverage")

@@ -84,6 +84,12 @@ fn id_to_range<'a>(range: &StringRegion, args: &Vec<String>, zoom: u64, path: u6
                     .about("Max coverage value on coverage track"),
             )
             .arg(
+                Arg::new("cache-dir")
+                    .short('d')
+                    .takes_value(true)
+                    .about("Cache directory for server (generated randomly if not specified)"),
+            )
+            .arg(
                 Arg::new("x-scale")
                     .short('X')
                     .takes_value(true)
