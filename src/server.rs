@@ -338,14 +338,14 @@ pub async fn server(matches: ArgMatches, range: StringRegion, prefetch_range: St
         .unwrap_or(rng.gen::<u32>().to_string());
     
     let x_width = all as u32 / diff as u32 * x;
-    let max_zoom = 18; //log_2(x_width as i32) + 1;
+    let max_zoom = 18; // log_2(x_width as i32) + 1;
 
     match fs::create_dir(&cache_dir) {
         Err(e) => panic!("{}: {}", &cache_dir, e),
         Ok(_) => {},
     };
     let params = Param{x_scale, max_y:x, prefetch_max: all, max_zoom, criteria:diff, y_freq: freq_size, y, cache_dir};
-    eprintln!("{:?}, threads:{}", params, threads);
+    eprintln!("{:?}, threads: {}, zoom: {}", params, threads, log_2(x_width as i32) + 1);
     // Create some global state prior to building the server
     //#[allow(clippy::mutex_atomic)] // it's intentional.
     //let counter1 = web::Data::new(Mutex::new((matches.clone(), range, list, annotation, freq)));
