@@ -193,6 +193,10 @@ async fn get_dzi(data: web::Data<RwLock<Vis>>) -> impl Responder {
     return web::Json(data.read().unwrap().dzi.clone());
 }
 
+async fn get_index(data: web::Data<RwLock<Vis>>) -> Result<NamedFile> {
+    return Ok(NamedFile::open(format!("static/index.html"))?);
+}
+
 async fn index(data: web::Data<RwLock<Vis>>, list: web::Data<Vec<(u64, Record)>>, req: HttpRequest) -> Result<NamedFile> {
     let zoom: u64 = req.match_info().query("zoom").parse().unwrap();
     let path: u64 = req.match_info().query("filename").parse().unwrap();// .parse().unwrap();
@@ -270,16 +274,17 @@ struct DZI {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 struct Image {
     xmlns: String,
+    Url: String,
     Format: String,
-    Overlap: u64,
-    TileSize: u32,
+    Overlap: String,
+    TileSize: String,
     Size: Size
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 struct Size {
-    height: u32,
-    width: u32
+    height: String,
+    width: String
 }
 #[derive(Debug, Clone)]
 pub struct Param {
@@ -311,8 +316,8 @@ pub async fn server(matches: ArgMatches, range: StringRegion, prefetch_range: St
         .unwrap_or(1280u32);
     let diff = range.end - range.start;
     let all = prefetch_range.end - prefetch_range.start;
-    let size = Size{height: x, width: (all as u32 / diff as u32 + 1) * x};
-    let image = Image{xmlns: "http://schemas.microsoft.com/deepzoom/2008".to_string(), Format: "png".to_string(), Overlap: 0, TileSize: x, Size: size};
+    let size = Size{height: x.to_string(), width: ((all as u32 / diff as u32 + 1) * x).to_string()};
+    let image = Image{xmlns: "http://schemas.microsoft.com/deepzoom/2008".to_string(), Url: format!("http://{}/", bind).to_string(), Format: "png".to_string(), Overlap: "0".to_string(), TileSize: x.to_string(), Size: size};
     let dzi = DZI{Image: image};
     let x_scale = matches
         .value_of("x-scale")
@@ -354,7 +359,7 @@ pub async fn server(matches: ArgMatches, range: StringRegion, prefetch_range: St
         let list = list.clone();
         //let counter = Arc::new(RwLock::new(Item{list: list, vis: Vis::new(range, args, annotation, freq, dzi, params)}));
         //let counter = Cell::new(Vis::new( range.clone(),args.clone(), list.clone(), annotation.clone(), freq.clone()));
-        actix_web::App::new().data(list).app_data(counter.clone()).route("genome.dzi", web::get().to(get_dzi)).route("/{zoom:.*}/{filename:.*}_0.png", web::get().to(index)).wrap(Logger::default())
+        actix_web::App::new().data(list).app_data(counter.clone()).route("/", web::get().to(get_index)).route("genome.dzi", web::get().to(get_dzi)).route("/{zoom:.*}/{filename:.*}_0.png", web::get().to(index)).wrap(Logger::default())
     })
     .bind(bind)?
     .workers(threads as usize)
