@@ -283,8 +283,8 @@ struct Image {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 struct Size {
-    height: String,
-    width: String
+    Height: String,
+    Width: String
 }
 #[derive(Debug, Clone)]
 pub struct Param {
@@ -316,7 +316,7 @@ pub async fn server(matches: ArgMatches, range: StringRegion, prefetch_range: St
         .unwrap_or(1280u32);
     let diff = range.end - range.start;
     let all = prefetch_range.end - prefetch_range.start;
-    let size = Size{height: x.to_string(), width: ((all as u32 / diff as u32 + 1) * x).to_string()};
+    let size = Size{Height: x.to_string(), Width: ((all as u32 / diff as u32 + 1) * x).to_string()};
     let image = Image{xmlns: "http://schemas.microsoft.com/deepzoom/2008".to_string(), Url: format!("http://{}/", bind).to_string(), Format: "png".to_string(), Overlap: "0".to_string(), TileSize: x.to_string(), Size: size};
     let dzi = DZI{Image: image};
     let x_scale = matches
