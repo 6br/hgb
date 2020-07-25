@@ -201,7 +201,7 @@ pub fn bam_record_vis<'a, F>(
     compressed_list: &Vec<(u64, usize)>,
     index_list: &Vec<usize>,
     prev_index: usize,
-    supplementary_list: &Vec<(&[u8], usize, usize, i32, i32)>,
+    supplementary_list: &Vec<(Vec<u8>, usize, usize, i32, i32)>,
     lambda: F,
 ) -> Result<(), Box<dyn std::error::Error>>
 where
@@ -594,7 +594,7 @@ where
                     vec![(i.3 as u64, i.1), (i.4 as u64, i.2)],
                     stroke.stroke_width(y / 2),
                 ))?
-                .label(format!("{}", String::from_utf8_lossy(i.0)))
+                .label(format!("{}", String::from_utf8_lossy(&i.0)))
                 .legend(move |(x, y)| {
                     Rectangle::new([(x - 5, y - 5), (x + 5, y + 5)], stroke.filled())
                 });

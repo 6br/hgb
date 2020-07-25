@@ -189,7 +189,7 @@ fn id_to_range<'a>(range: &StringRegion, args: &Vec<String>, zoom: u64, path: u6
     (matches, range)
 }
 
-async fn get_dzi<'a>(data: web::Data<RwLock<Vis<'a>>>) -> impl Responder {
+async fn get_dzi(data: web::Data<RwLock<Vis>>) -> impl Responder {
     return web::Json(data.read().unwrap().dzi.clone());
 }
 
@@ -320,7 +320,7 @@ fn log_2(x: i32) -> u32 {
 pub async fn server(matches: ArgMatches, range: StringRegion, prefetch_range: StringRegion, args: Vec<String>, list: Vec<(u64, Record)>, annotation: Vec<(u64, bed::Record)>, freq: BTreeMap<u64, Vec<(u64, u32)>>,     compressed_list: Vec<(u64, usize)>,
 index_list: Vec<usize>,
 prev_index: usize,
-supplementary_list: Vec<(&[u8], usize, usize, i32, i32)>,threads: u16) -> std::io::Result<()> {
+supplementary_list: Vec<(Vec<u8>, usize, usize, i32, i32)>,threads: u16) -> std::io::Result<()> {
 
     use actix_web::{web, HttpServer};
     let bind = matches.value_of("web").unwrap_or(&"0.0.0.0:4000");

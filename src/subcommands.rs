@@ -1011,7 +1011,7 @@ where
                 if let Some(end) = end_map.get(&(sample_id, k.1.name())) {
                     if None == name_index.get(k.1.name()) {
                         supplementary_list.push((
-                            k.1.name(),
+                            k.1.name().to_vec(),
                             index + last_prev_index,
                             index + last_prev_index + end.3,
                             end.0,
