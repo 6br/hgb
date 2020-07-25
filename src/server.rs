@@ -3,7 +3,7 @@ use actix_files::NamedFile;
 use rand::Rng;
 use actix_web::http::header::{ContentDisposition, DispositionType};
 use actix_web::{HttpRequest, Result, web, Responder, error, middleware::Logger};
-use std::{sync::{RwLock, Arc},  collections::BTreeMap, fs};
+use std::{sync::{RwLock, Arc},  collections::BTreeMap, fs, io::Bytes};
 use clap::{App,  ArgMatches, Arg, AppSettings};
 use ghi::{bed, vis::bam_record_vis};
 // use crate::subcommands::bam_vis;
@@ -82,6 +82,12 @@ fn id_to_range<'a>(range: &StringRegion, args: &Vec<String>, zoom: u64, path: u6
                     .short('m')
                     .takes_value(true)
                     .about("Max coverage value on coverage track"),
+            )
+            .arg(
+                Arg::new("cache-dir")
+                    .short('d')
+                    .takes_value(true)
+                    .about("Cache directory for server (generated randomly if not specified)"),
             )
             .arg(
                 Arg::new("x-scale")
@@ -166,7 +172,7 @@ fn id_to_range<'a>(range: &StringRegion, args: &Vec<String>, zoom: u64, path: u6
     let b: Vec<String> = if criteria << (max_zoom - zoom) >= 3000000 { // i.e. 2**22s
         vec!["-A".to_string(), "-Y".to_string(), (max_y >> (max_zoom-zoom)).to_string(), "-y".to_string(), (y >> (max_zoom-zoom)).to_string(), "-n".to_string(), "-I".to_string(), "-o".to_string(), path_string, "-X".to_string(), ((scalex_default >> (max_zoom-zoom) )* (max_y / freq_y)).to_string()]
     } else if criteria << (max_zoom - zoom ) <= 200000 { // Base-pair level
-        vec!["-Y".to_string(), (freq_y >> (max_zoom-zoom)).to_string(), "-y".to_string(), (y >> (max_zoom-zoom)).to_string(), "-X".to_string(), (scalex_default >> (max_zoom-zoom)).to_string(), "-o".to_string(), path_string]
+        vec!["-Y".to_string(), (freq_y >> (max_zoom-zoom)).to_string(), "-y".to_string(), (y >> (max_zoom-zoom)).to_string(), "-X".to_string(), (scalex_default >> (max_zoom-zoom)).to_string(), "-I".to_string(), "-o".to_string(), path_string]
     } else {
         vec!["-Y".to_string(), (freq_y >> (max_zoom-zoom)).to_string(), "-y".to_string(), (y >> (max_zoom-zoom)).to_string(), "-X".to_string(), (scalex_default >> (max_zoom-zoom)).to_string(), "-n".to_string(), "-I".to_string(), "-o".to_string(), path_string]
     };
@@ -187,7 +193,11 @@ async fn get_dzi<'a>(data: web::Data<RwLock<Vis<'a>>>) -> impl Responder {
     return web::Json(data.read().unwrap().dzi.clone());
 }
 
-async fn index<'a>(data: web::Data<RwLock<Vis<'a>>>, list: web::Data<Vec<(u64, Record)>>, req: HttpRequest) -> Result<NamedFile> {
+async fn get_index(data: web::Data<RwLock<Vis>>) -> Result<NamedFile> {
+    return Ok(NamedFile::open(format!("static/index.html"))?);
+}
+
+async fn index(data: web::Data<RwLock<Vis>>, list: web::Data<Vec<(u64, Record)>>, req: HttpRequest) -> Result<NamedFile> {
     let zoom: u64 = req.match_info().query("zoom").parse().unwrap();
     let path: u64 = req.match_info().query("filename").parse().unwrap();// .parse().unwrap();
     let data = data.read().unwrap();
@@ -246,18 +256,18 @@ pub struct Vis<'a> {
 
 
 #[derive(Clone)]
-pub struct Vis<'a> {
+pub struct Vis {
     range: StringRegion, args: Vec<String>, annotation: Vec<(u64, bed::Record)>, freq: BTreeMap<u64, Vec<(u64, u32)>>,     compressed_list: Vec<(u64, usize)>,
     index_list: Vec<usize>,
     prev_index: usize,
-    supplementary_list: Vec<(&'a[u8], usize, usize, i32, i32)>,dzi: DZI, params: Param
+    supplementary_list: Vec<(Vec<u8>, usize, usize, i32, i32)>,dzi: DZI, params: Param
 }
 
-impl<'a> Vis<'a> {
+impl Vis {
     fn new(range: StringRegion, args: Vec<String>, annotation: Vec<(u64, bed::Record)>, freq: BTreeMap<u64, Vec<(u64, u32)>>,     compressed_list: Vec<(u64, usize)>,
     index_list: Vec<usize>,
     prev_index: usize,
-    supplementary_list: Vec<(&[u8], usize, usize, i32, i32)>,dzi: DZI, params: Param) -> Vis {
+    supplementary_list: Vec<(Vec<u8>, usize, usize, i32, i32)>,dzi: DZI, params: Param) -> Vis {
         Vis{range, args, annotation, freq, compressed_list, index_list, prev_index, supplementary_list, dzi, params}
     }
 }
@@ -275,16 +285,17 @@ struct DZI {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 struct Image {
     xmlns: String,
+    Url: String,
     Format: String,
-    Overlap: u64,
-    TileSize: u32,
+    Overlap: String,
+    TileSize: String,
     Size: Size
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 struct Size {
-    height: u32,
-    width: u32
+    Height: String,
+    Width: String
 }
 #[derive(Debug, Clone)]
 pub struct Param {
@@ -319,8 +330,8 @@ supplementary_list: Vec<(&[u8], usize, usize, i32, i32)>,threads: u16) -> std::i
         .unwrap_or(1280u32);
     let diff = range.end - range.start;
     let all = prefetch_range.end - prefetch_range.start;
-    let size = Size{height: x, width: (all as u32 / diff as u32 + 1) * x};
-    let image = Image{xmlns: "http://schemas.microsoft.com/deepzoom/2008".to_string(), Format: "png".to_string(), Overlap: 0, TileSize: x, Size: size};
+    let size = Size{Height: x.to_string(), Width: ((all as u32 / diff as u32 + 1) * x).to_string()};
+    let image = Image{xmlns: "http://schemas.microsoft.com/deepzoom/2008".to_string(), Url: format!("http://{}/", bind).to_string(), Format: "png".to_string(), Overlap: "0".to_string(), TileSize: x.to_string(), Size: size};
     let dzi = DZI{Image: image};
     let x_scale = matches
         .value_of("x-scale")
@@ -362,7 +373,7 @@ supplementary_list: Vec<(&[u8], usize, usize, i32, i32)>,threads: u16) -> std::i
         let list = list.clone();
         //let counter = Arc::new(RwLock::new(Item{list: list, vis: Vis::new(range, args, annotation, freq, dzi, params)}));
         //let counter = Cell::new(Vis::new( range.clone(),args.clone(), list.clone(), annotation.clone(), freq.clone()));
-        actix_web::App::new().data(list).app_data(counter.clone()).route("genome.dzi", web::get().to(get_dzi)).route("/{zoom:.*}/{filename:.*}_0.png", web::get().to(index)).wrap(Logger::default())
+        actix_web::App::new().data(list).app_data(counter.clone()).route("/", web::get().to(get_index)).route("genome.dzi", web::get().to(get_dzi)).route("/{zoom:.*}/{filename:.*}_0.png", web::get().to(index)).wrap(Logger::default())
     })
     .bind(bind)?
     .workers(threads as usize)
