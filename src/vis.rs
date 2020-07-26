@@ -537,18 +537,20 @@ where
             if count > 0 {
                 let idx = *sample_sequential_id as usize;
                 // let idx = sample.next().0;
-                chart
+                let chart = chart
                     .draw_series(LineSeries::new(
                         vec![(range.start() - 1, count), (range.end() + 1, count)],
                         Palette99::pick(idx).stroke_width(y / 150 + 1),
                     ))?
-                    .label(format!("{}", lambda(idx).unwrap_or(&idx.to_string())))
-                    .legend(move |(x, y)| {
+                    .label(format!("{}", lambda(idx).unwrap_or(&idx.to_string())));
+                if !no_margin {
+                    chart.legend(move |(x, y)| {
                         Rectangle::new(
                             [(x - 5, y - 5), (x + 5, y + 5)],
                             Palette99::pick(idx).filled(),
                         )
                     });
+                }
             }
             //prev_index += count;
         }
@@ -568,7 +570,7 @@ where
                                 (range.start() - 1, prev_index),
                                 (range.end() + 1, prev_index + count),
                             ],
-                            stroke.stroke_width(5), // filled(), //stroke_width(100),
+                            stroke.stroke_width(y / 150 + 1), // filled(), //stroke_width(100),
                         );
                         bar2.set_margin(1, 0, 0, 0);
                         prev_index += count;

@@ -171,12 +171,14 @@ fn id_to_range<'a>(range: &StringRegion, args: &Vec<String>, zoom: u64, path: u6
     let x = param.x;
     let scalex_default = param.x_scale as u64;
     // let path = path << (max_zoom - zoom);
-    let b: Vec<String> = if (y >> (max_zoom-zoom)) <= 0 { // i.e. 2**22s
-        vec!["-A".to_string(), "-Y".to_string(), (max_y >> (max_zoom-zoom)).to_string(), "-y".to_string(), (y >> (max_zoom-zoom)).to_string(), "-n".to_string(), "-I".to_string(), "-o".to_string(), path_string, "-X".to_string(), ((max_y >> (max_zoom-zoom)) / 5).to_string(), "-x".to_string(), x.to_string()]
-    } else if criteria << (max_zoom - zoom ) <= 200000 { // Base-pair level
+    let b: Vec<String> = if (y >> (max_zoom-zoom)) <= 1 { // i.e. 2**22s
+        vec!["-A".to_string(), "-Y".to_string(), (max_y >> (max_zoom-zoom)).to_string(), "-y".to_string(), (y >> (max_zoom-zoom)).to_string(), "-n".to_string(), "-I".to_string(), "-o".to_string(), path_string, "-X".to_string(), ((max_y >> (max_zoom-zoom)) / 5).to_string(), "-x".to_string(), x.to_string(), "-l".to_string()]
+    } else if criteria << (max_zoom - zoom ) <= 100000 { // Base-pair level
         vec!["-Y".to_string(), (freq_y >> (max_zoom-zoom)).to_string(), "-y".to_string(), (y >> (max_zoom-zoom)).to_string(), "-X".to_string(), (scalex_default >> (max_zoom-zoom)).to_string(), "-I".to_string(), "-o".to_string(), path_string, "-x".to_string(), x.to_string()]
+    } else if criteria << (max_zoom - zoom ) <= 200000 { // Base-pair level
+        vec!["-Y".to_string(), (freq_y >> (max_zoom-zoom)).to_string(), "-y".to_string(), (y >> (max_zoom-zoom)).to_string(), "-X".to_string(), (scalex_default >> (max_zoom-zoom)).to_string(), "-I".to_string(), "-o".to_string(), path_string, "-x".to_string(), x.to_string(), "-l".to_string()]
     } else {
-        vec!["-Y".to_string(), (freq_y >> (max_zoom-zoom)).to_string(), "-y".to_string(), (y >> (max_zoom-zoom)).to_string(), "-X".to_string(), (scalex_default >> (max_zoom-zoom)).to_string(), "-n".to_string(), "-I".to_string(), "-o".to_string(), path_string, "-x".to_string(), x.to_string()]
+        vec!["-Y".to_string(), (freq_y >> (max_zoom-zoom)).to_string(), "-y".to_string(), (y >> (max_zoom-zoom)).to_string(), "-X".to_string(), (scalex_default >> (max_zoom-zoom)).to_string(), "-n".to_string(), "-I".to_string(), "-o".to_string(), path_string, "-x".to_string(), x.to_string(), "-l".to_string()]
     };
     let mut args = args.clone();
     args.extend(b); //b.extend(args.clone());
@@ -417,7 +419,11 @@ supplementary_list: Vec<(Vec<u8>, usize, usize, i32, i32)>,threads: u16) -> std:
         let list = list.clone();
         //let counter = Arc::new(RwLock::new(Item{list: list, vis: Vis::new(range, args, annotation, freq, dzi, params)}));
         //let counter = Cell::new(Vis::new( range.clone(),args.clone(), list.clone(), annotation.clone(), freq.clone()));
-        actix_web::App::new().data(list).app_data(counter.clone()).route("/", web::get().to(get_index)).route("openseadragon.min.js", web::get().to(get_js)).route("genome.dzi", web::get().to(get_dzi)).route("/{zoom:.*}/{filename:.*}_0.png", web::get().to(index)).service(actix_files::Files::new("/images", "static/images").show_files_listing()).wrap(Logger::default())
+        actix_web::App::new().data(list).app_data(counter.clone()).route("/", web::get().to(get_index))
+        .route("openseadragon.min.js", web::get().to(get_js))
+        .route("openseadragon.min.js.map", web::get().to(get_js_map))
+        .route("genome.dzi", web::get().to(get_dzi))
+        .route("/{zoom:.*}/{filename:.*}_0.png", web::get().to(index)).service(actix_files::Files::new("/images", "static/images").show_files_listing()).wrap(Logger::default())
     })
     .bind(bind)?
     .workers(threads as usize)
