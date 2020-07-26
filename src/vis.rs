@@ -129,7 +129,7 @@ where
     // Calculate coverage; it won't work on sort_by_name
 
     let root =
-        BitMapBackend::new(output, (x, frequency.len() as u32 * freq_size)).into_drawing_area();
+        BitMapBackend::new(output, (x, freq_size)).into_drawing_area();
     root.fill(&WHITE)?;
     let root = root.margin(0, 0, 0, 0);
     // After this point, we should be able to draw construct a chart context
@@ -541,10 +541,10 @@ where
                     .draw_series(LineSeries::new(
                         vec![(range.start() - 1, count), (range.end() + 1, count)],
                         Palette99::pick(idx).stroke_width(y / 150 + 1),
-                    ))?
-                    .label(format!("{}", lambda(idx).unwrap_or(&idx.to_string())));
+                    ))?;
+                    
                 if !no_margin {
-                    chart.legend(move |(x, y)| {
+                    chart.label(format!("{}", lambda(idx).unwrap_or(&idx.to_string()))).legend(move |(x, y)| {
                         Rectangle::new(
                             [(x - 5, y - 5), (x + 5, y + 5)],
                             Palette99::pick(idx).filled(),
