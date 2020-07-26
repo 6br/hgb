@@ -1128,7 +1128,7 @@ where
         bam_record_vis(
             matches,
             range,
-            list,
+            &list,
             &ann,
             &freq,
             &compressed_list,

@@ -191,7 +191,7 @@ where
 pub fn bam_record_vis<'a, F>(
     matches: &ArgMatches,
     range: StringRegion,
-    list: Vec<(u64, Record)>,
+    list: &Vec<(u64, Record)>,
     annotation: &Vec<(u64, bed::Record)>,
     frequency: &BTreeMap<u64, Vec<(u64, u32)>>,
     compressed_list: &Vec<(u64, usize)>,
