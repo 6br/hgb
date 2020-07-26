@@ -173,7 +173,7 @@ fn id_to_range<'a>(range: &StringRegion, args: &Vec<String>, zoom: u64, path: u6
     // let path = path << (max_zoom - zoom);
     let b: Vec<String> = if (y >> (max_zoom-zoom)) <= 1 { // i.e. 2**22s
         vec!["-A".to_string(), "-Y".to_string(), (max_y >> (max_zoom-zoom)).to_string(), "-y".to_string(), (y >> (max_zoom-zoom)).to_string(), "-n".to_string(), "-I".to_string(), "-o".to_string(), path_string, "-X".to_string(), ((max_y >> (max_zoom-zoom)) / 5).to_string(), "-x".to_string(), x.to_string(), "-l".to_string()]
-    } else if criteria << (max_zoom - zoom ) <= 100000 { // Base-pair level
+    } else if criteria << (max_zoom - zoom ) <= 50000 { // Base-pair level
         vec!["-Y".to_string(), (freq_y >> (max_zoom-zoom)).to_string(), "-y".to_string(), (y >> (max_zoom-zoom)).to_string(), "-X".to_string(), (scalex_default >> (max_zoom-zoom)).to_string(), "-I".to_string(), "-o".to_string(), path_string, "-x".to_string(), x.to_string()]
     } else if criteria << (max_zoom - zoom ) <= 200000 && (y >> (max_zoom-zoom)) >= 8 { // Base-pair level
         vec!["-Y".to_string(), (freq_y >> (max_zoom-zoom)).to_string(), "-y".to_string(), (y >> (max_zoom-zoom)).to_string(), "-X".to_string(), (scalex_default >> (max_zoom-zoom)).to_string(), "-I".to_string(), "-o".to_string(), path_string, "-x".to_string(), x.to_string(), "-l".to_string()]
