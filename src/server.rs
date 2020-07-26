@@ -373,7 +373,7 @@ supplementary_list: Vec<(Vec<u8>, usize, usize, i32, i32)>,threads: u16) -> std:
         Ok(_) => {},
     };
     let params = Param{x_scale, max_y:x, prefetch_max: all, max_zoom, criteria:diff, y_freq: freq_size, y, cache_dir};
-    eprintln!("{:?}, threads:{}", params, threads);
+    eprintln!("{:?}, threads: {}, zoom: {}", params, threads, log_2(x_width as i32) + 1);
     // Create some global state prior to building the server
     //#[allow(clippy::mutex_atomic)] // it's intentional.
     //let counter1 = web::Data::new(Mutex::new((matches.clone(), range, list, annotation, freq)));
