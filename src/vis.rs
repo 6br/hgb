@@ -14,7 +14,7 @@ use plotters::prelude::*;
 use plotters::style::RGBColor;
 // use rayon::prelude::*;
 use std::{
-    collections::{BTreeMap, HashMap},
+    collections::{BTreeMap},
     fs::File,
     time::Instant,
 };

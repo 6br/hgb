@@ -3,12 +3,13 @@ use actix_files::NamedFile;
 use rand::Rng;
 use actix_web::http::header::{ContentDisposition, DispositionType};
 use actix_web::{HttpRequest, Result, web, Responder, error, middleware::Logger};
-use std::{sync::{RwLock, Arc},  collections::BTreeMap, fs, io::Bytes};
+use std::{sync::{RwLock},  collections::BTreeMap, fs};
 use clap::{App,  ArgMatches, Arg, AppSettings};
 use ghi::{bed, vis::bam_record_vis};
 // use crate::subcommands::bam_vis;
 use genomic_range::StringRegion;
 use bam::Record;
+use itertools::Itertools;
 
 fn id_to_range<'a>(range: &StringRegion, args: &Vec<String>, zoom: u64, path: u64, param: &Param, path_string: String) -> (ArgMatches, StringRegion) {
 
@@ -66,7 +67,7 @@ fn id_to_range<'a>(range: &StringRegion, args: &Vec<String>, zoom: u64, path: u6
             .arg(Arg::new("no-scale").short('S').about("Do not show y-axis scale"))
             .arg(Arg::new("no-packing").short('p').about("Disable read packing"))
             .arg(Arg::new("no-legend").short('l').about("Hide legend"))
-            .arg(Arg::new("square").short('Q').about("Set square width (overwritten)"))
+            .arg(Arg::new("meaningless").short('Q').about("Set square width (overwritten)"))
             .arg(Arg::new("quality").short('q').about("Display reads by quality value"))
             .arg(Arg::new("x").short('x').takes_value(true).about("The width of image"))
             .arg(Arg::new("y").short('y').takes_value(true).about("The height of each read alignment"))
@@ -221,6 +222,7 @@ async fn index(data: web::Data<RwLock<Vis>>, list: web::Data<Vec<(u64, Record)>>
             let supplementary_list = &data.supplementary_list;
             let prev_index = data.prev_index;
 
+
             let min_zoom = 13;
             
             let path_string = format!("{}/{}/{}_0.png", cache_dir, zoom, path);
@@ -324,10 +326,28 @@ supplementary_list: Vec<(Vec<u8>, usize, usize, i32, i32)>,threads: u16) -> std:
 
     use actix_web::{web, HttpServer};
     let bind = matches.value_of("web").unwrap_or(&"0.0.0.0:4000");
-    let x = matches
+    let no_margin = matches.is_present("no-scale");
+    let annotation_count = annotation.iter().unique_by(|s| s.0).count(); // annotation.len();
+    let top_margin = if no_margin { 0 } else { 40 };
+    let axis_count = 0;
+    let y = matches
+        .value_of("y")
+        .and_then(|a| a.parse::<u32>().ok())
+        .unwrap_or(15u32);
+    let freq_size = matches
+        .value_of("freq-height")
+        .and_then(|a| a.parse::<u32>().ok())
+        .unwrap_or(50u32);
+    let square = matches.is_present("square");
+    let x = if square {
+        top_margin
+        + (prev_index as u32 + axis_count as u32 + annotation_count as u32 * 2) * y
+        + freq.len() as u32 * freq_size
+    } else {matches
         .value_of("x")
         .and_then(|a| a.parse::<u32>().ok())
-        .unwrap_or(1280u32);
+        .unwrap_or(1280u32)
+    };
     let diff = range.end - range.start;
     let all = prefetch_range.end - prefetch_range.start;
     let size = Size{Height: x.to_string(), Width: ((all as u32 / diff as u32 + 1) * x).to_string()};
@@ -337,14 +357,8 @@ supplementary_list: Vec<(Vec<u8>, usize, usize, i32, i32)>,threads: u16) -> std:
         .value_of("x-scale")
         .and_then(|a| a.parse::<u32>().ok())
         .unwrap_or(20u32);
-    let freq_size = matches
-        .value_of("freq-height")
-        .and_then(|a| a.parse::<u32>().ok())
-        .unwrap_or(50u32);
-    let y = matches
-        .value_of("y")
-        .and_then(|a| a.parse::<u32>().ok())
-        .unwrap_or(15u32);
+
+
     let mut rng = rand::thread_rng();
     let cache_dir = matches
         .value_of("cache-dir")
