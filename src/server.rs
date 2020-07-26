@@ -1,6 +1,7 @@
 
 use actix_files::NamedFile;
 use rand::Rng;
+use std::time::Instant;
 use actix_web::http::header::{ContentDisposition, DispositionType};
 use actix_web::{HttpRequest, Result, web, Responder, error, middleware::Logger};
 use std::{sync::{RwLock},  collections::BTreeMap, fs};
@@ -198,6 +199,7 @@ async fn get_index(data: web::Data<RwLock<Vis>>) -> Result<NamedFile> {
 }
 
 async fn index(data: web::Data<RwLock<Vis>>, list: web::Data<Vec<(u64, Record)>>, req: HttpRequest) -> Result<NamedFile> {
+    let start = Instant::now();
     let zoom: u64 = req.match_info().query("zoom").parse().unwrap();
     let path: u64 = req.match_info().query("filename").parse().unwrap();// .parse().unwrap();
     let data = data.read().unwrap();
@@ -212,7 +214,19 @@ async fn index(data: web::Data<RwLock<Vis>>, list: web::Data<Vec<(u64, Record)>>
                 parameters: vec![],
             })),
         _ => {
+            let end0 = start.elapsed();
+            eprintln!(
+                "match named file: {}.{:03} sec.",
+                end0.as_secs(),
+                end0.subsec_nanos() / 1_000_000
+            );
             fs::create_dir( format!("{}/{}", cache_dir, zoom)); //error is permitted.
+            let end1 = start.elapsed();
+            eprintln!(
+                "create dir: {}.{:03} sec.",
+                end1.as_secs(),
+                end1.subsec_nanos() / 1_000_000
+            );
             let ann = &data.annotation;
             let params = &data.params;
             let freq = &data.freq;
@@ -230,10 +244,21 @@ async fn index(data: web::Data<RwLock<Vis>>, list: web::Data<Vec<(u64, Record)>>
                 return Err(error::ErrorBadRequest("zoom level is not appropriate"));
             }
             let (matches, string_range) = id_to_range(&data.range, &data.args, zoom, path, params, path_string.clone());
-
+            let end2 = start.elapsed();
+            eprintln!(
+                "id_to_range: {}.{:03} sec.",
+                end2.as_secs(),
+                end2.subsec_nanos() / 1_000_000
+            );
             // If the end is exceeds the prefetch region, raise error.
             // let arg_vec = vec!["ghb", "vis", "-t", "1", "-r",  "parse"];
             bam_record_vis(&matches, string_range, list.to_vec(), ann, freq, compressed_list, index_list, prev_index, supplementary_list,|_| None).unwrap();
+            let end3 = start.elapsed();
+            eprintln!(
+                "img_saved: {}.{:03} sec.",
+                end3.as_secs(),
+                end3.subsec_nanos() / 1_000_000
+            );
             // bam_vis(matches, 1);
             Ok(NamedFile::open(path_string)?
                 .use_last_modified(true)
