@@ -274,11 +274,6 @@ impl Vis {
     }
 }
 
-pub struct Item {
-    list: Vec<(u64, Record)>,
-    vis: Vis,
-}
-
 #[derive(Debug, Serialize, Deserialize, Clone)]
 struct DZI {
     Image: Image
