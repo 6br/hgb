@@ -154,6 +154,7 @@ where
                 .configure_mesh()
                 // We can customize the maximum number of labels allowed for each axis
                 //.x_labels(5)
+                .x_label_style(("sans-serif", x_scale / 2).into_font())
                 // .y_labels(4)
                 .y_label_style(("sans-serif", 12).into_font())
                 // We can also change the format of the label text
@@ -341,7 +342,7 @@ where
             // Set the caption of the chart
             .caption(format!("{}", range), ("sans-serif", 20).into_font())
             // Set the size of the label region
-            .x_label_area_size(20)
+            .x_label_area_size(x_scale)
             .y_label_area_size(y_area_size)
             // Finally attach a coordinate on the drawing area and make a chart context
             .build_ranged(
@@ -355,6 +356,7 @@ where
         // We can customize the maximum number of labels allowed for each axis
         //.x_labels(5)
         .y_labels(1)
+        .x_label_style(("sans-serif", x_scale / 2).into_font())
         // We can also change the format of the label text
         .x_label_formatter(&|x| format!("{:.3}", x))
         .draw()?;
@@ -952,6 +954,7 @@ where
                 // We can customize the maximum number of labels allowed for each axis
                 //.x_labels(5)
                 // .y_labels(4)
+                //.x_label_style(("sans-serif", x_scale / 2).into_font())
                 .y_label_style(("sans-serif", 12).into_font())
                 // We can also change the format of the label text
                 // .x_label_formatter(&|x| format!("{:.3}", x))
