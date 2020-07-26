@@ -22,7 +22,6 @@ use itertools::EitherOrBoth::{Both, Left};
 use itertools::Itertools;
 use std::{
     collections::{BTreeMap, HashMap},
-    env::Args,
     fs::File,
     io,
     path::Path,

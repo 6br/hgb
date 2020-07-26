@@ -124,12 +124,12 @@ where
     let x_scale = matches
         .value_of("x-scale")
         .and_then(|a| a.parse::<u32>().ok())
-        .unwrap_or(20u32)
-        / frequency.len() as u32;
+        .unwrap_or(20u32) / frequency.len() as u32;
     // list.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.start().cmp(&b.1.start())));
     // Calculate coverage; it won't work on sort_by_name
 
-    let root = BitMapBackend::new(output, (x, freq_size)).into_drawing_area();
+    let root =
+        BitMapBackend::new(output, (x, freq_size)).into_drawing_area();
     root.fill(&WHITE)?;
     let root = root.margin(0, 0, 0, 0);
     // After this point, we should be able to draw construct a chart context
@@ -537,19 +537,18 @@ where
             if count > 0 {
                 let idx = *sample_sequential_id as usize;
                 // let idx = sample.next().0;
-                let chart = chart.draw_series(LineSeries::new(
-                    vec![(range.start() - 1, count), (range.end() + 1, count)],
-                    Palette99::pick(idx).stroke_width(y / 200 + 5),
-                ))?;
+                let chart = chart
+                    .draw_series(LineSeries::new(
+                        vec![(range.start() - 1, count), (range.end() + 1, count)],
+                        Palette99::pick(idx).stroke_width(y / 200 + 4),
+                    ))?;
                 if !no_margin {
-                    chart
-                        .label(format!("{}", lambda(idx).unwrap_or(&idx.to_string())))
-                        .legend(move |(x, y)| {
-                            Rectangle::new(
-                                [(x - 5, y - 5), (x + 5, y + 5)],
-                                Palette99::pick(idx).filled(),
-                            )
-                        });
+                    chart.label(format!("{}", lambda(idx).unwrap_or(&idx.to_string()))).legend(move |(x, y)| {
+                        Rectangle::new(
+                            [(x - 5, y - 5), (x + 5, y + 5)],
+                            Palette99::pick(idx).filled(),
+                        )
+                    });
                 }
             }
             //prev_index += count;
@@ -937,7 +936,7 @@ where
 
     if frequency.len() > 0 {
         let coverages = coverage.split_evenly((frequency.len(), 1));
-        for (i, (sample_sequential_id, values)) in frequency.iter().enumerate() {
+        for (i, (sample_sequential_id, values)) in frequency.iter().enumerate().rev() {
             let idx = *sample_sequential_id as usize;
             let y_max = match max_coverage {
                 Some(a) => a,
