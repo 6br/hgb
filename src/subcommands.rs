@@ -880,6 +880,7 @@ where
             freq.insert(t.0, line);
         });
     }
+    eprintln!("{:?}", freq.keys());
     ann.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.start().cmp(&b.1.start())));
     list.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.start().cmp(&b.1.start())));
 
