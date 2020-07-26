@@ -165,17 +165,18 @@ fn id_to_range<'a>(range: &StringRegion, args: &Vec<String>, zoom: u64, path: u6
     // let x_width = prefetch_max / criteria * (740); //max_x
     // Here 2**17 < x_width < 2**18 so maxZoom should be 18+ 1;
     let max_zoom = param.max_zoom as u64; // 18;
-    let max_y = param.max_y as u64;
+    let max_y = param.max_y as u64; // It is the same as x;
     let freq_y = param.y_freq as u64;
     let y = param.y as u64;
+    let x = param.x;
     let scalex_default = param.x_scale as u64;
     // let path = path << (max_zoom - zoom);
     let b: Vec<String> = if (y >> (max_zoom-zoom)) <= 0 { // i.e. 2**22s
-        vec!["-A".to_string(), "-Y".to_string(), (max_y >> (max_zoom-zoom)).to_string(), "-y".to_string(), (y >> (max_zoom-zoom)).to_string(), "-n".to_string(), "-I".to_string(), "-o".to_string(), path_string, "-X".to_string(), ((scalex_default >> (max_zoom-zoom) )* (max_y / freq_y)).to_string()]
+        vec!["-A".to_string(), "-Y".to_string(), (max_y >> (max_zoom-zoom)).to_string(), "-y".to_string(), (y >> (max_zoom-zoom)).to_string(), "-n".to_string(), "-I".to_string(), "-o".to_string(), path_string, "-X".to_string(), ((scalex_default >> (max_zoom-zoom)) * (max_y / freq_y)).to_string(), "-x".to_string(), x.to_string()]
     } else if criteria << (max_zoom - zoom ) <= 200000 { // Base-pair level
-        vec!["-Y".to_string(), (freq_y >> (max_zoom-zoom)).to_string(), "-y".to_string(), (y >> (max_zoom-zoom)).to_string(), "-X".to_string(), (scalex_default >> (max_zoom-zoom)).to_string(), "-I".to_string(), "-o".to_string(), path_string]
+        vec!["-Y".to_string(), (freq_y >> (max_zoom-zoom)).to_string(), "-y".to_string(), (y >> (max_zoom-zoom)).to_string(), "-X".to_string(), (scalex_default >> (max_zoom-zoom)).to_string(), "-I".to_string(), "-o".to_string(), path_string, "-x".to_string(), x.to_string()]
     } else {
-        vec!["-Y".to_string(), (freq_y >> (max_zoom-zoom)).to_string(), "-y".to_string(), (y >> (max_zoom-zoom)).to_string(), "-X".to_string(), (scalex_default >> (max_zoom-zoom)).to_string(), "-n".to_string(), "-I".to_string(), "-o".to_string(), path_string]
+        vec!["-Y".to_string(), (freq_y >> (max_zoom-zoom)).to_string(), "-y".to_string(), (y >> (max_zoom-zoom)).to_string(), "-X".to_string(), (scalex_default >> (max_zoom-zoom)).to_string(), "-n".to_string(), "-I".to_string(), "-o".to_string(), path_string, "-x".to_string(), x.to_string()]
     };
     let mut args = args.clone();
     args.extend(b); //b.extend(args.clone());
@@ -220,13 +221,6 @@ async fn index(data: web::Data<RwLock<Vis>>, list: web::Data<Vec<(u64, Record)>>
                 end0.as_secs(),
                 end0.subsec_nanos() / 1_000_000
             );
-            fs::create_dir( format!("{}/{}", cache_dir, zoom)); //error is permitted.
-            let end1 = start.elapsed();
-            eprintln!(
-                "create dir: {}.{:03} sec.",
-                end1.as_secs(),
-                end1.subsec_nanos() / 1_000_000
-            );
             let ann = &data.annotation;
             let params = &data.params;
             let freq = &data.freq;
@@ -243,6 +237,13 @@ async fn index(data: web::Data<RwLock<Vis>>, list: web::Data<Vec<(u64, Record)>>
             if zoom < min_zoom || zoom > max_zoom as u64 {
                 return Err(error::ErrorBadRequest("zoom level is not appropriate"));
             }
+            fs::create_dir( format!("{}/{}", cache_dir, zoom)); //error is permitted.
+            let end1 = start.elapsed();
+            eprintln!(
+                "create dir: {}.{:03} sec.",
+                end1.as_secs(),
+                end1.subsec_nanos() / 1_000_000
+            );
             let (matches, string_range) = id_to_range(&data.range, &data.args, zoom, path, params, path_string.clone());
             let end2 = start.elapsed();
             eprintln!(
@@ -326,6 +327,7 @@ pub struct Param {
     criteria: u64,
     max_zoom: u32,
     y_freq: u32,
+    x: u32,
     y: u32,
     cache_dir: String
 }
@@ -338,7 +340,7 @@ fn log_2(x: i32) -> u32 {
 }
 
 #[actix_rt::main]
-pub async fn server(matches: ArgMatches, range: StringRegion, prefetch_range: StringRegion, args: Vec<String>, list: Vec<(u64, Record)>, annotation: Vec<(u64, bed::Record)>, freq: BTreeMap<u64, Vec<(u64, u32)>>,     compressed_list: Vec<(u64, usize)>,
+pub async fn server(matches: ArgMatches, range: StringRegion, prefetch_range: StringRegion, args: Vec<String>, list: Vec<(u64, Record)>, annotation: Vec<(u64, bed::Record)>, freq: BTreeMap<u64, Vec<(u64, u32)>>, compressed_list: Vec<(u64, usize)>,
 index_list: Vec<usize>,
 prev_index: usize,
 supplementary_list: Vec<(Vec<u8>, usize, usize, i32, i32)>,threads: u16) -> std::io::Result<()> {
@@ -391,7 +393,7 @@ supplementary_list: Vec<(Vec<u8>, usize, usize, i32, i32)>,threads: u16) -> std:
         Err(e) => panic!("{}: {}", &cache_dir, e),
         Ok(_) => {},
     };
-    let params = Param{x_scale, max_y:x, prefetch_max: all, max_zoom, criteria:diff, y_freq: freq_size, y, cache_dir};
+    let params = Param{x_scale, max_y:x, prefetch_max: all, max_zoom, criteria:diff, y_freq: freq_size, x, y, cache_dir};
     eprintln!("{:?}, threads: {}, zoom: {}", params, threads, log_2(x_width as i32) + 1);
     // Create some global state prior to building the server
     //#[allow(clippy::mutex_atomic)] // it's intentional.
