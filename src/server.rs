@@ -366,7 +366,7 @@ supplementary_list: Vec<(Vec<u8>, usize, usize, i32, i32)>,threads: u16) -> std:
         .unwrap_or(rng.gen::<u32>().to_string());
     
     let x_width = all as u32 / diff as u32 * x;
-    let max_zoom = 18; //log_2(x_width as i32) + 1;
+    let max_zoom = log_2(x_width as i32) + 1;
 
     match fs::create_dir(&cache_dir) {
         Err(e) => panic!("{}: {}", &cache_dir, e),
@@ -380,7 +380,7 @@ supplementary_list: Vec<(Vec<u8>, usize, usize, i32, i32)>,threads: u16) -> std:
     // let counter = RwLock::new(Vis::new(range.clone(), args.clone(), list.clone(), annotation.clone(), freq.clone(), dzi.clone(), params.clone()));
     //let counter = Arc::new(RwLock::new(Vis::new(range, args, annotation, freq, dzi, params)));
     //#[allow(clippy::mutex_atomic)] 
-    let counter = web::Data::new(RwLock::new(Vis::new(range, args, annotation, freq, compressed_list, index_list, prev_index, supplementary_list,dzi, params)));
+    let counter = web::Data::new(RwLock::new(Vis::new(range, args, annotation, freq, compressed_list, index_list, prev_index, supplementary_list, dzi, params)));
 
     //https://github.com/actix/examples/blob/master/state/src/main.rs
     HttpServer::new(move|| {
