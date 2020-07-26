@@ -12,7 +12,6 @@ use bam::Record;
 use itertools::Itertools;
 
 fn id_to_range<'a>(range: &StringRegion, args: &Vec<String>, zoom: u64, path: u64, param: &Param, path_string: String) -> (ArgMatches, StringRegion) {
-
     let app = App::new("vis")
             .setting(AppSettings::AllArgsOverrideSelf)
             .about("Visualize GHB and other genomic data")
@@ -382,7 +381,7 @@ supplementary_list: Vec<(Vec<u8>, usize, usize, i32, i32)>,threads: u16) -> std:
         let list = list.clone();
         //let counter = Arc::new(RwLock::new(Item{list: list, vis: Vis::new(range, args, annotation, freq, dzi, params)}));
         //let counter = Cell::new(Vis::new( range.clone(),args.clone(), list.clone(), annotation.clone(), freq.clone()));
-        actix_web::App::new().data(list).app_data(counter.clone()).route("/", web::get().to(get_index)).route("genome.dzi", web::get().to(get_dzi)).route("/{zoom:.*}/{filename:.*}_0.png", web::get().to(index)).wrap(Logger::default())
+        actix_web::App::new().data(list).app_data(counter.clone()).route("/", web::get().to(get_index)).route("genome.dzi", web::get().to(get_dzi)).route("/{zoom:.*}/{filename:.*}_0.png", web::get().to(index)).service(actix_files::Files::new("/images", "static/images").show_files_listing()).wrap(Logger::default())
     })
     .bind(bind)?
     .workers(threads as usize)

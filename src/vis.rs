@@ -13,11 +13,7 @@ use plotters::prelude::Palette;
 use plotters::prelude::*;
 use plotters::style::RGBColor;
 // use rayon::prelude::*;
-use std::{
-    collections::{BTreeMap},
-    fs::File,
-    time::Instant,
-};
+use std::{collections::BTreeMap, fs::File, time::Instant};
 
 macro_rules! predefined_color {
     ($name:ident, $r:expr, $g:expr, $b:expr, $doc:expr) => {
