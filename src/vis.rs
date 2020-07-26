@@ -124,7 +124,7 @@ where
     let x_scale = matches
         .value_of("x-scale")
         .and_then(|a| a.parse::<u32>().ok())
-        .unwrap_or(20u32);
+        .unwrap_or(20u32) / frequency.len() as u32;
     // list.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.start().cmp(&b.1.start())));
     // Calculate coverage; it won't work on sort_by_name
 
@@ -540,9 +540,8 @@ where
                 let chart = chart
                     .draw_series(LineSeries::new(
                         vec![(range.start() - 1, count), (range.end() + 1, count)],
-                        Palette99::pick(idx).stroke_width(y / 150 + 1),
+                        Palette99::pick(idx).stroke_width(y / 200 + 3),
                     ))?;
-                    
                 if !no_margin {
                     chart.label(format!("{}", lambda(idx).unwrap_or(&idx.to_string()))).legend(move |(x, y)| {
                         Rectangle::new(
