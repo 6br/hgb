@@ -540,7 +540,7 @@ where
                 chart
                     .draw_series(LineSeries::new(
                         vec![(range.start() - 1, count), (range.end() + 1, count)],
-                        Palette99::pick(idx).stroke_width(7),
+                        Palette99::pick(idx).stroke_width(y / 150 + 1),
                     ))?
                     .label(format!("{}", lambda(idx).unwrap_or(&idx.to_string())))
                     .legend(move |(x, y)| {

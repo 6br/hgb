@@ -3,4 +3,10 @@ Cargo.lock
 *.ghb
 *.ghi
 *.log
+
+*.png
+*.bam
+*.bai
+*.svg
 *.sam
+*.old

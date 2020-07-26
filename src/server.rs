@@ -199,6 +199,15 @@ async fn get_index(data: web::Data<RwLock<Vis>>) -> Result<NamedFile> {
     return Ok(NamedFile::open(format!("static/index.html"))?);
 }
 
+async fn get_js(data: web::Data<RwLock<Vis>>) -> Result<NamedFile> {
+    return Ok(NamedFile::open(format!("static/openseadragon.min.js"))?);
+}
+
+async fn get_js_map(data: web::Data<RwLock<Vis>>) -> Result<NamedFile> {
+    return Ok(NamedFile::open(format!("static/openseadragon.min.js.map"))?);
+}
+
+
 async fn index(data: web::Data<RwLock<Vis>>, list: web::Data<Vec<(u64, Record)>>, req: HttpRequest) -> Result<NamedFile> {
     let start = Instant::now();
     let zoom: u64 = req.match_info().query("zoom").parse().unwrap();
@@ -408,7 +417,7 @@ supplementary_list: Vec<(Vec<u8>, usize, usize, i32, i32)>,threads: u16) -> std:
         let list = list.clone();
         //let counter = Arc::new(RwLock::new(Item{list: list, vis: Vis::new(range, args, annotation, freq, dzi, params)}));
         //let counter = Cell::new(Vis::new( range.clone(),args.clone(), list.clone(), annotation.clone(), freq.clone()));
-        actix_web::App::new().data(list).app_data(counter.clone()).route("/", web::get().to(get_index)).route("genome.dzi", web::get().to(get_dzi)).route("/{zoom:.*}/{filename:.*}_0.png", web::get().to(index)).service(actix_files::Files::new("/images", "static/images").show_files_listing()).wrap(Logger::default())
+        actix_web::App::new().data(list).app_data(counter.clone()).route("/", web::get().to(get_index)).route("openseadragon.min.js", web::get().to(get_js)).route("genome.dzi", web::get().to(get_dzi)).route("/{zoom:.*}/{filename:.*}_0.png", web::get().to(index)).service(actix_files::Files::new("/images", "static/images").show_files_listing()).wrap(Logger::default())
     })
     .bind(bind)?
     .workers(threads as usize)
