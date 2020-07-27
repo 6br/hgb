@@ -544,7 +544,7 @@ where
                 // let idx = sample.next().0;
                 let chart = chart.draw_series(LineSeries::new(
                     vec![(range.start() - 1, count), (range.end() + 1, count)],
-                    Palette99::pick(idx).stroke_width(y / 2 * 3),
+                    Palette99::pick(idx).stroke_width(y / 3 * 4),
                 ))?;
                 if !no_margin {
                     chart
