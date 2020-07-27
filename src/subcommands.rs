@@ -871,12 +871,12 @@ where
                 // == range.path
                 // &&
                 if prefetch_range.start <= column.ref_pos() as u64
-                    && column.ref_pos() as u64 <= prefetch_range.end
+                    && column.ref_pos() as u64 < prefetch_range.end
                 {
                     line.push((column.ref_pos() as u64, column.entries().len() as u32));
                 }
             }
-            // eprintln!("{:?}", line);
+            eprintln!("{:?}", line);
             freq.insert(t.0, line);
         });
     }
