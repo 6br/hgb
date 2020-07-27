@@ -243,7 +243,7 @@ where
     let x_scale = matches
         .value_of("x-scale")
         .and_then(|a| a.parse::<u32>().ok())
-        .unwrap_or(20u32);
+        .unwrap_or(40u32);
     let y = matches
         .value_of("y")
         .and_then(|a| a.parse::<u32>().ok())
@@ -335,8 +335,9 @@ where
         ChartBuilder::on(&alignment)
             // Set the caption of the chart
             // Set the size of the label region
-            .x_label_area_size(x_scale)
             .y_label_area_size(y_area_size)
+            .top_x_label_area_size(x_scale / 2)
+            .x_label_area_size(x_scale / 2)
             // Finally attach a coordinate on the drawing area and make a chart context
             .build_ranged(
                 (range.start() - 1)..(range.end() + 1),
@@ -347,7 +348,8 @@ where
             // Set the caption of the chart
             .caption(format!("{}", range), ("sans-serif", 20).into_font())
             // Set the size of the label region
-            .x_label_area_size(x_scale)
+            .top_x_label_area_size(x_scale / 2)
+            .x_label_area_size(x_scale / 2)
             .y_label_area_size(y_area_size)
             // Finally attach a coordinate on the drawing area and make a chart context
             .build_ranged(
@@ -361,7 +363,7 @@ where
         // We can customize the maximum number of labels allowed for each axis
         //.x_labels(5)
         .y_labels(1)
-        .x_label_style(("sans-serif", x_scale / 2).into_font())
+        .x_label_style(("sans-serif", x_scale / 4).into_font())
         // We can also change the format of the label text
         .x_label_formatter(&|x| format!("{:.3}", x))
         .draw()?;
@@ -575,7 +577,7 @@ where
                                 (range.start() - 1, prev_index),
                                 (range.end() + 1, prev_index + count),
                             ],
-                            stroke.stroke_width(y / 2 * 3), // filled(), //stroke_width(100),
+                            stroke.stroke_width(y / 2), // filled(), //stroke_width(100),
                         );
                         bar2.set_margin(1, 0, 0, 0);
                         prev_index += count;
