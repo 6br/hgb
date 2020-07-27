@@ -863,10 +863,14 @@ where
                 record.flag().no_bits(1796)
             }) {
                 let column = column.unwrap();
-                /*println!("Column at {}:{}, {} records", column.ref_id(),
-                column.ref_pos() + 1, column.entries().len());*/
+                eprintln!(
+                    "Column at {}:{}, {} records",
+                    column.ref_id(),
+                    column.ref_pos() + 1,
+                    column.entries().len()
+                );
                 // Should we have sparse occurrence table?
-                // eprintln!("{:?} {:?}",  range.path, lambda(column.ref_id() as usize).unwrap_or(&column.ref_id().to_string()));
+                //eprintln!("{:?} {:?}",  range.path, lambda(column.ref_id() as usize).unwrap_or(&column.ref_id().to_string()));
                 // lambda(column.ref_id() as usize).unwrap_or(&column.ref_id().to_string())
                 // == range.path
                 // &&
