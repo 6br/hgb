@@ -221,7 +221,6 @@ async fn index(data: web::Data<RwLock<Vis>>, list: web::Data<Vec<(u64, Record)>>
     let cache_dir = &data.params.cache_dir;
     match NamedFile::open(format!("{}/{}/{}_0.png", cache_dir, zoom, path)) {
         Ok(file) => Ok(file
-            .use_last_modified(true)
             .set_content_disposition(ContentDisposition {
                 disposition: DispositionType::Attachment,
                 parameters: vec![],
@@ -277,7 +276,6 @@ async fn index(data: web::Data<RwLock<Vis>>, list: web::Data<Vec<(u64, Record)>>
             );
             // bam_vis(matches, 1);
             Ok(NamedFile::open(path_string)?
-                .use_last_modified(true)
                 .set_content_disposition(ContentDisposition {
                     disposition: DispositionType::Attachment,
                     parameters: vec![],
