@@ -124,7 +124,7 @@ where
     let x_scale = matches
         .value_of("x-scale")
         .and_then(|a| a.parse::<u32>().ok())
-        .unwrap_or(20u32);
+        .unwrap_or(20u32)
         / frequency.len() as u32;
     // list.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.start().cmp(&b.1.start())));
     // Calculate coverage; it won't work on sort_by_name
