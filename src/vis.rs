@@ -161,6 +161,10 @@ where
                 .x_label_formatter(&|x| format!("{:.3}", x))
                 .draw()?;
             let color = Palette99::pick(idx); // BLUE
+            eprintln!("{} {:?}", y_max, values
+            .iter()
+            .filter(|t| t.0 >= range.start() && t.0 < range.end())
+            .map(|t| *t));
             chart
                 .draw_series(
                     Histogram::vertical(&chart).style(color.filled()).data(
