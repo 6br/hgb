@@ -12,7 +12,7 @@ use plotters::coord::ReverseCoordTranslate;
 use plotters::prelude::Palette;
 use plotters::prelude::*;
 use plotters::style::RGBColor;
-// use rayon::prelude::*;
+
 use std::{collections::BTreeMap, fs::File, time::Instant};
 
 macro_rules! predefined_color {
@@ -52,7 +52,6 @@ predefined_color!(T_COL, 255, 0, 40, "The predefined T color");
 predefined_color!(G_COL, 209, 113, 5, "The predefined G color");
 //RGBColor();
 
-//newtype RecordIter<'a> = std::slice::Iter<'a, (u64, Record)>;
 pub struct RecordIter<'a, I: Iterator<Item = &'a (u64, Record)>>(I);
 
 impl<'a, I> RecordIter<'a, I>
@@ -70,7 +69,6 @@ where
 {
     fn read_into(&mut self, record: &mut Record) -> std::io::Result<bool> {
         if let Some(next_record) = self.0.next() {
-            // record = next_record.1;
             std::mem::replace(record, next_record.1.clone());
             Ok(true)
         } else {
@@ -209,7 +207,7 @@ where
     F: Fn(usize) -> Option<&'a str>,
 {
     let start = Instant::now();
-    // let diff = range.end() - range.start();
+
     let preset: Option<VisPreset> = matches.value_of_t("preset").ok(); // .unwrap_or_else(|e| e.exit());
     eprintln!("Preset: {:?}", preset);
     let no_margin = matches.is_present("no-scale");
@@ -263,7 +261,6 @@ where
                     .from_reader(File::open(a).ok()?),
             )
         });
-    //.and_then(|a| Some(a.split("\n").map(|t| t.split("\t").collect()).collect()));
 
     /*
     let axis = if let Some(graph) = graph {
@@ -272,7 +269,6 @@ where
         0usize
     };*/
     let axis = if let Some(mut graph) = graph {
-        // let mut vec = vec![];
         let mut btree = BTreeMap::new();
         for i in graph.records() {
             let k = i?;
@@ -280,30 +276,14 @@ where
             //eprintln!("{:?}", k);
             let item = btree.entry(k[0].to_string()).or_insert(vec![]);
             item.push((k[1].parse::<u64>()?, k[2].parse::<u64>()?));
-            //vec.push((k[0].to_string(), k[1].parse::<u64>()?, k[2].parse::<u64>()?))
         }
-        //btree
         btree
     //        graph.into_iter().collect().unique_by(|s| s[0]).count() // group_by(|elt| elt[0]).count() as usize
     } else {
         BTreeMap::new()
-        //vec![]
     };
-    let axis_count = axis.len(); //into_iter().unique_by(|s| s.0).count();
-                                 /*
-                                 let annotation = {
-                                     let mut btree = BTreeMap::new();
-                                     for i in annotation {
-                                         //let k = i?;
-                                         //btree.insert(k[0].to_string(), (k[1].parse::<u64>()?, k[2].parse::<u64>()?));
-                                         //eprintln!("{:?}", k);
-                                         let item = btree.entry(i.0).or_insert(vec![]);
-                                         item.push((i.1.name().clone(), i.1.chrom(), i.1.start(), i.1.end()));
-                                         //vec.push((k[0].to_string(), k[1].parse::<u64>()?, k[2].parse::<u64>()?))
-                                     }
-                                     //btree
-                                     btree
-                                 };*/
+    let axis_count = axis.len();
+
     let end0 = start.elapsed();
     eprintln!(
         "{}.{:03} sec.",
@@ -322,6 +302,7 @@ where
     let approximate_one_pixel = 1; //((range.end() - range.start()) / x as u64) as u32;
     root.fill(&WHITE)?;
     let root = root.margin(0, 0, 0, 0);
+
     // After this point, we should be able to draw construct a chart context
     // let areas = root.split_by_breakpoints([], compressed_list);
 
@@ -374,17 +355,14 @@ where
 
     // We assume that axis[&range.path] includes all node id to be serialized.
     if let Some(axis) = axis.get(&range.path) {
-        axis.iter()
-            //.filter(|t| t.0 == range.path)
-            .for_each(|(node_id, pos)| {
-                if prev_pos > *pos {
-                } else {
-                    node_id_dict.insert(prev_node_id, (prev_pos, *pos));
-                }
-                prev_pos = *pos;
-                prev_node_id = *node_id;
-            });
-        //node_id_dict[&prev_node_id] = (prev_pos, range.end());
+        axis.iter().for_each(|(node_id, pos)| {
+            if prev_pos > *pos {
+            } else {
+                node_id_dict.insert(prev_node_id, (prev_pos, *pos));
+            }
+            prev_pos = *pos;
+            prev_node_id = *node_id;
+        });
         node_id_dict.insert(prev_node_id, (prev_pos, range.end()));
     }
 
@@ -444,7 +422,6 @@ where
                             .legend(move |(x, y)| {
                                 Rectangle::new([(x - 5, y - 5), (x + 5, y + 5)], stroke.filled())
                             });
-                        //Some(bar2)
                     }
                 })
         });
@@ -531,10 +508,6 @@ where
     */
 
     if legend || no_margin {
-        //list2.sort_by(|a, b| a.0.cmp(&b.0));
-        // eprintln!("{}", list.len());
-        // let mut prev_index = 0;
-
         for (sample_sequential_id, sample) in compressed_list.iter()
         // list2.into_iter().group_by(|elt| elt.0).into_iter()
         {
@@ -591,7 +564,6 @@ where
     }
 
     // For each supplementary alignment:
-
     if sort_by_cigar {
         for (idx, i) in supplementary_list.iter().enumerate() {
             let stroke = Palette99::pick(idx as usize);
@@ -760,10 +732,7 @@ where
                     match (quality, bam.alignment_entries()) {
                         (false, Ok(mut a)) => {
                             for i in left_top.0 + 1..right_bottom.0 {
-                                /*let k = {
-                                    let from = chart.into_coord_trans();
-                                    from((i, left_top.1))
-                                };*/
+
                                 let k = chart.as_coord_spec().reverse_translate((i, left_top.1));
                                 let mut color = None;
                                 if let Some(k) = k {

@@ -7,7 +7,6 @@ use actix_web::{HttpRequest, Result, web, Responder, error, middleware::Logger};
 use std::{sync::{RwLock},  collections::BTreeMap, fs};
 use clap::{App,  ArgMatches, Arg, AppSettings};
 use ghi::{bed, vis::bam_record_vis};
-// use crate::subcommands::bam_vis;
 use genomic_range::StringRegion;
 use bam::Record;
 use itertools::Itertools;
@@ -182,15 +181,13 @@ fn id_to_range<'a>(range: &StringRegion, args: &Vec<String>, zoom: u64, path: u6
         vec!["-Y".to_string(), (freq_y >> (max_zoom-zoom)).to_string(), "-y".to_string(), (y >> (max_zoom-zoom)).to_string(), "-X".to_string(), (scalex_default >> (max_zoom-zoom)).to_string(), "-n".to_string(), "-I".to_string(), "-o".to_string(), path_string, "-x".to_string(), x.to_string(), "-l".to_string(), "-e".to_string()]
     };
     let mut args = args.clone();
-    args.extend(b); //b.extend(args.clone());
+    args.extend(b);
     args.remove(0);
     args = args.into_iter().skip_while(|t| t != "vis").collect();
-    //b.insert(0, "vis".to_string());
     let start =  (criteria << (max_zoom - zoom)) * path + range.start;
     let range = StringRegion::new(&format!("{}:{}-{}", range.path, start, start + (criteria << (max_zoom - zoom)) - 1).to_string()).unwrap();
     eprintln!("{:?} {:?}", args.join(" "), range);
     let matches = app.get_matches_from(args);
-    // let args: Vec<String> = args.into_iter().chain(b.into_iter()).collect(); 
     (matches, range)
 }
 
@@ -214,10 +211,9 @@ async fn get_js_map(data: web::Data<RwLock<Vis>>) -> Result<NamedFile> {
 async fn index(data: web::Data<RwLock<Vis>>, list: web::Data<Vec<(u64, Record)>>, req: HttpRequest) -> Result<NamedFile> {
     let start = Instant::now();
     let zoom: u64 = req.match_info().query("zoom").parse().unwrap();
-    let path: u64 = req.match_info().query("filename").parse().unwrap();// .parse().unwrap();
+    let path: u64 = req.match_info().query("filename").parse().unwrap();
     let data = data.read().unwrap();
-    // printlnlet list = &data.list;
-    //let data = data.read().unwrap().vis; //(*data).lock().unwrap(); //get_mut();
+
     let cache_dir = &data.params.cache_dir;
     match NamedFile::open(format!("{}/{}/{}_0.png", cache_dir, zoom, path)) {
         Ok(file) => Ok(file
@@ -284,18 +280,7 @@ async fn index(data: web::Data<RwLock<Vis>>, list: web::Data<Vec<(u64, Record)>>
     }
 }
 
-/*
-pub struct Vis<'a> {
-    range: StringRegion,
-    list: Mutex<Vec<(u64, Record)>>,
-    annotation: Mutex<Vec<(u64, bed::Record)>>,
-    index_list: Mutex<Vec<usize>>,
-    suppl_list: Mutex<Vec<(&'a [u8], usize, usize, usize, usize)>>,
-}*/
-
-
-
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct Vis {
     range: StringRegion, 
     args: Vec<String>, 
@@ -308,7 +293,7 @@ pub struct Vis {
 }
 
 impl Vis {
-    fn new(range: StringRegion, args: Vec<String>, annotation: Vec<(u64, bed::Record)>, freq: BTreeMap<u64, Vec<(u64, u32)>>,     compressed_list: Vec<(u64, usize)>,
+    fn new(range: StringRegion, args: Vec<String>, annotation: Vec<(u64, bed::Record)>, freq: BTreeMap<u64, Vec<(u64, u32)>>, compressed_list: Vec<(u64, usize)>,
     index_list: Vec<usize>,
     prev_index: usize,
     supplementary_list: Vec<(Vec<u8>, usize, usize, i32, i32)>,dzi: DZI, params: Param) -> Vis {
@@ -423,8 +408,6 @@ supplementary_list: Vec<(Vec<u8>, usize, usize, i32, i32)>,threads: u16) -> std:
     //https://github.com/actix/examples/blob/master/state/src/main.rs
     HttpServer::new(move|| {
         let list = list.clone();
-        //let counter = Arc::new(RwLock::new(Item{list: list, vis: Vis::new(range, args, annotation, freq, dzi, params)}));
-        //let counter = Cell::new(Vis::new( range.clone(),args.clone(), list.clone(), annotation.clone(), freq.clone()));
         actix_web::App::new().data(list).app_data(counter.clone()).route("/", web::get().to(get_index))
         .route("openseadragon.min.js", web::get().to(get_js))
         .route("openseadragon.min.js.map", web::get().to(get_js_map))
