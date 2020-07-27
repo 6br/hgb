@@ -161,10 +161,10 @@ where
                 .x_label_formatter(&|x| format!("{:.3}", x))
                 .draw()?;
             let color = Palette99::pick(idx); // BLUE
-            /*eprintln!("{} {:?}", y_max, values
-            .iter()
-            .filter(|t| t.0 >= range.start() && t.0 < range.end())
-            .map(|t| *t));*/
+                                              /*eprintln!("{} {:?}", y_max, values
+                                              .iter()
+                                              .filter(|t| t.0 >= range.start() && t.0 < range.end())
+                                              .map(|t| *t));*/
             chart
                 .draw_series(
                     Histogram::vertical(&chart).style(color.filled()).data(
@@ -543,7 +543,7 @@ where
                 // let idx = sample.next().0;
                 let chart = chart.draw_series(LineSeries::new(
                     vec![(range.start() - 1, count), (range.end() + 1, count)],
-                    Palette99::pick(idx).stroke_width(y / 200 + 4),
+                    Palette99::pick(idx).stroke_width(y / 2 * 3),
                 ))?;
                 if !no_margin {
                     chart
@@ -574,7 +574,7 @@ where
                                 (range.start() - 1, prev_index),
                                 (range.end() + 1, prev_index + count),
                             ],
-                            stroke.stroke_width(y / 150 + 1), // filled(), //stroke_width(100),
+                            stroke.stroke_width(y / 2 * 3), // filled(), //stroke_width(100),
                         );
                         bar2.set_margin(1, 0, 0, 0);
                         prev_index += count;
