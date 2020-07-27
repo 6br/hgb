@@ -176,7 +176,7 @@ fn id_to_range<'a>(range: &StringRegion, args: &Vec<String>, zoom: u64, path: u6
         vec!["-A".to_string(), "-Y".to_string(), (max_y >> (max_zoom-zoom)).to_string(), "-y".to_string(), (y >> (max_zoom-zoom)).to_string(), "-n".to_string(), "-I".to_string(), "-o".to_string(), path_string, "-X".to_string(), ((max_y >> (max_zoom-zoom)) / 5).to_string(), "-x".to_string(), x.to_string(), "-l".to_string(), "-e".to_string()]
     } else if criteria << (max_zoom - zoom) <= 10000 { // Base-pair level with legend and insertion
         vec!["-Y".to_string(), (freq_y >> (max_zoom-zoom)).to_string(), "-y".to_string(), (y >> (max_zoom-zoom)).to_string(), "-X".to_string(), (scalex_default >> (max_zoom-zoom)).to_string(), "-o".to_string(), path_string, "-x".to_string(), x.to_string(), "-e".to_string()]
-    } else if criteria << (max_zoom - zoom) <= 50000 && (y >> (max_zoom-zoom)) >= 8 { // Base-pair level
+    } else if criteria << (max_zoom - zoom) <= 25000 && (y >> (max_zoom-zoom)) >= 10 { // Base-pair level
         vec!["-Y".to_string(), (freq_y >> (max_zoom-zoom)).to_string(), "-y".to_string(), (y >> (max_zoom-zoom)).to_string(), "-X".to_string(), (scalex_default >> (max_zoom-zoom)).to_string(), "-I".to_string(), "-o".to_string(), path_string, "-x".to_string(), x.to_string(), "-l".to_string(), "-e".to_string()]
     } else { // No alignment
         vec!["-Y".to_string(), (freq_y >> (max_zoom-zoom)).to_string(), "-y".to_string(), (y >> (max_zoom-zoom)).to_string(), "-X".to_string(), (scalex_default >> (max_zoom-zoom)).to_string(), "-n".to_string(), "-I".to_string(), "-o".to_string(), path_string, "-x".to_string(), x.to_string(), "-l".to_string(), "-e".to_string()]
@@ -247,7 +247,7 @@ async fn index(data: web::Data<RwLock<Vis>>, list: web::Data<Vec<(u64, Record)>>
             let path_string = format!("{}/{}/{}_0.png", cache_dir, zoom, path);
             let max_zoom = (&data.params).max_zoom as u64;
             //let min_zoom = ((&data.params).criteria << (max_zoom - zoom)) >= 10000000;
-            let min_zoom = zoom < 13;
+            let min_zoom = zoom < 12;
 
             if min_zoom || zoom > max_zoom as u64 {
                 return Err(error::ErrorBadRequest("zoom level is not appropriate"));
