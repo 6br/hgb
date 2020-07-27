@@ -983,7 +983,7 @@ where
                 Histogram::vertical(&chart).style(SPL_COL.filled()).data(
                     split_frequency
                         .iter()
-                        .filter(|&&t| t.0 == *sample_sequential_id)
+                        .filter(|&&t| t.0 == *sample_sequential_id && t.1 >= range.start() && t.1 < range.end())
                         .map(|t| t.1),
                 ),
             )?;
