@@ -72,6 +72,7 @@ fn id_to_range<'a>(range: &StringRegion, args: &Vec<String>, zoom: u64, path: u6
             .arg(Arg::new("x").short('x').takes_value(true).about("The width of image"))
             .arg(Arg::new("y").short('y').takes_value(true).about("The height of each read alignment"))
             .arg(Arg::new("web").short('w').takes_value(true).about("Serve the web server"))
+            .arg(Arg::new("end-split-callets").short('e').about("Show callets on ends of read alignments if the read contains split-alignment"))
             .arg(
                 Arg::new("freq-height")
                     .short('Y')
@@ -171,14 +172,14 @@ fn id_to_range<'a>(range: &StringRegion, args: &Vec<String>, zoom: u64, path: u6
     let x = param.x;
     let scalex_default = param.x_scale as u64;
     // let path = path << (max_zoom - zoom);
-    let b: Vec<String> = if (y >> (max_zoom-zoom)) <= 1 { // i.e. 2**22s
-        vec!["-A".to_string(), "-Y".to_string(), (max_y >> (max_zoom-zoom)).to_string(), "-y".to_string(), (y >> (max_zoom-zoom)).to_string(), "-n".to_string(), "-I".to_string(), "-o".to_string(), path_string, "-X".to_string(), ((max_y >> (max_zoom-zoom)) / 5).to_string(), "-x".to_string(), x.to_string(), "-l".to_string()]
-    } else if criteria << (max_zoom - zoom) <= 10000 { // Base-pair level with legend
-        vec!["-Y".to_string(), (freq_y >> (max_zoom-zoom)).to_string(), "-y".to_string(), (y >> (max_zoom-zoom)).to_string(), "-X".to_string(), (scalex_default >> (max_zoom-zoom)).to_string(), "-I".to_string(), "-o".to_string(), path_string, "-x".to_string(), x.to_string()]
+    let b: Vec<String> = if (y >> (max_zoom-zoom)) <= 2 { // i.e. 2**22s
+        vec!["-A".to_string(), "-Y".to_string(), (max_y >> (max_zoom-zoom)).to_string(), "-y".to_string(), (y >> (max_zoom-zoom)).to_string(), "-n".to_string(), "-I".to_string(), "-o".to_string(), path_string, "-X".to_string(), ((max_y >> (max_zoom-zoom)) / 5).to_string(), "-x".to_string(), x.to_string(), "-l".to_string(), "-e".to_string()]
+    } else if criteria << (max_zoom - zoom) <= 10000 { // Base-pair level with legend and insertion
+        vec!["-Y".to_string(), (freq_y >> (max_zoom-zoom)).to_string(), "-y".to_string(), (y >> (max_zoom-zoom)).to_string(), "-X".to_string(), (scalex_default >> (max_zoom-zoom)).to_string(), "-o".to_string(), path_string, "-x".to_string(), x.to_string(), "-e".to_string()]
     } else if criteria << (max_zoom - zoom) <= 50000 && (y >> (max_zoom-zoom)) >= 8 { // Base-pair level
-        vec!["-Y".to_string(), (freq_y >> (max_zoom-zoom)).to_string(), "-y".to_string(), (y >> (max_zoom-zoom)).to_string(), "-X".to_string(), (scalex_default >> (max_zoom-zoom)).to_string(), "-I".to_string(), "-o".to_string(), path_string, "-x".to_string(), x.to_string(), "-l".to_string()]
+        vec!["-Y".to_string(), (freq_y >> (max_zoom-zoom)).to_string(), "-y".to_string(), (y >> (max_zoom-zoom)).to_string(), "-X".to_string(), (scalex_default >> (max_zoom-zoom)).to_string(), "-I".to_string(), "-o".to_string(), path_string, "-x".to_string(), x.to_string(), "-l".to_string(), "-e".to_string()]
     } else { // No alignment
-        vec!["-Y".to_string(), (freq_y >> (max_zoom-zoom)).to_string(), "-y".to_string(), (y >> (max_zoom-zoom)).to_string(), "-X".to_string(), (scalex_default >> (max_zoom-zoom)).to_string(), "-n".to_string(), "-I".to_string(), "-o".to_string(), path_string, "-x".to_string(), x.to_string(), "-l".to_string()]
+        vec!["-Y".to_string(), (freq_y >> (max_zoom-zoom)).to_string(), "-y".to_string(), (y >> (max_zoom-zoom)).to_string(), "-X".to_string(), (scalex_default >> (max_zoom-zoom)).to_string(), "-n".to_string(), "-I".to_string(), "-o".to_string(), path_string, "-x".to_string(), x.to_string(), "-l".to_string(), "-e".to_string()]
     };
     let mut args = args.clone();
     args.extend(b); //b.extend(args.clone());

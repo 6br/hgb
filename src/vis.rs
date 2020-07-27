@@ -228,6 +228,7 @@ where
     let all_bases = matches.is_present("all-bases");
     let hide_alignment = matches.is_present("hide-alignment");
     let only_translocation = matches.is_present("only-translocation");
+    let end_split = matches.is_present("end-split-callets");
     let square = matches.is_present("square");
     if hide_alignment {
         return frequency_vis(matches, &range, frequency, lambda);
@@ -655,7 +656,7 @@ where
                 // eprintln!("{:?}", [(start, index), (end, index + 1)]);
                 bars.push(bar);
                 //let mut bars =  //, bar2];
-                if split {
+                if split || end_split {
                     match bam.tags().get(b"SA") {
                         Some(TagValue::String(array_view, StringType::String)) => {
                             // assert!(array_view.int_type() == IntegerType::U32);

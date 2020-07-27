@@ -406,6 +406,7 @@ fn main() {
                         .about("Show pileup as coverage plot"),
                 )
                 .arg(Arg::new("only-translocation").short('T').about("Show callets on ends of read alignments if the read contains translocation split-alignment"))
+                .arg(Arg::new("end-split-callets").short('e').about("Show callets on ends of read alignments if the read contains split-alignment"))
                 .arg(
                     Arg::new("graph")
                         .short('c')
