@@ -609,7 +609,7 @@ where
             let stroke = BLACK;
             let mut bar2 = Rectangle::new(
                 [(i.3 as u64, i.1), (i.4 as u64, i.2)],
-                stroke.stroke_width(2), // filled(), // (y / 4), // filled(), //stroke_width(100),
+                stroke.stroke_width(1), // filled(), // (y / 4), // filled(), //stroke_width(100),
             );
             bar2.set_margin(y / 4, y / 4, 0, 0);
             bar2
