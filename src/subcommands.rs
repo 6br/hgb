@@ -863,12 +863,12 @@ where
                 record.flag().no_bits(1796)
             }) {
                 let column = column.unwrap();
-                eprintln!(
+                /*eprintln!(
                     "Column at {}:{}, {} records",
                     column.ref_id(),
                     column.ref_pos() + 1,
                     column.entries().len()
-                );
+                );*/
                 // Should we have sparse occurrence table?
                 //eprintln!("{:?} {:?}",  range.path, lambda(column.ref_id() as usize).unwrap_or(&column.ref_id().to_string()));
                 // lambda(column.ref_id() as usize).unwrap_or(&column.ref_id().to_string())
@@ -880,7 +880,7 @@ where
                     line.push((column.ref_pos() as u64, column.entries().len() as u32));
                 }
             }
-            eprintln!("{:?}", line);
+            //eprintln!("{:?}", line);
             freq.insert(t.0, line);
         });
     }
