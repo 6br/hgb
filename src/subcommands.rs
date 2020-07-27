@@ -855,6 +855,9 @@ where
     // Calculate coverage; it won't work on sort_by_name
     // let mut frequency = BTreeMap::new(); // Vec::with_capacity();
 
+    ann.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.start().cmp(&b.1.start())));
+    list.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.start().cmp(&b.1.start())));
+
     if pileup {
         list.iter().group_by(|elt| elt.0).into_iter().for_each(|t| {
             let mut line =
@@ -885,9 +888,6 @@ where
         });
     }
     eprintln!("{:?}", freq.keys());
-    ann.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.start().cmp(&b.1.start())));
-    list.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.start().cmp(&b.1.start())));
-
     if sort_by_name {
         list.sort_by(|a, b| {
             a.0.cmp(&b.0)
