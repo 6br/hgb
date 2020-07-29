@@ -290,6 +290,12 @@ pub struct Slice<'a> {
     range: Region, // The entire range the slice covers.
 }
 
+impl<'a> Slice<'a> {
+    pub fn bin_disp_range(&self) -> Range<usize> {
+        self.bin_disp_range()
+    }
+}
+
 impl<'a> Iterator for BinsIter<'a> {
     type Item = Slice<'a>;
 

@@ -343,6 +343,11 @@ impl Bin {
         &self.chunks
     }
 
+    /// Returns all the chunks in the bin.
+    pub fn chunks_mut(&self) -> Vec<Chunk> {
+        self.chunks
+    }
+
     fn merge_chunks(&self) -> Vec<Chunk> {
         self.chunks.iter().fold(vec![], |mut acc: Vec<Chunk>, x| {
             if let Some(last) = acc.last_mut() {

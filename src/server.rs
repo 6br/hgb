@@ -6,7 +6,7 @@ use actix_web::http::header::{ContentDisposition, DispositionType};
 use actix_web::{HttpRequest, Result, web, Responder, error, middleware::Logger};
 use std::{sync::{RwLock},  collections::BTreeMap, fs};
 use clap::{App,  ArgMatches, Arg, AppSettings};
-use ghi::{bed, vis::bam_record_vis};
+use ghi::{bed, vis::bam_record_vis, Vis};
 use genomic_range::StringRegion;
 use bam::Record;
 use itertools::Itertools;
@@ -277,27 +277,6 @@ async fn index(data: web::Data<RwLock<Vis>>, list: web::Data<Vec<(u64, Record)>>
                     parameters: vec![],
                 }))
         }
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct Vis {
-    range: StringRegion, 
-    args: Vec<String>, 
-    annotation: Vec<(u64, bed::Record)>, 
-    freq: BTreeMap<u64, Vec<(u64, u32)>>,     
-    compressed_list: Vec<(u64, usize)>,
-    index_list: Vec<usize>,
-    prev_index: usize,
-    supplementary_list: Vec<(Vec<u8>, usize, usize, i32, i32)>,dzi: DZI, params: Param
-}
-
-impl Vis {
-    fn new(range: StringRegion, args: Vec<String>, annotation: Vec<(u64, bed::Record)>, freq: BTreeMap<u64, Vec<(u64, u32)>>, compressed_list: Vec<(u64, usize)>,
-    index_list: Vec<usize>,
-    prev_index: usize,
-    supplementary_list: Vec<(Vec<u8>, usize, usize, i32, i32)>,dzi: DZI, params: Param) -> Vis {
-        Vis{range, args, annotation, freq, compressed_list, index_list, prev_index, supplementary_list, dzi, params}
     }
 }
 

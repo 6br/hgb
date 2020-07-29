@@ -732,7 +732,6 @@ where
                     match (quality, bam.alignment_entries()) {
                         (false, Ok(mut a)) => {
                             for i in left_top.0 + 1..right_bottom.0 {
-
                                 let k = chart.as_coord_spec().reverse_translate((i, left_top.1));
                                 let mut color = None;
                                 if let Some(k) = k {

@@ -13,6 +13,7 @@ extern crate serde_json;
 //pub mod alignment;
 pub mod bed;
 pub mod binary;
+pub mod buffer;
 pub mod builder;
 pub mod checker_index;
 pub mod compression;
@@ -158,6 +159,26 @@ impl FromStr for VisPreset {
             "qual" => Ok(VisPreset::Qual),
             _ => Ok(VisPreset::Auto),
         }
+    }
+}
+#[derive(Debug, Clone)]
+pub struct Vis {
+    range: StringRegion, 
+    args: Vec<String>, 
+    annotation: Vec<(u64, bed::Record)>, 
+    freq: BTreeMap<u64, Vec<(u64, u32)>>,     
+    compressed_list: Vec<(u64, usize)>,
+    index_list: Vec<usize>,
+    prev_index: usize,
+    supplementary_list: Vec<(Vec<u8>, usize, usize, i32, i32)>,dzi: DZI, params: Param
+}
+
+impl Vis {
+    fn new(range: StringRegion, args: Vec<String>, annotation: Vec<(u64, bed::Record)>, freq: BTreeMap<u64, Vec<(u64, u32)>>, compressed_list: Vec<(u64, usize)>,
+    index_list: Vec<usize>,
+    prev_index: usize,
+    supplementary_list: Vec<(Vec<u8>, usize, usize, i32, i32)>,dzi: DZI, params: Param) -> Vis {
+        Vis{range, args, annotation, freq, compressed_list, index_list, prev_index, supplementary_list, dzi, params}
     }
 }
 
