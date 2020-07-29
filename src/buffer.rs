@@ -4,6 +4,7 @@ use crate::{
     bed, checker_index::Reference, header::Header, range::Format, reader::IndexedReader,
     twopass_alignment::Alignment, vis::RecordIter, Vis,
 };
+use bam::Record;
 use clap::ArgMatches;
 use genomic_range::StringRegion;
 use itertools::Itertools;
@@ -14,7 +15,7 @@ use std::{
 };
 
 pub struct ChromosomeBuffer<'a> {
-    chr_id: usize,
+    ref_id: u64,
     matches: &'a ArgMatches,
     bins: BTreeMap<usize, (Vec<(u64, bam::Record)>, Vec<(u64, bed::Record)>)>,
     freq: BTreeMap<u64, Vec<(u64, u32)>>,
@@ -29,7 +30,7 @@ impl<'a> ChromosomeBuffer<'a> {
         matches: &'a ArgMatches,
     ) -> Self {
         ChromosomeBuffer {
-            chr_id: 0,
+            ref_id: 0,
             matches,
             bins: BTreeMap::new(),
             freq: BTreeMap::new(),
@@ -38,8 +39,22 @@ impl<'a> ChromosomeBuffer<'a> {
         }
     }
 
+    // If the region is completely not overlapped,
+    fn drop(&mut self) {
+        self.ref_id = 0;
+        self.bins = BTreeMap::new();
+        self.freq = BTreeMap::new();
+    }
+
+    fn set_ref_id(&self, ref_id: u64) {
+        self.ref_id = ref_id;
+    }
+
     // This range is completely included or not?
     fn included(&mut self, range: Region) -> bool {
+        if range.ref_id() != self.ref_id {
+            return false;
+        }
         let bins = self.bins.keys();
         let bins_iter =
             self.reader.index().references()[range.ref_id() as usize].region_to_bins(range);
@@ -53,6 +68,9 @@ impl<'a> ChromosomeBuffer<'a> {
 
     //This range is at least once overlaps with bins?
     fn overlap(&mut self, range: Region) -> bool {
+        if range.ref_id() != self.ref_id {
+            return false;
+        }
         let bins = self.bins.keys();
         let bins_iter =
             self.reader.index().references()[range.ref_id() as usize].region_to_bins(range);
@@ -64,7 +82,17 @@ impl<'a> ChromosomeBuffer<'a> {
         false
     }
 
-    fn add(&mut self, range: Region) {
+    fn add(&mut self, range: StringRegion) {
+        let closure = |x: &str| self.reader.reference_id(x);
+        let reference_name = &range.path;
+        let range = Region::convert(&range, closure).unwrap();
+
+        // Check if overlap, and drop them if the chrom_id is different.
+        if range.ref_id() != self.ref_id {
+            self.drop();
+            self.set_ref_id(range.ref_id());
+        }
+
         let bins_iter =
             self.reader.index().references()[range.ref_id() as usize].region_to_bins(range);
         let matches = self.matches;
@@ -104,7 +132,7 @@ impl<'a> ChromosomeBuffer<'a> {
                             {
                                 match data {
                                     Format::Range(rec) => {
-                                        for i in rec.to_record(&prefetch_range.path) {
+                                        for i in rec.to_record(reference_name) {
                                             if !filter
                                                 || (i.end() as u64 > range.start()
                                                     && range.end() > i.start() as u64)
@@ -137,7 +165,7 @@ impl<'a> ChromosomeBuffer<'a> {
                     list.iter().group_by(|elt| elt.0).into_iter().for_each(|t| {
                 /*let mut line =
                     Vec::with_capacity((prefetch_range.end - prefetch_range.start + 1) as usize);*/
-                    let line = self.freq.entry(bin.bin_id as u64s);
+                    let line = self.freq.entry(bin.bin_id() as u64).or_insert(vec![]);
                 for column in bam::Pileup::with_filter(&mut RecordIter::new(t.1), |record| {
                     record.flag().no_bits(1796)
                 }) {
@@ -153,24 +181,29 @@ impl<'a> ChromosomeBuffer<'a> {
                     // lambda(column.ref_id() as usize).unwrap_or(&column.ref_id().to_string())
                     // == range.path
                     // &&
-                    if prefetch_range.start <= column.ref_pos() as u64
-                        && column.ref_pos() as u64 <= prefetch_range.end
-                    {
+                    //if prefetch_range.start <= column.ref_pos() as u64
+                    //    && column.ref_pos() as u64 <= prefetch_range.end
+                    //{
                         line.push((column.ref_pos() as u64, column.entries().len() as u32));
-                    }
+                    //}
                 }
                 //eprintln!("{:?}", line);
-                freq.insert(t.0, line);
+                //freq.insert(t.0, line);
             });
                 }
             }
         }
     }
 
-    fn vis(&mut self, range: StringRegion) -> Vis {
+    fn vis(&mut self, string_range: StringRegion) -> Vis {
         let closure = |x: &str| self.reader.reference_id(x);
-        let _reference_name = &range.path;
-        let range = Region::convert(&range, closure).unwrap();
+        let _reference_name = &string_range.path;
+        let range = Region::convert(&string_range, closure).unwrap();
+
+        if !self.included(range) {
+            self.add(string_range);
+        }
+        let freq = self.freq;
 
         let list: Vec<(u64, bam::Record)> = self
             .bins
@@ -432,18 +465,15 @@ impl<'a> ChromosomeBuffer<'a> {
         }
 
         Vis {
-            range,
+            range: string_range,
             list: list,
             annotation: ann,
             freq: self.freq,
             compressed_list: compressed_list,
             index_list: index_list,
             prev_index: prev_index,
-            supplementary_list: suppementary_list,
-            prefetch_max: self.reader.reference_len(range.path),
+            supplementary_list,
+            prefetch_max: self.reader.header().reference_len(0).unwrap(), // The max should be the same as the longest ?
         }
     }
-
-    // If the region is completely not overlapped,
-    fn drop(&mut self) {}
 }

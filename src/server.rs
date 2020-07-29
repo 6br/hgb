@@ -279,26 +279,10 @@ async fn index(data: web::Data<RwLock<Vis>>, list: web::Data<Vec<(u64, Record)>>
         }
     }
 }
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-struct DZI {
-    Image: Image
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-struct Image {
-    xmlns: String,
-    Url: String,
-    Format: String,
-    Overlap: String,
-    TileSize: String,
-    Size: Size
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-struct Size {
-    Height: String,
-    Width: String
+pub struct Item {
+    vis: Vis,
+    args: Vec<String>,
+    params: Param,
 }
 #[derive(Debug, Clone)]
 pub struct Param {
@@ -310,8 +294,29 @@ pub struct Param {
     y_freq: u32,
     x: u32,
     y: u32,
-    cache_dir: String
+    cache_dir: String,
 }
+#[derive(Debug, Serialize, Deserialize, Clone)]
+struct DZI {
+    Image: Image,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+struct Image {
+    xmlns: String,
+    Url: String,
+    Format: String,
+    Overlap: String,
+    TileSize: String,
+    Size: Size,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+struct Size {
+    Height: String,
+    Width: String,
+}
+
 
 const fn num_bits<T>() -> usize { std::mem::size_of::<T>() * 8 }
 

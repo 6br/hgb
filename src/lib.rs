@@ -29,6 +29,7 @@ pub mod vis;
 pub mod writer;
 
 use bam::IndexedReader;
+use buffer::ChromosomeBuffer;
 use checker_index::Index;
 use genomic_range::StringRegion;
 use io::Seek;
@@ -36,6 +37,7 @@ use range::InvertedRecord;
 use range::{Format, Record};
 use std::io;
 use std::{
+    collections::BTreeMap,
     io::{Read, Result, Write},
     str::FromStr,
 };
@@ -163,22 +165,40 @@ impl FromStr for VisPreset {
 }
 #[derive(Debug, Clone)]
 pub struct Vis {
-    range: StringRegion, 
-    args: Vec<String>, 
-    annotation: Vec<(u64, bed::Record)>, 
-    freq: BTreeMap<u64, Vec<(u64, u32)>>,     
+    range: StringRegion,
+    //list: Vec<(u64, bam::Record)>,
+    annotation: Vec<(u64, bed::Record)>,
+    freq: BTreeMap<u64, Vec<(u64, u32)>>,
     compressed_list: Vec<(u64, usize)>,
     index_list: Vec<usize>,
     prev_index: usize,
-    supplementary_list: Vec<(Vec<u8>, usize, usize, i32, i32)>,dzi: DZI, params: Param
+    supplementary_list: Vec<(Vec<u8>, usize, usize, i32, i32)>,
+    prefetch_max: u64,
 }
 
 impl Vis {
-    fn new(range: StringRegion, args: Vec<String>, annotation: Vec<(u64, bed::Record)>, freq: BTreeMap<u64, Vec<(u64, u32)>>, compressed_list: Vec<(u64, usize)>,
-    index_list: Vec<usize>,
-    prev_index: usize,
-    supplementary_list: Vec<(Vec<u8>, usize, usize, i32, i32)>,dzi: DZI, params: Param) -> Vis {
-        Vis{range, args, annotation, freq, compressed_list, index_list, prev_index, supplementary_list, dzi, params}
+    fn new(
+        range: StringRegion,
+        //list: Vec<(u64, bam::Record)>
+        annotation: Vec<(u64, bed::Record)>,
+        freq: BTreeMap<u64, Vec<(u64, u32)>>,
+        compressed_list: Vec<(u64, usize)>,
+        index_list: Vec<usize>,
+        prev_index: usize,
+        supplementary_list: Vec<(Vec<u8>, usize, usize, i32, i32)>,
+        prefetch_max: u64,
+    ) -> Vis {
+        Vis {
+            range,
+            //list,
+            annotation,
+            freq,
+            compressed_list,
+            index_list,
+            prev_index,
+            supplementary_list,
+            prefetch_max
+        }
     }
 }
 
