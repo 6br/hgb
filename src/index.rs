@@ -344,7 +344,7 @@ impl Bin {
     }
 
     /// Returns all the chunks in the bin.
-    pub fn chunks_mut(&self) -> Vec<Chunk> {
+    pub fn chunks_mut(self) -> Vec<Chunk> {
         self.chunks
     }
 

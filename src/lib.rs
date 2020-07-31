@@ -197,7 +197,7 @@ impl Vis {
             index_list,
             prev_index,
             supplementary_list,
-            prefetch_max
+            prefetch_max,
         }
     }
 }

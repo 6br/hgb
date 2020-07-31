@@ -55,11 +55,11 @@ impl<'a> ChromosomeBuffer<'a> {
         if range.ref_id() != self.ref_id {
             return false;
         }
-        let bins = self.bins.keys();
+        let bins = self.bins.keys().collect::<Vec<_>>();
         let bins_iter =
             self.reader.index().references()[range.ref_id() as usize].region_to_bins(range);
         for i in bins_iter {
-            if bins.any(|t| !i.bin_disp_range().contains(t)) {
+            if bins.iter().any(|t| !i.bin_disp_range().contains(t)) {
                 return false;
             }
         }
@@ -71,18 +71,18 @@ impl<'a> ChromosomeBuffer<'a> {
         if range.ref_id() != self.ref_id {
             return false;
         }
-        let bins = self.bins.keys();
+        let bins = self.bins.keys().collect::<Vec<_>>();
         let bins_iter =
             self.reader.index().references()[range.ref_id() as usize].region_to_bins(range);
         for i in bins_iter {
-            if bins.any(|t| i.bin_disp_range().contains(t)) {
+            if bins.iter().any(|t| i.bin_disp_range().contains(t)) {
                 return true;
             }
         }
         false
     }
 
-    fn add(&mut self, range: StringRegion) {
+    fn add(&mut self, range: &StringRegion) {
         let closure = |x: &str| self.reader.reference_id(x);
         let reference_name = &range.path;
         let range = Region::convert(&range, closure).unwrap();
@@ -195,17 +195,17 @@ impl<'a> ChromosomeBuffer<'a> {
         }
     }
 
-    fn vis(&mut self, string_range: StringRegion) -> Vis {
+    fn vis(&mut self, string_range: StringRegion) -> (Vis, Vec<(u64, Record)>) {
         let closure = |x: &str| self.reader.reference_id(x);
         let _reference_name = &string_range.path;
         let range = Region::convert(&string_range, closure).unwrap();
 
         if !self.included(range) {
-            self.add(string_range);
+            self.add(&string_range);
         }
-        let freq = self.freq;
+        let freq = &self.freq;
 
-        let list: Vec<(u64, bam::Record)> = self
+        let mut list: Vec<(u64, bam::Record)> = self
             .bins
             .values()
             .into_iter()
@@ -464,16 +464,19 @@ impl<'a> ChromosomeBuffer<'a> {
             }
         }
 
-        Vis {
-            range: string_range,
-            list: list,
-            annotation: ann,
-            freq: self.freq,
-            compressed_list: compressed_list,
-            index_list: index_list,
-            prev_index: prev_index,
-            supplementary_list,
-            prefetch_max: self.reader.header().reference_len(0).unwrap(), // The max should be the same as the longest ?
-        }
+        (
+            Vis {
+                range: string_range.clone(),
+                //list: list,
+                annotation: ann,
+                freq: self.freq,
+                compressed_list: compressed_list,
+                index_list: index_list,
+                prev_index: prev_index,
+                supplementary_list,
+                prefetch_max: self.reader.header().reference_len(0).unwrap(), // The max should be the same as the longest ?
+            },
+            list,
+        )
     }
 }
