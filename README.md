@@ -2,9 +2,11 @@
 
 A hybrid genome browser for zooming out long-read alignments
 
-You can get this image in seconds!
+You can get this image in seconds with command line option.
 
 ![alignments](fig/alignments.png)
+
+![large](fig/large.png)
 
 ## Feature
 
