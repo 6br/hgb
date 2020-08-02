@@ -51,7 +51,7 @@ cargo run -- vis -a input1.bam input2.bam -o output.png -r chr1:91234-92334 -s
 * A simple examples with two bam files of only split alignments:
 
 ```bash
-cargo run -- vis -a input1.bam input2.bam -o output.png -r chr1:91234-92334 -p -s -u
+cargo run -- vis -a input1.bam input2.bam -o output.png -r chr1:91234-92334 -s -u
 ```
 
 * A simple examples with two bam files with read quality:
