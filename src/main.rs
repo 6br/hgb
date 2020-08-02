@@ -7,7 +7,7 @@ use subcommands::*;
 
 fn main() {
     env_logger::init();
-    let matches = App::new("GHB/GHI genomic data visualization tool")
+    let matches = App::new("A hybrid genomic data visualization tool")
         // .setting(AppSettings::ArgsNegateSubcommands)
         .setting(AppSettings::SubcommandRequiredElseHelp)
         .setting(AppSettings::UnifiedHelpMessage)
@@ -30,7 +30,7 @@ fn main() {
         )
         .subcommand(
             App::new("build")
-                .about("construct GHB and GHI index from bam/")
+                .about("Constructs hybrid genome index from bam/bed files")
                 .arg(
                     Arg::new("bam")
                         .short('a')
@@ -72,7 +72,7 @@ fn main() {
         )
         .subcommand(
             App::new("query")
-                .about("construct GHB and GHI index from bam/")
+                .about("Extracts bam/bed from hybrid genome index with ranged query")
                 .arg(
                     Arg::new("range")
                         .short('r')
@@ -170,7 +170,7 @@ fn main() {
         )
         .subcommand(
             App::new("decompose")
-                .about("extract bam/bed from GHB and GHI index: (*) Now it needs to ")
+                .about("Extracts an entire bam/bed from a hybrid genome index. (*) used for debugging")
                 .arg(
                     Arg::new("id")
                         .short('i')
@@ -194,7 +194,7 @@ fn main() {
         )
         .subcommand(
             App::new("bin")
-                .about("extract bam/bed from GHB and GHI index: (*) Now it needs to ")
+                .about("Extracts bam/bed from a hybrid genome index. (*) used for debugging")
                 .arg(
                     Arg::new("id")
                         .short('i')
@@ -258,7 +258,7 @@ fn main() {
         )
         .subcommand(
             App::new("server")
-                .about("start the web server.")
+                .about("Starts the web server. (*) used for debugging")
                 .arg(Arg::new("host").short('i').about("host"))
                 .arg(Arg::new("port").short('p').about("port"))
                 .arg(
@@ -270,7 +270,7 @@ fn main() {
         )
         .subcommand(
             App::new("vis")
-                .about("Visualize GHB and other genomic data")
+                .about("Visualizes genomic data e.g. alignments and annotations")
                 .arg(
                     Arg::new("range")
                         .short('r')
@@ -417,7 +417,7 @@ fn main() {
         )
         .subcommand(
             App::new("split")
-                .about("start the web server.")
+                .about("Splits a hybrid genome index (not implemented).")
                 .arg(
                     Arg::new("output")
                         .short('o')
