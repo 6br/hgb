@@ -2,8 +2,9 @@
 use actix_files::NamedFile;
 use rand::Rng;
 use std::time::Instant;
+use actix_cors::Cors;
 use actix_web::http::header::{ContentDisposition, DispositionType};
-use actix_web::{HttpRequest, Result, web, Responder, error, middleware::Logger};
+use actix_web::{http,HttpRequest, Result, web, Responder, error, middleware::Logger};
 use std::{sync::{RwLock},  collections::BTreeMap, fs};
 use clap::{App,  ArgMatches, Arg, AppSettings};
 use ghi::{bed, vis::bam_record_vis};
@@ -415,7 +416,13 @@ supplementary_list: Vec<(Vec<u8>, usize, usize, i32, i32)>,threads: u16) -> std:
         .route("openseadragon.min.js", web::get().to(get_js))
         .route("openseadragon.min.js.map", web::get().to(get_js_map))
         .route("genome.dzi", web::get().to(get_dzi))
-        .route("/{zoom:.*}/{filename:.*}_0.png", web::get().to(index)).service(actix_files::Files::new("/images", "static/images").show_files_listing()).wrap(Logger::default())
+        .route("/{zoom:.*}/{filename:.*}_0.png", web::get().to(index)).service(actix_files::Files::new("/images", "static/images").show_files_listing()).wrap(Logger::default()).wrap(
+            Cors::new().allowed_origin("*").allowed_methods(vec!["GET", "POST"])
+            .allowed_headers(vec![http::header::AUTHORIZATION, http::header::ACCEPT])
+            .allowed_header(http::header::CONTENT_TYPE)
+            .max_age(3600)
+            .finish()
+        )
     })
     .bind(bind)?
     .workers(threads as usize)

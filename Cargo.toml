@@ -19,6 +19,7 @@ path = "src/main.rs"
 actix-web = "2.0"
 actix-rt = "1.0"
 actix-files = "*"
+actix-cors = "*"
 #bam = "*" 
 #bam = { git = "https://bitbucket.org/6br/bam" }
 bio-types = { git = "https://github.com/6br/rust-bio-types", branch="alignment_fix" }
