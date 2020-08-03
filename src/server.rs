@@ -160,7 +160,7 @@ fn id_to_range<'a>(range: &StringRegion, args: &Vec<String>, zoom: u64, path: u6
                     .about("(Optional) GHB format to display both alignment and annotation tracks")
                     .index(1),
             );
-    let prefetch_max = 25000000; // prefetch_range.end() - prefetch_range.start();
+    // let prefetch_max = 25000000; // prefetch_range.end() - prefetch_range.start();
     let criteria = param.criteria; // range.end() - range.start();
     // let x_width = prefetch_max / criteria * (740); //max_x
     // Here 2**17 < x_width < 2**18 so maxZoom should be 18+ 1;
@@ -242,7 +242,7 @@ async fn index(data: web::Data<RwLock<Vis>>, list: web::Data<Vec<(u64, Record)>>
             let path_string = format!("{}/{}/{}_0.png", cache_dir, zoom, path);
             let max_zoom = (&data.params).max_zoom as u64;
             //let min_zoom = ((&data.params).criteria << (max_zoom - zoom)) >= 10000000;
-            let min_zoom = zoom < 12;
+            let min_zoom = zoom < (&data.params).min_zoom as u64;
 
             if min_zoom || zoom > max_zoom as u64 {
                 return Err(error::ErrorBadRequest("zoom level is not appropriate"));
@@ -328,6 +328,7 @@ pub struct Param {
     prefetch_max: u64,
     criteria: u64,
     max_zoom: u32,
+    min_zoom: u32,
     y_freq: u32,
     x: u32,
     y: u32,
@@ -372,7 +373,7 @@ supplementary_list: Vec<(Vec<u8>, usize, usize, i32, i32)>,threads: u16) -> std:
         .unwrap_or(1280u32)
     };
     let diff = range.end - range.start;
-    let all = prefetch_range.end - prefetch_range.start;
+    let all = if matches.is_present("whole-chromosome") {250000000} else {prefetch_range.end - prefetch_range.start};
     let size = Size{Height: x.to_string(), Width: ((all as u32 / diff as u32 + 1) * x).to_string()};
     let image = Image{xmlns: "http://schemas.microsoft.com/deepzoom/2008".to_string(), Url: format!("http://{}/", bind).to_string(), Format: "png".to_string(), Overlap: "0".to_string(), TileSize: x.to_string(), Size: size};
     let dzi = DZI{Image: image};
@@ -389,13 +390,15 @@ supplementary_list: Vec<(Vec<u8>, usize, usize, i32, i32)>,threads: u16) -> std:
         .unwrap_or(rng.gen::<u32>().to_string());
     
     let x_width = all as u32 / diff as u32 * x;
+    eprintln!("{} {} {}", all,diff,x);
     let max_zoom = log_2(x_width as i32) + 1;
+    let min_zoom = max_zoom - 6;
 
     match fs::create_dir(&cache_dir) {
         Err(e) => panic!("{}: {}", &cache_dir, e),
         Ok(_) => {},
     };
-    let params = Param{x_scale, max_y:x, prefetch_max: all, max_zoom, criteria:diff, y_freq: freq_size, x, y, cache_dir};
+    let params = Param{x_scale, max_y:x, prefetch_max: all, max_zoom, min_zoom, criteria:diff, y_freq: freq_size, x, y, cache_dir};
     eprintln!("{:?}, threads: {}, zoom: {}", params, threads, log_2(x_width as i32) + 1);
     // Create some global state prior to building the server
     //#[allow(clippy::mutex_atomic)] // it's intentional.
