@@ -316,6 +316,7 @@ where
     );
     eprintln!("{:?} {:?} {:?}", prev_index, axis_count, annotation_count);
     let y_area_size = if no_margin { 0 } else { 40 };
+    let x_spec = if no_margin {range.start()..range.end()} else {(range.start() - 1)..(range.end() + 1)};
 
     let mut chart = if no_margin {
         ChartBuilder::on(&alignment)
@@ -326,7 +327,7 @@ where
             .x_label_area_size(x_scale / 2)
             // Finally attach a coordinate on the drawing area and make a chart context
             .build_ranged(
-                (range.start() - 1)..(range.end() + 1),
+                x_spec,
                 0..(1 + prev_index + axis_count + annotation_count * 2),
             )?
     } else {
