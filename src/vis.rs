@@ -144,7 +144,11 @@ where
                 Some(a) => a,
                 _ => values.iter().map(|t| t.1).max().unwrap_or(1),
             };
-            let x_spec = if no_margin {range.start()..range.end()} else {(range.start() - 1)..(range.end() + 1)};
+            let x_spec = if no_margin {
+                range.start()..range.end()
+            } else {
+                (range.start() - 1)..(range.end() + 1)
+            };
             let mut chart = ChartBuilder::on(&coverages[i])
                 // Set the caption of the chart
                 //.caption(format!("{}", range), ("sans-serif", 20).into_font())
@@ -316,7 +320,11 @@ where
     );
     eprintln!("{:?} {:?} {:?}", prev_index, axis_count, annotation_count);
     let y_area_size = if no_margin { 0 } else { 40 };
-    let x_spec = if no_margin {range.start()..range.end()} else {(range.start() - 1)..(range.end() + 1)};
+    let x_spec = if no_margin {
+        range.start()..range.end()
+    } else {
+        (range.start() - 1)..(range.end() + 1)
+    };
 
     let mut chart = if no_margin {
         ChartBuilder::on(&alignment)
@@ -601,15 +609,15 @@ where
                 ))?;
             }
         } else {*/
-            chart.draw_series(supplementary_list.iter().map(|i| {
-                let stroke = BLACK;
-                let mut bar2 = Rectangle::new(
-                    [(i.3 as u64, i.1), (i.4 as u64, i.2)],
-                    stroke.stroke_width(1), // filled(), // (y / 4), // filled(), //stroke_width(100),
-                );
-                bar2.set_margin(y / 4, y / 4, 0, 0);
-                bar2
-            }))?;
+        chart.draw_series(supplementary_list.iter().map(|i| {
+            let stroke = BLACK;
+            let mut bar2 = Rectangle::new(
+                [(i.3 as u64, i.1), (i.4 as u64, i.2)],
+                stroke.stroke_width(1), // filled(), // (y / 4), // filled(), //stroke_width(100),
+            );
+            bar2.set_margin(y / 4, y / 4, 0, 0);
+            bar2
+        }))?;
         //}
     }
     let mut split_frequency = vec![];
@@ -948,7 +956,7 @@ where
                 .x_label_area_size(0)
                 .y_label_area_size(y_area_size)
                 // Finally attach a coordinate on the drawing area and make a chart context
-                .build_ranged(x_spec, 0..y_max)?;
+                .build_ranged(x_spec.clone(), 0..y_max)?;
             chart
                 .configure_mesh()
                 // We can customize the maximum number of labels allowed for each axis
