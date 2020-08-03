@@ -905,6 +905,7 @@ where
     let mut supplementary_list = vec![];
     if split {
         let mut end_map = HashMap::new();
+        // let mut suppl_map = Vec::new();
 
         let new_list = {
             list.sort_by(|a, b| {

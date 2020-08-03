@@ -144,6 +144,7 @@ where
                 Some(a) => a,
                 _ => values.iter().map(|t| t.1).max().unwrap_or(1),
             };
+            let x_spec = if no_margin {range.start()..range.end()} else {(range.start() - 1)..(range.end() + 1)};
             let mut chart = ChartBuilder::on(&coverages[i])
                 // Set the caption of the chart
                 //.caption(format!("{}", range), ("sans-serif", 20).into_font())
@@ -151,7 +152,7 @@ where
                 .x_label_area_size(x_scale)
                 .y_label_area_size(y_area_size)
                 // Finally attach a coordinate on the drawing area and make a chart context
-                .build_ranged((range.start() - 1)..(range.end() + 1), 0..y_max)?;
+                .build_ranged(x_spec, 0..y_max)?;
             chart
                 .configure_mesh()
                 // We can customize the maximum number of labels allowed for each axis
@@ -583,15 +584,32 @@ where
                 });
         }
     } else {
-        chart.draw_series(supplementary_list.iter().map(|i| {
-            let stroke = BLACK;
-            let mut bar2 = Rectangle::new(
-                [(i.3 as u64, i.1), (i.4 as u64, i.2)],
-                stroke.stroke_width(1), // filled(), // (y / 4), // filled(), //stroke_width(100),
-            );
-            bar2.set_margin(y / 4, y / 4, 0, 0);
-            bar2
-        }))?;
+        /*if no_margin {
+            for (idx, i) in supplementary_list.iter().enumerate() {
+                let stroke = Palette99::pick(idx as usize);
+                // let stroke_color = BLACK;
+                chart
+                    .draw_series(LineSeries::new(
+                        vec![(range.start(), i.1), (range.end() as u64, i.1)],
+                        stroke.stroke_width(2),
+                    ))?;
+                chart
+                .draw_series(LineSeries::new(
+                    vec![(i.3 as u64, i.2+1), (i.4 as u64, i.2+1)],
+                    stroke.stroke_width(2),
+                ))?;
+            }
+        } else {*/
+            chart.draw_series(supplementary_list.iter().map(|i| {
+                let stroke = BLACK;
+                let mut bar2 = Rectangle::new(
+                    [(i.3 as u64, i.1), (i.4 as u64, i.2)],
+                    stroke.stroke_width(1), // filled(), // (y / 4), // filled(), //stroke_width(100),
+                );
+                bar2.set_margin(y / 4, y / 4, 0, 0);
+                bar2
+            }))?;
+        //}
     }
     let mut split_frequency = vec![];
     // For each alignment:
@@ -987,7 +1005,7 @@ where
         }
     }
 
-    if legend {
+    if legend && (!no_margin || annotation_count + axis_count > 0) {
         chart
             .configure_series_labels()
             .background_style(&WHITE.mix(0.8))
