@@ -948,7 +948,7 @@ where
                 .x_label_area_size(0)
                 .y_label_area_size(y_area_size)
                 // Finally attach a coordinate on the drawing area and make a chart context
-                .build_ranged((range.start() - 1)..(range.end() + 1), 0..y_max)?;
+                .build_ranged(x_spec, 0..y_max)?;
             chart
                 .configure_mesh()
                 // We can customize the maximum number of labels allowed for each axis
