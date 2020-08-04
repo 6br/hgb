@@ -30,6 +30,22 @@ impl HeaderType {
             HeaderType::BAM(header) => header.write_text(stream),
         }
     }
+    /// Save tsv to stream.
+    pub fn to_tsv<W: Write>(&self, stream: &mut W) -> Result<()> {
+        match self {
+            HeaderType::None => stream.write_i32::<LittleEndian>(0 as i32),
+            HeaderType::BAM(header) => {
+                for (name, len) in header
+                    .reference_names()
+                    .iter()
+                    .zip(header.reference_lengths())
+                {
+                    writeln!(stream, "{}\t{}", name, len)?;
+                }
+                Ok(())
+            }
+        }
+    }
     /// Load from stream.
     pub fn from_stream<R: Read>(stream: &mut R) -> Result<HeaderType> {
         let header_type = stream.read_i32::<LittleEndian>()?;
@@ -99,6 +115,18 @@ impl Header {
     pub fn reference_names(&self) -> &[String] {
         &self.global_header.reference_names()
     }
+    ///
+    pub fn to_tsv<W: Write>(&self, stream: &mut W) -> Result<()> {
+        for (name, len) in self
+            .global_header
+            .reference_names()
+            .iter()
+            .zip(self.global_header.reference_lengths())
+        {
+            writeln!(stream, "{}\t{}", name, len)?;
+        }
+        Ok(())
+    }
     /// Pushes a new header entry.
     ///
     /// Returns an error if the same reference appears twice or @SQ line has an incorrect format.
@@ -133,6 +161,9 @@ impl Header {
                 ))?;
         }
         Ok(())
+    }
+    pub fn get_global_header(&self) -> &bam::Header {
+        &self.global_header
     }
     pub fn get_local_header(&self, index: usize) -> Option<&HeaderType> {
         self.headers.get(index)

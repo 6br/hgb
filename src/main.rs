@@ -63,7 +63,8 @@ fn main() {
                         .takes_value(true)
                         .about("chroms.sizes"),
                 )
-                .arg(Arg::new("force").short('f').about("Outputs only header"))
+                .arg(Arg::new("header").short('z').about("Outputs only header"))
+                .arg(Arg::new("formatted-header").short('f').about("Outputs formatted header"))
                 .arg(
                     Arg::new("OUTPUT")
                         .about("Sets the output file to use")
@@ -184,6 +185,7 @@ fn main() {
                         .about("annotation sample to fetch (alignment | annotation)"),
                 )
                 .arg(Arg::new("header").short('z').about("Outputs only header"))
+                .arg(Arg::new("formatted-header").short('f').about("Outputs formatted header"))
                 .arg(
                     Arg::new("INPUT")
                         .about("Sets the input file to use")
@@ -462,7 +464,9 @@ fn main() {
                         .about("Sets the input file to use")
                         .required(true)
                         .index(1),
-                ),
+                )
+                .arg(Arg::new("header").short('z').about("Outputs only header"))
+                .arg(Arg::new("formatted-header").short('f').about("Outputs formatted header")),
         );
     let matches = app.get_matches();
     let args: Vec<String> = env::args().collect();

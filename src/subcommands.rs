@@ -363,11 +363,8 @@ pub fn query(matches: &ArgMatches, threads: u16) -> () {
 pub fn decompose(matches: &ArgMatches, _threads: u16) -> () {
     if let Some(i) = matches.value_of("INPUT") {
         //if let Some(o) = matches.value_of("OUTPUT") {
-        let id = matches
-            .value_of("id")
-            .and_then(|t| t.parse::<u64>().ok())
-            .unwrap();
         let header = matches.is_present("header");
+        let formatted_header = matches.is_present("formatted-header");
         let mut reader = IndexedReader::from_path_with_additional_threads(i, 0).unwrap();
         // Decomposer doesn't know the record boundary, so it can't parallelize.
         let out = std::io::stdout();
@@ -379,17 +376,32 @@ pub fn decompose(matches: &ArgMatches, _threads: u16) -> () {
             None => Box::new(out.lock()) as Box<dyn Write>,
         };
         let mut output = io::BufWriter::with_capacity(1048576, out_writer);
-
-        if let Some(header_type) = reader.header().get_local_header(id as usize) {
-            if header {
-                header_type.to_text(&mut output).unwrap();
+        let id = matches.value_of("id").and_then(|t| t.parse::<u64>().ok());
+        if let Some(id) = id {
+            if let Some(header_type) = reader.header().get_local_header(id as usize) {
+                if header {
+                    header_type.to_text(&mut output).unwrap();
+                } else if formatted_header {
+                    header_type.to_tsv(&mut output).unwrap();
+                }
+            // header.write_text(&mut writer);
+            } else {
+                println!("There is no header of id {}", id);
             }
-        // header.write_text(&mut writer);
         } else {
-            println!("There is no header of id {}", id);
+            // Output global header
+            if header {
+                reader
+                    .header()
+                    .get_global_header()
+                    .write_text(&mut output)
+                    .unwrap();
+            } else if formatted_header {
+                reader.header().to_tsv(&mut output).unwrap();
+            }
         }
 
-        if header {
+        if header || formatted_header {
             return;
         }
 
@@ -401,7 +413,7 @@ pub fn decompose(matches: &ArgMatches, _threads: u16) -> () {
         let _ = viewer.into_iter().for_each(|t| {
             //eprintln!("{:?}", t);
             t.map(|f| {
-                if f.sample_id() == id {
+                if f.sample_id() == id.unwrap() {
                     match f.data() {
                         Format::Range(rec) => {
                             let mut writer = bed::Writer::new(&mut output);
@@ -416,7 +428,7 @@ pub fn decompose(matches: &ArgMatches, _threads: u16) -> () {
                                     .write_sam(
                                         &mut output,
                                         header_data
-                                            .get_local_header(id as usize)
+                                            .get_local_header(id.unwrap() as usize)
                                             .unwrap()
                                             .bam_header(),
                                     )
@@ -442,6 +454,8 @@ pub fn split(matches: &ArgMatches, threads: u16) -> () {
             .unwrap();
         // Here all threads can be used, but I suspect that runs double
         let bam_header = reader2.header();
+        let header = matches.is_present("header");
+        let formatted_header = matches.is_present("formatted-header");
 
         let out = std::io::stdout();
         let out_writer = match matches.value_of("output") {
@@ -451,7 +465,22 @@ pub fn split(matches: &ArgMatches, threads: u16) -> () {
             }
             None => Box::new(out.lock()) as Box<dyn Write>,
         };
-        let output = io::BufWriter::with_capacity(1048576, out_writer);
+        let mut output = io::BufWriter::with_capacity(1048576, out_writer);
+
+        if header {
+            bam_header.write_text(&mut output).unwrap();
+            return ();
+        } else if formatted_header {
+            for (name, len) in bam_header
+            .reference_names()
+            .iter()
+            .zip(bam_header.reference_lengths())
+            {
+                writeln!(&mut output, "{}\t{}", name, len).unwrap();
+            }
+            return ();
+        }
+
         let clevel = matches
             .value_of("compression")
             .and_then(|a| a.parse::<u8>().ok())
@@ -905,7 +934,7 @@ where
     let mut supplementary_list = vec![];
     if split {
         let mut end_map = HashMap::new();
-        // let mut suppl_map = Vec::new();
+        // let mut suppl_map = HashMap::new();
 
         let new_list = {
             list.sort_by(|a, b| {
@@ -922,7 +951,7 @@ where
             .for_each(|t| {
                 let sample_id = t.0.clone();
                 t.1.group_by(|elt| elt.1.name()).into_iter().for_each(|s| {
-                    let items: Vec<&(u64, Record)> = s.1.into_iter().collect();
+                    let mut items: Vec<&(u64, Record)> = s.1.into_iter().collect();
                     if items.len() > 1 {
                         let last: &(u64, Record) =
                             items.iter().max_by_key(|t| t.1.calculate_end()).unwrap();
@@ -935,6 +964,19 @@ where
                                 items.len(),
                             ),
                         );
+                        /*
+                        items.sort_by(|a, b| {
+                            a.0.cmp(&b.0).then(a.1.name().cmp(&b.1.name())).then(
+                                (a.1.cigar().soft_clipping(!a.1.flag().is_reverse_strand())
+                                    + a.1.cigar().hard_clipping(!a.1.flag().is_reverse_strand()))
+                                .cmp(
+                                    &((b.1.cigar().soft_clipping(!b.1.flag().is_reverse_strand()))
+                                        + (b.1.cigar().hard_clipping(!b.1.flag().is_reverse_strand()))),
+                                ),
+                            )
+                        });
+                        suppl_map.insert((sample_id, s.0), )
+                        */
                     }
                 })
                 //group.into_iter().for_each(|t| {})
