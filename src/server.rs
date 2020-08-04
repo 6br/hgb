@@ -391,7 +391,7 @@ supplementary_list: Vec<(Vec<u8>, usize, usize, i32, i32)>,threads: u16) -> std:
         .unwrap_or(rng.gen::<u32>().to_string());
     
     let x_width = all as u32 / diff as u32 * x;
-    eprintln!("{} {} {}", all,diff,x);
+    // eprintln!("{} {} {}", all,diff,x);
     let max_zoom = log_2(x_width as i32) + 1;
     let min_zoom = max_zoom - 6;
 
@@ -401,6 +401,7 @@ supplementary_list: Vec<(Vec<u8>, usize, usize, i32, i32)>,threads: u16) -> std:
     };
     let params = Param{x_scale, max_y:x, prefetch_max: all, max_zoom, min_zoom, criteria:diff, y_freq: freq_size, x, y, cache_dir};
     eprintln!("{:?}, threads: {}, zoom: {}", params, threads, log_2(x_width as i32) + 1);
+    println!("Server is running on {}", bind);
     // Create some global state prior to building the server
     //#[allow(clippy::mutex_atomic)] // it's intentional.
     //let counter1 = web::Data::new(Mutex::new((matches.clone(), range, list, annotation, freq)));

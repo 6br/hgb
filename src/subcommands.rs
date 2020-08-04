@@ -472,9 +472,9 @@ pub fn split(matches: &ArgMatches, threads: u16) -> () {
             return ();
         } else if formatted_header {
             for (name, len) in bam_header
-            .reference_names()
-            .iter()
-            .zip(bam_header.reference_lengths())
+                .reference_names()
+                .iter()
+                .zip(bam_header.reference_lengths())
             {
                 writeln!(&mut output, "{}\t{}", name, len).unwrap();
             }
@@ -932,9 +932,9 @@ where
     let mut compressed_list = vec![];
     let mut index_list = Vec::with_capacity(list.len());
     let mut supplementary_list = vec![];
+    let mut suppl_map = HashMap::new();
     if split {
         let mut end_map = HashMap::new();
-        // let mut suppl_map = HashMap::new();
 
         let new_list = {
             list.sort_by(|a, b| {
@@ -964,19 +964,35 @@ where
                                 items.len(),
                             ),
                         );
-                        /*
                         items.sort_by(|a, b| {
                             a.0.cmp(&b.0).then(a.1.name().cmp(&b.1.name())).then(
                                 (a.1.cigar().soft_clipping(!a.1.flag().is_reverse_strand())
                                     + a.1.cigar().hard_clipping(!a.1.flag().is_reverse_strand()))
                                 .cmp(
                                     &((b.1.cigar().soft_clipping(!b.1.flag().is_reverse_strand()))
-                                        + (b.1.cigar().hard_clipping(!b.1.flag().is_reverse_strand()))),
+                                        + (b.1
+                                            .cigar()
+                                            .hard_clipping(!b.1.flag().is_reverse_strand()))),
                                 ),
                             )
                         });
-                        suppl_map.insert((sample_id, s.0), )
-                        */
+                        //suppl_map.insert((sample_id, s.0), )
+                        for (idx, item) in items.iter().enumerate() {
+                            if idx > 0 {
+                                // Add head
+                                suppl_map
+                                    .entry((sample_id, s.0))
+                                    .or_insert(vec![])
+                                    .push(item.1.start());
+                            }
+                            if idx < items.len() - 1 {
+                                // Add tail
+                                suppl_map
+                                    .entry((sample_id, s.0))
+                                    .or_insert(vec![])
+                                    .push(item.1.calculate_end());
+                            }
+                        }
                     }
                 })
                 //group.into_iter().for_each(|t| {})
