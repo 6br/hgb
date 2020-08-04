@@ -393,7 +393,7 @@ supplementary_list: Vec<(Vec<u8>, usize, usize, i32, i32)>,threads: u16) -> std:
     let x_width = all as u32 / diff as u32 * x;
     // eprintln!("{} {} {}", all,diff,x);
     let max_zoom = log_2(x_width as i32) + 1;
-    let min_zoom = max_zoom - 6;
+    let min_zoom = max_zoom - 8;
 
     match fs::create_dir(&cache_dir) {
         Err(e) => panic!("{}: {}", &cache_dir, e),
