@@ -497,7 +497,7 @@ fn main() {
     } else if let Some(ref matches) = matches.subcommand_matches("bin") {
         bin(matches, threads);
     } else if let Some(ref matches) = matches.subcommand_matches("vis") {
-        eprintln!("{:?}", matches.is_present("INPUT"));
+        // eprintln!("{:?}", matches.is_present("INPUT"));
         match matches.is_present("INPUT") {
             true => vis_query(matches, args, threads).unwrap(),
             false => bam_vis(matches, args, threads).unwrap(),
