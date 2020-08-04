@@ -114,6 +114,7 @@ pub fn bam_vis(
                                         .score()
                                         .and_then(|t| t.parse::<u32>().ok())
                                         .unwrap_or(0),
+                                    '*',
                                 ));
                             }
                         }
@@ -862,7 +863,7 @@ pub fn bam_record_vis_pre_calculate<'a, F>(
     args: &Vec<String>,
     mut list: Vec<(u64, Record)>,
     mut ann: Vec<(u64, bed::Record)>,
-    mut freq: BTreeMap<u64, Vec<(u64, u32)>>,
+    mut freq: BTreeMap<u64, Vec<(u64, u32, char)>>,
     threads: u16,
     lambda: F,
 ) -> Result<(), Box<dyn std::error::Error>>
@@ -881,8 +882,11 @@ where
     let max_coverage = matches
         .value_of("max-coverage")
         .and_then(|a| a.parse::<u32>().ok());
-    // Calculate coverage; it won't work on sort_by_name
-    // let mut frequency = BTreeMap::new(); // Vec::with_capacity();
+    let snp_frequency = matches
+        .value_of("snp-frequency")
+        .and_then(|a| a.parse::<f64>().ok()); // default 0.2
+                                              // Calculate coverage; it won't work on sort_by_name
+                                              // let mut frequency = BTreeMap::new(); // Vec::with_capacity();
 
     ann.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.start().cmp(&b.1.start())));
     list.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.start().cmp(&b.1.start())));
@@ -901,6 +905,42 @@ where
                     column.ref_pos() + 1,
                     column.entries().len()
                 );*/
+                if let Some(freq) = snp_frequency {
+                    let mut seqs = Vec::with_capacity(column.entries().len()); //vec![];
+                    for entry in column.entries().iter() {
+                        let seq: Vec<_> = entry.sequence().unwrap().map(|nt| nt as char).collect();
+                        //let qual: Vec<_> = entry.qualities().unwrap().iter()
+                        //    .map(|q| (q + 33) as char).collect();
+                        //eprintln!("    {:?}: {:?}", entry.record(), seq);
+                        seqs.push(seq);
+                    }
+                    let unique_elements = seqs.iter().cloned().unique().collect_vec();
+                    let mut unique_frequency = vec![];
+                    for unique_elem in unique_elements.iter() {
+                        unique_frequency.push((
+                            seqs.iter().filter(|&elem| elem == unique_elem).count(),
+                            unique_elem,
+                        ));
+                    }
+                    unique_frequency.sort_by_key(|t| t.0);
+                    unique_frequency.reverse();
+                    let d: usize = unique_frequency.iter().map(|t| t.0).sum();
+                    let threshold = d as f64 * freq;
+                    // let minor = d - seqs[0].0;
+                    // let second_minor = d - unique_frequency[1].0;
+                    let (_, cdr) = unique_frequency.split_first().unwrap();
+                    cdr.iter()
+                        .filter(|t| t.0 > threshold as usize)
+                        .for_each(|t2| {
+                            if t2.1.len() > 0 {
+                                line.push((
+                                    column.ref_pos() as u64,
+                                    t2.0 as u32,
+                                    t2.1[0].to_ascii_uppercase(),
+                                ));
+                            }
+                        });
+                }
                 // Should we have sparse occurrence table?
                 //eprintln!("{:?} {:?}",  range.path, lambda(column.ref_id() as usize).unwrap_or(&column.ref_id().to_string()));
                 // lambda(column.ref_id() as usize).unwrap_or(&column.ref_id().to_string())
@@ -909,7 +949,7 @@ where
                 if prefetch_range.start <= column.ref_pos() as u64
                     && column.ref_pos() as u64 <= prefetch_range.end
                 {
-                    line.push((column.ref_pos() as u64, column.entries().len() as u32));
+                    line.push((column.ref_pos() as u64, column.entries().len() as u32, '*'));
                 }
             }
             //eprintln!("{:?}", line);

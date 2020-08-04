@@ -80,6 +80,12 @@ fn id_to_range<'a>(range: &StringRegion, args: &Vec<String>, zoom: u64, path: u6
                     .about("The height of each coverage track"),
             )
             .arg(
+                Arg::new("snp-frequency")
+                    .short('Z')
+                    .takes_value(true)
+                    .about("The portion of SNP frequency to display on each coverage track"),
+            )
+            .arg(
                 Arg::new("max-coverage")
                     .short('m')
                     .takes_value(true)
@@ -286,7 +292,7 @@ pub struct Vis {
     range: StringRegion, 
     args: Vec<String>, 
     annotation: Vec<(u64, bed::Record)>, 
-    freq: BTreeMap<u64, Vec<(u64, u32)>>,     
+    freq: BTreeMap<u64, Vec<(u64, u32, char)>>,
     compressed_list: Vec<(u64, usize)>,
     index_list: Vec<usize>,
     prev_index: usize,
@@ -294,7 +300,7 @@ pub struct Vis {
 }
 
 impl Vis {
-    fn new(range: StringRegion, args: Vec<String>, annotation: Vec<(u64, bed::Record)>, freq: BTreeMap<u64, Vec<(u64, u32)>>, compressed_list: Vec<(u64, usize)>,
+    fn new(range: StringRegion, args: Vec<String>, annotation: Vec<(u64, bed::Record)>, freq: BTreeMap<u64, Vec<(u64, u32, char)>>, compressed_list: Vec<(u64, usize)>,
     index_list: Vec<usize>,
     prev_index: usize,
     supplementary_list: Vec<(Vec<u8>, usize, usize, i32, i32)>,dzi: DZI, params: Param) -> Vis {
@@ -344,7 +350,7 @@ fn log_2(x: i32) -> u32 {
 }
 
 #[actix_rt::main]
-pub async fn server(matches: ArgMatches, range: StringRegion, prefetch_range: StringRegion, args: Vec<String>, list: Vec<(u64, Record)>, annotation: Vec<(u64, bed::Record)>, freq: BTreeMap<u64, Vec<(u64, u32)>>, compressed_list: Vec<(u64, usize)>,
+pub async fn server(matches: ArgMatches, range: StringRegion, prefetch_range: StringRegion, args: Vec<String>, list: Vec<(u64, Record)>, annotation: Vec<(u64, bed::Record)>, freq: BTreeMap<u64, Vec<(u64, u32, char)>>, compressed_list: Vec<(u64, usize)>,
 index_list: Vec<usize>,
 prev_index: usize,
 supplementary_list: Vec<(Vec<u8>, usize, usize, i32, i32)>,threads: u16) -> std::io::Result<()> {
@@ -382,8 +388,6 @@ supplementary_list: Vec<(Vec<u8>, usize, usize, i32, i32)>,threads: u16) -> std:
         .value_of("x-scale")
         .and_then(|a| a.parse::<u32>().ok())
         .unwrap_or(20u32);
-
-
     let mut rng = rand::thread_rng();
     let cache_dir = matches
         .value_of("cache-dir")

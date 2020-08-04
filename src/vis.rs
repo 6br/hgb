@@ -52,6 +52,16 @@ predefined_color!(T_COL, 255, 0, 40, "The predefined T color");
 predefined_color!(G_COL, 209, 113, 5, "The predefined G color");
 //RGBColor();
 
+fn nt_color(record_nt: char) -> Option<RGBColor> {
+    match record_nt {
+        'A' => Some(A_COL), //RED,
+        'C' => Some(C_COL), // BLUE,
+        'G' => Some(G_COL),
+        'T' => Some(T_COL), //GREEN,
+        _ => Some(N_COL),
+    }
+}
+
 pub struct RecordIter<'a, I: Iterator<Item = &'a (u64, Record)>>(I);
 
 impl<'a, I> RecordIter<'a, I>
@@ -99,7 +109,7 @@ where
 pub fn frequency_vis<'a, F>(
     matches: &ArgMatches,
     range: &StringRegion,
-    frequency: &BTreeMap<u64, Vec<(u64, u32)>>,
+    frequency: &BTreeMap<u64, Vec<(u64, u32, char)>>,
     lambda: F,
 ) -> Result<(), Box<dyn std::error::Error>>
 where
@@ -145,7 +155,7 @@ where
                 Some(a) => a,
                 _ => values.iter().map(|t| t.1).max().unwrap_or(1),
             };
-            let x_spec = if no_margin && range.end() - range.start() <= 100 {
+            let x_spec = if no_margin && range.end() - range.start() <= 1000 {
                 range.start()..range.end()
             } else {
                 (range.start() - 1)..(range.end() + 1)
@@ -178,8 +188,8 @@ where
                     Histogram::vertical(&chart).style(color.filled()).data(
                         values
                             .iter()
-                            .filter(|t| t.0 >= range.start() && t.0 < range.end())
-                            .map(|t| *t),
+                            .filter(|t| t.0 >= range.start() && t.0 < range.end() && t.2 == '*')
+                            .map(|t| (t.0, t.1)),
                     ),
                 )?
                 .label(format!("{}", lambda(idx).unwrap_or(&idx.to_string())))
@@ -206,7 +216,7 @@ pub fn bam_record_vis<'a, F>(
     range: StringRegion,
     list: &Vec<(u64, Record)>,
     annotation: &Vec<(u64, bed::Record)>,
-    frequency: &BTreeMap<u64, Vec<(u64, u32)>>,
+    frequency: &BTreeMap<u64, Vec<(u64, u32, char)>>,
     compressed_list: &Vec<(u64, usize)>,
     index_list: &Vec<usize>,
     prev_index: usize,
@@ -243,6 +253,9 @@ where
     let max_coverage = matches
         .value_of("max-coverage")
         .and_then(|a| a.parse::<u32>().ok());
+    let snp_frequency = matches
+        .value_of("snp-frequency")
+        .and_then(|a| a.parse::<f64>().ok());
     let x = matches
         .value_of("x")
         .and_then(|a| a.parse::<u32>().ok())
@@ -320,7 +333,7 @@ where
     );
     eprintln!("{:?} {:?} {:?}", prev_index, axis_count, annotation_count);
     let y_area_size = if no_margin { 0 } else { 40 };
-    let x_spec = if no_margin && range.end() - range.start() <= 100 {
+    let x_spec = if no_margin && range.end() - range.start() <= 1000 {
         range.start()..range.end()
     } else {
         (range.start() - 1)..(range.end() + 1)
@@ -532,7 +545,7 @@ where
                 let idx = *sample_sequential_id as usize;
                 // let idx = sample.next().0;
                 let chart = chart.draw_series(LineSeries::new(
-                    vec![(range.start() - 1, count), (range.end() + 1, count)],
+                    vec![(range.start() , count), (range.end() , count)],
                     Palette99::pick(idx).stroke_width(y / 3 * 4),
                 ))?;
                 if !no_margin {
@@ -561,8 +574,8 @@ where
                         let stroke = Palette99::pick(*sample_sequential_id as usize);
                         let mut bar2 = Rectangle::new(
                             [
-                                (range.start() - 1, prev_index),
-                                (range.end() + 1, prev_index + count),
+                                (range.start() , prev_index),
+                                (range.end() , prev_index + count),
                             ],
                             stroke.stroke_width(y / 2), // filled(), //stroke_width(100),
                         );
@@ -621,6 +634,7 @@ where
         //}
     }
     let mut split_frequency = vec![];
+    //let mut snp_frequency = vec![];
     // For each alignment:
     let series = {
         //list.into_iter().enumerate().map(|(index, data)| {
@@ -795,16 +809,11 @@ where
                                                 if prev_ref > range.end() as u64 {
                                                     break;
                                                 }
+                                                // If all bases shows the SNPs
                                                 if prev_ref >= range.start() as u64 && all_bases {
                                                     let record_nt =
                                                         entry.record_pos_nt().unwrap().1;
-                                                    color = match record_nt as char {
-                                                        'A' => Some(A_COL), //RED,
-                                                        'C' => Some(C_COL), // BLUE,
-                                                        'G' => Some(G_COL),
-                                                        'T' => Some(T_COL), //GREEN,
-                                                        _ => Some(N_COL),
-                                                    };
+                                                    color = nt_color(record_nt as char);
                                                 }
                                             } else {
                                                 /* Mismatch */
@@ -816,13 +825,8 @@ where
                                                 if prev_ref >= range.start() as u64 {
                                                     let record_nt =
                                                         entry.record_pos_nt().unwrap().1;
-                                                    color = match record_nt as char {
-                                                        'A' => Some(A_COL), //RED,
-                                                        'C' => Some(C_COL), // BLUE,
-                                                        'G' => Some(G_COL),
-                                                        'T' => Some(T_COL), //GREEN,
-                                                        _ => Some(N_COL),
-                                                    };
+                                                    color = nt_color(record_nt as char);
+                                                    //snp_frequency.push((data.0, (record_nt, start, approximate_one_pixel)));
 
                                                     /*let mut bar =
                                                     Rectangle::new([(prev_ref as u64, index), (prev_ref as u64 + 1, index + 1)], color.filled());
@@ -967,14 +971,14 @@ where
                 // We can also change the format of the label text
                 // .x_label_formatter(&|x| format!("{:.3}", x))
                 .draw()?;
-            let color = Palette99::pick(idx); // BLUE
+            let color = if let Some(_) = snp_frequency {Palette99::pick(idx).stroke_width(2)} else{Palette99::pick(idx).filled()}; // BLUE
             chart
                 .draw_series(
-                    Histogram::vertical(&chart).style(color.filled()).data(
+                    Histogram::vertical(&chart).style(color).data(
                         values
                             .iter()
-                            .filter(|t| t.0 >= range.start() && t.0 < range.end())
-                            .map(|t| *t),
+                            .filter(|t| t.0 >= range.start() && t.0 < range.end() && t.2 == '*')
+                            .map(|t| (t.0, t.1)),
                     ),
                 )?
                 .label(format!("{}", lambda(idx).unwrap_or(&idx.to_string())))
@@ -984,6 +988,19 @@ where
                         Palette99::pick(idx).filled(),
                     )
                 });
+            if let Some(f) = snp_frequency {
+                for i in ['A', 'C', 'G', 'T'].iter() {
+                    let color = nt_color(*i).unwrap();
+                    chart.draw_series(
+                        Histogram::vertical(&chart).style(color.filled()).data(
+                            values
+                                .iter()
+                                .filter(|t| t.0 >= range.start() && t.0 < range.end() && t.2 == *i)
+                                .map(|t| (t.0, t.1)),
+                        ),
+                    )?;
+                }
+            }
 
             chart.draw_series(
                 Histogram::vertical(&chart).style(SPL_COL.filled()).data(
@@ -997,6 +1014,10 @@ where
                         .map(|t| t.1),
                 ),
             )?;
+
+            /*if snp_frequency {
+                [('A', A_COL), ]
+            }*/
             /*.label(format!("{}", lambda(idx).unwrap_or(&idx.to_string())))
             .legend(move |(x, y)| {
                 Rectangle::new(
