@@ -138,13 +138,14 @@ where
     // let areas = root.split_by_breakpoints([], compressed_list);
     if frequency.len() > 0 {
         let coverages = root.split_evenly((frequency.len(), 1));
-        for (i, (sample_sequential_id, values)) in frequency.iter().enumerate().rev() {
+        for (i, (sample_sequential_id, values)) in frequency.iter().rev().enumerate() {
+            // eprintln!("{} {}", i, sample_sequential_id);
             let idx = *sample_sequential_id as usize;
             let y_max = match max_coverage {
                 Some(a) => a,
                 _ => values.iter().map(|t| t.1).max().unwrap_or(1),
             };
-            let x_spec = if no_margin {
+            let x_spec = if no_margin && range.end() - range.start() <= 100 {
                 range.start()..range.end()
             } else {
                 (range.start() - 1)..(range.end() + 1)
@@ -216,7 +217,6 @@ where
     F: Fn(usize) -> Option<&'a str>,
 {
     let start = Instant::now();
-
     let preset: Option<VisPreset> = matches.value_of_t("preset").ok(); // .unwrap_or_else(|e| e.exit());
     eprintln!("Preset: {:?}", preset);
     let no_margin = matches.is_present("no-scale");
@@ -320,7 +320,7 @@ where
     );
     eprintln!("{:?} {:?} {:?}", prev_index, axis_count, annotation_count);
     let y_area_size = if no_margin { 0 } else { 40 };
-    let x_spec = if no_margin {
+    let x_spec = if no_margin && range.end() - range.start() <= 100 {
         range.start()..range.end()
     } else {
         (range.start() - 1)..(range.end() + 1)
@@ -943,7 +943,7 @@ where
 
     if frequency.len() > 0 {
         let coverages = coverage.split_evenly((frequency.len(), 1));
-        for (i, (sample_sequential_id, values)) in frequency.iter().enumerate().rev() {
+        for (i, (sample_sequential_id, values)) in frequency.iter().rev().enumerate() {
             let idx = *sample_sequential_id as usize;
             let y_max = match max_coverage {
                 Some(a) => a,
