@@ -1,8 +1,8 @@
 use crate::index::Region;
 use crate::range::Default;
 use crate::{
-    bed, checker_index::Reference, header::Header, range::Format, reader::IndexedReader,
-    twopass_alignment::Alignment, vis::RecordIter, Vis,
+    bed, header::Header, range::Format, reader::IndexedReader, twopass_alignment::Alignment,
+    vis::RecordIter, Vis,
 };
 use bam::Record;
 use clap::ArgMatches;
@@ -19,13 +19,13 @@ pub struct ChromosomeBuffer<'a> {
     matches: &'a ArgMatches,
     bins: BTreeMap<usize, (Vec<(u64, bam::Record)>, Vec<(u64, bed::Record)>)>,
     freq: BTreeMap<u64, Vec<(u64, u32, char)>>,
-    header: Header,
+    ///header: Header,
     reader: &'a mut IndexedReader<BufReader<File>>,
 }
 
 impl<'a> ChromosomeBuffer<'a> {
-    fn new(
-        header: Header,
+    pub fn new(
+        //header: Header,
         reader: &'a mut IndexedReader<BufReader<File>>,
         matches: &'a ArgMatches,
     ) -> Self {
@@ -34,7 +34,7 @@ impl<'a> ChromosomeBuffer<'a> {
             matches,
             bins: BTreeMap::new(),
             freq: BTreeMap::new(),
-            header,
+            //header,
             reader,
         }
     }
@@ -82,7 +82,7 @@ impl<'a> ChromosomeBuffer<'a> {
         false
     }
 
-    fn add(&mut self, range: &StringRegion) {
+    pub fn add(&mut self, range: &StringRegion) {
         let closure = |x: &str| self.reader.reference_id(x);
         let reference_name = &range.path;
         let range = Region::convert(&range, closure).unwrap();
@@ -201,7 +201,7 @@ impl<'a> ChromosomeBuffer<'a> {
         }
     }
 
-    fn vis(&mut self, string_range: StringRegion) -> (Vis, Vec<(u64, Record)>) {
+    pub fn vis(&mut self, string_range: StringRegion) -> (Vis, Vec<(u64, Record)>) {
         let closure = |x: &str| self.reader.reference_id(x);
         let _reference_name = &string_range.path;
         let range = Region::convert(&string_range, closure).unwrap();

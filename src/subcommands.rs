@@ -2,9 +2,11 @@ use bam;
 use bam::{Record, RecordWriter};
 use clap::ArgMatches;
 use genomic_range::StringRegion;
+use ghi::VisPreset::Chromosome;
 
 use log::{debug, info};
 // use rayon::prelude::*;
+use crate::buffered_server;
 use crate::server::server;
 use ghi::bed;
 use ghi::binary::GhbWriter;
@@ -16,7 +18,7 @@ use ghi::range::{Format, InvertedRecordEntire, Set};
 use ghi::twopass_alignment::{Alignment, AlignmentBuilder};
 use ghi::vis::{bam_record_vis, RecordIter};
 use ghi::writer::GhiWriter;
-use ghi::{gff, reader::IndexedReader, IndexWriter};
+use ghi::{buffer::ChromosomeBuffer, gff, reader::IndexedReader, IndexWriter};
 use io::{BufReader, Error, ErrorKind, Write};
 use itertools::EitherOrBoth::{Both, Left};
 use itertools::Itertools;
@@ -599,13 +601,13 @@ pub fn vis_query(
     if let Some(o) = matches.value_of("INPUT") {
         let mut reader: IndexedReader<BufReader<File>> =
             IndexedReader::from_path_with_additional_threads(o, threads - 1).unwrap();
-
         if let Some(ranges) = matches.values_of("range") {
             let ranges: Vec<&str> = ranges.collect();
             let prefetch_ranges: Vec<&str> = matches
                 .values_of("prefetch-range")
                 .and_then(|t| Some(t.collect()))
                 .unwrap_or(vec![]);
+
             /*let ranged_zip = if let Some(prefetch_ranges) = prefetch_ranges {
                 ranges.into_iter().zip(prefetch_ranges)
             } else {
@@ -628,6 +630,10 @@ pub fn vis_query(
 
                 let range = Region::convert(&prefetch_range, closure).unwrap();
                 let viewer = reader.fetch(&range).unwrap();
+
+                let buffer = ChromosomeBuffer::new(&mut reader, matches);
+                buffer.add(string_range);
+                buffered_server::server(buffer);
 
                 let sample_ids_opt: Option<Vec<u64>> = matches
                     .values_of("id")
@@ -699,6 +705,7 @@ pub fn vis_query(
                         }
                     }
                 });
+
                 bam_record_vis_pre_calculate(
                     matches,
                     string_range,
@@ -874,6 +881,7 @@ where
     .value_of("threads")
     .and_then(|t| t.parse::<u16>().ok())
     .unwrap_or(1u16);*/
+
     let pileup = matches.is_present("pileup");
     let split_only = matches.is_present("only-split-alignment");
     let sort_by_name = matches.is_present("sort-by-name");

@@ -3,6 +3,7 @@ extern crate log;
 extern crate serde_derive;
 pub mod subcommands;
 pub mod server;
+pub mod buffered_server;
 
 use clap::{App, AppSettings, Arg};
 use env_logger;

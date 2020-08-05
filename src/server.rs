@@ -5,9 +5,9 @@ use std::time::Instant;
 use actix_cors::Cors;
 use actix_web::http::header::{ContentDisposition, DispositionType};
 use actix_web::{http,HttpRequest, Result, web, Responder, error, middleware::Logger};
-use std::{sync::{RwLock},  collections::BTreeMap, fs};
+use std::{sync::{RwLock, Mutex},  collections::BTreeMap, fs};
 use clap::{App,  ArgMatches, Arg, AppSettings};
-use ghi::{bed, vis::bam_record_vis, Vis};
+use ghi::{bed, vis::bam_record_vis, Vis, buffer::ChromosomeBuffer};
 use genomic_range::StringRegion;
 use bam::Record;
 use itertools::Itertools;
@@ -215,7 +215,7 @@ async fn get_js_map(data: web::Data<RwLock<Item>>) -> Result<NamedFile> {
 }
 
 
-async fn index(data: web::Data<RwLock<Item>>, list: web::Data<Vec<(u64, Record)>>, req: HttpRequest) -> Result<NamedFile> {
+async fn index(data: web::Data<RwLock<Item>>, list: web::Data<RwLock<Vec<(u64, Record)>>>, req: HttpRequest) -> Result<NamedFile> {
     let start = Instant::now();
     let zoom: u64 = req.match_info().query("zoom").parse().unwrap();
     let path: u64 = req.match_info().query("filename").parse().unwrap();
@@ -272,7 +272,7 @@ async fn index(data: web::Data<RwLock<Item>>, list: web::Data<Vec<(u64, Record)>
             );
             // If the end is exceeds the prefetch region, raise error.
             // let arg_vec = vec!["ghb", "vis", "-t", "1", "-r",  "parse"];
-            bam_record_vis(&matches, string_range, &list, ann, freq, compressed_list, index_list, prev_index, supplementary_list,|_| None).unwrap();
+            bam_record_vis(&matches, string_range, &list.read().unwrap(), ann, freq, compressed_list, index_list, prev_index, supplementary_list,|_| None).unwrap();
             let end3 = start.elapsed();
             eprintln!(
                 "img_saved: {}.{:03} sec.",
@@ -418,11 +418,12 @@ supplementary_list: Vec<(Vec<u8>, usize, usize, i32, i32)>,threads: u16) -> std:
     //#[allow(clippy::mutex_atomic)] 
     let vis = Vis::new(range, annotation, freq, compressed_list, index_list, prev_index, supplementary_list, 250000000);
     let counter = web::Data::new(RwLock::new(Item::new(vis, args, params, dzi)));
+    //let buffer = web::Data::new(RwLock::new(ChromosomeBuffer::new()));
 
     //https://github.com/actix/examples/blob/master/state/src/main.rs
     HttpServer::new(move|| {
-        let list = list.clone();
-        actix_web::App::new().data(list).app_data(counter.clone()).route("/", web::get().to(get_index))
+        //let list = list.clone();
+        actix_web::App::new().data(()).app_data(web::Data::new(RwLock::new(list.clone()))).app_data(counter.clone()).route("/", web::get().to(get_index))
         .route("openseadragon.min.js", web::get().to(get_js))
         .route("openseadragon.min.js.map", web::get().to(get_js_map))
         .route("genome.dzi", web::get().to(get_dzi))
