@@ -2,8 +2,9 @@
 use actix_files::NamedFile;
 use rand::Rng;
 use std::time::Instant;
+use actix_cors::Cors;
 use actix_web::http::header::{ContentDisposition, DispositionType};
-use actix_web::{HttpRequest, Result, web, Responder, error, middleware::Logger};
+use actix_web::{http,HttpRequest, Result, web, Responder, error, middleware::Logger};
 use std::{sync::{RwLock},  collections::BTreeMap, fs};
 use clap::{App,  ArgMatches, Arg, AppSettings};
 use ghi::{bed, vis::bam_record_vis, Vis};
@@ -60,7 +61,7 @@ fn id_to_range<'a>(range: &StringRegion, args: &Vec<String>, zoom: u64, path: u6
                     .takes_value(true)
                     .multiple(true)
                     .about("A subset of sorted bed for coverage plot (start and score fields are used)"),
-            )
+            )                .arg(Arg::new("whole-chromosome").short('W').about("Pretend as if the prefetch range is the whole chromosome"))
             .arg(Arg::new("no-filter").short('f').about("Disable pre-filtering on loading BAM index (used for debugging)"))
             .arg(Arg::new("no-cigar").short('n').about("Do not show cigar string"))
             .arg(Arg::new("no-scale").short('S').about("Do not show y-axis scale"))
@@ -77,6 +78,12 @@ fn id_to_range<'a>(range: &StringRegion, args: &Vec<String>, zoom: u64, path: u6
                     .short('Y')
                     .takes_value(true)
                     .about("The height of each coverage track"),
+            )
+            .arg(
+                Arg::new("snp-frequency")
+                    .short('Z')
+                    .takes_value(true)
+                    .about("The portion of SNP frequency to display on each coverage track"),
             )
             .arg(
                 Arg::new("max-coverage")
@@ -160,7 +167,7 @@ fn id_to_range<'a>(range: &StringRegion, args: &Vec<String>, zoom: u64, path: u6
                     .about("(Optional) GHB format to display both alignment and annotation tracks")
                     .index(1),
             );
-    let prefetch_max = 25000000; // prefetch_range.end() - prefetch_range.start();
+    // let prefetch_max = 25000000; // prefetch_range.end() - prefetch_range.start();
     let criteria = param.criteria; // range.end() - range.start();
     // let x_width = prefetch_max / criteria * (740); //max_x
     // Here 2**17 < x_width < 2**18 so maxZoom should be 18+ 1;
@@ -242,7 +249,7 @@ async fn index(data: web::Data<RwLock<Vis>>, list: web::Data<Vec<(u64, Record)>>
             let path_string = format!("{}/{}/{}_0.png", cache_dir, zoom, path);
             let max_zoom = (&data.params).max_zoom as u64;
             //let min_zoom = ((&data.params).criteria << (max_zoom - zoom)) >= 10000000;
-            let min_zoom = zoom < 12;
+            let min_zoom = zoom < (&data.params).min_zoom as u64;
 
             if min_zoom || zoom > max_zoom as u64 {
                 return Err(error::ErrorBadRequest("zoom level is not appropriate"));
@@ -279,22 +286,32 @@ async fn index(data: web::Data<RwLock<Vis>>, list: web::Data<Vec<(u64, Record)>>
         }
     }
 }
+
 pub struct Item {
     vis: Vis,
     args: Vec<String>,
     params: Param,
 }
+
 #[derive(Debug, Clone)]
-pub struct Param {
-    x_scale: u32,
-    max_y: u32,
-    prefetch_max: u64,
-    criteria: u64,
-    max_zoom: u32,
-    y_freq: u32,
-    x: u32,
-    y: u32,
-    cache_dir: String,
+pub struct Vis {
+    range: StringRegion, 
+    args: Vec<String>, 
+    annotation: Vec<(u64, bed::Record)>, 
+    freq: BTreeMap<u64, Vec<(u64, u32, char)>>,
+    compressed_list: Vec<(u64, usize)>,
+    index_list: Vec<usize>,
+    prev_index: usize,
+    supplementary_list: Vec<(Vec<u8>, usize, usize, i32, i32)>,dzi: DZI, params: Param
+}
+
+impl Vis {
+    fn new(range: StringRegion, args: Vec<String>, annotation: Vec<(u64, bed::Record)>, freq: BTreeMap<u64, Vec<(u64, u32, char)>>, compressed_list: Vec<(u64, usize)>,
+    index_list: Vec<usize>,
+    prev_index: usize,
+    supplementary_list: Vec<(Vec<u8>, usize, usize, i32, i32)>,dzi: DZI, params: Param) -> Vis {
+        Vis{range, args, annotation, freq, compressed_list, index_list, prev_index, supplementary_list, dzi, params}
+    }
 }
 #[derive(Debug, Serialize, Deserialize, Clone)]
 struct DZI {
@@ -314,7 +331,20 @@ struct Image {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 struct Size {
     Height: String,
-    Width: String,
+    Width: String
+}
+#[derive(Debug, Clone)]
+pub struct Param {
+    x_scale: u32,
+    max_y: u32,
+    prefetch_max: u64,
+    criteria: u64,
+    max_zoom: u32,
+    min_zoom: u32,
+    y_freq: u32,
+    x: u32,
+    y: u32,
+    cache_dir: String
 }
 
 
@@ -326,7 +356,7 @@ fn log_2(x: i32) -> u32 {
 }
 
 #[actix_rt::main]
-pub async fn server(matches: ArgMatches, range: StringRegion, prefetch_range: StringRegion, args: Vec<String>, list: Vec<(u64, Record)>, annotation: Vec<(u64, bed::Record)>, freq: BTreeMap<u64, Vec<(u64, u32)>>, compressed_list: Vec<(u64, usize)>,
+pub async fn server(matches: ArgMatches, range: StringRegion, prefetch_range: StringRegion, args: Vec<String>, list: Vec<(u64, Record)>, annotation: Vec<(u64, bed::Record)>, freq: BTreeMap<u64, Vec<(u64, u32, char)>>, compressed_list: Vec<(u64, usize)>,
 index_list: Vec<usize>,
 prev_index: usize,
 supplementary_list: Vec<(Vec<u8>, usize, usize, i32, i32)>,threads: u16) -> std::io::Result<()> {
@@ -356,7 +386,7 @@ supplementary_list: Vec<(Vec<u8>, usize, usize, i32, i32)>,threads: u16) -> std:
         .unwrap_or(1280u32)
     };
     let diff = range.end - range.start;
-    let all = prefetch_range.end - prefetch_range.start;
+    let all = if matches.is_present("whole-chromosome") {250000000} else {prefetch_range.end - prefetch_range.start};
     let size = Size{Height: x.to_string(), Width: ((all as u32 / diff as u32 + 1) * x).to_string()};
     let image = Image{xmlns: "http://schemas.microsoft.com/deepzoom/2008".to_string(), Url: format!("http://{}/", bind).to_string(), Format: "png".to_string(), Overlap: "0".to_string(), TileSize: x.to_string(), Size: size};
     let dzi = DZI{Image: image};
@@ -364,8 +394,6 @@ supplementary_list: Vec<(Vec<u8>, usize, usize, i32, i32)>,threads: u16) -> std:
         .value_of("x-scale")
         .and_then(|a| a.parse::<u32>().ok())
         .unwrap_or(20u32);
-
-
     let mut rng = rand::thread_rng();
     let cache_dir = matches
         .value_of("cache-dir")
@@ -373,14 +401,17 @@ supplementary_list: Vec<(Vec<u8>, usize, usize, i32, i32)>,threads: u16) -> std:
         .unwrap_or(rng.gen::<u32>().to_string());
     
     let x_width = all as u32 / diff as u32 * x;
+    // eprintln!("{} {} {}", all,diff,x);
     let max_zoom = log_2(x_width as i32) + 1;
+    let min_zoom = max_zoom - 8;
 
     match fs::create_dir(&cache_dir) {
         Err(e) => panic!("{}: {}", &cache_dir, e),
         Ok(_) => {},
     };
-    let params = Param{x_scale, max_y:x, prefetch_max: all, max_zoom, criteria:diff, y_freq: freq_size, x, y, cache_dir};
+    let params = Param{x_scale, max_y:x, prefetch_max: all, max_zoom, min_zoom, criteria:diff, y_freq: freq_size, x, y, cache_dir};
     eprintln!("{:?}, threads: {}, zoom: {}", params, threads, log_2(x_width as i32) + 1);
+    println!("Server is running on {}", bind);
     // Create some global state prior to building the server
     //#[allow(clippy::mutex_atomic)] // it's intentional.
     //let counter1 = web::Data::new(Mutex::new((matches.clone(), range, list, annotation, freq)));
@@ -396,7 +427,13 @@ supplementary_list: Vec<(Vec<u8>, usize, usize, i32, i32)>,threads: u16) -> std:
         .route("openseadragon.min.js", web::get().to(get_js))
         .route("openseadragon.min.js.map", web::get().to(get_js_map))
         .route("genome.dzi", web::get().to(get_dzi))
-        .route("/{zoom:.*}/{filename:.*}_0.png", web::get().to(index)).service(actix_files::Files::new("/images", "static/images").show_files_listing()).wrap(Logger::default())
+        .route("/{zoom:.*}/{filename:.*}_0.png", web::get().to(index)).service(actix_files::Files::new("/images", "static/images").show_files_listing()).wrap(Logger::default()).wrap(
+            Cors::new().supports_credentials() /*allowed_origin("*").allowed_methods(vec!["GET", "POST"])
+            .allowed_headers(vec![http::header::AUTHORIZATION, http::header::ACCEPT])
+            .allowed_header(http::header::CONTENT_TYPE)
+            .max_age(3600)*/
+            .finish()
+        )
     })
     .bind(bind)?
     .workers(threads as usize)

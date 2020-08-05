@@ -63,7 +63,8 @@ fn main() {
                         .takes_value(true)
                         .about("chroms.sizes"),
                 )
-                .arg(Arg::new("force").short('f').about("Outputs only header"))
+                .arg(Arg::new("header").short('z').about("Outputs only header"))
+                .arg(Arg::new("formatted-header").short('f').about("Outputs formatted header"))
                 .arg(
                     Arg::new("OUTPUT")
                         .about("Sets the output file to use")
@@ -184,6 +185,7 @@ fn main() {
                         .about("annotation sample to fetch (alignment | annotation)"),
                 )
                 .arg(Arg::new("header").short('z').about("Outputs only header"))
+                .arg(Arg::new("formatted-header").short('f').about("Outputs formatted header"))
                 .arg(
                     Arg::new("INPUT")
                         .about("Sets the input file to use")
@@ -351,6 +353,13 @@ fn main() {
                 .arg(Arg::new("x").short('x').takes_value(true).about("The width of image"))
                 .arg(Arg::new("y").short('y').takes_value(true).about("The height of each read alignment"))
                 .arg(Arg::new("web").short('w').takes_value(true).about("Serve the web server"))
+                .arg(Arg::new("whole-chromosome").short('W').about("Pretend as if the prefetch range is the whole chromosome"))
+                .arg(
+                    Arg::new("snp-frequency")
+                        .short('Z')
+                        .takes_value(true)
+                        .about("The portion of allele frequency to display on each coverage track"),
+                )
                 .arg(
                     Arg::new("freq-height")
                         .short('Y')
@@ -373,7 +382,7 @@ fn main() {
                     Arg::new("min-read-length")
                         .short('M')
                         .takes_value(true)
-                        .about("Mininum read length on coverage/alignment track"),
+                        .about("Minimum read length on coverage/alignment track"),
                 )
                 .arg(
                     Arg::new("x-scale")
@@ -461,7 +470,9 @@ fn main() {
                         .about("Sets the input file to use")
                         .required(true)
                         .index(1),
-                ),
+                )
+                .arg(Arg::new("header").short('z').about("Outputs only header"))
+                .arg(Arg::new("formatted-header").short('f').about("Outputs formatted header")),
         );
     let matches = app.get_matches();
     let args: Vec<String> = env::args().collect();
@@ -492,7 +503,7 @@ fn main() {
     } else if let Some(ref matches) = matches.subcommand_matches("bin") {
         bin(matches, threads);
     } else if let Some(ref matches) = matches.subcommand_matches("vis") {
-        eprintln!("{:?}", matches.is_present("INPUT"));
+        // eprintln!("{:?}", matches.is_present("INPUT"));
         match matches.is_present("INPUT") {
             true => vis_query(matches, args, threads).unwrap(),
             false => bam_vis(matches, args, threads).unwrap(),

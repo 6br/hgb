@@ -114,6 +114,7 @@ pub fn bam_vis(
                                         .score()
                                         .and_then(|t| t.parse::<u32>().ok())
                                         .unwrap_or(0),
+                                    '*',
                                 ));
                             }
                         }
@@ -363,11 +364,8 @@ pub fn query(matches: &ArgMatches, threads: u16) -> () {
 pub fn decompose(matches: &ArgMatches, _threads: u16) -> () {
     if let Some(i) = matches.value_of("INPUT") {
         //if let Some(o) = matches.value_of("OUTPUT") {
-        let id = matches
-            .value_of("id")
-            .and_then(|t| t.parse::<u64>().ok())
-            .unwrap();
         let header = matches.is_present("header");
+        let formatted_header = matches.is_present("formatted-header");
         let mut reader = IndexedReader::from_path_with_additional_threads(i, 0).unwrap();
         // Decomposer doesn't know the record boundary, so it can't parallelize.
         let out = std::io::stdout();
@@ -379,17 +377,32 @@ pub fn decompose(matches: &ArgMatches, _threads: u16) -> () {
             None => Box::new(out.lock()) as Box<dyn Write>,
         };
         let mut output = io::BufWriter::with_capacity(1048576, out_writer);
-
-        if let Some(header_type) = reader.header().get_local_header(id as usize) {
-            if header {
-                header_type.to_text(&mut output).unwrap();
+        let id = matches.value_of("id").and_then(|t| t.parse::<u64>().ok());
+        if let Some(id) = id {
+            if let Some(header_type) = reader.header().get_local_header(id as usize) {
+                if header {
+                    header_type.to_text(&mut output).unwrap();
+                } else if formatted_header {
+                    header_type.to_tsv(&mut output).unwrap();
+                }
+            // header.write_text(&mut writer);
+            } else {
+                println!("There is no header of id {}", id);
             }
-        // header.write_text(&mut writer);
         } else {
-            println!("There is no header of id {}", id);
+            // Output global header
+            if header {
+                reader
+                    .header()
+                    .get_global_header()
+                    .write_text(&mut output)
+                    .unwrap();
+            } else if formatted_header {
+                reader.header().to_tsv(&mut output).unwrap();
+            }
         }
 
-        if header {
+        if header || formatted_header {
             return;
         }
 
@@ -401,7 +414,7 @@ pub fn decompose(matches: &ArgMatches, _threads: u16) -> () {
         let _ = viewer.into_iter().for_each(|t| {
             //eprintln!("{:?}", t);
             t.map(|f| {
-                if f.sample_id() == id {
+                if f.sample_id() == id.unwrap() {
                     match f.data() {
                         Format::Range(rec) => {
                             let mut writer = bed::Writer::new(&mut output);
@@ -416,7 +429,7 @@ pub fn decompose(matches: &ArgMatches, _threads: u16) -> () {
                                     .write_sam(
                                         &mut output,
                                         header_data
-                                            .get_local_header(id as usize)
+                                            .get_local_header(id.unwrap() as usize)
                                             .unwrap()
                                             .bam_header(),
                                     )
@@ -442,6 +455,8 @@ pub fn split(matches: &ArgMatches, threads: u16) -> () {
             .unwrap();
         // Here all threads can be used, but I suspect that runs double
         let bam_header = reader2.header();
+        let header = matches.is_present("header");
+        let formatted_header = matches.is_present("formatted-header");
 
         let out = std::io::stdout();
         let out_writer = match matches.value_of("output") {
@@ -451,7 +466,22 @@ pub fn split(matches: &ArgMatches, threads: u16) -> () {
             }
             None => Box::new(out.lock()) as Box<dyn Write>,
         };
-        let output = io::BufWriter::with_capacity(1048576, out_writer);
+        let mut output = io::BufWriter::with_capacity(1048576, out_writer);
+
+        if header {
+            bam_header.write_text(&mut output).unwrap();
+            return ();
+        } else if formatted_header {
+            for (name, len) in bam_header
+                .reference_names()
+                .iter()
+                .zip(bam_header.reference_lengths())
+            {
+                writeln!(&mut output, "{}\t{}", name, len).unwrap();
+            }
+            return ();
+        }
+
         let clevel = matches
             .value_of("compression")
             .and_then(|a| a.parse::<u8>().ok())
@@ -833,7 +863,7 @@ pub fn bam_record_vis_pre_calculate<'a, F>(
     args: &Vec<String>,
     mut list: Vec<(u64, Record)>,
     mut ann: Vec<(u64, bed::Record)>,
-    mut freq: BTreeMap<u64, Vec<(u64, u32)>>,
+    mut freq: BTreeMap<u64, Vec<(u64, u32, char)>>,
     threads: u16,
     lambda: F,
 ) -> Result<(), Box<dyn std::error::Error>>
@@ -852,8 +882,11 @@ where
     let max_coverage = matches
         .value_of("max-coverage")
         .and_then(|a| a.parse::<u32>().ok());
-    // Calculate coverage; it won't work on sort_by_name
-    // let mut frequency = BTreeMap::new(); // Vec::with_capacity();
+    let snp_frequency = matches
+        .value_of("snp-frequency")
+        .and_then(|a| a.parse::<f64>().ok()); // default 0.2
+                                              // Calculate coverage; it won't work on sort_by_name
+                                              // let mut frequency = BTreeMap::new(); // Vec::with_capacity();
 
     ann.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.start().cmp(&b.1.start())));
     list.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.start().cmp(&b.1.start())));
@@ -872,6 +905,42 @@ where
                     column.ref_pos() + 1,
                     column.entries().len()
                 );*/
+                if let Some(freq) = snp_frequency {
+                    let mut seqs = Vec::with_capacity(column.entries().len()); //vec![];
+                    for entry in column.entries().iter() {
+                        let seq: Vec<_> = entry.sequence().unwrap().map(|nt| nt as char).collect();
+                        //let qual: Vec<_> = entry.qualities().unwrap().iter()
+                        //    .map(|q| (q + 33) as char).collect();
+                        //eprintln!("    {:?}: {:?}", entry.record(), seq);
+                        seqs.push(seq);
+                    }
+                    let unique_elements = seqs.iter().cloned().unique().collect_vec();
+                    let mut unique_frequency = vec![];
+                    for unique_elem in unique_elements.iter() {
+                        unique_frequency.push((
+                            seqs.iter().filter(|&elem| elem == unique_elem).count(),
+                            unique_elem,
+                        ));
+                    }
+                    unique_frequency.sort_by_key(|t| t.0);
+                    unique_frequency.reverse();
+                    let d: usize = unique_frequency.iter().map(|t| t.0).sum();
+                    let threshold = d as f64 * freq;
+                    // let minor = d - seqs[0].0;
+                    // let second_minor = d - unique_frequency[1].0;
+                    let (_, cdr) = unique_frequency.split_first().unwrap();
+                    cdr.iter()
+                        .filter(|t| t.0 > threshold as usize)
+                        .for_each(|t2| {
+                            if t2.1.len() > 0 {
+                                line.push((
+                                    column.ref_pos() as u64,
+                                    t2.0 as u32,
+                                    t2.1[0].to_ascii_uppercase(),
+                                ));
+                            }
+                        });
+                }
                 // Should we have sparse occurrence table?
                 //eprintln!("{:?} {:?}",  range.path, lambda(column.ref_id() as usize).unwrap_or(&column.ref_id().to_string()));
                 // lambda(column.ref_id() as usize).unwrap_or(&column.ref_id().to_string())
@@ -880,7 +949,7 @@ where
                 if prefetch_range.start <= column.ref_pos() as u64
                     && column.ref_pos() as u64 <= prefetch_range.end
                 {
-                    line.push((column.ref_pos() as u64, column.entries().len() as u32));
+                    line.push((column.ref_pos() as u64, column.entries().len() as u32, '*'));
                 }
             }
             //eprintln!("{:?}", line);
@@ -903,6 +972,7 @@ where
     let mut compressed_list = vec![];
     let mut index_list = Vec::with_capacity(list.len());
     let mut supplementary_list = vec![];
+    let mut suppl_map = HashMap::new();
     if split {
         let mut end_map = HashMap::new();
 
@@ -921,7 +991,7 @@ where
             .for_each(|t| {
                 let sample_id = t.0.clone();
                 t.1.group_by(|elt| elt.1.name()).into_iter().for_each(|s| {
-                    let items: Vec<&(u64, Record)> = s.1.into_iter().collect();
+                    let mut items: Vec<&(u64, Record)> = s.1.into_iter().collect();
                     if items.len() > 1 {
                         let last: &(u64, Record) =
                             items.iter().max_by_key(|t| t.1.calculate_end()).unwrap();
@@ -934,6 +1004,35 @@ where
                                 items.len(),
                             ),
                         );
+                        items.sort_by(|a, b| {
+                            a.0.cmp(&b.0).then(a.1.name().cmp(&b.1.name())).then(
+                                (a.1.cigar().soft_clipping(!a.1.flag().is_reverse_strand())
+                                    + a.1.cigar().hard_clipping(!a.1.flag().is_reverse_strand()))
+                                .cmp(
+                                    &((b.1.cigar().soft_clipping(!b.1.flag().is_reverse_strand()))
+                                        + (b.1
+                                            .cigar()
+                                            .hard_clipping(!b.1.flag().is_reverse_strand()))),
+                                ),
+                            )
+                        });
+                        //suppl_map.insert((sample_id, s.0), )
+                        for (idx, item) in items.iter().enumerate() {
+                            if idx > 0 {
+                                // Add head
+                                suppl_map
+                                    .entry((sample_id, s.0))
+                                    .or_insert(vec![])
+                                    .push(item.1.start());
+                            }
+                            if idx < items.len() - 1 {
+                                // Add tail
+                                suppl_map
+                                    .entry((sample_id, s.0))
+                                    .or_insert(vec![])
+                                    .push(item.1.calculate_end());
+                            }
+                        }
                     }
                 })
                 //group.into_iter().for_each(|t| {})

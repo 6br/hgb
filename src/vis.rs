@@ -52,6 +52,16 @@ predefined_color!(T_COL, 255, 0, 40, "The predefined T color");
 predefined_color!(G_COL, 209, 113, 5, "The predefined G color");
 //RGBColor();
 
+fn nt_color(record_nt: char) -> Option<RGBColor> {
+    match record_nt {
+        'A' => Some(A_COL), //RED,
+        'C' => Some(C_COL), // BLUE,
+        'G' => Some(G_COL),
+        'T' => Some(T_COL), //GREEN,
+        _ => Some(N_COL),
+    }
+}
+
 pub struct RecordIter<'a, I: Iterator<Item = &'a (u64, Record)>>(I);
 
 impl<'a, I> RecordIter<'a, I>
@@ -99,7 +109,7 @@ where
 pub fn frequency_vis<'a, F>(
     matches: &ArgMatches,
     range: &StringRegion,
-    frequency: &BTreeMap<u64, Vec<(u64, u32)>>,
+    frequency: &BTreeMap<u64, Vec<(u64, u32, char)>>,
     lambda: F,
 ) -> Result<(), Box<dyn std::error::Error>>
 where
@@ -123,7 +133,11 @@ where
         .value_of("x-scale")
         .and_then(|a| a.parse::<u32>().ok())
         .unwrap_or(20u32)
-        / frequency.len() as u32;
+        / if frequency.len() > 1 {
+            frequency.len() as u32
+        } else {
+            1u32
+        };
     // list.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.start().cmp(&b.1.start())));
     // Calculate coverage; it won't work on sort_by_name
 
@@ -134,11 +148,17 @@ where
     // let areas = root.split_by_breakpoints([], compressed_list);
     if frequency.len() > 0 {
         let coverages = root.split_evenly((frequency.len(), 1));
-        for (i, (sample_sequential_id, values)) in frequency.iter().enumerate().rev() {
+        for (i, (sample_sequential_id, values)) in frequency.iter().rev().enumerate() {
+            // eprintln!("{} {}", i, sample_sequential_id);
             let idx = *sample_sequential_id as usize;
             let y_max = match max_coverage {
                 Some(a) => a,
                 _ => values.iter().map(|t| t.1).max().unwrap_or(1),
+            };
+            let x_spec = if no_margin && range.end() - range.start() <= 1000 {
+                range.start()..range.end()
+            } else {
+                (range.start() - 1)..(range.end() + 1)
             };
             let mut chart = ChartBuilder::on(&coverages[i])
                 // Set the caption of the chart
@@ -147,7 +167,7 @@ where
                 .x_label_area_size(x_scale)
                 .y_label_area_size(y_area_size)
                 // Finally attach a coordinate on the drawing area and make a chart context
-                .build_ranged((range.start() - 1)..(range.end() + 1), 0..y_max)?;
+                .build_ranged(x_spec.clone(), 0..y_max)?;
             chart
                 .configure_mesh()
                 // We can customize the maximum number of labels allowed for each axis
@@ -168,8 +188,8 @@ where
                     Histogram::vertical(&chart).style(color.filled()).data(
                         values
                             .iter()
-                            .filter(|t| t.0 >= range.start() && t.0 < range.end())
-                            .map(|t| *t),
+                            .filter(|t| t.0 >= range.start() && t.0 < range.end() && t.2 == '*')
+                            .map(|t| (t.0, t.1)),
                     ),
                 )?
                 .label(format!("{}", lambda(idx).unwrap_or(&idx.to_string())))
@@ -196,7 +216,7 @@ pub fn bam_record_vis<'a, F>(
     range: StringRegion,
     list: &Vec<(u64, Record)>,
     annotation: &Vec<(u64, bed::Record)>,
-    frequency: &BTreeMap<u64, Vec<(u64, u32)>>,
+    frequency: &BTreeMap<u64, Vec<(u64, u32, char)>>,
     compressed_list: &Vec<(u64, usize)>,
     index_list: &Vec<usize>,
     prev_index: usize,
@@ -207,7 +227,6 @@ where
     F: Fn(usize) -> Option<&'a str>,
 {
     let start = Instant::now();
-
     let preset: Option<VisPreset> = matches.value_of_t("preset").ok(); // .unwrap_or_else(|e| e.exit());
     eprintln!("Preset: {:?}", preset);
     let no_margin = matches.is_present("no-scale");
@@ -234,6 +253,9 @@ where
     let max_coverage = matches
         .value_of("max-coverage")
         .and_then(|a| a.parse::<u32>().ok());
+    let snp_frequency = matches
+        .value_of("snp-frequency")
+        .and_then(|a| a.parse::<f64>().ok());
     let x = matches
         .value_of("x")
         .and_then(|a| a.parse::<u32>().ok())
@@ -311,6 +333,11 @@ where
     );
     eprintln!("{:?} {:?} {:?}", prev_index, axis_count, annotation_count);
     let y_area_size = if no_margin { 0 } else { 40 };
+    let x_spec = if no_margin && range.end() - range.start() <= 1000 {
+        range.start()..range.end()
+    } else {
+        (range.start() - 1)..(range.end() + 1)
+    };
 
     let mut chart = if no_margin {
         ChartBuilder::on(&alignment)
@@ -321,7 +348,7 @@ where
             .x_label_area_size(x_scale / 2)
             // Finally attach a coordinate on the drawing area and make a chart context
             .build_ranged(
-                (range.start() - 1)..(range.end() + 1),
+                x_spec.clone(),
                 0..(1 + prev_index + axis_count + annotation_count * 2),
             )?
     } else {
@@ -518,7 +545,7 @@ where
                 let idx = *sample_sequential_id as usize;
                 // let idx = sample.next().0;
                 let chart = chart.draw_series(LineSeries::new(
-                    vec![(range.start() - 1, count), (range.end() + 1, count)],
+                    vec![(range.start() , count), (range.end() , count)],
                     Palette99::pick(idx).stroke_width(y / 3 * 4),
                 ))?;
                 if !no_margin {
@@ -547,8 +574,8 @@ where
                         let stroke = Palette99::pick(*sample_sequential_id as usize);
                         let mut bar2 = Rectangle::new(
                             [
-                                (range.start() - 1, prev_index),
-                                (range.end() + 1, prev_index + count),
+                                (range.start() , prev_index),
+                                (range.end() , prev_index + count),
                             ],
                             stroke.stroke_width(y / 2), // filled(), //stroke_width(100),
                         );
@@ -579,6 +606,22 @@ where
                 });
         }
     } else {
+        /*if no_margin {
+            for (idx, i) in supplementary_list.iter().enumerate() {
+                let stroke = Palette99::pick(idx as usize);
+                // let stroke_color = BLACK;
+                chart
+                    .draw_series(LineSeries::new(
+                        vec![(range.start(), i.1), (range.end() as u64, i.1)],
+                        stroke.stroke_width(2),
+                    ))?;
+                chart
+                .draw_series(LineSeries::new(
+                    vec![(i.3 as u64, i.2+1), (i.4 as u64, i.2+1)],
+                    stroke.stroke_width(2),
+                ))?;
+            }
+        } else {*/
         chart.draw_series(supplementary_list.iter().map(|i| {
             let stroke = BLACK;
             let mut bar2 = Rectangle::new(
@@ -588,8 +631,10 @@ where
             bar2.set_margin(y / 4, y / 4, 0, 0);
             bar2
         }))?;
+        //}
     }
     let mut split_frequency = vec![];
+    //let mut snp_frequency = vec![];
     // For each alignment:
     let series = {
         //list.into_iter().enumerate().map(|(index, data)| {
@@ -764,16 +809,11 @@ where
                                                 if prev_ref > range.end() as u64 {
                                                     break;
                                                 }
+                                                // If all bases shows the SNPs
                                                 if prev_ref >= range.start() as u64 && all_bases {
                                                     let record_nt =
                                                         entry.record_pos_nt().unwrap().1;
-                                                    color = match record_nt as char {
-                                                        'A' => Some(A_COL), //RED,
-                                                        'C' => Some(C_COL), // BLUE,
-                                                        'G' => Some(G_COL),
-                                                        'T' => Some(T_COL), //GREEN,
-                                                        _ => Some(N_COL),
-                                                    };
+                                                    color = nt_color(record_nt as char);
                                                 }
                                             } else {
                                                 /* Mismatch */
@@ -785,13 +825,8 @@ where
                                                 if prev_ref >= range.start() as u64 {
                                                     let record_nt =
                                                         entry.record_pos_nt().unwrap().1;
-                                                    color = match record_nt as char {
-                                                        'A' => Some(A_COL), //RED,
-                                                        'C' => Some(C_COL), // BLUE,
-                                                        'G' => Some(G_COL),
-                                                        'T' => Some(T_COL), //GREEN,
-                                                        _ => Some(N_COL),
-                                                    };
+                                                    color = nt_color(record_nt as char);
+                                                    //snp_frequency.push((data.0, (record_nt, start, approximate_one_pixel)));
 
                                                     /*let mut bar =
                                                     Rectangle::new([(prev_ref as u64, index), (prev_ref as u64 + 1, index + 1)], color.filled());
@@ -912,7 +947,7 @@ where
 
     if frequency.len() > 0 {
         let coverages = coverage.split_evenly((frequency.len(), 1));
-        for (i, (sample_sequential_id, values)) in frequency.iter().enumerate().rev() {
+        for (i, (sample_sequential_id, values)) in frequency.iter().rev().enumerate() {
             let idx = *sample_sequential_id as usize;
             let y_max = match max_coverage {
                 Some(a) => a,
@@ -925,7 +960,7 @@ where
                 .x_label_area_size(0)
                 .y_label_area_size(y_area_size)
                 // Finally attach a coordinate on the drawing area and make a chart context
-                .build_ranged((range.start() - 1)..(range.end() + 1), 0..y_max)?;
+                .build_ranged(x_spec.clone(), 0..y_max)?;
             chart
                 .configure_mesh()
                 // We can customize the maximum number of labels allowed for each axis
@@ -936,14 +971,14 @@ where
                 // We can also change the format of the label text
                 // .x_label_formatter(&|x| format!("{:.3}", x))
                 .draw()?;
-            let color = Palette99::pick(idx); // BLUE
+            let color = if let Some(_) = snp_frequency {Palette99::pick(idx).stroke_width(2)} else{Palette99::pick(idx).filled()}; // BLUE
             chart
                 .draw_series(
-                    Histogram::vertical(&chart).style(color.filled()).data(
+                    Histogram::vertical(&chart).style(color).data(
                         values
                             .iter()
-                            .filter(|t| t.0 >= range.start() && t.0 < range.end())
-                            .map(|t| *t),
+                            .filter(|t| t.0 >= range.start() && t.0 < range.end() && t.2 == '*')
+                            .map(|t| (t.0, t.1)),
                     ),
                 )?
                 .label(format!("{}", lambda(idx).unwrap_or(&idx.to_string())))
@@ -953,6 +988,19 @@ where
                         Palette99::pick(idx).filled(),
                     )
                 });
+            if let Some(f) = snp_frequency {
+                for i in ['A', 'C', 'G', 'T'].iter() {
+                    let color = nt_color(*i).unwrap();
+                    chart.draw_series(
+                        Histogram::vertical(&chart).style(color.filled()).data(
+                            values
+                                .iter()
+                                .filter(|t| t.0 >= range.start() && t.0 < range.end() && t.2 == *i)
+                                .map(|t| (t.0, t.1)),
+                        ),
+                    )?;
+                }
+            }
 
             chart.draw_series(
                 Histogram::vertical(&chart).style(SPL_COL.filled()).data(
@@ -966,6 +1014,10 @@ where
                         .map(|t| t.1),
                 ),
             )?;
+
+            /*if snp_frequency {
+                [('A', A_COL), ]
+            }*/
             /*.label(format!("{}", lambda(idx).unwrap_or(&idx.to_string())))
             .legend(move |(x, y)| {
                 Rectangle::new(
@@ -983,7 +1035,7 @@ where
         }
     }
 
-    if legend {
+    if legend && (!no_margin || annotation_count + axis_count > 0) {
         chart
             .configure_series_labels()
             .background_style(&WHITE.mix(0.8))
