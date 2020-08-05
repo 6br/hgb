@@ -198,24 +198,24 @@ fn id_to_range<'a>(range: &StringRegion, args: &Vec<String>, zoom: u64, path: u6
     (matches, range)
 }
 
-async fn get_dzi(data: web::Data<RwLock<Vis>>) -> impl Responder {
+async fn get_dzi(data: web::Data<RwLock<Item>>) -> impl Responder {
     return web::Json(data.read().unwrap().dzi.clone());
 }
 
-async fn get_index(data: web::Data<RwLock<Vis>>) -> Result<NamedFile> {
+async fn get_index(data: web::Data<RwLock<Item>>) -> Result<NamedFile> {
     return Ok(NamedFile::open(format!("static/index.html"))?);
 }
 
-async fn get_js(data: web::Data<RwLock<Vis>>) -> Result<NamedFile> {
+async fn get_js(data: web::Data<RwLock<Item>>) -> Result<NamedFile> {
     return Ok(NamedFile::open(format!("static/openseadragon.min.js"))?);
 }
 
-async fn get_js_map(data: web::Data<RwLock<Vis>>) -> Result<NamedFile> {
+async fn get_js_map(data: web::Data<RwLock<Item>>) -> Result<NamedFile> {
     return Ok(NamedFile::open(format!("static/openseadragon.min.js.map"))?);
 }
 
 
-async fn index(data: web::Data<RwLock<Vis>>, list: web::Data<Vec<(u64, Record)>>, req: HttpRequest) -> Result<NamedFile> {
+async fn index(data: web::Data<RwLock<Item>>, list: web::Data<Vec<(u64, Record)>>, req: HttpRequest) -> Result<NamedFile> {
     let start = Instant::now();
     let zoom: u64 = req.match_info().query("zoom").parse().unwrap();
     let path: u64 = req.match_info().query("filename").parse().unwrap();
@@ -235,8 +235,10 @@ async fn index(data: web::Data<RwLock<Vis>>, list: web::Data<Vec<(u64, Record)>>
                 end0.as_secs(),
                 end0.subsec_nanos() / 1_000_000
             );
-            let ann = &data.annotation;
             let params = &data.params;
+            let args = &data.args;
+            let data = &data.vis;
+            let ann = &data.annotation;
             let freq = &data.freq;
             let compressed_list = &data.compressed_list;
             let index_list = &data.index_list;
@@ -247,9 +249,9 @@ async fn index(data: web::Data<RwLock<Vis>>, list: web::Data<Vec<(u64, Record)>>
             //let min_zoom = 13;
             
             let path_string = format!("{}/{}/{}_0.png", cache_dir, zoom, path);
-            let max_zoom = (&data.params).max_zoom as u64;
+            let max_zoom = params.max_zoom as u64;
             //let min_zoom = ((&data.params).criteria << (max_zoom - zoom)) >= 10000000;
-            let min_zoom = zoom < (&data.params).min_zoom as u64;
+            let min_zoom = zoom < params.min_zoom as u64;
 
             if min_zoom || zoom > max_zoom as u64 {
                 return Err(error::ErrorBadRequest("zoom level is not appropriate"));
@@ -261,7 +263,7 @@ async fn index(data: web::Data<RwLock<Vis>>, list: web::Data<Vec<(u64, Record)>>
                 end1.as_secs(),
                 end1.subsec_nanos() / 1_000_000
             );
-            let (matches, string_range) = id_to_range(&data.range, &data.args, zoom, path, params, path_string.clone());
+            let (matches, string_range) = id_to_range(&data.range, args, zoom, path, params, path_string.clone());
             let end2 = start.elapsed();
             eprintln!(
                 "id_to_range: {}.{:03} sec.",
@@ -291,28 +293,24 @@ pub struct Item {
     vis: Vis,
     args: Vec<String>,
     params: Param,
+    dzi: DZI,
 }
 
-#[derive(Debug, Clone)]
-pub struct Vis {
-    range: StringRegion, 
-    args: Vec<String>, 
-    annotation: Vec<(u64, bed::Record)>, 
-    freq: BTreeMap<u64, Vec<(u64, u32, char)>>,
-    compressed_list: Vec<(u64, usize)>,
-    index_list: Vec<usize>,
-    prev_index: usize,
-    supplementary_list: Vec<(Vec<u8>, usize, usize, i32, i32)>,dzi: DZI, params: Param
+impl Item {
+    fn new(vis: Vis, args: Vec<String>, params: Param, dzi: DZI) -> Self {
+        Item{vis:vis, args:args,params:params,dzi:dzi}
+    }
 }
 
+/*
 impl Vis {
     fn new(range: StringRegion, args: Vec<String>, annotation: Vec<(u64, bed::Record)>, freq: BTreeMap<u64, Vec<(u64, u32, char)>>, compressed_list: Vec<(u64, usize)>,
     index_list: Vec<usize>,
     prev_index: usize,
-    supplementary_list: Vec<(Vec<u8>, usize, usize, i32, i32)>,dzi: DZI, params: Param) -> Vis {
-        Vis{range, args, annotation, freq, compressed_list, index_list, prev_index, supplementary_list, dzi, params}
+    supplementary_list: Vec<(Vec<u8>, usize, usize, i32, i32)>) -> Vis {
+        Vis{range, args, annotation, freq, compressed_list, index_list, prev_index, supplementary_list}
     }
-}
+}*/
 #[derive(Debug, Serialize, Deserialize, Clone)]
 struct DZI {
     Image: Image,
@@ -418,7 +416,8 @@ supplementary_list: Vec<(Vec<u8>, usize, usize, i32, i32)>,threads: u16) -> std:
     // let counter = RwLock::new(Vis::new(range.clone(), args.clone(), list.clone(), annotation.clone(), freq.clone(), dzi.clone(), params.clone()));
     //let counter = Arc::new(RwLock::new(Vis::new(range, args, annotation, freq, dzi, params)));
     //#[allow(clippy::mutex_atomic)] 
-    let counter = web::Data::new(RwLock::new(Vis::new(range, args, annotation, freq, compressed_list, index_list, prev_index, supplementary_list, dzi, params)));
+    let vis = Vis::new(range, annotation, freq, compressed_list, index_list, prev_index, supplementary_list, 250000000);
+    let counter = web::Data::new(RwLock::new(Item::new(vis, args, params, dzi)));
 
     //https://github.com/actix/examples/blob/master/state/src/main.rs
     HttpServer::new(move|| {

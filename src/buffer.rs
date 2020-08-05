@@ -18,7 +18,7 @@ pub struct ChromosomeBuffer<'a> {
     ref_id: u64,
     matches: &'a ArgMatches,
     bins: BTreeMap<usize, (Vec<(u64, bam::Record)>, Vec<(u64, bed::Record)>)>,
-    freq: BTreeMap<u64, Vec<(u64, u32)>>,
+    freq: BTreeMap<u64, Vec<(u64, u32, char)>>,
     header: Header,
     reader: &'a mut IndexedReader<BufReader<File>>,
 }
@@ -192,7 +192,7 @@ impl<'a> ChromosomeBuffer<'a> {
                     //if prefetch_range.start <= column.ref_pos() as u64
                     //    && column.ref_pos() as u64 <= prefetch_range.end
                     //{
-                    line.push((column.ref_pos() as u64, column.entries().len() as u32));
+                    line.push((column.ref_pos() as u64, column.entries().len() as u32, '*'));
                     //}
                 }
                 //eprintln!("{:?}", line);
@@ -475,7 +475,7 @@ impl<'a> ChromosomeBuffer<'a> {
                 range: string_range.clone(),
                 //list: list,
                 annotation: ann,
-                freq: self.freq,
+                freq: self.freq.clone(),
                 compressed_list: compressed_list,
                 index_list: index_list,
                 prev_index: prev_index,

@@ -165,23 +165,23 @@ impl FromStr for VisPreset {
 }
 #[derive(Debug, Clone)]
 pub struct Vis {
-    range: StringRegion,
+    pub range: StringRegion,
     //list: Vec<(u64, bam::Record)>,
-    annotation: Vec<(u64, bed::Record)>,
-    freq: BTreeMap<u64, Vec<(u64, u32)>>,
-    compressed_list: Vec<(u64, usize)>,
-    index_list: Vec<usize>,
-    prev_index: usize,
-    supplementary_list: Vec<(Vec<u8>, usize, usize, i32, i32)>,
-    prefetch_max: u64,
+    pub annotation: Vec<(u64, bed::Record)>,
+    pub freq: BTreeMap<u64, Vec<(u64, u32, char)>>,
+    pub compressed_list: Vec<(u64, usize)>,
+    pub index_list: Vec<usize>,
+    pub prev_index: usize,
+    pub supplementary_list: Vec<(Vec<u8>, usize, usize, i32, i32)>,
+    pub prefetch_max: u64,
 }
 
 impl Vis {
-    fn new(
+    pub fn new(
         range: StringRegion,
         //list: Vec<(u64, bam::Record)>
         annotation: Vec<(u64, bed::Record)>,
-        freq: BTreeMap<u64, Vec<(u64, u32)>>,
+        freq: BTreeMap<u64, Vec<(u64, u32, char)>>,
         compressed_list: Vec<(u64, usize)>,
         index_list: Vec<usize>,
         prev_index: usize,
