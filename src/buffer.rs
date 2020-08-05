@@ -215,14 +215,14 @@ impl<'a> ChromosomeBuffer<'a> {
             .bins
             .values()
             .into_iter()
-            .map(|t| t.0)
+            .map(|t| t.0.clone())
             .flatten()
             .collect();
         let mut ann: Vec<(u64, bed::Record)> = self
             .bins
             .values()
             .into_iter()
-            .map(|t| t.1)
+            .map(|t| t.1.clone())
             .flatten()
             .collect();
         let matches = self.matches;
