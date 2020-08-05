@@ -545,7 +545,7 @@ where
                 let idx = *sample_sequential_id as usize;
                 // let idx = sample.next().0;
                 let chart = chart.draw_series(LineSeries::new(
-                    vec![(range.start() , count), (range.end() , count)],
+                    vec![(range.start(), count), (range.end(), count)],
                     Palette99::pick(idx).stroke_width(y / 3 * 4),
                 ))?;
                 if !no_margin {
@@ -574,8 +574,8 @@ where
                         let stroke = Palette99::pick(*sample_sequential_id as usize);
                         let mut bar2 = Rectangle::new(
                             [
-                                (range.start() , prev_index),
-                                (range.end() , prev_index + count),
+                                (range.start(), prev_index),
+                                (range.end(), prev_index + count),
                             ],
                             stroke.stroke_width(y / 2), // filled(), //stroke_width(100),
                         );
@@ -971,7 +971,11 @@ where
                 // We can also change the format of the label text
                 // .x_label_formatter(&|x| format!("{:.3}", x))
                 .draw()?;
-            let color = if let Some(_) = snp_frequency {Palette99::pick(idx).stroke_width(2)} else{Palette99::pick(idx).filled()}; // BLUE
+            let color = if let Some(_) = snp_frequency {
+                Palette99::pick(idx).stroke_width(2)
+            } else {
+                Palette99::pick(idx).filled()
+            }; // BLUE
             chart
                 .draw_series(
                     Histogram::vertical(&chart).style(color).data(
