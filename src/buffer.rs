@@ -20,13 +20,13 @@ pub struct ChromosomeBuffer<'a> {
     bins: BTreeMap<usize, (Vec<(u64, bam::Record)>, Vec<(u64, bed::Record)>)>,
     freq: BTreeMap<u64, Vec<(u64, u32)>>,
     header: Header,
-    reader: &'a IndexedReader<BufReader<File>>,
+    reader: &'a mut IndexedReader<BufReader<File>>,
 }
 
 impl<'a> ChromosomeBuffer<'a> {
     fn new(
         header: Header,
-        reader: &'a IndexedReader<BufReader<File>>,
+        reader: &'a mut IndexedReader<BufReader<File>>,
         matches: &'a ArgMatches,
     ) -> Self {
         ChromosomeBuffer {
@@ -46,12 +46,12 @@ impl<'a> ChromosomeBuffer<'a> {
         self.freq = BTreeMap::new();
     }
 
-    fn set_ref_id(&self, ref_id: u64) {
+    fn set_ref_id(&mut self, ref_id: u64) {
         self.ref_id = ref_id;
     }
 
     // This range is completely included or not?
-    fn included(&mut self, range: Region) -> bool {
+    fn included(&self, range: Region) -> bool {
         if range.ref_id() != self.ref_id {
             return false;
         }
@@ -92,80 +92,88 @@ impl<'a> ChromosomeBuffer<'a> {
             self.drop();
             self.set_ref_id(range.ref_id());
         }
-
-        let bins_iter =
-            self.reader.index().references()[range.ref_id() as usize].region_to_bins(range);
         let matches = self.matches;
         let min_read_len = matches
             .value_of("min-read-length")
             .and_then(|a| a.parse::<u32>().ok())
             .unwrap_or(0u32);
-        for i in bins_iter {
-            for bins in i.slice {
-                for bin in bins {
-                    let viewer = self.reader.chunk(bin.chunks_mut()).unwrap();
 
-                    let sample_ids_opt: Option<Vec<u64>> = matches
-                        .values_of("id")
-                        //.unwrap()
-                        .and_then(|a| Some(a.map(|t| t.parse::<u64>().unwrap()).collect()));
-                    let sample_id_cond = sample_ids_opt.is_some();
-                    let sample_ids = sample_ids_opt.unwrap_or(vec![]);
-                    let filter = matches.is_present("filter");
+        let mut chunks = BTreeMap::new();
+        {
+            //let bins_iter =.clone();
 
-                    let format_type_opt = matches.value_of_t::<Format>("type");
-                    let format_type_cond = format_type_opt.is_ok();
-                    let format_type = format_type_opt.unwrap_or(Format::Default(Default {}));
-                    let mut list = vec![];
-                    let mut ann = vec![];
-                    //let mut list2 = vec![];
-                    //let mut samples = BTreeMap::new();
-                    let _ = viewer.into_iter().for_each(|t| {
-                        //eprintln!("{:?}", t.clone().unwrap());
-                        let f = t.unwrap();
-                        if !sample_id_cond || sample_ids.iter().any(|&i| i == f.sample_id()) {
-                            let sample_id = f.sample_id();
-                            let data = f.data();
-                            if !format_type_cond
-                                || std::mem::discriminant(&format_type)
-                                    == std::mem::discriminant(&data)
-                            {
-                                match data {
-                                    Format::Range(rec) => {
-                                        for i in rec.to_record(reference_name) {
-                                            if !filter
-                                                || (i.end() as u64 > range.start()
-                                                    && range.end() > i.start() as u64)
-                                            {
-                                                ann.push((sample_id, i))
-                                            }
-                                        }
+            for i in self.reader.index().references()[range.ref_id() as usize]
+                .region_to_bins(range.clone())
+            {
+                for bins in i.slice {
+                    for bin in bins {
+                        chunks.insert(bin.bin_id(), bin.clone().chunks_mut());
+                    }
+                }
+            }
+        }
+        for (bin_id, chunks) in chunks {
+            let viewer = self.reader.chunk(chunks).unwrap();
+
+            let sample_ids_opt: Option<Vec<u64>> = matches
+                .values_of("id")
+                //.unwrap()
+                .and_then(|a| Some(a.map(|t| t.parse::<u64>().unwrap()).collect()));
+            let sample_id_cond = sample_ids_opt.is_some();
+            let sample_ids = sample_ids_opt.unwrap_or(vec![]);
+            let filter = matches.is_present("filter");
+
+            let format_type_opt = matches.value_of_t::<Format>("type");
+            let format_type_cond = format_type_opt.is_ok();
+            let format_type = format_type_opt.unwrap_or(Format::Default(Default {}));
+            let mut list = vec![];
+            let mut ann = vec![];
+            //let mut list2 = vec![];
+            //let mut samples = BTreeMap::new();
+            let _ = viewer.into_iter().for_each(|t| {
+                //eprintln!("{:?}", t.clone().unwrap());
+                let f = t.unwrap();
+                if !sample_id_cond || sample_ids.iter().any(|&i| i == f.sample_id()) {
+                    let sample_id = f.sample_id();
+                    let data = f.data();
+                    if !format_type_cond
+                        || std::mem::discriminant(&format_type) == std::mem::discriminant(&data)
+                    {
+                        match data {
+                            Format::Range(rec) => {
+                                for i in rec.to_record(reference_name) {
+                                    if !filter
+                                        || (i.end() as u64 > range.start()
+                                            && range.end() > i.start() as u64)
+                                    {
+                                        ann.push((sample_id, i))
                                     }
-                                    Format::Alignment(Alignment::Object(rec)) => {
-                                        for i in rec {
-                                            if !filter
-                                                || (i.calculate_end() as u64 > range.start()
-                                                    && range.end() > i.start() as u64)
-                                            {
-                                                if !i.flag().is_secondary()
-                                                    && i.query_len() > min_read_len
-                                                {
-                                                    list.push((sample_id, i));
-                                                }
-                                            }
-                                        }
-                                    }
-                                    _ => {}
                                 }
                             }
+                            Format::Alignment(Alignment::Object(rec)) => {
+                                for i in rec {
+                                    if !filter
+                                        || (i.calculate_end() as u64 > range.start()
+                                            && range.end() > i.start() as u64)
+                                    {
+                                        if !i.flag().is_secondary() && i.query_len() > min_read_len
+                                        {
+                                            list.push((sample_id, i));
+                                        }
+                                    }
+                                }
+                            }
+                            _ => {}
                         }
-                    });
+                    }
+                }
+            });
 
-                    // Before append into BTreeMap, we need to calculate pileup.
-                    list.iter().group_by(|elt| elt.0).into_iter().for_each(|t| {
+            // Before append into BTreeMap, we need to calculate pileup.
+            list.iter().group_by(|elt| elt.0).into_iter().for_each(|t| {
                 /*let mut line =
-                    Vec::with_capacity((prefetch_range.end - prefetch_range.start + 1) as usize);*/
-                    let line = self.freq.entry(bin.bin_id() as u64).or_insert(vec![]);
+                Vec::with_capacity((prefetch_range.end - prefetch_range.start + 1) as usize);*/
+                let line = self.freq.entry(bin_id as u64).or_insert(vec![]);
                 for column in bam::Pileup::with_filter(&mut RecordIter::new(t.1), |record| {
                     record.flag().no_bits(1796)
                 }) {
@@ -184,14 +192,12 @@ impl<'a> ChromosomeBuffer<'a> {
                     //if prefetch_range.start <= column.ref_pos() as u64
                     //    && column.ref_pos() as u64 <= prefetch_range.end
                     //{
-                        line.push((column.ref_pos() as u64, column.entries().len() as u32));
+                    line.push((column.ref_pos() as u64, column.entries().len() as u32));
                     //}
                 }
                 //eprintln!("{:?}", line);
                 //freq.insert(t.0, line);
             });
-                }
-            }
         }
     }
 
@@ -200,7 +206,7 @@ impl<'a> ChromosomeBuffer<'a> {
         let _reference_name = &string_range.path;
         let range = Region::convert(&string_range, closure).unwrap();
 
-        if !self.included(range) {
+        if !self.included(range.clone()) {
             self.add(&string_range);
         }
         let freq = &self.freq;
@@ -212,7 +218,7 @@ impl<'a> ChromosomeBuffer<'a> {
             .map(|t| t.0)
             .flatten()
             .collect();
-        let ann: Vec<(u64, bed::Record)> = self
+        let mut ann: Vec<(u64, bed::Record)> = self
             .bins
             .values()
             .into_iter()
