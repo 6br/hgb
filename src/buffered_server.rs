@@ -420,12 +420,13 @@ pub async fn server(matches: ArgMatches, range: StringRegion, prefetch_range: St
     //#[allow(clippy::mutex_atomic)] 
     // let vis = Vis::new(range, annotation, freq, compressed_list, index_list, prev_index, supplementary_list, 250000000);
     let counter = web::Data::new(RwLock::new(Item::new(vis.0, args, params, dzi)));
-    let buffer = web::Data::new(Arc::new(RwLock::new(buffer)));
+    //let buffer = web::Data::new(Arc::new(RwLock::new(buffer)));
 
     //https://github.com/actix/examples/blob/master/state/src/main.rs
     HttpServer::new(move|| {
-        //let list = list.clone();
-        actix_web::App::new().data(()).app_data(web::Data::new(RwLock::new(list.clone()))).app_data(counter.clone()).app_data(buffer.clone()).route("/", web::get().to(get_index))
+        //let list = list.clone();buffer = 
+        let buffer = buffer.clone();
+        actix_web::App::new().data(buffer).app_data(web::Data::new(RwLock::new(list.clone()))).app_data(counter.clone()).app_data(buffer.clone()).route("/", web::get().to(get_index))
         .route("openseadragon.min.js", web::get().to(get_js))
         .route("openseadragon.min.js.map", web::get().to(get_js_map))
         .route("genome.dzi", web::get().to(get_dzi))
