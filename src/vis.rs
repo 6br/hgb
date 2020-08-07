@@ -719,6 +719,13 @@ where
                                         current_left_clip,
                                         cigar.soft_clipping(strand == "+"),
                                     );*/
+                                    /*eprintln!(
+                                        "{} {} {} {}",
+                                        only_translocation,
+                                        t[0],
+                                        range.path,
+                                        t[0] == range.path
+                                    );*/
                                     if only_translocation && t[0] == range.path {
                                         None
                                     } else {
