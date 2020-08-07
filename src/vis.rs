@@ -62,6 +62,15 @@ fn nt_color(record_nt: char) -> Option<RGBColor> {
     }
 }
 
+fn name_to_num(name: &[u8]) -> usize {
+    let mut uuid = 0usize;
+    //name.iter().sum()
+    for &i in name[0..8].iter() {
+        uuid += i as usize
+    }
+    uuid
+}
+
 pub struct RecordIter<'a, I: Iterator<Item = &'a (u64, Record)>>(I);
 
 impl<'a, I> RecordIter<'a, I>
@@ -241,6 +250,7 @@ where
     let split_only = matches.is_present("only-split-alignment");
     let sort_by_name = matches.is_present("sort-by-name");
     let sort_by_cigar = matches.is_present("sort-by-cigar");
+    let colored_by_name = matches.is_present("colored-by-name");
     // let pileup = matches.is_present("pileup");
     let all_bases = matches.is_present("all-bases");
     let hide_alignment = matches.is_present("hide-alignment");
@@ -545,7 +555,7 @@ where
                 let idx = *sample_sequential_id as usize;
                 // let idx = sample.next().0;
                 let chart = chart.draw_series(LineSeries::new(
-                    vec![(range.start() , count), (range.end() , count)],
+                    vec![(range.start(), count), (range.end(), count)],
                     Palette99::pick(idx).stroke_width(y / 3 * 4),
                 ))?;
                 if !no_margin {
@@ -574,8 +584,8 @@ where
                         let stroke = Palette99::pick(*sample_sequential_id as usize);
                         let mut bar2 = Rectangle::new(
                             [
-                                (range.start() , prev_index),
-                                (range.end() , prev_index + count),
+                                (range.start(), prev_index),
+                                (range.end(), prev_index + count),
                             ],
                             stroke.stroke_width(y / 2), // filled(), //stroke_width(100),
                         );
@@ -672,8 +682,17 @@ where
                 let mut bar = Rectangle::new([(start, index), (end, index + 1)], color.filled());
                 bar.set_margin(2, 2, 0, 0);
 
-                // eprintln!("{:?}", [(start, index), (end, index + 1)]);
                 bars.push(bar);
+                if colored_by_name {
+                    let color = Palette99::pick(name_to_num(data.1.name()));
+                    let mut inner_bar =
+                        Rectangle::new([(start, index), (end, index + 1)], color.filled());
+                    inner_bar.set_margin(3, 3, 0, 0);
+                    bars.push(inner_bar);
+                }
+
+                // eprintln!("{:?}", [(start, index), (end, index + 1)]);
+
                 //let mut bars =  //, bar2];
                 if split || end_split {
                     match bam.tags().get(b"SA") {
@@ -971,7 +990,11 @@ where
                 // We can also change the format of the label text
                 // .x_label_formatter(&|x| format!("{:.3}", x))
                 .draw()?;
-            let color = if let Some(_) = snp_frequency {Palette99::pick(idx).stroke_width(2)} else{Palette99::pick(idx).filled()}; // BLUE
+            let color = if let Some(_) = snp_frequency {
+                Palette99::pick(idx).stroke_width(2)
+            } else {
+                Palette99::pick(idx).filled()
+            }; // BLUE
             chart
                 .draw_series(
                     Histogram::vertical(&chart).style(color).data(
