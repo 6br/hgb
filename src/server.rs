@@ -186,7 +186,7 @@ fn id_to_range<'a>(range: &StringRegion, args: &Vec<String>, zoom: u64, path: u6
     } else if criteria << (max_zoom - zoom) <= 25000 && (y >> (max_zoom-zoom)) >= 8 { // Base-pair level
         vec!["-Y".to_string(), (freq_y >> (max_zoom-zoom)).to_string(), "-y".to_string(), (y >> (max_zoom-zoom)).to_string(), "-X".to_string(), (scalex_default >> (max_zoom-zoom)).to_string(), "-I".to_string(), "-o".to_string(), path_string, "-x".to_string(), x.to_string(), "-l".to_string(), "-e".to_string()]
     } else { // No alignment
-        vec!["-Y".to_string(), (freq_y >> (max_zoom-zoom)).to_string(), "-y".to_string(), (y >> (max_zoom-zoom)).to_string(), "-X".to_string(), (scalex_default >> (max_zoom-zoom)).to_string(), "-n".to_string(), "-I".to_string(), "-o".to_string(), path_string, "-x".to_string(), x.to_string(), "-l".to_string(), "-e".to_string()]
+        vec!["-Y".to_string(), (freq_y >> (max_zoom-zoom)).to_string(), "-y".to_string(), (y >> (max_zoom-zoom)).to_string(), "-X".to_string(), (scalex_default >> (max_zoom-zoom)).to_string(), "-c".to_string(), "-I".to_string(), "-o".to_string(), path_string, "-x".to_string(), x.to_string(), "-l".to_string(), "-e".to_string()]
     };
     let mut args = args.clone();
     args.extend(b);
