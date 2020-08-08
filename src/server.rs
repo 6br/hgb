@@ -7,7 +7,7 @@ use actix_web::http::header::{ContentDisposition, DispositionType};
 use actix_web::{http,HttpRequest, Result, web, Responder, error, middleware::Logger};
 use std::{sync::{RwLock, Mutex},  collections::BTreeMap, fs};
 use clap::{App,  ArgMatches, Arg, AppSettings};
-use ghi::{bed, vis::bam_record_vis, Vis, buffer::ChromosomeBuffer};
+use ghi::{bed, vis::bam_record_vis, Vis, simple_buffer::ChromosomeBuffer};
 use genomic_range::StringRegion;
 use bam::Record;
 use itertools::Itertools;
@@ -360,6 +360,7 @@ prev_index: usize,
 supplementary_list: Vec<(Vec<u8>, usize, usize, i32, i32)>,threads: u16) -> std::io::Result<()> {
 
     use actix_web::{web, HttpServer};
+
     let bind = matches.value_of("web").unwrap_or(&"0.0.0.0:4000");
     let no_margin = matches.is_present("no-scale");
     let annotation_count = annotation.iter().unique_by(|s| s.0).count(); // annotation.len();

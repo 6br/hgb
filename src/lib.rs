@@ -23,18 +23,19 @@ pub mod index;
 //pub mod server;
 pub mod range;
 pub mod reader;
+pub mod simple_buffer;
 #[no_mangle]
 pub mod twopass_alignment;
 pub mod vis;
 pub mod writer;
 
 use bam::IndexedReader;
-use buffer::ChromosomeBuffer;
 use checker_index::Index;
 use genomic_range::StringRegion;
 use io::Seek;
 use range::InvertedRecord;
 use range::{Format, Record};
+use simple_buffer::ChromosomeBuffer;
 use std::io;
 use std::{
     collections::BTreeMap,

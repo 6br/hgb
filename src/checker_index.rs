@@ -292,7 +292,7 @@ pub struct Slice<'a> {
 
 impl<'a> Slice<'a> {
     pub fn bin_disp_range(&self) -> Range<usize> {
-        self.bin_disp_range()
+        self.bin_disp_range.clone()
     }
 }
 

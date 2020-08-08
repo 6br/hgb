@@ -9,24 +9,25 @@ use clap::ArgMatches;
 use genomic_range::StringRegion;
 use itertools::Itertools;
 use std::{
-    collections::{BTreeMap, HashMap},
+    collections::{BTreeMap, BTreeSet, HashMap},
     fs::File,
     io::BufReader,
 };
 
-pub struct ChromosomeBuffer<'a> {
+pub struct ChromosomeBuffer {
     ref_id: u64,
     matches: ArgMatches,
-    bins: BTreeMap<usize, (Vec<(u64, bam::Record)>, Vec<(u64, bed::Record)>)>,
+    //bins: BTreeMap<usize, (Vec<(u64, bam::Record)>, Vec<(u64, bed::Record)>)>,
+    bins: BTreeMap<usize, Vec<(u64, bed::Record)>>,
     freq: BTreeMap<u64, Vec<(u64, u32, char)>>,
     ///header: Header,
-    reader: &'a mut IndexedReader<BufReader<File>>,
+    reader: IndexedReader<BufReader<File>>,
 }
 
-impl<'a> ChromosomeBuffer<'a> {
+impl ChromosomeBuffer {
     pub fn new(
         //header: Header,
-        reader: &'a mut IndexedReader<BufReader<File>>,
+        reader: IndexedReader<BufReader<File>>,
         matches: ArgMatches,
     ) -> Self {
         ChromosomeBuffer {
@@ -82,7 +83,7 @@ impl<'a> ChromosomeBuffer<'a> {
         false
     }
 
-    pub fn add(&mut self, range: &StringRegion) {
+    pub fn add(&mut self, range: &StringRegion) -> Vec<(u64, Record)> {
         let closure = |x: &str| self.reader.reference_id(x);
         let reference_name = &range.path;
         let range = Region::convert(&range, closure).unwrap();
@@ -112,9 +113,11 @@ impl<'a> ChromosomeBuffer<'a> {
                 }
             }
         }
+        let mut list = vec![];
+
         for (bin_id, chunks) in chunks {
             let viewer = self.reader.chunk(chunks).unwrap();
-
+            let mut ann = vec![];
             let sample_ids_opt: Option<Vec<u64>> = matches
                 .values_of("id")
                 //.unwrap()
@@ -126,8 +129,7 @@ impl<'a> ChromosomeBuffer<'a> {
             let format_type_opt = matches.value_of_t::<Format>("type");
             let format_type_cond = format_type_opt.is_ok();
             let format_type = format_type_opt.unwrap_or(Format::Default(Default {}));
-            let mut list = vec![];
-            let mut ann = vec![];
+
             //let mut list2 = vec![];
             //let mut samples = BTreeMap::new();
             let _ = viewer.into_iter().for_each(|t| {
@@ -198,34 +200,42 @@ impl<'a> ChromosomeBuffer<'a> {
                 //eprintln!("{:?}", line);
                 //freq.insert(t.0, line);
             });
+            self.bins.insert(bin_id as usize, ann);
         }
+        list
     }
 
-    pub fn vis(&mut self, string_range: StringRegion) -> (Vis, Vec<(u64, Record)>) {
+    pub fn retrieve(
+        &mut self,
+        string_range: &StringRegion,
+        list: &mut Vec<(u64, bam::Record)>,
+    ) -> Option<Vis> {
         let closure = |x: &str| self.reader.reference_id(x);
         let _reference_name = &string_range.path;
-        let range = Region::convert(&string_range, closure).unwrap();
+        let range = Region::convert(string_range, closure).unwrap();
 
         if !self.included(range.clone()) {
-            self.add(&string_range);
+            let new_list = self.add(string_range);
+            list.extend(new_list);
+            //ann.extend(new_ann);
         }
         let freq = &self.freq;
 
-        let mut list: Vec<(u64, bam::Record)> = self
-            .bins
-            .values()
-            .into_iter()
-            .map(|t| t.0.clone())
-            .flatten()
-            .collect();
+        /*let mut list: Vec<(u64, bam::Record)> = self
+        .bins
+        .values()
+        .into_iter()
+        .map(|t| t.0.clone())
+        .flatten()
+        .collect();*/
         let mut ann: Vec<(u64, bed::Record)> = self
             .bins
             .values()
             .into_iter()
-            .map(|t| t.1.clone())
+            .map(|t| t.clone())
             .flatten()
             .collect();
-        let matches = &self.matches;
+        let matches = self.matches.clone();
         let pileup = matches.is_present("pileup");
         let split_only = matches.is_present("only-split-alignment");
         let sort_by_name = matches.is_present("sort-by-name");
@@ -328,16 +338,16 @@ impl<'a> ChromosomeBuffer<'a> {
             } else {
                 list.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.start().cmp(&b.1.start())));
             }
-
-            if split_only {
-                list = list
-                    .into_iter()
-                    .filter(|(sample_id, record)| {
-                        end_map.contains_key(&(*sample_id, record.name()))
-                    })
-                    .collect();
-            }
-
+            /*
+                        if split_only {
+                            list = list
+                                .into_iter()
+                                .filter(|(sample_id, record)| {
+                                    end_map.contains_key(&(*sample_id, record.name()))
+                                })
+                                .collect();
+                        }
+            */
             list.iter().group_by(|elt| elt.0).into_iter().for_each(|t| {
                 // let mut heap = BinaryHeap::<(i64, usize)>::new();
                 let mut packing_vec = vec![0u64];
@@ -470,19 +480,16 @@ impl<'a> ChromosomeBuffer<'a> {
             }
         }
 
-        (
-            Vis {
-                range: string_range.clone(),
-                //list: list,
-                annotation: ann,
-                freq: self.freq.clone(),
-                compressed_list: compressed_list,
-                index_list: index_list,
-                prev_index: prev_index,
-                supplementary_list,
-                prefetch_max: self.reader.header().reference_len(0).unwrap(), // The max should be the same as the longest ?
-            },
-            list,
-        )
+        return Some(Vis {
+            range: string_range.clone(),
+            //list: list,
+            annotation: ann,
+            freq: self.freq.clone(),
+            compressed_list: compressed_list,
+            index_list: index_list,
+            prev_index: prev_index,
+            supplementary_list,
+            prefetch_max: self.reader.header().reference_len(0).unwrap(), // The max should be the same as the longest ?
+        });
     }
 }

@@ -18,7 +18,7 @@ use ghi::range::{Format, InvertedRecordEntire, Set};
 use ghi::twopass_alignment::{Alignment, AlignmentBuilder};
 use ghi::vis::{bam_record_vis, RecordIter};
 use ghi::writer::GhiWriter;
-use ghi::{buffer::ChromosomeBuffer, gff, reader::IndexedReader, IndexWriter};
+use ghi::{gff, reader::IndexedReader, simple_buffer::ChromosomeBuffer, IndexWriter};
 use io::{BufReader, Error, ErrorKind, Write};
 use itertools::EitherOrBoth::{Both, Left};
 use itertools::Itertools;
@@ -631,15 +631,14 @@ pub fn vis_query(
                 let range = Region::convert(&prefetch_range, closure).unwrap();
                 let viewer = reader.fetch(&range).unwrap();
 
-                let mut buffer: ChromosomeBuffer<'static> =
-                    ChromosomeBuffer::new(&mut reader, &matches.clone());
-                buffer.add(&string_range);
+                let mut buffer: ChromosomeBuffer =
+                    ChromosomeBuffer::new(reader, matches.clone());
                 buffered_server::server(
                     matches.clone(),
                     string_range,
                     prefetch_range,
                     args,
-                    &mut buffer,
+                    buffer,
                     threads,
                 );
                 break;

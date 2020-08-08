@@ -7,7 +7,7 @@ use actix_web::http::header::{ContentDisposition, DispositionType};
 use actix_web::{http,HttpRequest, Result, web, Responder, error, middleware::Logger};
 use std::{sync::{RwLock, Mutex, Arc},  collections::BTreeMap, fs};
 use clap::{App,  ArgMatches, Arg, AppSettings};
-use ghi::{bed, vis::bam_record_vis, Vis, buffer::ChromosomeBuffer};
+use ghi::{bed, vis::bam_record_vis, Vis, simple_buffer::ChromosomeBuffer};
 use genomic_range::StringRegion;
 use bam::Record;
 use itertools::Itertools;
@@ -215,7 +215,7 @@ async fn get_js_map(data: web::Data<RwLock<Item>>) -> Result<NamedFile> {
 }
 
 
-async fn index(data: web::Data<RwLock<Item>>, list: web::Data<RwLock<Vec<(u64, Record)>>>, req: HttpRequest) -> Result<NamedFile> {
+async fn index(data: web::Data<RwLock<Item>>, list: web::Data<RwLock<Vec<(u64, Record)>>>, buffer: web::Data<RwLock<ChromosomeBuffer>>, req: HttpRequest) -> Result<NamedFile> {
     let start = Instant::now();
     let zoom: u64 = req.match_info().query("zoom").parse().unwrap();
     let path: u64 = req.match_info().query("filename").parse().unwrap();
@@ -238,6 +238,8 @@ async fn index(data: web::Data<RwLock<Item>>, list: web::Data<RwLock<Vec<(u64, R
             let params = &data.params;
             let args = &data.args;
             let data = &data.vis;
+
+
             let ann = &data.annotation;
             let freq = &data.freq;
             let compressed_list = &data.compressed_list;
@@ -264,6 +266,9 @@ async fn index(data: web::Data<RwLock<Item>>, list: web::Data<RwLock<Vec<(u64, R
                 end1.subsec_nanos() / 1_000_000
             );
             let (matches, string_range) = id_to_range(&data.range, args, zoom, path, params, path_string.clone());
+            if !buffer.read().unwrap().overlap(string_range) {
+                let vis = buffer.retrieve(list);
+            }
             let end2 = start.elapsed();
             eprintln!(
                 "id_to_range: {}.{:03} sec.",
@@ -354,16 +359,17 @@ fn log_2(x: i32) -> u32 {
 }
 
 #[actix_rt::main]
-pub async fn server(matches: ArgMatches, range: StringRegion, prefetch_range: StringRegion, args: Vec<String>, buffer:&'static mut ChromosomeBuffer<'static>,threads: u16) -> std::io::Result<()> {
+pub async fn server(matches: ArgMatches, range: StringRegion, prefetch_range: StringRegion, args: Vec<String>, mut buffer:  ChromosomeBuffer, threads: u16) -> std::io::Result<()> {
 
     use actix_web::{web, HttpServer};
+    // let list = buffer.add(&prefetch_range);
+    let mut list = vec![];
     let bind = matches.value_of("web").unwrap_or(&"0.0.0.0:4000");
     let no_margin = matches.is_present("no-scale");
-    let vis = buffer.vis(range);
-    let annotation = vis.0.annotation;
-    let prev_index = vis.0.prev_index;
-    let list = vis.1;
-    let freq = vis.0.freq;
+    let vis = buffer.retrieve(&prefetch_range, &mut list).unwrap();
+    let annotation = &vis.annotation;
+    let prev_index = vis.prev_index;
+    let freq = &vis.freq;
     let annotation_count = annotation.iter().unique_by(|s| s.0).count(); // annotation.len();
     let top_margin = if no_margin { 0 } else { 40 };
     let axis_count = 0;
@@ -419,7 +425,7 @@ pub async fn server(matches: ArgMatches, range: StringRegion, prefetch_range: St
     //let counter = Arc::new(RwLock::new(Vis::new(range, args, annotation, freq, dzi, params)));
     //#[allow(clippy::mutex_atomic)] 
     // let vis = Vis::new(range, annotation, freq, compressed_list, index_list, prev_index, supplementary_list, 250000000);
-    let counter = web::Data::new(RwLock::new(Item::new(vis.0, args, params, dzi)));
+    let counter = web::Data::new(RwLock::new(Item::new(vis, args, params, dzi)));
     let buffer = web::Data::new(Arc::new(RwLock::new(buffer)));
 
     //https://github.com/actix/examples/blob/master/state/src/main.rs
