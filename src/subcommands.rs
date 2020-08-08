@@ -631,9 +631,18 @@ pub fn vis_query(
                 let range = Region::convert(&prefetch_range, closure).unwrap();
                 let viewer = reader.fetch(&range).unwrap();
 
-                let buffer = ChromosomeBuffer::new(&mut reader, matches);
-                buffer.add(string_range);
-                buffered_server::server(buffer);
+                let mut buffer: ChromosomeBuffer<'static> =
+                    ChromosomeBuffer::new(&mut reader, &matches.clone());
+                buffer.add(&string_range);
+                buffered_server::server(
+                    matches.clone(),
+                    string_range,
+                    prefetch_range,
+                    args,
+                    &mut buffer,
+                    threads,
+                );
+                break;
 
                 let sample_ids_opt: Option<Vec<u64>> = matches
                     .values_of("id")
