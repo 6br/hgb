@@ -99,6 +99,12 @@ fn id_to_range<'a>(range: &StringRegion, args: &Vec<String>, zoom: u64, path: u6
                     .about("Cache directory for server (generated randomly if not specified)"),
             )
             .arg(
+                Arg::new("min-read-length")
+                    .short('M')
+                    .takes_value(true)
+                    .about("Minimum read length on coverage/alignment track"),
+            )
+            .arg(
                 Arg::new("x-scale")
                     .short('X')
                     .takes_value(true)
