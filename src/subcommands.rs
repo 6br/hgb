@@ -631,8 +631,7 @@ pub fn vis_query(
                 let range = Region::convert(&prefetch_range, closure).unwrap();
                 let viewer = reader.fetch(&range).unwrap();
 
-                let mut buffer: ChromosomeBuffer =
-                    ChromosomeBuffer::new(reader, matches.clone());
+                let mut buffer: ChromosomeBuffer = ChromosomeBuffer::new(reader, matches.clone());
                 buffered_server::server(
                     matches.clone(),
                     string_range,

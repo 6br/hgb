@@ -52,7 +52,7 @@ impl ChromosomeBuffer {
     }
 
     // This range is completely included or not?
-    fn included(&self, range: Region) -> bool {
+    pub fn included(&self, range: Region) -> bool {
         if range.ref_id() != self.ref_id {
             return false;
         }
@@ -81,6 +81,10 @@ impl ChromosomeBuffer {
             }
         }
         false
+    }
+
+    pub fn bins(&self) -> Vec<&usize> {
+        self.bins.keys().collect::<Vec<&usize>>()
     }
 
     pub fn add(&mut self, range: &StringRegion) -> Vec<(u64, Record)> {
@@ -204,6 +208,17 @@ impl ChromosomeBuffer {
         }
         list
     }
+
+    pub fn included_string(
+        &self,
+        string_range: &StringRegion,
+    ) -> bool {
+        let closure = |x: &str| self.reader.reference_id(x);
+        let _reference_name = &string_range.path;
+        let range = Region::convert(string_range, closure).unwrap();
+        self.included(range.clone())
+    }
+
 
     pub fn retrieve(
         &mut self,

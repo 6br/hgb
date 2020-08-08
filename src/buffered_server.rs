@@ -215,11 +215,11 @@ async fn get_js_map(data: web::Data<RwLock<Item>>) -> Result<NamedFile> {
 }
 
 
-async fn index(data: web::Data<RwLock<Item>>, list: web::Data<RwLock<Vec<(u64, Record)>>>, buffer: web::Data<RwLock<ChromosomeBuffer>>, req: HttpRequest) -> Result<NamedFile> {
+async fn index(item: web::Data<RwLock<Item>>, list: web::Data<RwLock<Vec<(u64, Record)>>>, buffer: web::Data<RwLock<ChromosomeBuffer>>, req: HttpRequest) -> Result<NamedFile> {
     let start = Instant::now();
     let zoom: u64 = req.match_info().query("zoom").parse().unwrap();
     let path: u64 = req.match_info().query("filename").parse().unwrap();
-    let data = data.read().unwrap();
+    let data = item.read().unwrap();
 
     let cache_dir = &data.params.cache_dir;
     match NamedFile::open(format!("{}/{}/{}_0.png", cache_dir, zoom, path)) {
@@ -266,8 +266,9 @@ async fn index(data: web::Data<RwLock<Item>>, list: web::Data<RwLock<Vec<(u64, R
                 end1.subsec_nanos() / 1_000_000
             );
             let (matches, string_range) = id_to_range(&data.range, args, zoom, path, params, path_string.clone());
-            if !buffer.read().unwrap().overlap(string_range) {
-                let vis = buffer.retrieve(list);
+            if !buffer.read().unwrap().included_string(&string_range) {
+                let vis = buffer.write().unwrap().retrieve(&string_range, &mut list.write().unwrap());
+                item.write().unwrap().vis = vis.unwrap();
             }
             let end2 = start.elapsed();
             eprintln!(
@@ -426,11 +427,12 @@ pub async fn server(matches: ArgMatches, range: StringRegion, prefetch_range: St
     //#[allow(clippy::mutex_atomic)] 
     // let vis = Vis::new(range, annotation, freq, compressed_list, index_list, prev_index, supplementary_list, 250000000);
     let counter = web::Data::new(RwLock::new(Item::new(vis, args, params, dzi)));
+    let bins = buffer.bins();
     let buffer = web::Data::new(Arc::new(RwLock::new(buffer)));
 
     //https://github.com/actix/examples/blob/master/state/src/main.rs
     HttpServer::new(move|| {
-        //let list = list.clone();buffer = 
+        //let list = list.clone();//buffer = 
         //let buffer = buffer.clone();
         actix_web::App::new().app_data(web::Data::new(RwLock::new(list.clone()))).app_data(counter.clone())
         .app_data(buffer.clone()).route("/", web::get().to(get_index))
