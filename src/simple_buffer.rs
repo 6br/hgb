@@ -96,6 +96,7 @@ impl ChromosomeBuffer {
     }
 
     pub fn add(&mut self, range: &StringRegion) -> (bool, Vec<(u64, Record)>) {
+        eprintln!("Add: {}", range);
         let closure = |x: &str| self.reader.reference_id(x);
         let reference_name = &range.path;
         let range = Region::convert(&range, closure).unwrap();
@@ -159,7 +160,7 @@ impl ChromosomeBuffer {
                 let f = t.unwrap();
                 if !sample_id_cond || sample_ids.iter().any(|&i| i == f.sample_id()) {
                     let sample_id = f.sample_id();
-                    eprintln!("{:?}", sample_id);
+                    // eprintln!("{:?}", sample_id);
                     let data = f.data();
                     if !format_type_cond
                         || std::mem::discriminant(&format_type) == std::mem::discriminant(&data)
