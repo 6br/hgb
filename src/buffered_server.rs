@@ -391,6 +391,10 @@ pub async fn server(matches: ArgMatches, range: StringRegion, prefetch_range: St
         .value_of("freq-height")
         .and_then(|a| a.parse::<u32>().ok())
         .unwrap_or(50u32);
+    let zoom_range = matches
+        .value_of("zoom-range")
+        .and_then(|a| a.parse::<u32>().ok())
+        .unwrap_or(8u32);
     let square = matches.is_present("square");
     let x = if square {
         top_margin
@@ -403,6 +407,7 @@ pub async fn server(matches: ArgMatches, range: StringRegion, prefetch_range: St
     };
     let diff = range.end - range.start;
     let all = if matches.is_present("whole-chromosome") {vis.prefetch_max} else {prefetch_range.end - prefetch_range.start};
+    let view_range = if matches.is_present("whole-chromosome") {StringRegion{path: prefetch_range.path, start: 1, end: vis.prefetch_max}} else {prefetch_range}; 
     let size = Size{Height: x.to_string(), Width: ((all as u32 / diff as u32 + 1) * x).to_string()};
     let image = Image{xmlns: "http://schemas.microsoft.com/deepzoom/2008".to_string(), Url: format!("http://{}/", bind).to_string(), Format: "png".to_string(), Overlap: "0".to_string(), TileSize: x.to_string(), Size: size};
     let dzi = DZI{Image: image};
@@ -419,7 +424,7 @@ pub async fn server(matches: ArgMatches, range: StringRegion, prefetch_range: St
     let x_width = all as u32 / diff as u32 * x;
     // eprintln!("{} {} {}", all,diff,x);
     let max_zoom = log_2(x_width as i32) + 1;
-    let min_zoom = max_zoom - 8;
+    let min_zoom = max_zoom - zoom_range;
 
     match fs::create_dir(&cache_dir) {
         Err(e) => panic!("{}: {}", &cache_dir, e),
@@ -435,7 +440,7 @@ pub async fn server(matches: ArgMatches, range: StringRegion, prefetch_range: St
     //let counter = Arc::new(RwLock::new(Vis::new(range, args, annotation, freq, dzi, params)));
     //#[allow(clippy::mutex_atomic)] 
     // let vis = Vis::new(range, annotation, freq, compressed_list, index_list, prev_index, supplementary_list, 250000000);
-    let counter = web::Data::new(RwLock::new(Item::new(prefetch_range, args, params, dzi)));
+    let counter = web::Data::new(RwLock::new(Item::new(view_range, args, params, dzi)));
     let vis = web::Data::new(RwLock::new(vis));
     let buffer = web::Data::new(RwLock::new(buffer));
 

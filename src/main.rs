@@ -358,9 +358,15 @@ fn main() {
                 .arg(Arg::new("whole-chromosome").short('W').about("Pretend as if the prefetch range is the whole chromosome"))
                 .arg(
                     Arg::new("snp-frequency")
-                        .short('Z')
+                        .short('V')
                         .takes_value(true)
                         .about("The portion of allele frequency to display on each coverage track"),
+                )
+                .arg(
+                    Arg::new("zoom-range")
+                        .short('Z')
+                        .takes_value(true)
+                        .about("Permitted zoom range on web server mode"),
                 )
                 .arg(
                     Arg::new("freq-height")

@@ -393,6 +393,7 @@ supplementary_list: Vec<(Vec<u8>, usize, usize, i32, i32)>,threads: u16) -> std:
     };
     let diff = range.end - range.start;
     let all = if matches.is_present("whole-chromosome") {250000000} else {prefetch_range.end - prefetch_range.start};
+
     let size = Size{Height: x.to_string(), Width: ((all as u32 / diff as u32 + 1) * x).to_string()};
     let image = Image{xmlns: "http://schemas.microsoft.com/deepzoom/2008".to_string(), Url: format!("http://{}/", bind).to_string(), Format: "png".to_string(), Overlap: "0".to_string(), TileSize: x.to_string(), Size: size};
     let dzi = DZI{Image: image};
@@ -409,7 +410,8 @@ supplementary_list: Vec<(Vec<u8>, usize, usize, i32, i32)>,threads: u16) -> std:
     let x_width = all as u32 / diff as u32 * x;
     // eprintln!("{} {} {}", all,diff,x);
     let max_zoom = log_2(x_width as i32) + 1;
-    let min_zoom = max_zoom - 8;
+    //let min_zoom_margin = 
+    let min_zoom = max_zoom - 8;// + (prev_index );
 
     match fs::create_dir(&cache_dir) {
         Err(e) => panic!("{}: {}", &cache_dir, e),
