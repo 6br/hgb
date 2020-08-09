@@ -52,7 +52,7 @@ impl ChromosomeBuffer {
     }
 
     // This range is completely included or not?
-    pub fn included(&self, range: Region) -> bool {
+    fn included(&self, range: Region) -> bool {
         if range.ref_id() != self.ref_id {
             return false;
         }
