@@ -62,6 +62,15 @@ fn nt_color(record_nt: char) -> Option<RGBColor> {
     }
 }
 
+fn name_to_num(name: &[u8]) -> usize {
+    let mut uuid = 0usize;
+    //name.iter().sum()
+    for &i in name[0..8].iter() {
+        uuid += i as usize
+    }
+    uuid
+}
+
 pub struct RecordIter<'a, I: Iterator<Item = &'a (u64, Record)>>(I);
 
 impl<'a, I> RecordIter<'a, I>
@@ -241,6 +250,7 @@ where
     let split_only = matches.is_present("only-split-alignment");
     let sort_by_name = matches.is_present("sort-by-name");
     let sort_by_cigar = matches.is_present("sort-by-cigar");
+    let colored_by_name = matches.is_present("colored-by-name");
     // let pileup = matches.is_present("pileup");
     let all_bases = matches.is_present("all-bases");
     let hide_alignment = matches.is_present("hide-alignment");
@@ -672,8 +682,17 @@ where
                 let mut bar = Rectangle::new([(start, index), (end, index + 1)], color.filled());
                 bar.set_margin(2, 2, 0, 0);
 
-                // eprintln!("{:?}", [(start, index), (end, index + 1)]);
                 bars.push(bar);
+                if colored_by_name {
+                    let color = Palette99::pick(name_to_num(data.1.name()));
+                    let mut inner_bar =
+                        Rectangle::new([(start, index), (end, index + 1)], color.filled());
+                    inner_bar.set_margin(3, 3, 0, 0);
+                    bars.push(inner_bar);
+                }
+
+                // eprintln!("{:?}", [(start, index), (end, index + 1)]);
+
                 //let mut bars =  //, bar2];
                 if split || end_split {
                     match bam.tags().get(b"SA") {
@@ -699,6 +718,13 @@ where
                                         String::from_utf8_lossy(bam.name()),
                                         current_left_clip,
                                         cigar.soft_clipping(strand == "+"),
+                                    );*/
+                                    /*eprintln!(
+                                        "{} {} {} {}",
+                                        only_translocation,
+                                        t[0],
+                                        range.path,
+                                        t[0] == range.path
                                     );*/
                                     if only_translocation && t[0] == range.path {
                                         None
