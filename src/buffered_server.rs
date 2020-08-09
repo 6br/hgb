@@ -237,15 +237,7 @@ async fn index(item: web::Data<RwLock<Item>>, list: web::Data<RwLock<Vec<(u64, R
             );
             let params = &data.params;
             let args = &data.args;
-            let data = &data.vis;
 
-
-            let ann = &data.annotation;
-            let freq = &data.freq;
-            let compressed_list = &data.compressed_list;
-            let index_list = &data.index_list;
-            let supplementary_list = &data.supplementary_list;
-            let prev_index = data.prev_index;
 
 
             //let min_zoom = 13;
@@ -265,11 +257,25 @@ async fn index(item: web::Data<RwLock<Item>>, list: web::Data<RwLock<Vec<(u64, R
                 end1.as_secs(),
                 end1.subsec_nanos() / 1_000_000
             );
+
             let (matches, string_range) = id_to_range(&data.range, args, zoom, path, params, path_string.clone());
             if !buffer.read().unwrap().included_string(&string_range) {
+                // TODO() This ignores 
+                eprintln!("Fallback to reload");
                 let vis = buffer.write().unwrap().retrieve(&string_range, &mut list.write().unwrap());
+                eprintln!("Fallback to reload2");
                 item.write().unwrap().vis = vis.unwrap();
+                eprintln!("Fallback to reload3");
             }
+
+
+            let data = &data.vis;
+            let ann = &data.annotation;
+            let freq = &data.freq;
+            let compressed_list = &data.compressed_list;
+            let index_list = &data.index_list;
+            let supplementary_list = &data.supplementary_list;
+            let prev_index = data.prev_index;
             let end2 = start.elapsed();
             eprintln!(
                 "id_to_range: {}.{:03} sec.",
@@ -297,14 +303,15 @@ async fn index(item: web::Data<RwLock<Item>>, list: web::Data<RwLock<Vec<(u64, R
 
 pub struct Item {
     vis: Vis,
+    range: StringRegion,
     args: Vec<String>,
     params: Param,
     dzi: DZI,
 }
 
 impl Item {
-    fn new(vis: Vis, args: Vec<String>, params: Param, dzi: DZI) -> Self {
-        Item{vis:vis, args:args,params:params,dzi:dzi}
+    fn new(vis: Vis, range: StringRegion, args: Vec<String>, params: Param, dzi: DZI) -> Self {
+        Item{vis:vis, range, args:args,params:params,dzi:dzi}
     }
 }
 
@@ -368,6 +375,7 @@ pub async fn server(matches: ArgMatches, range: StringRegion, prefetch_range: St
     let bind = matches.value_of("web").unwrap_or(&"0.0.0.0:4000");
     let no_margin = matches.is_present("no-scale");
     let vis = buffer.retrieve(&prefetch_range, &mut list).unwrap();
+    //eprintln!("{:#?}", vis);
     let annotation = &vis.annotation;
     let prev_index = vis.prev_index;
     let freq = &vis.freq;
@@ -426,9 +434,9 @@ pub async fn server(matches: ArgMatches, range: StringRegion, prefetch_range: St
     //let counter = Arc::new(RwLock::new(Vis::new(range, args, annotation, freq, dzi, params)));
     //#[allow(clippy::mutex_atomic)] 
     // let vis = Vis::new(range, annotation, freq, compressed_list, index_list, prev_index, supplementary_list, 250000000);
-    let counter = web::Data::new(RwLock::new(Item::new(vis, args, params, dzi)));
+    let counter = web::Data::new(RwLock::new(Item::new(vis, range, args, params, dzi)));
     let bins = buffer.bins();
-    let buffer = web::Data::new(Arc::new(RwLock::new(buffer)));
+    let buffer = web::Data::new(RwLock::new(buffer));
 
     //https://github.com/actix/examples/blob/master/state/src/main.rs
     HttpServer::new(move|| {

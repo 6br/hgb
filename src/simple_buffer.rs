@@ -60,7 +60,8 @@ impl ChromosomeBuffer {
         let bins_iter =
             self.reader.index().references()[range.ref_id() as usize].region_to_bins(range);
         for i in bins_iter {
-            if bins.iter().any(|t| !i.bin_disp_range().contains(t)) {
+            if i.bin_disp_range().into_iter().any(|t| !bins.contains(&&t)) {
+                //if bins.iter().any(|t| !i.bin_disp_range().contains(t)) {
                 return false;
             }
         }
@@ -91,7 +92,7 @@ impl ChromosomeBuffer {
         let closure = |x: &str| self.reader.reference_id(x);
         let reference_name = &range.path;
         let range = Region::convert(&range, closure).unwrap();
-
+        eprintln!("1");
         // Check if overlap, and drop them if the chrom_id is different.
         if range.ref_id() != self.ref_id {
             self.drop();
@@ -102,26 +103,28 @@ impl ChromosomeBuffer {
             .value_of("min-read-length")
             .and_then(|a| a.parse::<u32>().ok())
             .unwrap_or(0u32);
-
+        eprintln!("2");
         let mut chunks = BTreeMap::new();
-        {
-            //let bins_iter =.clone();
 
-            for i in self.reader.index().references()[range.ref_id() as usize]
-                .region_to_bins(range.clone())
-            {
-                for bins in i.slice {
-                    for bin in bins {
-                        chunks.insert(bin.bin_id(), bin.clone().chunks_mut());
-                    }
+        //let bins_iter =.clone();
+
+        for i in
+            self.reader.index().references()[range.ref_id() as usize].region_to_bins(range.clone())
+        {
+            for bins in i.slice {
+                for bin in bins {
+                    chunks.insert(bin.bin_id(), bin.clone().chunks_mut());
                 }
             }
         }
-        let mut list = vec![];
+        eprintln!("3");
+
+        let mut merged_list = vec![];
 
         for (bin_id, chunks) in chunks {
             let viewer = self.reader.chunk(chunks).unwrap();
             let mut ann = vec![];
+            let mut list = vec![];
             let sample_ids_opt: Option<Vec<u64>> = matches
                 .values_of("id")
                 //.unwrap()
@@ -141,6 +144,7 @@ impl ChromosomeBuffer {
                 let f = t.unwrap();
                 if !sample_id_cond || sample_ids.iter().any(|&i| i == f.sample_id()) {
                     let sample_id = f.sample_id();
+                    eprintln!("{:?}", sample_id);
                     let data = f.data();
                     if !format_type_cond
                         || std::mem::discriminant(&format_type) == std::mem::discriminant(&data)
@@ -204,21 +208,18 @@ impl ChromosomeBuffer {
                 //eprintln!("{:?}", line);
                 //freq.insert(t.0, line);
             });
+            merged_list.extend(list);
             self.bins.insert(bin_id as usize, ann);
         }
-        list
+        merged_list
     }
 
-    pub fn included_string(
-        &self,
-        string_range: &StringRegion,
-    ) -> bool {
+    pub fn included_string(&self, string_range: &StringRegion) -> bool {
         let closure = |x: &str| self.reader.reference_id(x);
         let _reference_name = &string_range.path;
         let range = Region::convert(string_range, closure).unwrap();
         self.included(range.clone())
     }
-
 
     pub fn retrieve(
         &mut self,
@@ -228,10 +229,12 @@ impl ChromosomeBuffer {
         let closure = |x: &str| self.reader.reference_id(x);
         let _reference_name = &string_range.path;
         let range = Region::convert(string_range, closure).unwrap();
-
+        eprintln!("1");
         if !self.included(range.clone()) {
             let new_list = self.add(string_range);
+            eprintln!("2");
             list.extend(new_list);
+            eprintln!("3");
             //ann.extend(new_ann);
         }
         let freq = &self.freq;

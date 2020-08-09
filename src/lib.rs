@@ -13,7 +13,7 @@ extern crate serde_json;
 //pub mod alignment;
 pub mod bed;
 pub mod binary;
-pub mod buffer;
+//pub mod buffer;
 pub mod builder;
 pub mod checker_index;
 pub mod compression;
