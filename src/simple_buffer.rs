@@ -42,6 +42,7 @@ impl ChromosomeBuffer {
 
     // If the region is completely not overlapped,
     fn drop(&mut self) {
+        eprintln!("Buffer has dropped.");
         self.ref_id = 0;
         self.bins = BTreeMap::new();
         self.freq = BTreeMap::new();
