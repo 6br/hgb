@@ -92,7 +92,7 @@ impl ChromosomeBuffer {
         //std::mem::size_of(self)
         //This is a very heuristic way.
         eprintln!("Current bin size: {}", self.bins.keys().len());
-        self.bins.keys().len() > 200
+        self.bins.keys().len() > 10000
     }
 
     pub fn add(&mut self, range: &StringRegion) -> (bool, Vec<(u64, Record)>) {
@@ -245,17 +245,17 @@ impl ChromosomeBuffer {
         let closure = |x: &str| self.reader.reference_id(x);
         let _reference_name = &string_range.path;
         let range = Region::convert(string_range, closure).unwrap();
-        eprintln!("1");
+        eprintln!("List len: {}", list.len());
 
         if !self.included(range.clone()) {
             let (reset_flag, new_list) = self.add(string_range);
-            eprintln!("2");
+            eprintln!("Loaded len: {}", new_list.len());
             if reset_flag {
                 std::mem::replace(list, new_list);
             } else {
                 list.extend(new_list);
             }
-            eprintln!("3");
+            eprintln!("After load list len: {}", list.len());
             //ann.extend(new_ann);
         }
 
