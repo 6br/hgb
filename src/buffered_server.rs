@@ -215,7 +215,7 @@ async fn get_js_map(data: web::Data<RwLock<Item>>) -> Result<NamedFile> {
 }
 
 
-async fn index(item: web::Data<RwLock<Item>>, list: web::Data<RwLock<Vec<(u64, Record)>>>, buffer: web::Data<RwLock<ChromosomeBuffer>>, req: HttpRequest) -> Result<NamedFile> {
+async fn index(item: web::Data<RwLock<Item>>, vis: web::Data<RwLock<Vis>>, list: web::Data<RwLock<Vec<(u64, Record)>>>, buffer: web::Data<RwLock<ChromosomeBuffer>>, req: HttpRequest) -> Result<NamedFile> {
     let start = Instant::now();
     let zoom: u64 = req.match_info().query("zoom").parse().unwrap();
     let path: u64 = req.match_info().query("filename").parse().unwrap();
@@ -262,14 +262,14 @@ async fn index(item: web::Data<RwLock<Item>>, list: web::Data<RwLock<Vec<(u64, R
             if !buffer.read().unwrap().included_string(&string_range) {
                 // TODO() This ignores 
                 eprintln!("Fallback to reload");
-                let vis = buffer.write().unwrap().retrieve(&string_range, &mut list.write().unwrap());
+                let new_vis = buffer.write().unwrap().retrieve(&string_range, &mut list.write().unwrap());
                 eprintln!("Fallback to reload2");
-                item.write().unwrap().vis = vis.unwrap();
+                vis.write().unwrap() = new_vis.unwrap();
                 eprintln!("Fallback to reload3");
             }
 
 
-            let data = &data.vis;
+            let data = vis.read().unwrap();
             let ann = &data.annotation;
             let freq = &data.freq;
             let compressed_list = &data.compressed_list;
@@ -302,7 +302,7 @@ async fn index(item: web::Data<RwLock<Item>>, list: web::Data<RwLock<Vec<(u64, R
 }
 
 pub struct Item {
-    vis: Vis,
+    //vis: Vis,
     range: StringRegion,
     args: Vec<String>,
     params: Param,
@@ -310,8 +310,8 @@ pub struct Item {
 }
 
 impl Item {
-    fn new(vis: Vis, range: StringRegion, args: Vec<String>, params: Param, dzi: DZI) -> Self {
-        Item{vis:vis, range, args:args,params:params,dzi:dzi}
+    fn new(range: StringRegion, args: Vec<String>, params: Param, dzi: DZI) -> Self {
+        Item{range, args:args,params:params,dzi:dzi}
     }
 }
 
@@ -434,7 +434,8 @@ pub async fn server(matches: ArgMatches, range: StringRegion, prefetch_range: St
     //let counter = Arc::new(RwLock::new(Vis::new(range, args, annotation, freq, dzi, params)));
     //#[allow(clippy::mutex_atomic)] 
     // let vis = Vis::new(range, annotation, freq, compressed_list, index_list, prev_index, supplementary_list, 250000000);
-    let counter = web::Data::new(RwLock::new(Item::new(vis, range, args, params, dzi)));
+    let counter = web::Data::new(RwLock::new(Item::new(range, args, params, dzi)));
+    let vis = web::Data::new(RwLock::new(vis));
     let bins = buffer.bins();
     let buffer = web::Data::new(RwLock::new(buffer));
 
@@ -442,7 +443,7 @@ pub async fn server(matches: ArgMatches, range: StringRegion, prefetch_range: St
     HttpServer::new(move|| {
         //let list = list.clone();//buffer = 
         //let buffer = buffer.clone();
-        actix_web::App::new().app_data(web::Data::new(RwLock::new(list.clone()))).app_data(counter.clone())
+        actix_web::App::new().app_data(web::Data::new(RwLock::new(list.clone()))).app_data(counter.clone()).app_data(vis.clone())
         .app_data(buffer.clone()).route("/", web::get().to(get_index))
         .route("openseadragon.min.js", web::get().to(get_js))
         .route("openseadragon.min.js.map", web::get().to(get_js_map))
