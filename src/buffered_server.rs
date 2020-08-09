@@ -264,7 +264,8 @@ async fn index(item: web::Data<RwLock<Item>>, vis: web::Data<RwLock<Vis>>, list:
                 eprintln!("Fallback to reload");
                 let new_vis = buffer.write().unwrap().retrieve(&string_range, &mut list.write().unwrap());
                 eprintln!("Fallback to reload2");
-                vis.write().unwrap() = new_vis.unwrap();
+                let mut old_vis = vis.write().unwrap();
+                *old_vis = new_vis.unwrap();
                 eprintln!("Fallback to reload3");
             }
 
@@ -401,7 +402,7 @@ pub async fn server(matches: ArgMatches, range: StringRegion, prefetch_range: St
         .unwrap_or(1280u32)
     };
     let diff = range.end - range.start;
-    let all = if matches.is_present("whole-chromosome") {250000000} else {prefetch_range.end - prefetch_range.start};
+    let all = if matches.is_present("whole-chromosome") {vis.prefetch_max} else {prefetch_range.end - prefetch_range.start};
     let size = Size{Height: x.to_string(), Width: ((all as u32 / diff as u32 + 1) * x).to_string()};
     let image = Image{xmlns: "http://schemas.microsoft.com/deepzoom/2008".to_string(), Url: format!("http://{}/", bind).to_string(), Format: "png".to_string(), Overlap: "0".to_string(), TileSize: x.to_string(), Size: size};
     let dzi = DZI{Image: image};
@@ -434,9 +435,8 @@ pub async fn server(matches: ArgMatches, range: StringRegion, prefetch_range: St
     //let counter = Arc::new(RwLock::new(Vis::new(range, args, annotation, freq, dzi, params)));
     //#[allow(clippy::mutex_atomic)] 
     // let vis = Vis::new(range, annotation, freq, compressed_list, index_list, prev_index, supplementary_list, 250000000);
-    let counter = web::Data::new(RwLock::new(Item::new(range, args, params, dzi)));
+    let counter = web::Data::new(RwLock::new(Item::new(prefetch_range, args, params, dzi)));
     let vis = web::Data::new(RwLock::new(vis));
-    let bins = buffer.bins();
     let buffer = web::Data::new(RwLock::new(buffer));
 
     //https://github.com/actix/examples/blob/master/state/src/main.rs

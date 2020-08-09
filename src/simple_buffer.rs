@@ -88,22 +88,35 @@ impl ChromosomeBuffer {
         self.bins.keys().collect::<Vec<&usize>>()
     }
 
-    pub fn add(&mut self, range: &StringRegion) -> Vec<(u64, Record)> {
+    fn size_limit(&self) -> bool {
+        //std::mem::size_of(self)
+        //This is a very heuristic way.
+        eprintln!("Current bin size: {}", self.bins.keys().len());
+        self.bins.keys().len() > 200
+    }
+
+    pub fn add(&mut self, range: &StringRegion) -> (bool, Vec<(u64, Record)>) {
         let closure = |x: &str| self.reader.reference_id(x);
         let reference_name = &range.path;
         let range = Region::convert(&range, closure).unwrap();
-        eprintln!("1");
+        //eprintln!("1");
+        let mut reload_flag = false;
         // Check if overlap, and drop them if the chrom_id is different.
         if range.ref_id() != self.ref_id {
             self.drop();
             self.set_ref_id(range.ref_id());
+            reload_flag = true;
+        } else if self.size_limit() {
+            self.drop();
+            self.set_ref_id(range.ref_id());
+            reload_flag = true;
         }
         let matches = self.matches.clone();
         let min_read_len = matches
             .value_of("min-read-length")
             .and_then(|a| a.parse::<u32>().ok())
             .unwrap_or(0u32);
-        eprintln!("2");
+        //eprintln!("2");
         let mut chunks = BTreeMap::new();
 
         //let bins_iter =.clone();
@@ -113,11 +126,13 @@ impl ChromosomeBuffer {
         {
             for bins in i.slice {
                 for bin in bins {
-                    chunks.insert(bin.bin_id(), bin.clone().chunks_mut());
+                    if !self.bins.contains_key(&(bin.bin_id() as usize)) {
+                        chunks.insert(bin.bin_id(), bin.clone().chunks_mut());
+                    }
                 }
             }
         }
-        eprintln!("3");
+        //eprintln!("3");
 
         let mut merged_list = vec![];
 
@@ -183,7 +198,7 @@ impl ChromosomeBuffer {
             list.iter().group_by(|elt| elt.0).into_iter().for_each(|t| {
                 /*let mut line =
                 Vec::with_capacity((prefetch_range.end - prefetch_range.start + 1) as usize);*/
-                let line = self.freq.entry(bin_id as u64).or_insert(vec![]);
+                let line = self.freq.entry(t.0).or_insert(vec![]);
                 for column in bam::Pileup::with_filter(&mut RecordIter::new(t.1), |record| {
                     record.flag().no_bits(1796)
                 }) {
@@ -211,7 +226,7 @@ impl ChromosomeBuffer {
             merged_list.extend(list);
             self.bins.insert(bin_id as usize, ann);
         }
-        merged_list
+        (reload_flag, merged_list)
     }
 
     pub fn included_string(&self, string_range: &StringRegion) -> bool {
@@ -230,13 +245,19 @@ impl ChromosomeBuffer {
         let _reference_name = &string_range.path;
         let range = Region::convert(string_range, closure).unwrap();
         eprintln!("1");
+
         if !self.included(range.clone()) {
-            let new_list = self.add(string_range);
+            let (reset_flag, new_list) = self.add(string_range);
             eprintln!("2");
-            list.extend(new_list);
+            if reset_flag {
+                std::mem::replace(list, new_list);
+            } else {
+                list.extend(new_list);
+            }
             eprintln!("3");
             //ann.extend(new_ann);
         }
+
         let freq = &self.freq;
 
         /*let mut list: Vec<(u64, bam::Record)> = self
