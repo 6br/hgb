@@ -396,7 +396,7 @@ pub async fn server(matches: ArgMatches, range: StringRegion, prefetch_range: St
     let zoom_range = matches
         .value_of("zoom-range")
         .and_then(|a| a.parse::<u32>().ok())
-        .unwrap_or(8u32);
+        .unwrap_or(if matches.is_present("whole-chromosome") {6u32} else{8u32});
     let square = matches.is_present("square");
     let x = if square {
         top_margin
