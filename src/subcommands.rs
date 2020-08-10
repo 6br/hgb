@@ -483,21 +483,108 @@ pub fn split(matches: &ArgMatches, threads: u16) -> () {
             }
             return ();
         }
+        let output_secondary_unmapped = matches.is_present("secondary-unmapped");
 
         let clevel = matches
             .value_of("compression")
             .and_then(|a| a.parse::<u8>().ok())
             .unwrap_or(6u8);
         let header = bam_header;
-        let mut _writer = bam::bam_writer::BamWriterBuilder::new()
+        let mut writer = bam::bam_writer::BamWriterBuilder::new()
             .additional_threads(threads - 1)
             .compression_level(clevel)
             .write_header(true)
             .from_stream(output, header.clone())
             .unwrap();
+        let max_coverage = matches
+            .value_of("max-coverage")
+            .and_then(|a| a.parse::<u32>().ok());
 
-        let viewer = reader2.full();
-        for _record in viewer {}
+        //let viewer = reader2.full();
+        //for _record in viewer {}
+        for (id, len) in header.clone().reference_lengths().iter().enumerate() {
+            let viewer = reader2
+                .fetch(&bam::Region::new(id as u32, 1, *len))
+                .unwrap();
+            let mut list = vec![];
+            for record in viewer {
+                let record = record.unwrap();
+                if !record.flag().is_secondary() {
+                    list.push((0, record));
+                } else {
+                    if output_secondary_unmapped {
+                        writer.write(&record).unwrap();
+                    }
+                }
+            }
+
+            // Sort
+            list.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.start().cmp(&b.1.start())));
+            let mut prev_index = 0;
+            let mut last_prev_index = 0;
+            let mut index_list = Vec::with_capacity(list.len());
+            list.iter().group_by(|elt| elt.0).into_iter().for_each(|t| {
+                // let mut heap = BinaryHeap::<(i64, usize)>::new();
+                let mut packing = vec![0u64];
+                prev_index += 1;
+                (t.1).for_each(|k| {
+                    let mut index = if let Some(index) = packing
+                        .iter_mut()
+                        .enumerate()
+                        .find(|(_, item)| **item < k.1.start() as u64)
+                    {
+                        //packing[index.0] = k.1.calculate_end() as u64;
+                        *index.1 = k.1.calculate_end() as u64;
+                        index.0
+                    } else {
+                        packing.push(k.1.calculate_end() as u64);
+                        prev_index += 1;
+                        packing.len() - 1
+                        //prev_index - 1
+                    }; /*
+                       let index: usize = if heap.peek() != None
+                           && -heap.peek().unwrap().0 < k.1.start() as i64
+                       {
+                           let hp = heap.pop().unwrap();
+                           // let index = hp.1;
+                           heap.push((-k.1.calculate_end() as i64, hp.1));
+                           hp.1
+                       } else {
+                           let index = prev_index;
+                           prev_index += 1;
+                           heap.push((-k.1.calculate_end() as i64, index));
+                           index
+                       };*/
+                    //let index =
+                    if let Some(max_cov) = max_coverage {
+                        if index > max_cov as usize {
+                            index = max_cov as usize;
+                            prev_index = max_cov as usize + last_prev_index;
+                        }
+                    }
+                    index_list.push(index + last_prev_index);
+                    // eprintln!("{:?}", packing);
+                    //(index, (k.0, k.1))
+                }); //.collect::<Vec<(usize, (u64, Record))>>()
+                    // compressed_list.push(prev_index);
+                    //compressed_list.insert(t.0, prev_index);
+                    //prev_index += 1;
+                if let Some(max_cov) = max_coverage {
+                    prev_index = max_cov as usize + last_prev_index;
+                }
+                // compressed_list.push((t.0, prev_index));
+                //eprintln!("{:?} {:?} {:?}", compressed_list, packing, index_list);
+                last_prev_index = prev_index;
+                //(t.0, ((t.1).0, (t.1).1))
+                // .collect::<&(u64, Record)>(). // collect::<Vec<(usize, (u64, Record))>>
+            });
+
+            for ((_, mut record), index) in list.into_iter().zip(index_list) {
+                record.tags_mut().push_num(b"YY", index as i32);
+                writer.write(&record).unwrap();
+            }
+            //packingwriteln!(&mut output, "{}\t{}", name, len).unwrap();
+        }
     }
 }
 
