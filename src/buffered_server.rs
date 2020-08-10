@@ -448,8 +448,8 @@ pub async fn server(matches: ArgMatches, range: StringRegion, prefetch_range: St
 
     //https://github.com/actix/examples/blob/master/state/src/main.rs
     HttpServer::new(move|| {
-        let list = list.clone();
-        let list_btree = list_btree.clone();//buffer = 
+        let list = RwLock::new(list.clone());
+        let list_btree = RwLock::new(list_btree.clone());//buffer = 
         //let buffer = buffer.clone();
         actix_web::App::new().data(list).data(list_btree)/*.app_data(web::Data::new(RwLock::new(list.clone()))).*/.app_data(counter.clone()).app_data(vis.clone())
         .app_data(buffer.clone()).route("/", web::get().to(get_index))
