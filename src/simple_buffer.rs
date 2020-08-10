@@ -4,7 +4,10 @@ use crate::{
     bed, header::Header, range::Format, reader::IndexedReader, twopass_alignment::Alignment,
     vis::RecordIter, Vis,
 };
-use bam::Record;
+use bam::{
+    record::tags::{IntegerType, TagValue},
+    Record,
+};
 use clap::ArgMatches;
 use genomic_range::StringRegion;
 use itertools::Itertools;
@@ -640,7 +643,11 @@ impl ChromosomeBuffer {
                     let mut packing = vec![0u64];
                     prev_index += 1;
                     (t.1).for_each(|k| {
-                        let mut index = if let Some(index) = packing
+                        let mut index = if let Some(TagValue::Int(array_view, IntegerType::I32)) =
+                            k.1.tags().get(b"YY")
+                        {
+                            array_view as usize
+                        } else if let Some(index) = packing
                             .iter_mut()
                             .enumerate()
                             .find(|(_, item)| **item < k.1.start() as u64)
