@@ -8,6 +8,7 @@ use bio_types::strand::Strand;
 use clap::ArgMatches;
 use genomic_range::StringRegion;
 use itertools::Itertools;
+use num_format::{Locale, ToFormattedString};
 use plotters::coord::ReverseCoordTranslate;
 use plotters::prelude::Palette;
 use plotters::prelude::*;
@@ -185,7 +186,7 @@ where
                 // .y_labels(4)
                 .y_label_style(("sans-serif", 12).into_font())
                 // We can also change the format of the label text
-                .x_label_formatter(&|x| format!("{:.3}", x))
+                .x_label_formatter(&|x| format!("{}", x.to_formatted_string(&Locale::en)))
                 .draw()?;
             let color = Palette99::pick(idx); // BLUE
                                               /*eprintln!("{} {:?}", y_max, values
@@ -383,7 +384,7 @@ where
         .y_labels(1)
         .x_label_style(("sans-serif", x_scale / 4).into_font())
         // We can also change the format of the label text
-        .x_label_formatter(&|x| format!("{:.3}", x))
+        .x_label_formatter(&|x| format!("{}", x.to_formatted_string(&Locale::en)))
         .draw()?;
 
     let mut node_id_dict: BTreeMap<u64, (u64, u64)> = BTreeMap::new();
