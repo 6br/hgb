@@ -481,6 +481,7 @@ pub fn split(matches: &ArgMatches, threads: u16) -> () {
             }
             return ();
         }
+        let output_secondary_unmapped = matches.is_present("secondary-unmapped");
 
         let clevel = matches
             .value_of("compression")
@@ -506,7 +507,13 @@ pub fn split(matches: &ArgMatches, threads: u16) -> () {
             let mut list = vec![];
             for record in viewer {
                 let record = record.unwrap();
-                list.push((0, record));
+                if !record.flag().is_secondary() {
+                    list.push((0, record));
+                } else {
+                    if output_secondary_unmapped {
+                        writer.write(&record).unwrap();
+                    }
+                }
             }
 
             // Sort
