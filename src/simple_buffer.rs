@@ -266,6 +266,13 @@ impl ChromosomeBuffer {
         true
     }
 
+    pub fn included_string_local(&self, string_range: &StringRegion, bins: &BTreeSet<u64>) -> bool {
+        let closure = |x: &str| self.reader.reference_id(x);
+        let _reference_name = &string_range.path;
+        let range = Region::convert(string_range, closure).unwrap();
+        self.included_local(range.clone(), bins)
+    }
+
     pub fn add_local(
         &mut self,
         range: &StringRegion,

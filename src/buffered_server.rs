@@ -5,7 +5,7 @@ use std::time::Instant;
 use actix_cors::Cors;
 use actix_web::http::header::{ContentDisposition, DispositionType};
 use actix_web::{http,HttpRequest, Result, web, Responder, error, middleware::Logger};
-use std::{sync::{RwLock, Mutex, Arc},  collections::BTreeMap, fs};
+use std::{sync::{RwLock, Mutex, Arc},  collections::{BTreeSet, BTreeMap}, fs};
 use clap::{App,  ArgMatches, Arg, AppSettings};
 use ghi::{bed, vis::bam_record_vis, Vis, simple_buffer::ChromosomeBuffer};
 use genomic_range::StringRegion;
@@ -215,7 +215,7 @@ async fn get_js_map(data: web::Data<RwLock<Item>>) -> Result<NamedFile> {
 }
 
 
-async fn index(item: web::Data<RwLock<Item>>, vis: web::Data<RwLock<Vis>>, list: web::Data<RwLock<Vec<(u64, Record)>>>, buffer: web::Data<RwLock<ChromosomeBuffer>>, req: HttpRequest) -> Result<NamedFile> {
+async fn index(item: web::Data<RwLock<Item>>, vis: web::Data<RwLock<Vis>>, list: web::Data<RwLock<Vec<(u64, Record)>>>, list_btree: web::Data<RwLock<BTreeSet<u64>>>, buffer: web::Data<RwLock<ChromosomeBuffer>>, req: HttpRequest) -> Result<NamedFile> {
     let start = Instant::now();
     let zoom: u64 = req.match_info().query("zoom").parse().unwrap();
     let path: u64 = req.match_info().query("filename").parse().unwrap();
@@ -259,10 +259,11 @@ async fn index(item: web::Data<RwLock<Item>>, vis: web::Data<RwLock<Vis>>, list:
             );
 
             let (matches, string_range) = id_to_range(&data.range, args, zoom, path, params, path_string.clone());
-            if !buffer.read().unwrap().included_string(&string_range) {
+            if !buffer.read().unwrap().included_string_local(&string_range, &list_btree.read().unwrap()) {
                 // TODO() This ignores 
                 eprintln!("Fallback to reload");
-                let new_vis = buffer.write().unwrap().retrieve(&string_range, &mut list.write().unwrap());
+                //let (mut list, mut list_btree) = &*;
+                let new_vis = buffer.write().unwrap().retrieve(&string_range, &mut list.write().unwrap(), &mut list_btree.write().unwrap());
                 eprintln!("Fallback to reload2");
                 let mut old_vis = vis.write().unwrap();
                 *old_vis = new_vis.unwrap();
@@ -373,9 +374,10 @@ pub async fn server(matches: ArgMatches, range: StringRegion, prefetch_range: St
     use actix_web::{web, HttpServer};
     // let list = buffer.add(&prefetch_range);
     let mut list = vec![];
+    let mut list_btree = BTreeSet::new();
     let bind = matches.value_of("web").unwrap_or(&"0.0.0.0:4000");
     let no_margin = matches.is_present("no-scale");
-    let vis = buffer.retrieve(&prefetch_range, &mut list).unwrap();
+    let vis = buffer.retrieve(&prefetch_range, &mut list, &mut list_btree).unwrap();
     //eprintln!("{:#?}", vis);
     let annotation = &vis.annotation;
     let prev_index = vis.prev_index;
@@ -446,9 +448,10 @@ pub async fn server(matches: ArgMatches, range: StringRegion, prefetch_range: St
 
     //https://github.com/actix/examples/blob/master/state/src/main.rs
     HttpServer::new(move|| {
-        //let list = list.clone();//buffer = 
+        let list = list.clone();
+        let list_btree = list_btree.clone();//buffer = 
         //let buffer = buffer.clone();
-        actix_web::App::new().app_data(web::Data::new(RwLock::new(list.clone()))).app_data(counter.clone()).app_data(vis.clone())
+        actix_web::App::new().data(list).data(list_btree)/*.app_data(web::Data::new(RwLock::new(list.clone()))).*/.app_data(counter.clone()).app_data(vis.clone())
         .app_data(buffer.clone()).route("/", web::get().to(get_index))
         .route("openseadragon.min.js", web::get().to(get_js))
         .route("openseadragon.min.js.map", web::get().to(get_js_map))
