@@ -2,7 +2,6 @@ use bam;
 use bam::{Record, RecordWriter};
 use clap::ArgMatches;
 use genomic_range::StringRegion;
-use ghi::VisPreset::Chromosome;
 
 use log::{debug, info};
 // use rayon::prelude::*;

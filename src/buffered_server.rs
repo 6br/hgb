@@ -377,9 +377,9 @@ pub struct Param {
 
 const fn num_bits<T>() -> usize { std::mem::size_of::<T>() * 8 }
 
-fn log_2(x: i32) -> u32 {
+fn log_2(x: i64) -> u32 {
     assert!(x > 0);
-    num_bits::<i32>() as u32 - x.leading_zeros() - 1
+    num_bits::<i64>() as u32 - x.leading_zeros() - 1
 }
 
 #[actix_rt::main]
@@ -439,8 +439,8 @@ pub async fn server(matches: ArgMatches, range: StringRegion, prefetch_range: St
         .unwrap_or(rng.gen::<u32>().to_string());
     
     let x_width = all as u32 / diff as u32 * x;
-    eprintln!("Total len: {}, partial len: {}, x_width: {}({}), x: {}", all,diff,x_width, x_width as i32, x);
-    let max_zoom = log_2(x_width as i32) + 1;
+    eprintln!("Total len: {}, partial len: {}, x_width: {}({}), x: {}", all,diff,x_width, x_width as i64, x);
+    let max_zoom = log_2(x_width as i64) + 1;
     let min_zoom = max_zoom - zoom_range;
 
     match fs::create_dir(&cache_dir) {
@@ -448,7 +448,7 @@ pub async fn server(matches: ArgMatches, range: StringRegion, prefetch_range: St
         Ok(_) => {},
     };
     let params = Param{x_scale, max_y:x, prefetch_max: all, max_zoom, min_zoom, criteria:diff, y_freq: freq_size, x, y, cache_dir};
-    eprintln!("{:?}, threads: {}, zoom: {}", params, threads, log_2(x_width as i32) + 1);
+    eprintln!("{:?}, threads: {}, zoom: {}", params, threads, log_2(x_width as i64) + 1);
     println!("Server is running on {}", bind);
     // Create some global state prior to building the server
     //#[allow(clippy::mutex_atomic)] // it's intentional.
