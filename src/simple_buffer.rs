@@ -643,37 +643,36 @@ impl ChromosomeBuffer {
                     let mut packing = vec![0u64];
                     prev_index += 1;
                     (t.1).for_each(|k| {
-                        let mut index = if let Some(TagValue::Int(array_view, _)) =
-                            k.1.tags().get(b"YY")
-                        {
-                            array_view as usize
-                        } else if let Some(index) = packing
-                            .iter_mut()
-                            .enumerate()
-                            .find(|(_, item)| **item < k.1.start() as u64)
-                        {
-                            //packing[index.0] = k.1.calculate_end() as u64;
-                            *index.1 = k.1.calculate_end() as u64;
-                            index.0
-                        } else {
-                            packing.push(k.1.calculate_end() as u64);
-                            prev_index += 1;
-                            packing.len() - 1
-                            //prev_index - 1
-                        }; /*
-                           let index: usize = if heap.peek() != None
-                               && -heap.peek().unwrap().0 < k.1.start() as i64
-                           {
-                               let hp = heap.pop().unwrap();
-                               // let index = hp.1;
-                               heap.push((-k.1.calculate_end() as i64, hp.1));
-                               hp.1
-                           } else {
-                               let index = prev_index;
-                               prev_index += 1;
-                               heap.push((-k.1.calculate_end() as i64, index));
-                               index
-                           };*/
+                        let mut index =
+                            if let Some(TagValue::Int(array_view, _)) = k.1.tags().get(b"YY") {
+                                array_view as usize
+                            } else if let Some(index) = packing
+                                .iter_mut()
+                                .enumerate()
+                                .find(|(_, item)| **item < k.1.start() as u64)
+                            {
+                                //packing[index.0] = k.1.calculate_end() as u64;
+                                *index.1 = k.1.calculate_end() as u64;
+                                index.0
+                            } else {
+                                packing.push(k.1.calculate_end() as u64);
+                                prev_index += 1;
+                                packing.len() - 1
+                                //prev_index - 1
+                            }; /*
+                               let index: usize = if heap.peek() != None
+                                   && -heap.peek().unwrap().0 < k.1.start() as i64
+                               {
+                                   let hp = heap.pop().unwrap();
+                                   // let index = hp.1;
+                                   heap.push((-k.1.calculate_end() as i64, hp.1));
+                                   hp.1
+                               } else {
+                                   let index = prev_index;
+                                   prev_index += 1;
+                                   heap.push((-k.1.calculate_end() as i64, index));
+                                   index
+                               };*/
                         //let index =
                         if let Some(max_cov) = max_coverage {
                             if index > max_cov as usize {
