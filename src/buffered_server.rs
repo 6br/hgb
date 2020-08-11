@@ -220,10 +220,11 @@ async fn index(item: web::Data<RwLock<Item>>, vis: web::Data<RwLock<Vis>>, list:
     let start = Instant::now();
     let zoom: u64 = req.match_info().query("zoom").parse().unwrap();
     let path: u64 = req.match_info().query("filename").parse().unwrap();
+    let format = req.match_info().query("format");
     let data = item.read().unwrap();
 
     let cache_dir = &data.params.cache_dir;
-    match NamedFile::open(format!("{}/{}/{}_0.png", cache_dir, zoom, path)) {
+    match NamedFile::open(format!("{}/{}/{}_0.{}", cache_dir, zoom, path, format)) {
         Ok(file) => Ok(file
             .set_content_disposition(ContentDisposition {
                 disposition: DispositionType::Attachment,
@@ -243,7 +244,7 @@ async fn index(item: web::Data<RwLock<Item>>, vis: web::Data<RwLock<Vis>>, list:
 
             //let min_zoom = 13;
             
-            let path_string = format!("{}/{}/{}_0.png", cache_dir, zoom, path);
+            let path_string = format!("{}/{}/{}_0.{}", cache_dir, zoom, path, format);
             let max_zoom = params.max_zoom as u64;
             //let min_zoom = ((&data.params).criteria << (max_zoom - zoom)) >= 10000000;
             let min_zoom = zoom < params.min_zoom as u64;
@@ -260,6 +261,12 @@ async fn index(item: web::Data<RwLock<Item>>, vis: web::Data<RwLock<Vis>>, list:
             );
 
             let (matches, string_range) = id_to_range(&data.range, args, zoom, path, params, path_string.clone());
+            let end2 = start.elapsed();
+            eprintln!(
+                "id_to_range: {}.{:03} sec.",
+                end2.as_secs(),
+                end2.subsec_nanos() / 1_000_000
+            );
             if !buffer.read().unwrap().included_string_local(&string_range, &list_btree.read().unwrap()) {
                 // TODO() This ignores 
                 let endx = start.elapsed();
@@ -292,12 +299,7 @@ async fn index(item: web::Data<RwLock<Item>>, vis: web::Data<RwLock<Vis>>, list:
             let index_list = &data.index_list;
             let supplementary_list = &data.supplementary_list;
             let prev_index = data.prev_index;
-            let end2 = start.elapsed();
-            eprintln!(
-                "id_to_range: {}.{:03} sec.",
-                end2.as_secs(),
-                end2.subsec_nanos() / 1_000_000
-            );
+
             // If the end is exceeds the prefetch region, raise error.
             // let arg_vec = vec!["ghb", "vis", "-t", "1", "-r",  "parse"];
             bam_record_vis(&matches, string_range, &list.read().unwrap(), ann, freq, compressed_list, index_list, prev_index, supplementary_list,|_| None).unwrap();
@@ -422,11 +424,14 @@ pub async fn server(matches: ArgMatches, range: StringRegion, prefetch_range: St
         .and_then(|a| a.parse::<u32>().ok())
         .unwrap_or(1280u32)
     };
+    let format = matches
+        .value_of("format")
+        .unwrap_or(&"png");
     let diff = range.end - range.start;
     let all = if matches.is_present("whole-chromosome") {vis.prefetch_max} else {prefetch_range.end - prefetch_range.start};
     let view_range = if matches.is_present("whole-chromosome") {StringRegion{path: prefetch_range.path, start: 1, end: vis.prefetch_max}} else {prefetch_range}; 
     let size = Size{Height: x.to_string(), Width: ((all as u32 / diff as u32 + 1) * x).to_string()};
-    let image = Image{xmlns: "http://schemas.microsoft.com/deepzoom/2008".to_string(), Url: format!("http://{}/", bind).to_string(), Format: "png".to_string(), Overlap: "0".to_string(), TileSize: x.to_string(), Size: size};
+    let image = Image{xmlns: "http://schemas.microsoft.com/deepzoom/2008".to_string(), Url: format!("http://{}/", bind).to_string(), Format: format.to_string(), Overlap: "0".to_string(), TileSize: x.to_string(), Size: size};
     let dzi = DZI{Image: image};
     let x_scale = matches
         .value_of("x-scale")
@@ -471,7 +476,7 @@ pub async fn server(matches: ArgMatches, range: StringRegion, prefetch_range: St
         .route("openseadragon.min.js", web::get().to(get_js))
         .route("openseadragon.min.js.map", web::get().to(get_js_map))
         .route("genome.dzi", web::get().to(get_dzi))
-        .route("/{zoom:.*}/{filename:.*}_0.png", web::get().to(index)).service(actix_files::Files::new("/images", "static/images").show_files_listing()).wrap(Logger::default()).wrap(
+        .route("/{zoom:.*}/{filename:.*}_0.{format:.*}", web::get().to(index)).service(actix_files::Files::new("/images", "static/images").show_files_listing()).wrap(Logger::default()).wrap(
             Cors::new().supports_credentials() /*allowed_origin("*").allowed_methods(vec!["GET", "POST"])
             .allowed_headers(vec![http::header::AUTHORIZATION, http::header::ACCEPT])
             .allowed_header(http::header::CONTENT_TYPE)

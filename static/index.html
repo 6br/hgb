@@ -1,20 +1,29 @@
 <div id="openseadragon1" style="width: 95%; height: 95%;"></div>
 <script src="openseadragon.min.js"></script>
 <script type="text/javascript">
-    OpenSeadragon.DEFAULT_SETTINGS.timeout = 120000; 
+    OpenSeadragon.DEFAULT_SETTINGS.timeout = 320000; 
     var viewer = OpenSeadragon({
         id:            "openseadragon1",
         panVertical: 	true,
         prefixUrl:     "/images/",
         navigatorSizeRatio: 0.25,
         wrapHorizontal:     false,
-        debugMode:  false,
+        debugMode:  true,
         showNavigator:  true,
         navigatorHeight:   "10px",
         navigatorWidth:    "845px",
-        defaultZoomLevel: 	36,
+        //defaultZoomLevel: 	26,
         //minZoomLevel: 	9,
         visibilityRatio: 	0.5,
         tileSources:   "/genome.dzi",
+    });
+    viewer.addHandler('open', function() {
+        var maxZoom = viewer.viewport.getMaxZoom() * 2;
+
+        // zoom to max zoom
+        viewer.viewport.zoomTo(maxZoom, null, true);
+
+        // make the minimum zoom level max zoom - log2(256)
+        viewer.viewport.minZoomLevel = maxZoom / 256;
     });
 </script>
