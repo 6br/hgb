@@ -357,6 +357,12 @@ fn main() {
                 .arg(Arg::new("web").short('w').takes_value(true).about("Serve the web server"))
                 .arg(Arg::new("whole-chromosome").short('W').about("Pretend as if the prefetch range is the whole chromosome"))
                 .arg(
+                    Arg::new("format")
+                        .short('O')
+                        .takes_value(true)
+                        .about("Output format (automatically detected; optionally used for server mode)"),
+                )
+                .arg(
                     Arg::new("snp-frequency")
                         .short('V')
                         .takes_value(true)

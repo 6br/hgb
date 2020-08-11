@@ -165,7 +165,7 @@ where
                 Some(a) => a,
                 _ => values.iter().map(|t| t.1).max().unwrap_or(1),
             };
-            let x_spec = if no_margin && range.end() - range.start() <= 1000 {
+            let x_spec = if no_margin && range.end() - range.start() <= 2000 {
                 range.start()..range.end()
             } else {
                 (range.start() - 1)..(range.end() + 1)
@@ -344,7 +344,7 @@ where
     );
     eprintln!("{:?} {:?} {:?}", prev_index, axis_count, annotation_count);
     let y_area_size = if no_margin { 0 } else { 40 };
-    let x_spec = if no_margin && range.end() - range.start() <= 1000 {
+    let x_spec = if no_margin && range.end() - range.start() <= 2000 {
         range.start()..range.end()
     } else {
         (range.start() - 1)..(range.end() + 1)
