@@ -268,7 +268,8 @@ async fn index(item: web::Data<RwLock<Item>>, vis: web::Data<RwLock<Vis>>, list:
                     endx.subsec_nanos() / 1_000_000
                 );
                 //let (mut list, mut list_btree) = &*;
-                let new_vis = buffer.write().unwrap().retrieve(&string_range, &mut list.write().unwrap(), &mut list_btree.write().unwrap());
+                buffer.write().unwrap().retrieve(&string_range, &mut list.write().unwrap(), &mut list_btree.write().unwrap());
+                let new_vis = buffer.read().unwrap().vis(&string_range, &mut list.write().unwrap(), &mut list_btree.write().unwrap());
                 let endy = start.elapsed();
                 eprintln!("Fallback to reload2: {}.{:03} sec.",
                     endy.as_secs(),
@@ -390,7 +391,8 @@ pub async fn server(matches: ArgMatches, range: StringRegion, prefetch_range: St
     let mut list_btree = BTreeSet::new();
     let bind = matches.value_of("web").unwrap_or(&"0.0.0.0:4000");
     let no_margin = matches.is_present("no-scale");
-    let vis = buffer.retrieve(&prefetch_range, &mut list, &mut list_btree).unwrap();
+    buffer.retrieve(&prefetch_range, &mut list, &mut list_btree);
+    let vis = buffer.vis(&prefetch_range, &mut list, &mut list_btree).unwrap();
     //eprintln!("{:#?}", vis);
     let annotation = &vis.annotation;
     let prev_index = vis.prev_index;

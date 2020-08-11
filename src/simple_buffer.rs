@@ -96,7 +96,7 @@ impl ChromosomeBuffer {
         //std::mem::size_of(self)
         //This is a very heuristic way.
         eprintln!("Current bin size: {}", self.bins.keys().len());
-        self.bins.keys().len() > 2000
+        self.bins.keys().len() > 5000
     }
 
     fn size_limit_local(&self, bins: &BTreeSet<u64>) -> bool {
@@ -289,8 +289,7 @@ impl ChromosomeBuffer {
         let mut reload_flag = false;
         // Check if overlap, and drop them if the chrom_id is different.
         if self.size_limit_local(local_bins) {
-            self.drop();
-            self.set_ref_id(range.ref_id());
+            //self.drop();
             *local_bins = BTreeSet::new();
             reload_flag = true;
         }
@@ -419,9 +418,8 @@ impl ChromosomeBuffer {
         &mut self,
         string_range: &StringRegion,
         list: &mut Vec<(u64, bam::Record)>,
-        //mut list_btree: BTreeSet<u64>,
         list_btree: &mut BTreeSet<u64>,
-    ) -> Option<Vis> {
+    ) {
         let closure = |x: &str| self.reader.reference_id(x);
         let _reference_name = &string_range.path;
         let range = Region::convert(string_range, closure).unwrap();
@@ -448,8 +446,18 @@ impl ChromosomeBuffer {
             } else {
                 list.extend(new_list);
             }
+            eprintln!("After load list len: {}", list.len());
         }
-
+    }
+    pub fn vis(
+        &self,
+        string_range: &StringRegion,
+        list: &mut Vec<(u64, bam::Record)>,
+        list_btree: &mut BTreeSet<u64>,
+    ) -> Option<Vis> {
+        let closure = |x: &str| self.reader.reference_id(x);
+        let _reference_name = &string_range.path;
+        let range = Region::convert(string_range, closure).unwrap();
         let freq = &self.freq;
 
         /*let mut list: Vec<(u64, bam::Record)> = self
