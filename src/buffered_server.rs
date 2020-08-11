@@ -221,6 +221,9 @@ async fn get_js_map(data: web::Data<RwLock<Item>>) -> Result<NamedFile> {
     return Ok(NamedFile::open(format!("static/openseadragon.min.js.map"))?);
 }
 
+async fn get_js_aux(data: web::Data<RwLock<Item>>) -> Result<NamedFile> {
+    return Ok(NamedFile::open(format!("static/openseadragon-scalebar.js"))?);
+}
 
 async fn index(item: web::Data<RwLock<Item>>, vis: web::Data<RwLock<Vis>>, list: web::Data<RwLock<Vec<(u64, Record)>>>, list_btree: web::Data<RwLock<BTreeSet<u64>>>, buffer: web::Data<RwLock<ChromosomeBuffer>>, req: HttpRequest) -> Result<NamedFile> {
     let start = Instant::now();
@@ -471,18 +474,20 @@ pub async fn server(matches: ArgMatches, range: StringRegion, prefetch_range: St
     //#[allow(clippy::mutex_atomic)] 
     // let vis = Vis::new(range, annotation, freq, compressed_list, index_list, prev_index, supplementary_list, 250000000);
     let counter = web::Data::new(RwLock::new(Item::new(view_range, args, params, dzi)));
-    let vis = web::Data::new(RwLock::new(vis));
+    //let vis = web::Data::new(RwLock::new(vis));
     let buffer = web::Data::new(RwLock::new(buffer));
 
     //https://github.com/actix/examples/blob/master/state/src/main.rs
     HttpServer::new(move|| {
         let list = RwLock::new(list.clone());
-        let list_btree = RwLock::new(list_btree.clone());//buffer = 
+        let list_btree = RwLock::new(list_btree.clone());//buffer =
+        let vis = RwLock::new(vis.clone()); 
         //let buffer = buffer.clone();
-        actix_web::App::new().data(list).data(list_btree)/*.app_data(web::Data::new(RwLock::new(list.clone()))).*/.app_data(counter.clone()).app_data(vis.clone())
+        actix_web::App::new().data(list).data(list_btree)/*.app_data(web::Data::new(RwLock::new(list.clone()))).*/.app_data(counter.clone()).data(vis) //.app_data(vis.clone())
         .app_data(buffer.clone()).route("/", web::get().to(get_index))
         .route("openseadragon.min.js", web::get().to(get_js))
         .route("openseadragon.min.js.map", web::get().to(get_js_map))
+        .route("openseadragon-scalebar.js", web::get().to(get_js_aux))
         .route("genome.dzi", web::get().to(get_dzi))
         .route("/{zoom:.*}/{filename:.*}_0.{format:.*}", web::get().to(index)).service(actix_files::Files::new("/images", "static/images").show_files_listing()).wrap(Logger::default()).wrap(
             Cors::new().supports_credentials() /*allowed_origin("*").allowed_methods(vec!["GET", "POST"])
