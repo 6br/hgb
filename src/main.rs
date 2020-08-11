@@ -116,6 +116,7 @@ fn main() {
                 )
                 .arg(Arg::new("filter").short('f').about("Pre-filter"))
                 .arg(Arg::new("binary").short('b').about("Binary"))
+                .arg(Arg::new("bench").short('B').about("For benchmarking"))
                 /*                .arg(Arg::new("vis").short('v').about("Binary"))
                 .arg(Arg::new("no-cigar").short('n').about("Binary"))
                 .arg(Arg::new("packing").short('p').about("Binary"))
@@ -505,8 +506,8 @@ fn main() {
     } else if let Some(ref matches) = matches.subcommand_matches("query") {
         match matches.is_present("binary") {
             true => bam_query(matches, threads),
-            false => match matches.is_present("vis") {
-                true => vis_query(matches, args, threads).unwrap(),
+            false => match matches.is_present("bench") {
+                true => bench_query(matches, args, threads),
                 false => query(matches, threads),
             },
         }

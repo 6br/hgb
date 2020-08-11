@@ -22,7 +22,7 @@ use io::{BufReader, Error, ErrorKind, Write};
 use itertools::EitherOrBoth::{Both, Left};
 use itertools::Itertools;
 use std::{
-    collections::{BTreeMap, HashMap},
+    collections::{BTreeMap, HashMap, BTreeSet},
     fs::File,
     io,
     path::Path,
@@ -670,6 +670,55 @@ pub fn bam_query(matches: &ArgMatches, threads: u16) -> () {
                     }
                     //}
                 });
+            }
+        }
+    }
+}
+pub fn bench_query(matches: &ArgMatches, args: Vec<String>, threads: u16) {
+    let min_read_len = matches
+        .value_of("min-read-length")
+        .and_then(|a| a.parse::<u32>().ok())
+        .unwrap_or(0u32);
+    if let Some(o) = matches.value_of("INPUT") {
+        let mut reader: IndexedReader<BufReader<File>> =
+            IndexedReader::from_path_with_additional_threads(o, threads - 1).unwrap();
+        if let Some(ranges) = matches.values_of("range") {
+            let ranges: Vec<&str> = ranges.collect();
+            let prefetch_ranges: Vec<&str> = matches
+                .values_of("prefetch-range")
+                .and_then(|t| Some(t.collect()))
+                .unwrap_or(vec![]);
+
+            /*let ranged_zip = if let Some(prefetch_ranges) = prefetch_ranges {
+                ranges.into_iter().zip(prefetch_ranges)
+            } else {
+                ranges.into_iter().zip(ranges.clone())
+            };*/
+            for eob in ranges.into_iter().zip_longest(prefetch_ranges) {
+                let (range, prefetch_str) = match eob {
+                    Both(a, b) => (a, b),
+                    Left(a) => (a, a),
+                    _ => panic!("Range is not specified."),
+                };
+                let string_range = StringRegion::new(range).unwrap();
+                let prefetch_range = StringRegion::new(prefetch_str).unwrap();
+
+                eprintln!("Retrieving: {} (prefetch: {})", range, prefetch_range);
+                // let start = Instant::now();
+                let closure = |x: &str| reader.reference_id(x);
+
+                let _reference_name = &string_range.path;
+
+                let range = Region::convert(&prefetch_range, closure).unwrap();
+                let viewer = reader.fetch(&range).unwrap();
+
+                let mut buffer: ChromosomeBuffer = ChromosomeBuffer::new(reader, matches.clone());
+                let mut list = vec![];
+                let mut list_btree= BTreeSet::new();
+                buffer.retrieve(&string_range, &mut list, &mut list_btree);
+                let new_vis = buffer.vis(&string_range, &mut list, &mut list_btree);
+                println!("{}", new_vis.unwrap().prefetch_max);
+                break;
             }
         }
     }

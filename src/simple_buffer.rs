@@ -299,7 +299,8 @@ impl ChromosomeBuffer {
             .and_then(|a| a.parse::<u32>().ok())
             .unwrap_or(0u32);
         //eprintln!("2");
-        let mut chunks = BTreeMap::new();
+        //let mut chunks = BTreeMap::new();
+        let mut chunks = vec![];
 
         //let bins_iter =.clone();
 
@@ -309,7 +310,8 @@ impl ChromosomeBuffer {
             for bins in i.slice {
                 for bin in bins {
                     if !local_bins.contains(&(bin.bin_id() as u64)) && !reload_flag {
-                        chunks.insert(bin.bin_id(), bin.clone().chunks_mut());
+                        //chunks.insert(bin.bin_id(), bin.clone().chunks_mut());
+                        chunks.extend(bin.clone().chunks_mut());
                         local_bins.insert(bin.bin_id() as u64);
                     }
                 }
@@ -319,98 +321,97 @@ impl ChromosomeBuffer {
 
         let mut merged_list = vec![];
 
-        for (bin_id, chunks) in chunks {
-            let viewer = self.reader.chunk(chunks).unwrap();
-            let mut ann = vec![];
-            let mut list = vec![];
-            let sample_ids_opt: Option<Vec<u64>> = matches
-                .values_of("id")
-                //.unwrap()
-                .and_then(|a| Some(a.map(|t| t.parse::<u64>().unwrap()).collect()));
-            let sample_id_cond = sample_ids_opt.is_some();
-            let sample_ids = sample_ids_opt.unwrap_or(vec![]);
-            let filter = matches.is_present("filter");
+        //for (_, chunks) in chunks {
+        let viewer = self.reader.chunk(chunks).unwrap();
+        let mut ann = vec![];
+        let mut list = vec![];
+        let sample_ids_opt: Option<Vec<u64>> = matches
+            .values_of("id")
+            //.unwrap()
+            .and_then(|a| Some(a.map(|t| t.parse::<u64>().unwrap()).collect()));
+        let sample_id_cond = sample_ids_opt.is_some();
+        let sample_ids = sample_ids_opt.unwrap_or(vec![]);
+        let filter = matches.is_present("filter");
 
-            let format_type_opt = matches.value_of_t::<Format>("type");
-            let format_type_cond = format_type_opt.is_ok();
-            let format_type = format_type_opt.unwrap_or(Format::Default(Default {}));
+        let format_type_opt = matches.value_of_t::<Format>("type");
+        let format_type_cond = format_type_opt.is_ok();
+        let format_type = format_type_opt.unwrap_or(Format::Default(Default {}));
 
-            //let mut list2 = vec![];
-            //let mut samples = BTreeMap::new();
-            let _ = viewer.into_iter().for_each(|t| {
-                //eprintln!("{:?}", t.clone().unwrap());
-                let f = t.unwrap();
-                if !sample_id_cond || sample_ids.iter().any(|&i| i == f.sample_id()) {
-                    let sample_id = f.sample_id();
-                    // eprintln!("{:?}", sample_id);
-                    let data = f.data();
-                    if !format_type_cond
-                        || std::mem::discriminant(&format_type) == std::mem::discriminant(&data)
-                    {
-                        match data {
-                            Format::Range(rec) => {
-                                for i in rec.to_record(reference_name) {
-                                    if !filter
-                                        || (i.end() as u64 > range.start()
-                                            && range.end() > i.start() as u64)
-                                    {
-                                        ann.push((sample_id, i))
-                                    }
+        //let mut list2 = vec![];
+        //let mut samples = BTreeMap::new();
+        let _ = viewer.into_iter().for_each(|t| {
+            //eprintln!("{:?}", t.clone().unwrap());
+            let f = t.unwrap();
+            if !sample_id_cond || sample_ids.iter().any(|&i| i == f.sample_id()) {
+                let sample_id = f.sample_id();
+                // eprintln!("{:?}", sample_id);
+                let data = f.data();
+                if !format_type_cond
+                    || std::mem::discriminant(&format_type) == std::mem::discriminant(&data)
+                {
+                    match data {
+                        Format::Range(rec) => {
+                            for i in rec.to_record(reference_name) {
+                                if !filter
+                                    || (i.end() as u64 > range.start()
+                                        && range.end() > i.start() as u64)
+                                {
+                                    ann.push((sample_id, i))
                                 }
                             }
-                            Format::Alignment(Alignment::Object(rec)) => {
-                                for i in rec {
-                                    if !filter
-                                        || (i.calculate_end() as u64 > range.start()
-                                            && range.end() > i.start() as u64)
-                                    {
-                                        if !i.flag().is_secondary() && i.query_len() > min_read_len
-                                        {
-                                            list.push((sample_id, i));
-                                        }
-                                    }
-                                }
-                            }
-                            _ => {}
                         }
+                        Format::Alignment(Alignment::Object(rec)) => {
+                            for i in rec {
+                                if !filter
+                                    || (i.calculate_end() as u64 > range.start()
+                                        && range.end() > i.start() as u64)
+                                {
+                                    if !i.flag().is_secondary() && i.query_len() > min_read_len {
+                                        list.push((sample_id, i));
+                                    }
+                                }
+                            }
+                        }
+                        _ => {}
                     }
                 }
-            });
+            }
+        });
 
-            // Before append into BTreeMap, we need to calculate pileup.
-            /*
-            list.iter().group_by(|elt| elt.0).into_iter().for_each(|t| {
-                /*let mut line =
-                Vec::with_capacity((prefetch_range.end - prefetch_range.start + 1) as usize);*/
-                let line = self.freq.entry(t.0).or_insert(vec![]);
-                for column in bam::Pileup::with_filter(&mut RecordIter::new(t.1), |record| {
-                    record.flag().no_bits(1796)
-                }) {
-                    let column = column.unwrap();
-                    /*eprintln!(
-                        "Column at {}:{}, {} records",
-                        column.ref_id(),
-                        column.ref_pos() + 1,
-                        column.entries().len()
-                    );*/
-                    // Should we have sparse occurrence table?
-                    //eprintln!("{:?} {:?}",  range.path, lambda(column.ref_id() as usize).unwrap_or(&column.ref_id().to_string()));
-                    // lambda(column.ref_id() as usize).unwrap_or(&column.ref_id().to_string())
-                    // == range.path
-                    // &&
-                    //if prefetch_range.start <= column.ref_pos() as u64
-                    //    && column.ref_pos() as u64 <= prefetch_range.end
-                    //{
-                    line.push((column.ref_pos() as u64, column.entries().len() as u32, '*'));
-                    //}
-                }
-                //eprintln!("{:?}", line);
-                //freq.insert(t.0, line);
-            });
-            */
-            merged_list.extend(list);
-            //self.bins.insert(bin_id as usize, ann);
-        }
+        // Before append into BTreeMap, we need to calculate pileup.
+        /*
+        list.iter().group_by(|elt| elt.0).into_iter().for_each(|t| {
+            /*let mut line =
+            Vec::with_capacity((prefetch_range.end - prefetch_range.start + 1) as usize);*/
+            let line = self.freq.entry(t.0).or_insert(vec![]);
+            for column in bam::Pileup::with_filter(&mut RecordIter::new(t.1), |record| {
+                record.flag().no_bits(1796)
+            }) {
+                let column = column.unwrap();
+                /*eprintln!(
+                    "Column at {}:{}, {} records",
+                    column.ref_id(),
+                    column.ref_pos() + 1,
+                    column.entries().len()
+                );*/
+                // Should we have sparse occurrence table?
+                //eprintln!("{:?} {:?}",  range.path, lambda(column.ref_id() as usize).unwrap_or(&column.ref_id().to_string()));
+                // lambda(column.ref_id() as usize).unwrap_or(&column.ref_id().to_string())
+                // == range.path
+                // &&
+                //if prefetch_range.start <= column.ref_pos() as u64
+                //    && column.ref_pos() as u64 <= prefetch_range.end
+                //{
+                line.push((column.ref_pos() as u64, column.entries().len() as u32, '*'));
+                //}
+            }
+            //eprintln!("{:?}", line);
+            //freq.insert(t.0, line);
+        });
+        */
+        merged_list.extend(list);
+        //self.bins.insert(bin_id as usize, ann);
+        //}
         (reload_flag, merged_list)
     }
 
