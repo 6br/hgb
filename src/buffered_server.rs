@@ -63,10 +63,11 @@ fn id_to_range<'a>(range: &StringRegion, args: &Vec<String>, zoom: u64, path: u6
                     .about("A subset of sorted bed for coverage plot (start and score fields are used)"),
             )                .arg(Arg::new("whole-chromosome").short('W').about("Pretend as if the prefetch range is the whole chromosome"))
             .arg(Arg::new("no-filter").short('f').about("Disable pre-filtering on loading BAM index (used for debugging)"))
-            .arg(Arg::new("no-cigar").short('n').about("Do not show cigar string"))
+            .arg(Arg::new("no-cigar").short('c').about("Do not show cigar string"))
             .arg(Arg::new("no-scale").short('S').about("Do not show y-axis scale"))
             .arg(Arg::new("no-packing").short('p').about("Disable read packing"))
             .arg(Arg::new("no-legend").short('l').about("Hide legend"))
+            .arg(Arg::new("colored-by-name").short('n').about("Set read colors by read name"))
             .arg(Arg::new("meaningless").short('Q').about("Set square width (overwritten)"))
             .arg(Arg::new("quality").short('q').about("Display reads by quality value"))
             .arg(Arg::new("x").short('x').takes_value(true).about("The width of image"))
