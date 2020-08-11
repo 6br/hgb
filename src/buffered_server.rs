@@ -187,7 +187,7 @@ fn id_to_range<'a>(range: &StringRegion, args: &Vec<String>, zoom: u64, path: u6
     // let path = path << (max_zoom - zoom);
     let b: Vec<String> = if (y >> (max_zoom-zoom)) <= 2 { // i.e. 2**22s
         vec!["-A".to_string(), "-Y".to_string(), (max_y >> (max_zoom-zoom)).to_string(), "-y".to_string(), (y >> (max_zoom-zoom)).to_string(), "-c".to_string(), "-I".to_string(), "-o".to_string(), path_string, "-X".to_string(), ((max_y >> (max_zoom-zoom)) / 2).to_string(), "-x".to_string(), x.to_string(), "-l".to_string(), "-e".to_string()]
-    } else if criteria << (max_zoom - zoom) <= 10000 { // Base-pair level with legend and insertion
+    } else if criteria << (max_zoom - zoom) <= 10000 && (y >> (max_zoom-zoom)) >= 8 { // Base-pair level with legend and insertion
         vec!["-Y".to_string(), (freq_y >> (max_zoom-zoom)).to_string(), "-y".to_string(), (y >> (max_zoom-zoom)).to_string(), "-X".to_string(), (scalex_default >> (max_zoom-zoom)).to_string(), "-o".to_string(), path_string, "-x".to_string(), x.to_string(), "-e".to_string()]
     } else if criteria << (max_zoom - zoom) <= 25000 && (y >> (max_zoom-zoom)) >= 8 { // Base-pair level
         vec!["-Y".to_string(), (freq_y >> (max_zoom-zoom)).to_string(), "-y".to_string(), (y >> (max_zoom-zoom)).to_string(), "-X".to_string(), (scalex_default >> (max_zoom-zoom)).to_string(), "-I".to_string(), "-o".to_string(), path_string, "-x".to_string(), x.to_string(), "-l".to_string(), "-e".to_string()]
@@ -281,7 +281,9 @@ async fn index(item: web::Data<RwLock<Item>>, vis: web::Data<RwLock<Vis>>, list:
                     endx.subsec_nanos() / 1_000_000
                 );
                 //let (mut list, mut list_btree) = &*;
-                buffer.write().unwrap().retrieve(&string_range, &mut list.write().unwrap(), &mut list_btree.write().unwrap());
+                {
+                    buffer.write().unwrap().retrieve(&string_range, &mut list.write().unwrap(), &mut list_btree.write().unwrap());
+                }
                 let new_vis = buffer.read().unwrap().vis(&string_range, &mut list.write().unwrap(), &mut list_btree.write().unwrap());
                 let endy = start.elapsed();
                 eprintln!("Fallback to reload2: {}.{:03} sec.",
