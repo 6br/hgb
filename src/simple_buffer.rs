@@ -491,7 +491,7 @@ impl ChromosomeBuffer {
 
         //TODO(FIX: pileup changed to append )
 
-        eprintln!("{:?}", freq.keys());
+        //eprintln!("{:?}", freq.keys());
         if sort_by_name {
             list.sort_by(|a, b| {
                 a.0.cmp(&b.0)
