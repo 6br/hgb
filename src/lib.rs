@@ -35,7 +35,6 @@ use genomic_range::StringRegion;
 use io::Seek;
 use range::InvertedRecord;
 use range::{Format, Record};
-use simple_buffer::ChromosomeBuffer;
 use std::io;
 use std::{
     collections::BTreeMap,

@@ -1,13 +1,9 @@
 use crate::index::Region;
 use crate::range::Default;
 use crate::{
-    bed, header::Header, range::Format, reader::IndexedReader, twopass_alignment::Alignment,
-    vis::RecordIter, Vis,
+    bed, range::Format, reader::IndexedReader, twopass_alignment::Alignment, vis::RecordIter, Vis,
 };
-use bam::{
-    record::tags::{IntegerType, TagValue},
-    Record,
-};
+use bam::{record::tags::TagValue, Record};
 use clap::ArgMatches;
 use genomic_range::StringRegion;
 use itertools::Itertools;
