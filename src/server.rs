@@ -156,6 +156,12 @@ fn id_to_range<'a>(range: &StringRegion, args: &Vec<String>, zoom: u64, path: u6
                     .about("[Input] A subset of sorted bed to display as annotation track"),
             )
             .arg(
+                Arg::new("format")
+                    .short('O')
+                    .takes_value(true)
+                    .about("Output format (automatically detected; optionally used for server mode)"),
+            )
+            .arg(
                 Arg::new("bam")
                     .short('a')
                     .takes_value(true)

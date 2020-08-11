@@ -62,6 +62,12 @@ fn id_to_range<'a>(range: &StringRegion, args: &Vec<String>, zoom: u64, path: u6
                     .multiple(true)
                     .about("A subset of sorted bed for coverage plot (start and score fields are used)"),
             )                .arg(Arg::new("whole-chromosome").short('W').about("Pretend as if the prefetch range is the whole chromosome"))
+            .arg(
+                Arg::new("format")
+                    .short('O')
+                    .takes_value(true)
+                    .about("Output format (automatically detected; optionally used for server mode)"),
+            )
             .arg(Arg::new("no-filter").short('f').about("Disable pre-filtering on loading BAM index (used for debugging)"))
             .arg(Arg::new("no-cigar").short('c').about("Do not show cigar string"))
             .arg(Arg::new("no-scale").short('S').about("Do not show y-axis scale"))
