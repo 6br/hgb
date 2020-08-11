@@ -424,7 +424,7 @@ pub async fn server(matches: ArgMatches, range: StringRegion, prefetch_range: St
         .unwrap_or(rng.gen::<u32>().to_string());
     
     let x_width = all as u32 / diff as u32 * x;
-    // eprintln!("{} {} {}", all,diff,x);
+    eprintln!("Total len: {}, partial len: {}, x_width: {}", all,diff,x);
     let max_zoom = log_2(x_width as i32) + 1;
     let min_zoom = max_zoom - zoom_range;
 
