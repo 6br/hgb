@@ -643,7 +643,7 @@ impl ChromosomeBuffer {
                     let mut packing = vec![0u64];
                     prev_index += 1;
                     (t.1).for_each(|k| {
-                        let mut index = if let Some(TagValue::Int(array_view, IntegerType::I32)) =
+                        let mut index = if let Some(TagValue::Int(array_view, _)) =
                             k.1.tags().get(b"YY")
                         {
                             array_view as usize
