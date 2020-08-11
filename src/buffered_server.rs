@@ -262,13 +262,25 @@ async fn index(item: web::Data<RwLock<Item>>, vis: web::Data<RwLock<Vis>>, list:
             let (matches, string_range) = id_to_range(&data.range, args, zoom, path, params, path_string.clone());
             if !buffer.read().unwrap().included_string_local(&string_range, &list_btree.read().unwrap()) {
                 // TODO() This ignores 
-                eprintln!("Fallback to reload");
+                let endx = start.elapsed();
+                eprintln!("Fallback to reload: {}.{:03} sec.",
+                    endx.as_secs(),
+                    endx.subsec_nanos() / 1_000_000
+                );
                 //let (mut list, mut list_btree) = &*;
                 let new_vis = buffer.write().unwrap().retrieve(&string_range, &mut list.write().unwrap(), &mut list_btree.write().unwrap());
-                eprintln!("Fallback to reload2");
+                let endy = start.elapsed();
+                eprintln!("Fallback to reload2: {}.{:03} sec.",
+                    endy.as_secs(),
+                    endy.subsec_nanos() / 1_000_000
+                );
                 let mut old_vis = vis.write().unwrap();
                 *old_vis = new_vis.unwrap();
-                eprintln!("Fallback to reload3");
+                let endz = start.elapsed();
+                eprintln!("Fallback to reload3: {}.{:03} sec.",
+                    endz.as_secs(),
+                    endz.subsec_nanos() / 1_000_000
+                );
             }
 
 

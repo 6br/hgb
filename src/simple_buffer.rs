@@ -96,14 +96,14 @@ impl ChromosomeBuffer {
         //std::mem::size_of(self)
         //This is a very heuristic way.
         eprintln!("Current bin size: {}", self.bins.keys().len());
-        self.bins.keys().len() > 10000
+        self.bins.keys().len() > 2000
     }
 
     fn size_limit_local(&self, bins: &BTreeSet<u64>) -> bool {
         //std::mem::size_of(self)
         //This is a very heuristic way.
         eprintln!("Current local bin size: {}", bins.iter().len());
-        bins.iter().len() > 10000
+        bins.iter().len() > 2000
     }
 
     pub fn add(&mut self, range: &StringRegion) -> (bool, Vec<(u64, Record)>, BTreeSet<u64>) {
