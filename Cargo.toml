@@ -16,10 +16,10 @@ path = "src/main.rs"
 
 [dependencies]
 
-actix-web = "2.0"
-actix-rt = "1.0"
-actix-files = "*"
-actix-cors = "*"
+actix-web = { version = "2.0", optional = true }
+actix-rt = { version = "1.0", optional = true }
+actix-files = { version = "*", optional = true }
+actix-cors = { version = "*", optional = true }
 #bam = "*" 
 #bam = { git = "https://bitbucket.org/6br/bam" }
 bio-types = { git = "https://github.com/6br/rust-bio-types", branch="alignment_fix" }
@@ -56,6 +56,10 @@ default-features = false
 
 # Cherry-pick the features you'd like to use
 features = [ "suggestions", "color", "std" ]
+
+[features]
+default = ["web"]
+web = ["actix-web", "actix-rt", "actix-cors", "actix-files"]
 
 [profile.release]
 codegen-units = 1

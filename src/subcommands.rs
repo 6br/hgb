@@ -3,9 +3,9 @@ use bam::{Record, RecordWriter};
 use clap::ArgMatches;
 use genomic_range::StringRegion;
 
-use log::{debug, info};
-// use rayon::prelude::*;
+#[cfg(feature = "web")]
 use crate::server::server;
+
 use ghi::bed;
 use ghi::binary::GhbWriter;
 use ghi::builder::InvertedRecordBuilder;
@@ -20,6 +20,7 @@ use ghi::{gff, reader::IndexedReader, IndexWriter};
 use io::{BufReader, Error, ErrorKind, Write};
 use itertools::EitherOrBoth::{Both, Left};
 use itertools::Itertools;
+use log::{debug, info};
 use std::{
     collections::{BTreeMap, HashMap},
     fs::File,
@@ -1328,4 +1329,22 @@ where
             lambda,
         )?;
     })
+}
+
+#[cfg(not(feature = "web"))]
+fn server(
+    matches: ArgMatches,
+    range: StringRegion,
+    prefetch_range: StringRegion,
+    args: Vec<String>,
+    list: Vec<(u64, Record)>,
+    annotation: Vec<(u64, bed::Record)>,
+    freq: BTreeMap<u64, Vec<(u64, u32, char)>>,
+    compressed_list: Vec<(u64, usize)>,
+    index_list: Vec<usize>,
+    prev_index: usize,
+    supplementary_list: Vec<(Vec<u8>, usize, usize, i32, i32)>,
+    threads: u16,
+) -> std::io::Result<()> {
+    unimplemented!("Please add web as a feature.")
 }

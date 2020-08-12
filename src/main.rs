@@ -2,6 +2,7 @@ extern crate log;
 #[macro_use]
 extern crate serde_derive;
 pub mod subcommands;
+#[cfg(feature = "web")]
 pub mod server;
 
 use clap::{App, AppSettings, Arg};
