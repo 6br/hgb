@@ -22,7 +22,7 @@ use io::{BufReader, Error, ErrorKind, Write};
 use itertools::EitherOrBoth::{Both, Left};
 use itertools::Itertools;
 use std::{
-    collections::{BTreeMap, HashMap, BTreeSet},
+    collections::{BTreeMap, BTreeSet, HashMap},
     fs::File,
     io,
     path::Path,
@@ -714,7 +714,7 @@ pub fn bench_query(matches: &ArgMatches, args: Vec<String>, threads: u16) {
 
                 let mut buffer: ChromosomeBuffer = ChromosomeBuffer::new(reader, matches.clone());
                 let mut list = vec![];
-                let mut list_btree= BTreeSet::new();
+                let mut list_btree = BTreeSet::new();
                 buffer.retrieve(&string_range, &mut list, &mut list_btree);
                 let new_vis = buffer.vis(&string_range, &mut list, &mut list_btree);
                 println!("{}", new_vis.unwrap().prefetch_max);

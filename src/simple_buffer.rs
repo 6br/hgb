@@ -19,13 +19,11 @@ pub struct ChromosomeBuffer {
     //bins: BTreeMap<usize, (Vec<(u64, bam::Record)>, Vec<(u64, bed::Record)>)>,
     bins: BTreeMap<usize, Vec<(u64, bed::Record)>>,
     freq: BTreeMap<u64, Vec<(u64, u32, char)>>,
-    ///header: Header,
     reader: IndexedReader<BufReader<File>>,
 }
 
 impl ChromosomeBuffer {
     pub fn new(
-        //header: Header,
         reader: IndexedReader<BufReader<File>>,
         matches: ArgMatches,
     ) -> Self {
@@ -34,7 +32,6 @@ impl ChromosomeBuffer {
             matches,
             bins: BTreeMap::new(),
             freq: BTreeMap::new(),
-            //header,
             reader,
         }
     }
@@ -61,7 +58,6 @@ impl ChromosomeBuffer {
             self.reader.index().references()[range.ref_id() as usize].region_to_bins(range);
         for i in bins_iter {
             if i.bin_disp_range().into_iter().any(|t| !bins.contains(&&t)) {
-                //if bins.iter().any(|t| !i.bin_disp_range().contains(t)) {
                 return false;
             }
         }
@@ -128,7 +124,6 @@ impl ChromosomeBuffer {
         let mut chunks = BTreeMap::new();
         let mut bin_ids = BTreeSet::new();
 
-        //let bins_iter =.clone();
 
         for i in
             self.reader.index().references()[range.ref_id() as usize].region_to_bins(range.clone())
@@ -152,7 +147,6 @@ impl ChromosomeBuffer {
             let mut list = vec![];
             let sample_ids_opt: Option<Vec<u64>> = matches
                 .values_of("id")
-                //.unwrap()
                 .and_then(|a| Some(a.map(|t| t.parse::<u64>().unwrap()).collect()));
             let sample_id_cond = sample_ids_opt.is_some();
             let sample_ids = sample_ids_opt.unwrap_or(vec![]);
@@ -162,8 +156,6 @@ impl ChromosomeBuffer {
             let format_type_cond = format_type_opt.is_ok();
             let format_type = format_type_opt.unwrap_or(Format::Default(Default {}));
 
-            //let mut list2 = vec![];
-            //let mut samples = BTreeMap::new();
             let _ = viewer.into_iter().for_each(|t| {
                 //eprintln!("{:?}", t.clone().unwrap());
                 let f = t.unwrap();
@@ -213,25 +205,8 @@ impl ChromosomeBuffer {
                     record.flag().no_bits(1796)
                 }) {
                     let column = column.unwrap();
-                    /*eprintln!(
-                        "Column at {}:{}, {} records",
-                        column.ref_id(),
-                        column.ref_pos() + 1,
-                        column.entries().len()
-                    );*/
-                    // Should we have sparse occurrence table?
-                    //eprintln!("{:?} {:?}",  range.path, lambda(column.ref_id() as usize).unwrap_or(&column.ref_id().to_string()));
-                    // lambda(column.ref_id() as usize).unwrap_or(&column.ref_id().to_string())
-                    // == range.path
-                    // &&
-                    //if prefetch_range.start <= column.ref_pos() as u64
-                    //    && column.ref_pos() as u64 <= prefetch_range.end
-                    //{
                     line.push((column.ref_pos() as u64, column.entries().len() as u32, '*'));
-                    //}
                 }
-                //eprintln!("{:?}", line);
-                //freq.insert(t.0, line);
             });
             merged_list.extend(list);
             self.bins.insert(bin_id as usize, ann);
@@ -320,7 +295,7 @@ impl ChromosomeBuffer {
         //for (_, chunks) in chunks {
         let viewer = self.reader.chunk(chunks).unwrap();
         let mut ann = vec![];
-        let mut list = vec![];
+        //let mut list = vec![];
         let sample_ids_opt: Option<Vec<u64>> = matches
             .values_of("id")
             //.unwrap()
@@ -363,7 +338,7 @@ impl ChromosomeBuffer {
                                         && range.end() > i.start() as u64)
                                 {
                                     if !i.flag().is_secondary() && i.query_len() > min_read_len {
-                                        list.push((sample_id, i));
+                                        merged_list.push((sample_id, i));
                                     }
                                 }
                             }
@@ -373,41 +348,6 @@ impl ChromosomeBuffer {
                 }
             }
         });
-
-        // Before append into BTreeMap, we need to calculate pileup.
-        /*
-        list.iter().group_by(|elt| elt.0).into_iter().for_each(|t| {
-            /*let mut line =
-            Vec::with_capacity((prefetch_range.end - prefetch_range.start + 1) as usize);*/
-            let line = self.freq.entry(t.0).or_insert(vec![]);
-            for column in bam::Pileup::with_filter(&mut RecordIter::new(t.1), |record| {
-                record.flag().no_bits(1796)
-            }) {
-                let column = column.unwrap();
-                /*eprintln!(
-                    "Column at {}:{}, {} records",
-                    column.ref_id(),
-                    column.ref_pos() + 1,
-                    column.entries().len()
-                );*/
-                // Should we have sparse occurrence table?
-                //eprintln!("{:?} {:?}",  range.path, lambda(column.ref_id() as usize).unwrap_or(&column.ref_id().to_string()));
-                // lambda(column.ref_id() as usize).unwrap_or(&column.ref_id().to_string())
-                // == range.path
-                // &&
-                //if prefetch_range.start <= column.ref_pos() as u64
-                //    && column.ref_pos() as u64 <= prefetch_range.end
-                //{
-                line.push((column.ref_pos() as u64, column.entries().len() as u32, '*'));
-                //}
-            }
-            //eprintln!("{:?}", line);
-            //freq.insert(t.0, line);
-        });
-        */
-        merged_list.extend(list);
-        //self.bins.insert(bin_id as usize, ann);
-        //}
         (reload_flag, merged_list)
     }
 
