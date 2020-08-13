@@ -768,7 +768,7 @@ pub fn vis_query(
                 let range = Region::convert(&prefetch_range, closure).unwrap();
                 let viewer = reader.fetch(&range).unwrap();
                 if matches.is_present("whole-chromosome") {
-                    let mut buffer: ChromosomeBuffer =
+                    let buffer: ChromosomeBuffer =
                         ChromosomeBuffer::new(reader, matches.clone());
                     buffered_server::server(
                         matches.clone(),
