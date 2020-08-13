@@ -767,17 +767,19 @@ pub fn vis_query(
 
                 let range = Region::convert(&prefetch_range, closure).unwrap();
                 let viewer = reader.fetch(&range).unwrap();
-
-                let mut buffer: ChromosomeBuffer = ChromosomeBuffer::new(reader, matches.clone());
-                buffered_server::server(
-                    matches.clone(),
-                    string_range,
-                    prefetch_range,
-                    args,
-                    buffer,
-                    threads,
-                );
-                break;
+                if matches.is_present("whole-chromosome") {
+                    let mut buffer: ChromosomeBuffer =
+                        ChromosomeBuffer::new(reader, matches.clone());
+                    buffered_server::server(
+                        matches.clone(),
+                        string_range,
+                        prefetch_range,
+                        args,
+                        buffer,
+                        threads,
+                    )?;
+                    break;
+                }
 
                 let sample_ids_opt: Option<Vec<u64>> = matches
                     .values_of("id")
@@ -1397,7 +1399,12 @@ where
 
 #[cfg(not(feature = "web"))]
 fn server(
-matches: ArgMatches, range: StringRegion, prefetch_range: StringRegion, args: Vec<String>, mut buffer:  ChromosomeBuffer, threads: u16
+    matches: ArgMatches,
+    range: StringRegion,
+    prefetch_range: StringRegion,
+    args: Vec<String>,
+    mut buffer: ChromosomeBuffer,
+    threads: u16,
 ) -> std::io::Result<()> {
     unimplemented!("Please add web as a feature.")
 }
