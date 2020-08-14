@@ -1383,7 +1383,7 @@ where
     } else {
         bam_record_vis(
             matches,
-VisRef::new(
+            vec![VisRef::new(
                 range,
                 &list,
                 &ann,
@@ -1392,7 +1392,7 @@ VisRef::new(
                 &index_list,
                 prev_index,
                 &supplementary_list,
-            ),
+            )],
             lambda,
         )?;
     })

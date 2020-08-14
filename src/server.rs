@@ -285,7 +285,7 @@ async fn index(data: web::Data<RwLock<Item>>, list: web::Data<RwLock<Vec<(u64, R
             );
             // If the end is exceeds the prefetch region, raise error.
             // let arg_vec = vec!["ghb", "vis", "-t", "1", "-r",  "parse"];
-            bam_record_vis(&matches, VisRef::new(string_range, &list.read().unwrap(), ann, freq, compressed_list, index_list, prev_index, supplementary_list),|_| None).unwrap();
+            bam_record_vis(&matches, vec![VisRef::new(string_range, &list.read().unwrap(), ann, freq, compressed_list, index_list, prev_index, supplementary_list)],|_| None).unwrap();
             let end3 = start.elapsed();
             eprintln!(
                 "img_saved: {}.{:03} sec.",

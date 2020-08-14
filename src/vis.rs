@@ -223,7 +223,7 @@ where
 
 pub fn bam_record_vis<'a, F>(
     matches: &ArgMatches,
-    vis: VisRef,
+    vis: Vec<VisRef>,
     lambda: F,
 ) -> Result<(), Box<dyn std::error::Error>>
 where
@@ -251,8 +251,8 @@ where
     let only_translocation = matches.is_present("only-translocation");
     let end_split = matches.is_present("end-split-callets");
     let square = matches.is_present("square");
-
-    let range = vis.range;
+    let vis = &vis[0];
+    let range = &vis.range;
     let frequency = vis.frequency;
     let list = vis.list;
     let annotation = vis.annotation;
@@ -261,7 +261,7 @@ where
     let prev_index = vis.prev_index;
     let supplementary_list = vis.supplementary_list;
     if hide_alignment {
-        return frequency_vis(matches, &range, frequency, lambda);
+        return frequency_vis(matches, range, frequency, lambda);
     }
     let max_coverage = matches
         .value_of("max-coverage")
