@@ -251,16 +251,12 @@ where
     let only_translocation = matches.is_present("only-translocation");
     let end_split = matches.is_present("end-split-callets");
     let square = matches.is_present("square");
-    let vis = &vis[0];
-    let range = &vis.range;
-    let frequency = vis.frequency;
-    let list = vis.list;
-    let annotation = vis.annotation;
-    let compressed_list = vis.compressed_list;
-    let index_list = vis.index_list;
-    let prev_index = vis.prev_index;
-    let supplementary_list = vis.supplementary_list;
     if hide_alignment {
+        //Multi-ranged frequency vis has not yet been supported.
+        let vis = &vis[0];
+        let range = &vis.range;
+        let frequency = vis.frequency;
+
         return frequency_vis(matches, range, frequency, lambda);
     }
     let max_coverage = matches
@@ -326,333 +322,362 @@ where
         end0.subsec_nanos() / 1_000_000
     );
 
-    let annotation_count = annotation.iter().unique_by(|s| s.0).count(); // annotation.len();
+    //let annotation_count = annotation.iter().unique_by(|s| s.0).count(); // annotation.len();
+    let annotation_count = vis
+        .iter()
+        .map(|a| a.annotation)
+        .collect::<Vec<_>>()
+        .into_iter()
+        .flatten()
+        .unique_by(|s| s.0)
+        .count(); // annotation.len();
+    let prev_index = vis.iter().map(|a| a.prev_index).max().unwrap();
+    let freq_len = vis.iter().map(|a| a.frequency.len()).max().unwrap();
     let top_margin = if no_margin { 0 } else { 40 };
     let y_len = top_margin
         + (prev_index as u32 + axis_count as u32 + annotation_count as u32 * 2) * y
-        + frequency.len() as u32 * freq_size;
+        + freq_len as u32 * freq_size;
     let x_len = if square { y_len } else { x };
 
     let root = BitMapBackend::new(output, (x_len, y_len)).into_drawing_area();
     let approximate_one_pixel = 1; //((range.end() - range.start()) / x as u64) as u32;
     root.fill(&WHITE)?;
     let root = root.margin(0, 0, 0, 0);
+    let areas = root.split_evenly((1, vis.len()));
 
-    // After this point, we should be able to draw construct a chart context
-    // let areas = root.split_by_breakpoints([], compressed_list);
+    for (index, area) in areas.iter().enumerate() {
+        let vis = &vis[index];
+        let range = &vis.range;
+        let frequency = vis.frequency;
+        let list = vis.list;
+        let annotation = vis.annotation;
+        let compressed_list = vis.compressed_list;
+        let index_list = vis.index_list;
+        let prev_index = vis.prev_index;
+        let supplementary_list = vis.supplementary_list;
 
-    let (alignment, coverage) = root.split_vertically(
-        top_margin + (prev_index as u32 + axis_count as u32 + annotation_count as u32 * 2) * y,
-    );
-    eprintln!("{:?} {:?} {:?}", prev_index, axis_count, annotation_count);
-    let y_area_size = if no_margin { 0 } else { 40 };
-    let x_spec = if no_margin && range.end() - range.start() <= 5000 {
-        range.start()..range.end()
-    } else {
-        (range.start() - 1)..(range.end() + 1)
-    };
+        // After this point, we should be able to draw construct a chart context
+        // let areas = root.split_by_breakpoints([], compressed_list);
 
-    let mut chart = if no_margin {
-        ChartBuilder::on(&alignment)
-            // Set the caption of the chart
-            // Set the size of the label region
-            .y_label_area_size(y_area_size)
-            .top_x_label_area_size(x_scale / 2)
-            .x_label_area_size(x_scale / 2)
-            // Finally attach a coordinate on the drawing area and make a chart context
-            .build_ranged(
-                x_spec.clone(),
-                0..(1 + prev_index + axis_count + annotation_count * 2),
-            )?
-    } else {
-        ChartBuilder::on(&alignment)
-            // Set the caption of the chart
-            .caption(format!("{}", range), ("sans-serif", 20).into_font())
-            // Set the size of the label region
-            .top_x_label_area_size(x_scale / 2)
-            .x_label_area_size(x_scale / 2)
-            .y_label_area_size(y_area_size)
-            // Finally attach a coordinate on the drawing area and make a chart context
-            .build_ranged(
-                (range.start() - 1)..(range.end() + 1),
-                0..(1 + prev_index + axis_count + annotation_count * 2),
-            )?
-    };
-    // Then we can draw a mesh
-    chart
-        .configure_mesh()
-        // We can customize the maximum number of labels allowed for each axis
-        //.x_labels(5)
-        .y_labels(1)
-        .x_label_style(("sans-serif", x_scale / 4).into_font())
-        // We can also change the format of the label text
-        .x_label_formatter(&|x| format!("{}", x.to_formatted_string(&Locale::en)))
-        .draw()?;
+        let (alignment, coverage) = area.split_vertically(
+            top_margin + (prev_index as u32 + axis_count as u32 + annotation_count as u32 * 2) * y,
+        );
+        eprintln!("{:?} {:?} {:?}", prev_index, axis_count, annotation_count);
+        let y_area_size = if no_margin { 0 } else { 40 };
+        let x_spec = if no_margin && range.end() - range.start() <= 5000 {
+            range.start()..range.end()
+        } else {
+            (range.start() - 1)..(range.end() + 1)
+        };
 
-    let mut node_id_dict: BTreeMap<u64, (u64, u64)> = BTreeMap::new();
-    let mut prev_pos = std::u64::MAX;
-    let mut prev_node_id = 0u64;
+        let mut chart = if no_margin {
+            ChartBuilder::on(&alignment)
+                // Set the caption of the chart
+                // Set the size of the label region
+                .y_label_area_size(y_area_size)
+                .top_x_label_area_size(x_scale / 2)
+                .x_label_area_size(x_scale / 2)
+                // Finally attach a coordinate on the drawing area and make a chart context
+                .build_ranged(
+                    x_spec.clone(),
+                    0..(1 + prev_index + axis_count + annotation_count * 2),
+                )?
+        } else {
+            ChartBuilder::on(&alignment)
+                // Set the caption of the chart
+                .caption(format!("{}", range), ("sans-serif", 20).into_font())
+                // Set the size of the label region
+                .top_x_label_area_size(x_scale / 2)
+                .x_label_area_size(x_scale / 2)
+                .y_label_area_size(y_area_size)
+                // Finally attach a coordinate on the drawing area and make a chart context
+                .build_ranged(
+                    (range.start() - 1)..(range.end() + 1),
+                    0..(1 + prev_index + axis_count + annotation_count * 2),
+                )?
+        };
+        // Then we can draw a mesh
+        chart
+            .configure_mesh()
+            // We can customize the maximum number of labels allowed for each axis
+            //.x_labels(5)
+            .y_labels(1)
+            .x_label_style(("sans-serif", x_scale / 4).into_font())
+            // We can also change the format of the label text
+            .x_label_formatter(&|x| format!("{}", x.to_formatted_string(&Locale::en)))
+            .draw()?;
 
-    // We assume that axis[&range.path] includes all node id to be serialized.
-    if let Some(axis) = axis.get(&range.path) {
-        axis.iter().for_each(|(node_id, pos)| {
-            if prev_pos > *pos {
-            } else {
-                node_id_dict.insert(prev_node_id, (prev_pos, *pos));
-            }
-            prev_pos = *pos;
-            prev_node_id = *node_id;
-        });
-        node_id_dict.insert(prev_node_id, (prev_pos, range.end()));
-    }
+        let mut node_id_dict: BTreeMap<u64, (u64, u64)> = BTreeMap::new();
+        let mut prev_pos = std::u64::MAX;
+        let mut prev_node_id = 0u64;
 
-    // Draw annotation if there is bed-compatible annotation.
-    annotation
-        .iter()
-        .group_by(|elt| elt.0)
-        .into_iter()
-        .enumerate()
-        .for_each(|(key, value)| {
-            // let sample = value.0.clone();
-            value
-                .1
-                .into_iter()
-                .enumerate()
-                .for_each(|(index, (_, record))| {
-                    let end = record.end();
-                    let start = record.start();
-                    if end > range.start() && start < range.end() {
-                        let start = if start > range.start() {
-                            start
-                        } else {
-                            range.start()
-                        };
-                        let end = if end < range.end() { end } else { range.end() };
-                        let stroke = Palette99::pick(index as usize);
-                        let outer_stroke = match record.strand() {
-                            Some(Strand::Forward) => POS_COL.mix(0.8),
-                            Some(Strand::Reverse) => NEG_COL.mix(0.8),
-                            _ => TRANSPARENT,
-                        };
-                        /*let mut bar2 = Rectangle::new(
-                            [(start, prev_index + key), (end, prev_index + key + 1)],
-                            stroke.stroke_width(2),
-                        );
-                        bar2.set_margin(1, 1, 0, 0);*/
-                        // prev_index += 1;
-                        chart
-                            .draw_series(LineSeries::new(
-                                vec![
-                                    (start, prev_index + key * 2 + axis_count + 1),
-                                    (end, prev_index + key * 2 + axis_count + 1),
-                                ],
-                                outer_stroke.stroke_width(y),
-                            ))
-                            .unwrap();
-                        chart
-                            .draw_series(LineSeries::new(
-                                vec![
-                                    (start, prev_index + key * 2 + axis_count + 1),
-                                    (end, prev_index + key * 2 + axis_count + 1),
-                                ],
-                                stroke.stroke_width(y / 2),
-                            ))
-                            .unwrap()
-                            .label(format!("{}", record.name().unwrap_or(&"")))
-                            .legend(move |(x, y)| {
-                                Rectangle::new([(x - 5, y - 5), (x + 5, y + 5)], stroke.filled())
-                            });
-                    }
-                })
-        });
-
-    // Draw graph axis if there is graph information.
-    axis.into_iter()
-        //.group_by(|elt| elt.0.as_str())
-        //.into_iter()
-        .enumerate()
-        .for_each(|(key, value)| {
-            let path_name = value.0.clone();
-            value.1.into_iter().for_each(|(node_id, _pos)| {
-                let points = node_id_dict.get(&node_id); // [&node_id];
-                if let Some(points) = points {
-                    if points.1 > range.start() && points.0 < range.end() {
-                        let start = if points.0 > range.start() {
-                            points.0
-                        } else {
-                            range.start()
-                        };
-                        let end = if points.1 < range.end() {
-                            points.1
-                        } else {
-                            range.end()
-                        };
-                        let stroke = Palette99::pick(node_id as usize);
-                        let mut bar2 = Rectangle::new(
-                            [(start, prev_index + key), (end, prev_index + key + 1)],
-                            stroke.stroke_width(2),
-                        );
-                        bar2.set_margin(1, 1, 0, 0);
-                        // prev_index += 1;
-                        chart
-                            .draw_series(LineSeries::new(
-                                vec![(start, prev_index + key), (end, prev_index + key)],
-                                stroke.stroke_width(y / 2),
-                            ))
-                            .unwrap()
-                            .label(format!("{}: {}", path_name, node_id))
-                            .legend(move |(x, y)| {
-                                Rectangle::new([(x - 5, y - 5), (x + 5, y + 5)], stroke.filled())
-                            });
-                        //Some(bar2)
-                    }
+        // We assume that axis[&range.path] includes all node id to be serialized.
+        if let Some(axis) = axis.get(&range.path) {
+            axis.iter().for_each(|(node_id, pos)| {
+                if prev_pos > *pos {
+                } else {
+                    node_id_dict.insert(prev_node_id, (prev_pos, *pos));
                 }
-            })
-        });
-    /*
-    chart.draw_series(
-        axis.into_iter()
+                prev_pos = *pos;
+                prev_node_id = *node_id;
+            });
+            node_id_dict.insert(prev_node_id, (prev_pos, range.end()));
+        }
+
+        // Draw annotation if there is bed-compatible annotation.
+        annotation
+            .iter()
+            .group_by(|elt| elt.0)
+            .into_iter()
+            .enumerate()
+            .for_each(|(key, value)| {
+                // let sample = value.0.clone();
+                value
+                    .1
+                    .into_iter()
+                    .enumerate()
+                    .for_each(|(index, (_, record))| {
+                        let end = record.end();
+                        let start = record.start();
+                        if end > range.start() && start < range.end() {
+                            let start = if start > range.start() {
+                                start
+                            } else {
+                                range.start()
+                            };
+                            let end = if end < range.end() { end } else { range.end() };
+                            let stroke = Palette99::pick(index as usize);
+                            let outer_stroke = match record.strand() {
+                                Some(Strand::Forward) => POS_COL.mix(0.8),
+                                Some(Strand::Reverse) => NEG_COL.mix(0.8),
+                                _ => TRANSPARENT,
+                            };
+                            /*let mut bar2 = Rectangle::new(
+                                [(start, prev_index + key), (end, prev_index + key + 1)],
+                                stroke.stroke_width(2),
+                            );
+                            bar2.set_margin(1, 1, 0, 0);*/
+                            // prev_index += 1;
+                            chart
+                                .draw_series(LineSeries::new(
+                                    vec![
+                                        (start, prev_index + key * 2 + axis_count + 1),
+                                        (end, prev_index + key * 2 + axis_count + 1),
+                                    ],
+                                    outer_stroke.stroke_width(y),
+                                ))
+                                .unwrap();
+                            chart
+                                .draw_series(LineSeries::new(
+                                    vec![
+                                        (start, prev_index + key * 2 + axis_count + 1),
+                                        (end, prev_index + key * 2 + axis_count + 1),
+                                    ],
+                                    stroke.stroke_width(y / 2),
+                                ))
+                                .unwrap()
+                                .label(format!("{}", record.name().unwrap_or(&"")))
+                                .legend(move |(x, y)| {
+                                    Rectangle::new(
+                                        [(x - 5, y - 5), (x + 5, y + 5)],
+                                        stroke.filled(),
+                                    )
+                                });
+                        }
+                    })
+            });
+
+        // Draw graph axis if there is graph information.
+        axis.iter()
             //.group_by(|elt| elt.0.as_str())
             //.into_iter()
             .enumerate()
-            .map(|(key, value)| {
-                value.1.into_iter().map(|(node_id, _pos)| {
-                    let points = node_id_dict[&node_id];
-                    if points.1 > range.start() && points.0 < range.end() {
-                        let start = if points.0 > range.start() {
-                            points.0
-                        } else {
-                            range.start()
-                        };
-                        let end = if points.1 < range.end() {
-                            points.1
-                        } else {
-                            range.end()
-                        };
-                        let stroke = Palette99::pick(node_id as usize);
-                        let mut bar2 = Rectangle::new(
-                            [(start, prev_index + key), (end, prev_index + key + 1)],
-                            stroke.stroke_width(2),
-                        );
-                        bar2.set_margin(1, 1, 0, 0);
-                        // prev_index += 1;
-                        Some(bar2)
-                    } else {
-                        None
+            .for_each(|(key, value)| {
+                let path_name = value.0.clone();
+                value.1.into_iter().for_each(|(node_id, _pos)| {
+                    let points = node_id_dict.get(&node_id); // [&node_id];
+                    if let Some(points) = points {
+                        if points.1 > range.start() && points.0 < range.end() {
+                            let start = if points.0 > range.start() {
+                                points.0
+                            } else {
+                                range.start()
+                            };
+                            let end = if points.1 < range.end() {
+                                points.1
+                            } else {
+                                range.end()
+                            };
+                            let stroke = Palette99::pick(*node_id as usize);
+                            let mut bar2 = Rectangle::new(
+                                [(start, prev_index + key), (end, prev_index + key + 1)],
+                                stroke.stroke_width(2),
+                            );
+                            bar2.set_margin(1, 1, 0, 0);
+                            // prev_index += 1;
+                            chart
+                                .draw_series(LineSeries::new(
+                                    vec![(start, prev_index + key), (end, prev_index + key)],
+                                    stroke.stroke_width(y / 2),
+                                ))
+                                .unwrap()
+                                .label(format!("{}: {}", path_name, node_id))
+                                .legend(move |(x, y)| {
+                                    Rectangle::new(
+                                        [(x - 5, y - 5), (x + 5, y + 5)],
+                                        stroke.filled(),
+                                    )
+                                });
+                            //Some(bar2)
+                        }
                     }
                 })
-            })
-            .flatten()
-            .filter_map(|s| s)
-    )?;
-    */
-
-    if legend || no_margin {
-        for (sample_sequential_id, sample) in compressed_list.iter()
-        // list2.into_iter().group_by(|elt| elt.0).into_iter()
-        {
-            // Check that the sum of each group is +/- 4.
-            // assert_eq!(4, group.iter().fold(0_i32, |a, b| a + b).abs());
-            let count = *sample; //.count();
-            if count > 0 {
-                let idx = *sample_sequential_id as usize;
-                // let idx = sample.next().0;
-                let chart = chart.draw_series(LineSeries::new(
-                    vec![(range.start(), count), (range.end(), count)],
-                    Palette99::pick(idx).stroke_width(y / 3 * 4),
-                ))?;
-                if !no_margin {
-                    chart
-                        .label(format!("{}", lambda(idx).unwrap_or(&idx.to_string())))
-                        .legend(move |(x, y)| {
-                            Rectangle::new(
-                                [(x - 5, y - 5), (x + 5, y + 5)],
-                                Palette99::pick(idx).filled(),
-                            )
-                        });
-                }
-            }
-            //prev_index += count;
-        }
-    } else {
-        // For each sample:
-
-        let mut prev_index = 0;
+            });
+        /*
         chart.draw_series(
-            compressed_list
-                .iter()
-                .map(|(sample_sequential_id, sample)| {
-                    let count = *sample;
-                    if count > 0 {
-                        let stroke = Palette99::pick(*sample_sequential_id as usize);
-                        let mut bar2 = Rectangle::new(
-                            [
-                                (range.start(), prev_index),
-                                (range.end(), prev_index + count),
-                            ],
-                            stroke.stroke_width(y / 2), // filled(), //stroke_width(100),
-                        );
-                        bar2.set_margin(1, 0, 0, 0);
-                        prev_index += count;
-                        Some(bar2)
-                    } else {
-                        None
-                    }
+            axis.into_iter()
+                //.group_by(|elt| elt.0.as_str())
+                //.into_iter()
+                .enumerate()
+                .map(|(key, value)| {
+                    value.1.into_iter().map(|(node_id, _pos)| {
+                        let points = node_id_dict[&node_id];
+                        if points.1 > range.start() && points.0 < range.end() {
+                            let start = if points.0 > range.start() {
+                                points.0
+                            } else {
+                                range.start()
+                            };
+                            let end = if points.1 < range.end() {
+                                points.1
+                            } else {
+                                range.end()
+                            };
+                            let stroke = Palette99::pick(node_id as usize);
+                            let mut bar2 = Rectangle::new(
+                                [(start, prev_index + key), (end, prev_index + key + 1)],
+                                stroke.stroke_width(2),
+                            );
+                            bar2.set_margin(1, 1, 0, 0);
+                            // prev_index += 1;
+                            Some(bar2)
+                        } else {
+                            None
+                        }
+                    })
                 })
-                .filter_map(|t| t),
+                .flatten()
+                .filter_map(|s| s)
         )?;
-    }
+        */
 
-    // For each supplementary alignment:
-    if sort_by_cigar {
-        for (idx, i) in supplementary_list.iter().enumerate() {
-            let stroke = Palette99::pick(idx as usize);
-            // let stroke_color = BLACK;
-            chart
-                .draw_series(LineSeries::new(
-                    vec![(i.3 as u64, i.1), (i.4 as u64, i.2)],
-                    stroke.stroke_width(y / 2),
-                ))?
-                .label(format!("{}", String::from_utf8_lossy(&i.0)))
-                .legend(move |(x, y)| {
-                    Rectangle::new([(x - 5, y - 5), (x + 5, y + 5)], stroke.filled())
-                });
+        if legend || no_margin {
+            for (sample_sequential_id, sample) in compressed_list.iter()
+            // list2.into_iter().group_by(|elt| elt.0).into_iter()
+            {
+                // Check that the sum of each group is +/- 4.
+                // assert_eq!(4, group.iter().fold(0_i32, |a, b| a + b).abs());
+                let count = *sample; //.count();
+                if count > 0 {
+                    let idx = *sample_sequential_id as usize;
+                    // let idx = sample.next().0;
+                    let chart = chart.draw_series(LineSeries::new(
+                        vec![(range.start(), count), (range.end(), count)],
+                        Palette99::pick(idx).stroke_width(y / 3 * 4),
+                    ))?;
+                    if !no_margin {
+                        chart
+                            .label(format!("{}", lambda(idx).unwrap_or(&idx.to_string())))
+                            .legend(move |(x, y)| {
+                                Rectangle::new(
+                                    [(x - 5, y - 5), (x + 5, y + 5)],
+                                    Palette99::pick(idx).filled(),
+                                )
+                            });
+                    }
+                }
+                //prev_index += count;
+            }
+        } else {
+            // For each sample:
+
+            let mut prev_index = 0;
+            chart.draw_series(
+                compressed_list
+                    .iter()
+                    .map(|(sample_sequential_id, sample)| {
+                        let count = *sample;
+                        if count > 0 {
+                            let stroke = Palette99::pick(*sample_sequential_id as usize);
+                            let mut bar2 = Rectangle::new(
+                                [
+                                    (range.start(), prev_index),
+                                    (range.end(), prev_index + count),
+                                ],
+                                stroke.stroke_width(y / 2), // filled(), //stroke_width(100),
+                            );
+                            bar2.set_margin(1, 0, 0, 0);
+                            prev_index += count;
+                            Some(bar2)
+                        } else {
+                            None
+                        }
+                    })
+                    .filter_map(|t| t),
+            )?;
         }
-    } else {
-        /*if no_margin {
+
+        // For each supplementary alignment:
+        if sort_by_cigar {
             for (idx, i) in supplementary_list.iter().enumerate() {
                 let stroke = Palette99::pick(idx as usize);
                 // let stroke_color = BLACK;
                 chart
                     .draw_series(LineSeries::new(
-                        vec![(range.start(), i.1), (range.end() as u64, i.1)],
+                        vec![(i.3 as u64, i.1), (i.4 as u64, i.2)],
+                        stroke.stroke_width(y / 2),
+                    ))?
+                    .label(format!("{}", String::from_utf8_lossy(&i.0)))
+                    .legend(move |(x, y)| {
+                        Rectangle::new([(x - 5, y - 5), (x + 5, y + 5)], stroke.filled())
+                    });
+            }
+        } else {
+            /*if no_margin {
+                for (idx, i) in supplementary_list.iter().enumerate() {
+                    let stroke = Palette99::pick(idx as usize);
+                    // let stroke_color = BLACK;
+                    chart
+                        .draw_series(LineSeries::new(
+                            vec![(range.start(), i.1), (range.end() as u64, i.1)],
+                            stroke.stroke_width(2),
+                        ))?;
+                    chart
+                    .draw_series(LineSeries::new(
+                        vec![(i.3 as u64, i.2+1), (i.4 as u64, i.2+1)],
                         stroke.stroke_width(2),
                     ))?;
-                chart
-                .draw_series(LineSeries::new(
-                    vec![(i.3 as u64, i.2+1), (i.4 as u64, i.2+1)],
-                    stroke.stroke_width(2),
-                ))?;
-            }
-        } else {*/
-        chart.draw_series(supplementary_list.iter().map(|i| {
-            let stroke = BLACK;
-            let mut bar2 = Rectangle::new(
-                [(i.3 as u64, i.1), (i.4 as u64, i.2)],
-                stroke.stroke_width(1), // filled(), // (y / 4), // filled(), //stroke_width(100),
-            );
-            bar2.set_margin(y / 4, y / 4, 0, 0);
-            bar2
-        }))?;
-        //}
-    }
-    let mut split_frequency = vec![];
-    //let mut snp_frequency = vec![];
-    // For each alignment:
-    let series = {
-        //list.into_iter().enumerate().map(|(index, data)| {
-        let mut bars = vec![];
-        index_list
+                }
+            } else {*/
+            chart.draw_series(supplementary_list.iter().map(|i| {
+                let stroke = BLACK;
+                let mut bar2 = Rectangle::new(
+                    [(i.3 as u64, i.1), (i.4 as u64, i.2)],
+                    stroke.stroke_width(1), // filled(), // (y / 4), // filled(), //stroke_width(100),
+                );
+                bar2.set_margin(y / 4, y / 4, 0, 0);
+                bar2
+            }))?;
+            //}
+        }
+        let mut split_frequency = vec![];
+        //let mut snp_frequency = vec![];
+        // For each alignment:
+        let series =
+            {
+                //list.into_iter().enumerate().map(|(index, data)| {
+                let mut bars = vec![];
+                index_list
             .iter()
             .zip(list.iter())
             .filter(|(_, data)| {
@@ -964,123 +989,126 @@ where
                 }
                 //}).flatten().collect::<Vec<_>>())?;
             });
-        bars
-    };
-    chart.draw_series(series)?;
-    let end1 = start.elapsed();
-    eprintln!(
-        "{}.{:03} sec.",
-        end1.as_secs(),
-        end1.subsec_nanos() / 1_000_000
-    );
-
-    if frequency.len() > 0 {
-        let coverages = coverage.split_evenly((frequency.len(), 1));
-        for (i, (sample_sequential_id, values)) in frequency.iter().rev().enumerate() {
-            let idx = *sample_sequential_id as usize;
-            let y_max = match max_coverage {
-                Some(a) => a,
-                _ => values.iter().map(|t| t.1).max().unwrap_or(1),
+                bars
             };
-            let mut chart = ChartBuilder::on(&coverages[i])
-                // Set the caption of the chart
-                //.caption(format!("{}", range), ("sans-serif", 20).into_font())
-                // Set the size of the label region
-                .x_label_area_size(0)
-                .y_label_area_size(y_area_size)
-                // Finally attach a coordinate on the drawing area and make a chart context
-                .build_ranged(x_spec.clone(), 0..y_max)?;
-            chart
-                .configure_mesh()
-                // We can customize the maximum number of labels allowed for each axis
-                //.x_labels(5)
-                // .y_labels(4)
-                //.x_label_style(("sans-serif", x_scale / 2).into_font())
-                .y_label_style(("sans-serif", 12).into_font())
-                // We can also change the format of the label text
-                // .x_label_formatter(&|x| format!("{:.3}", x))
-                .draw()?;
-            let color = if let Some(_) = snp_frequency {
-                Palette99::pick(idx).stroke_width(2)
-            } else {
-                Palette99::pick(idx).filled()
-            }; // BLUE
-            chart
-                .draw_series(
-                    Histogram::vertical(&chart).style(color).data(
-                        values
+        chart.draw_series(series)?;
+        let end1 = start.elapsed();
+        eprintln!(
+            "{}.{:03} sec.",
+            end1.as_secs(),
+            end1.subsec_nanos() / 1_000_000
+        );
+
+        if frequency.len() > 0 {
+            let coverages = coverage.split_evenly((frequency.len(), 1));
+            for (i, (sample_sequential_id, values)) in frequency.iter().rev().enumerate() {
+                let idx = *sample_sequential_id as usize;
+                let y_max = match max_coverage {
+                    Some(a) => a,
+                    _ => values.iter().map(|t| t.1).max().unwrap_or(1),
+                };
+                let mut chart = ChartBuilder::on(&coverages[i])
+                    // Set the caption of the chart
+                    //.caption(format!("{}", range), ("sans-serif", 20).into_font())
+                    // Set the size of the label region
+                    .x_label_area_size(0)
+                    .y_label_area_size(y_area_size)
+                    // Finally attach a coordinate on the drawing area and make a chart context
+                    .build_ranged(x_spec.clone(), 0..y_max)?;
+                chart
+                    .configure_mesh()
+                    // We can customize the maximum number of labels allowed for each axis
+                    //.x_labels(5)
+                    // .y_labels(4)
+                    //.x_label_style(("sans-serif", x_scale / 2).into_font())
+                    .y_label_style(("sans-serif", 12).into_font())
+                    // We can also change the format of the label text
+                    // .x_label_formatter(&|x| format!("{:.3}", x))
+                    .draw()?;
+                let color = if let Some(_) = snp_frequency {
+                    Palette99::pick(idx).stroke_width(2)
+                } else {
+                    Palette99::pick(idx).filled()
+                }; // BLUE
+                chart
+                    .draw_series(
+                        Histogram::vertical(&chart).style(color).data(
+                            values
+                                .iter()
+                                .filter(|t| t.0 >= range.start() && t.0 < range.end() && t.2 == '*')
+                                .map(|t| (t.0, t.1)),
+                        ),
+                    )?
+                    .label(format!("{}", lambda(idx).unwrap_or(&idx.to_string())))
+                    .legend(move |(x, y)| {
+                        Rectangle::new(
+                            [(x - 5, y - 5), (x + 5, y + 5)],
+                            Palette99::pick(idx).filled(),
+                        )
+                    });
+                if let Some(f) = snp_frequency {
+                    for i in ['A', 'C', 'G', 'T'].iter() {
+                        let color = nt_color(*i).unwrap();
+                        chart.draw_series(
+                            Histogram::vertical(&chart).style(color.filled()).data(
+                                values
+                                    .iter()
+                                    .filter(|t| {
+                                        t.0 >= range.start() && t.0 < range.end() && t.2 == *i
+                                    })
+                                    .map(|t| (t.0, t.1)),
+                            ),
+                        )?;
+                    }
+                }
+
+                chart.draw_series(
+                    Histogram::vertical(&chart).style(SPL_COL.filled()).data(
+                        split_frequency
                             .iter()
-                            .filter(|t| t.0 >= range.start() && t.0 < range.end() && t.2 == '*')
-                            .map(|t| (t.0, t.1)),
+                            .filter(|&&t| {
+                                t.0 == *sample_sequential_id
+                                    && (t.1).0 >= range.start()
+                                    && (t.1).0 < range.end()
+                            })
+                            .map(|t| t.1),
                     ),
-                )?
-                .label(format!("{}", lambda(idx).unwrap_or(&idx.to_string())))
+                )?;
+
+                /*if snp_frequency {
+                    [('A', A_COL), ]
+                }*/
+                /*.label(format!("{}", lambda(idx).unwrap_or(&idx.to_string())))
                 .legend(move |(x, y)| {
                     Rectangle::new(
                         [(x - 5, y - 5), (x + 5, y + 5)],
                         Palette99::pick(idx).filled(),
                     )
-                });
-            if let Some(f) = snp_frequency {
-                for i in ['A', 'C', 'G', 'T'].iter() {
-                    let color = nt_color(*i).unwrap();
-                    chart.draw_series(
-                        Histogram::vertical(&chart).style(color.filled()).data(
-                            values
-                                .iter()
-                                .filter(|t| t.0 >= range.start() && t.0 < range.end() && t.2 == *i)
-                                .map(|t| (t.0, t.1)),
-                        ),
-                    )?;
+                });*/
+                if !no_margin {
+                    chart
+                        .configure_series_labels()
+                        .background_style(&WHITE.mix(0.8))
+                        .border_style(&BLACK)
+                        .draw()?;
                 }
             }
-
-            chart.draw_series(
-                Histogram::vertical(&chart).style(SPL_COL.filled()).data(
-                    split_frequency
-                        .iter()
-                        .filter(|&&t| {
-                            t.0 == *sample_sequential_id
-                                && (t.1).0 >= range.start()
-                                && (t.1).0 < range.end()
-                        })
-                        .map(|t| t.1),
-                ),
-            )?;
-
-            /*if snp_frequency {
-                [('A', A_COL), ]
-            }*/
-            /*.label(format!("{}", lambda(idx).unwrap_or(&idx.to_string())))
-            .legend(move |(x, y)| {
-                Rectangle::new(
-                    [(x - 5, y - 5), (x + 5, y + 5)],
-                    Palette99::pick(idx).filled(),
-                )
-            });*/
-            if !no_margin {
-                chart
-                    .configure_series_labels()
-                    .background_style(&WHITE.mix(0.8))
-                    .border_style(&BLACK)
-                    .draw()?;
-            }
         }
-    }
 
-    if legend && (!no_margin || annotation_count + axis_count > 0) {
-        chart
-            .configure_series_labels()
-            .background_style(&WHITE.mix(0.8))
-            .border_style(&BLACK)
-            .draw()?;
+        if legend && (!no_margin || annotation_count + axis_count > 0) {
+            chart
+                .configure_series_labels()
+                .background_style(&WHITE.mix(0.8))
+                .border_style(&BLACK)
+                .draw()?;
+        }
+        let end2 = start.elapsed();
+        eprintln!(
+            "{}.{:03} sec.",
+            end2.as_secs(),
+            end2.subsec_nanos() / 1_000_000
+        );
     }
-    let end2 = start.elapsed();
-    eprintln!(
-        "{}.{:03} sec.",
-        end2.as_secs(),
-        end2.subsec_nanos() / 1_000_000
-    );
 
     Ok(())
 }
