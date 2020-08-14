@@ -23,10 +23,7 @@ pub struct ChromosomeBuffer {
 }
 
 impl ChromosomeBuffer {
-    pub fn new(
-        reader: IndexedReader<BufReader<File>>,
-        matches: ArgMatches,
-    ) -> Self {
+    pub fn new(reader: IndexedReader<BufReader<File>>, matches: ArgMatches) -> Self {
         ChromosomeBuffer {
             ref_id: 0,
             matches,
@@ -123,7 +120,6 @@ impl ChromosomeBuffer {
         //eprintln!("2");
         let mut chunks = BTreeMap::new();
         let mut bin_ids = BTreeSet::new();
-
 
         for i in
             self.reader.index().references()[range.ref_id() as usize].region_to_bins(range.clone())

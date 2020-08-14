@@ -202,6 +202,41 @@ impl Vis {
     }
 }
 
+pub struct VisRef<'a> {
+    range: StringRegion,
+    list: &'a Vec<(u64, bam::Record)>,
+    annotation: &'a Vec<(u64, bed::Record)>,
+    frequency: &'a BTreeMap<u64, Vec<(u64, u32, char)>>,
+    compressed_list: &'a Vec<(u64, usize)>,
+    index_list: &'a Vec<usize>,
+    prev_index: usize,
+    supplementary_list: &'a Vec<(Vec<u8>, usize, usize, i32, i32)>,
+}
+
+impl<'a> VisRef<'a> {
+    pub fn new(
+        range: StringRegion,
+        list: &'a Vec<(u64, bam::Record)>,
+        annotation: &'a Vec<(u64, bed::Record)>,
+        frequency: &'a BTreeMap<u64, Vec<(u64, u32, char)>>,
+        compressed_list: &'a Vec<(u64, usize)>,
+        index_list: &'a std::vec::Vec<usize>,
+        prev_index: usize,
+        supplementary_list: &'a std::vec::Vec<(std::vec::Vec<u8>, usize, usize, i32, i32)>,
+    ) -> Self {
+        VisRef {
+            range,
+            list,
+            annotation,
+            frequency,
+            compressed_list,
+            index_list,
+            prev_index,
+            supplementary_list,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::bed;

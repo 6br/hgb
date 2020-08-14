@@ -18,7 +18,7 @@ use ghi::range::{Format, InvertedRecordEntire, Set};
 use ghi::twopass_alignment::{Alignment, AlignmentBuilder};
 use ghi::vis::{bam_record_vis, RecordIter};
 use ghi::writer::GhiWriter;
-use ghi::{gff, reader::IndexedReader, simple_buffer::ChromosomeBuffer, IndexWriter};
+use ghi::{gff, reader::IndexedReader, simple_buffer::ChromosomeBuffer, IndexWriter, VisRef};
 use io::{BufReader, Error, ErrorKind, Write};
 use itertools::EitherOrBoth::{Both, Left};
 use itertools::Itertools;
@@ -768,8 +768,7 @@ pub fn vis_query(
                 let range = Region::convert(&prefetch_range, closure).unwrap();
                 let viewer = reader.fetch(&range).unwrap();
                 if matches.is_present("whole-chromosome") {
-                    let buffer: ChromosomeBuffer =
-                        ChromosomeBuffer::new(reader, matches.clone());
+                    let buffer: ChromosomeBuffer = ChromosomeBuffer::new(reader, matches.clone());
                     buffered_server::server(
                         matches.clone(),
                         string_range,
@@ -1384,14 +1383,16 @@ where
     } else {
         bam_record_vis(
             matches,
-            range,
-            &list,
-            &ann,
-            &freq,
-            &compressed_list,
-            &index_list,
-            prev_index,
-            &supplementary_list,
+VisRef::new(
+                range,
+                &list,
+                &ann,
+                &freq,
+                &compressed_list,
+                &index_list,
+                prev_index,
+                &supplementary_list,
+            ),
             lambda,
         )?;
     })

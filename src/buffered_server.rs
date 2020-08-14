@@ -7,7 +7,7 @@ use actix_web::http::header::{ContentDisposition, DispositionType};
 use actix_web::{HttpRequest, Result, web, Responder, error, middleware::Logger};
 use std::{sync::{RwLock},  collections::{BTreeSet}, fs};
 use clap::{App,  ArgMatches, Arg, AppSettings};
-use ghi::{vis::bam_record_vis, Vis, simple_buffer::ChromosomeBuffer};
+use ghi::{vis::bam_record_vis, Vis, simple_buffer::ChromosomeBuffer, VisRef};
 use genomic_range::StringRegion;
 use bam::Record;
 use itertools::Itertools;
@@ -313,7 +313,7 @@ async fn index(item: web::Data<RwLock<Item>>, vis: web::Data<RwLock<Vis>>, list:
 
             // If the end is exceeds the prefetch region, raise error.
             // let arg_vec = vec!["ghb", "vis", "-t", "1", "-r",  "parse"];
-            bam_record_vis(&matches, string_range, &list.read().unwrap(), ann, freq, compressed_list, index_list, prev_index, supplementary_list,|_| None).unwrap();
+            bam_record_vis(&matches, VisRef::new(string_range, &list.read().unwrap(), ann, freq, compressed_list, index_list, prev_index, supplementary_list),|_| None).unwrap();
             let end3 = start.elapsed();
             eprintln!(
                 "img_saved: {}.{:03} sec.",
@@ -343,16 +343,6 @@ impl Item {
         Item{range, args:args,params:params,dzi:dzi}
     }
 }
-
-/*
-impl Vis {
-    fn new(range: StringRegion, args: Vec<String>, annotation: Vec<(u64, bed::Record)>, freq: BTreeMap<u64, Vec<(u64, u32, char)>>, compressed_list: Vec<(u64, usize)>,
-    index_list: Vec<usize>,
-    prev_index: usize,
-    supplementary_list: Vec<(Vec<u8>, usize, usize, i32, i32)>) -> Vis {
-        Vis{range, args, annotation, freq, compressed_list, index_list, prev_index, supplementary_list}
-    }
-}*/
 #[derive(Debug, Serialize, Deserialize, Clone)]
 struct DZI {
     Image: Image,

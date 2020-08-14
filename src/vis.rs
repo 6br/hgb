@@ -1,4 +1,4 @@
-use crate::{bed, VisPreset};
+use crate::{bed, VisPreset, VisRef};
 use bam::record::{
     tags::{StringType, TagValue},
     Cigar,
@@ -223,14 +223,7 @@ where
 
 pub fn bam_record_vis<'a, F>(
     matches: &ArgMatches,
-    range: StringRegion,
-    list: &Vec<(u64, Record)>,
-    annotation: &Vec<(u64, bed::Record)>,
-    frequency: &BTreeMap<u64, Vec<(u64, u32, char)>>,
-    compressed_list: &Vec<(u64, usize)>,
-    index_list: &Vec<usize>,
-    prev_index: usize,
-    supplementary_list: &Vec<(Vec<u8>, usize, usize, i32, i32)>,
+    vis: VisRef,
     lambda: F,
 ) -> Result<(), Box<dyn std::error::Error>>
 where
@@ -258,6 +251,15 @@ where
     let only_translocation = matches.is_present("only-translocation");
     let end_split = matches.is_present("end-split-callets");
     let square = matches.is_present("square");
+
+    let range = vis.range;
+    let frequency = vis.frequency;
+    let list = vis.list;
+    let annotation = vis.annotation;
+    let compressed_list = vis.compressed_list;
+    let index_list = vis.index_list;
+    let prev_index = vis.prev_index;
+    let supplementary_list = vis.supplementary_list;
     if hide_alignment {
         return frequency_vis(matches, &range, frequency, lambda);
     }
