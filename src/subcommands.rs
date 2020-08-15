@@ -24,10 +24,12 @@ use itertools::EitherOrBoth::{Both, Left};
 use itertools::Itertools;
 use log::{debug, info};
 use std::{
+    cell::Cell,
     collections::{BTreeMap, BTreeSet, HashMap},
     fs::File,
     io,
     path::Path,
+    sync::Mutex,
 };
 
 pub fn bam_vis(
@@ -40,33 +42,34 @@ pub fn bam_vis(
         .value_of("min-read-length")
         .and_then(|a| a.parse::<u32>().ok())
         .unwrap_or(0u32);
+    if let Some(bam_files) = matches.values_of("bam") {
+        let bam_files: Vec<&str> = bam_files.collect();
 
-    if let Some(ranges) = matches.values_of("range") {
-        let ranges: Vec<&str> = ranges.collect();
-        let prefetch_ranges: Vec<&str> = matches
-            .values_of("prefetch-range")
-            .and_then(|t| Some(t.collect()))
-            .unwrap_or(vec![]);
-        /*let ranged_zip = if let Some(prefetch_ranges) = prefetch_ranges {
-            ranges.into_iter().zip(prefetch_ranges)
-        } else {
-            ranges.into_iter().zip(ranges.clone())
-        };*/
-        for eob in ranges.into_iter().zip_longest(prefetch_ranges) {
-            let (range, prefetch_str) = match eob {
-                Both(a, b) => (a, b),
-                Left(a) => (a, a),
-                _ => panic!("Range is not specified."),
-            };
-            let string_range = StringRegion::new(range).unwrap();
-            let prefetch_range = StringRegion::new(prefetch_str).unwrap();
-            /*let prefetch_range = if let Some(prefetch_ranges) = prefetch_ranges {
-                StringRegion::new(prefetch_ranges[index])?
+        if let Some(ranges) = matches.values_of("range") {
+            let ranges: Vec<&str> = ranges.collect();
+            let mut precursor = Vec::with_capacity(ranges.len());
+            let prefetch_ranges: Vec<&str> = matches
+                .values_of("prefetch-range")
+                .and_then(|t| Some(t.collect()))
+                .unwrap_or(vec![]);
+            /*let ranged_zip = if let Some(prefetch_ranges) = prefetch_ranges {
+                ranges.into_iter().zip(prefetch_ranges)
             } else {
-                string_range
+                ranges.into_iter().zip(ranges.clone())
             };*/
-            if let Some(bam_files) = matches.values_of("bam") {
-                let bam_files: Vec<&str> = bam_files.collect();
+            for eob in ranges.into_iter().zip_longest(prefetch_ranges) {
+                let (range, prefetch_str) = match eob {
+                    Both(a, b) => (a, b),
+                    Left(a) => (a, a),
+                    _ => panic!("Range is not specified."),
+                };
+                let string_range = StringRegion::new(range).unwrap();
+                let prefetch_range = StringRegion::new(prefetch_str).unwrap();
+                /*let prefetch_range = if let Some(prefetch_ranges) = prefetch_ranges {
+                    StringRegion::new(prefetch_ranges[index])?
+                } else {
+                    string_range
+                };*/
                 let mut list: Vec<(u64, Record)> = vec![];
                 println!("Input file: {:?}", bam_files);
                 for (index, bam_path) in bam_files.iter().enumerate() {
@@ -170,35 +173,17 @@ pub fn bam_vis(
                         idx += 1;
                     }
                 }
-                bam_record_vis_pre_calculate(
-                    matches,
+                precursor.push(VisPrecursor::new(
                     string_range,
                     prefetch_range,
-                    &args,
                     list,
                     ann,
                     freq,
-                    threads,
-                    |idx| Some(bam_files[idx]),
-                )?;
-                /*
-                if matches.is_present("web") {
-                    server(
-                        matches.clone(),
-                        string_range,
-                        prefetch_range,
-                        args.clone(),
-                        list,
-                        ann,
-                        freq,
-                        threads,
-                    )?;
-                } else {
-                    bam_record_vis(matches, string_range, list, ann, freq, |idx| {
-                        Some(bam_files[idx])
-                    })?;
-                }*/
+                ));
             }
+            bam_record_vis_pre_calculate(matches, &args, precursor, threads, |idx| {
+                Some(bam_files[idx])
+            })?;
         }
     }
     Ok(())
@@ -740,6 +725,7 @@ pub fn vis_query(
             IndexedReader::from_path_with_additional_threads(o, threads - 1).unwrap();
         if let Some(ranges) = matches.values_of("range") {
             let ranges: Vec<&str> = ranges.collect();
+            let mut precursor = Vec::with_capacity(ranges.len());
             let prefetch_ranges: Vec<&str> = matches
                 .values_of("prefetch-range")
                 .and_then(|t| Some(t.collect()))
@@ -777,7 +763,7 @@ pub fn vis_query(
                         buffer,
                         threads,
                     )?;
-                    break;
+                    return Ok(());
                 }
 
                 let sample_ids_opt: Option<Vec<u64>> = matches
@@ -850,36 +836,17 @@ pub fn vis_query(
                         }
                     }
                 });
-
-                bam_record_vis_pre_calculate(
-                    matches,
+                precursor.push(VisPrecursor::new(
                     string_range,
                     prefetch_range,
-                    &args,
                     list,
                     ann,
                     BTreeMap::new(),
-                    threads,
-                    |idx| reader.header().get_name(idx).and_then(|t| Some(t.as_str())),
-                )?;
-                /*
-                if matches.is_present("web") {
-                    server(
-                        matches.clone(),
-                        string_range,
-                        prefetch_range,
-                        args.clone(),
-                        list,
-                        ann,
-                        BTreeMap::new(),
-                        threads,
-                    )?;
-                } else {
-                    bam_record_vis(matches, string_range, list, ann, BTreeMap::new(), |idx| {
-                        reader.header().get_name(idx).and_then(|t| Some(t.as_str()))
-                    })?;
-                }*/
+                ));
             }
+            bam_record_vis_pre_calculate(matches, &args, precursor, threads, |idx| {
+                reader.header().get_name(idx).and_then(|t| Some(t.as_str()))
+            })?;
         }
     }
     Ok(())
@@ -1008,14 +975,61 @@ pub fn bin(matches: &ArgMatches, threads: u16) -> () {
     }
 }
 
-pub fn bam_record_vis_pre_calculate<'a, F>(
-    matches: &ArgMatches,
+pub struct VisPrecursor {
     range: StringRegion,
     prefetch_range: StringRegion,
+    list: Mutex<Vec<(u64, Record)>>,
+    annotation: Mutex<Vec<(u64, bed::Record)>>,
+    frequency: Mutex<BTreeMap<u64, Vec<(u64, u32, char)>>>,
+    //list: Cell<Vec<(u64, Record)>>,
+    //annotation: Cell<Vec<(u64, bed::Record)>>,
+    //frequency: Cell<BTreeMap<u64, Vec<(u64, u32, char)>>>,
+    // index_list: Mutex<Vec<usize>>,
+    //suppl_list: Mutex<Vec<(Vec<u8>, usize, usize, usize, usize)>>
+}
+
+impl VisPrecursor {
+    pub fn new(
+        range: StringRegion,
+        prefetch_range: StringRegion,
+        list: Vec<(u64, Record)>,
+        annotation: Vec<(u64, bed::Record)>,
+        frequency: BTreeMap<u64, Vec<(u64, u32, char)>>,
+    ) -> Self {
+        VisPrecursor {
+            range,
+            prefetch_range,
+            list: Mutex::new(list),
+            annotation: Mutex::new(annotation),
+            frequency: Mutex::new(frequency),
+            //index_list: Mutex::new(vec![]),
+            //suppl_list: Mutex::new(vec![]),
+        }
+    }
+    /*
+    fn split_only(&mut self, end_map: &HashMap<(u64, &[u8]), (i32, i32, i32, usize)>) {
+        let list = &*self.list.lock().unwrap();
+        /*self.list = Cell::new(
+            list.into_iter()
+                .filter(|(sample_id, record)| end_map.contains_key(&(*sample_id, record.name())))
+                .collect(),
+        );*/
+        *self.list.lock().unwrap() = list
+            .into_iter()
+            .filter(|(sample_id, record)| end_map.contains_key(&(*sample_id, record.name())))
+            .collect();
+    }*/
+}
+
+pub fn bam_record_vis_pre_calculate<'a, F>(
+    matches: &ArgMatches,
     args: &Vec<String>,
+    mut vis: Vec<VisPrecursor>,
+    /*range: StringRegion,
+    prefetch_range: StringRegion,
     mut list: Vec<(u64, Record)>,
     mut ann: Vec<(u64, bed::Record)>,
-    mut freq: BTreeMap<u64, Vec<(u64, u32, char)>>,
+    mut freq: BTreeMap<u64, Vec<(u64, u32, char)>>,*/
     threads: u16,
     lambda: F,
 ) -> Result<(), Box<dyn std::error::Error>>
@@ -1026,6 +1040,8 @@ where
     .value_of("threads")
     .and_then(|t| t.parse::<u16>().ok())
     .unwrap_or(1u16);*/
+    let range = &vis[0].range.clone();
+    let prefetch_range = &vis[0].prefetch_range.clone();
 
     let pileup = matches.is_present("pileup");
     let split_only = matches.is_present("only-split-alignment");
@@ -1040,77 +1056,94 @@ where
         .and_then(|a| a.parse::<f64>().ok()); // default 0.2
                                               // Calculate coverage; it won't work on sort_by_name
                                               // let mut frequency = BTreeMap::new(); // Vec::with_capacity();
+    {
+        let mut ann = &mut *vis[0].annotation.get_mut().unwrap();
+        ann.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.start().cmp(&b.1.start())));
+    }
+    {
+        let mut list = &mut *vis[0].list.get_mut().unwrap();
 
-    ann.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.start().cmp(&b.1.start())));
-    list.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.start().cmp(&b.1.start())));
+        list.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.start().cmp(&b.1.start())));
+    }
 
     if pileup {
-        list.iter().group_by(|elt| elt.0).into_iter().for_each(|t| {
-            let mut line =
-                Vec::with_capacity((prefetch_range.end - prefetch_range.start + 1) as usize);
-            for column in bam::Pileup::with_filter(&mut RecordIter::new(t.1), |record| {
-                record.flag().no_bits(1796)
-            }) {
-                let column = column.unwrap();
-                /*eprintln!(
-                    "Column at {}:{}, {} records",
-                    column.ref_id(),
-                    column.ref_pos() + 1,
-                    column.entries().len()
-                );*/
-                if let Some(freq) = snp_frequency {
-                    let mut seqs = Vec::with_capacity(column.entries().len()); //vec![];
-                    for entry in column.entries().iter() {
-                        let seq: Vec<_> = entry.sequence().unwrap().map(|nt| nt as char).collect();
-                        //let qual: Vec<_> = entry.qualities().unwrap().iter()
-                        //    .map(|q| (q + 33) as char).collect();
-                        //eprintln!("    {:?}: {:?}", entry.record(), seq);
-                        seqs.push(seq);
+        let mut freq_tmp = BTreeMap::new();
+        {
+            let mut list = &*vis[0].list.lock().unwrap();
+
+            list.iter().group_by(|elt| elt.0).into_iter().for_each(|t| {
+                let mut line =
+                    Vec::with_capacity((prefetch_range.end - prefetch_range.start + 1) as usize);
+                for column in bam::Pileup::with_filter(&mut RecordIter::new(t.1), |record| {
+                    record.flag().no_bits(1796)
+                }) {
+                    let column = column.unwrap();
+                    /*eprintln!(
+                        "Column at {}:{}, {} records",
+                        column.ref_id(),
+                        column.ref_pos() + 1,
+                        column.entries().len()
+                    );*/
+                    if let Some(freq) = snp_frequency {
+                        let mut seqs = Vec::with_capacity(column.entries().len()); //vec![];
+                        for entry in column.entries().iter() {
+                            let seq: Vec<_> =
+                                entry.sequence().unwrap().map(|nt| nt as char).collect();
+                            //let qual: Vec<_> = entry.qualities().unwrap().iter()
+                            //    .map(|q| (q + 33) as char).collect();
+                            //eprintln!("    {:?}: {:?}", entry.record(), seq);
+                            seqs.push(seq);
+                        }
+                        let unique_elements = seqs.iter().cloned().unique().collect_vec();
+                        let mut unique_frequency = vec![];
+                        for unique_elem in unique_elements.iter() {
+                            unique_frequency.push((
+                                seqs.iter().filter(|&elem| elem == unique_elem).count(),
+                                unique_elem,
+                            ));
+                        }
+                        unique_frequency.sort_by_key(|t| t.0);
+                        unique_frequency.reverse();
+                        let d: usize = unique_frequency.iter().map(|t| t.0).sum();
+                        let threshold = d as f64 * freq;
+                        // let minor = d - seqs[0].0;
+                        // let second_minor = d - unique_frequency[1].0;
+                        let (_, cdr) = unique_frequency.split_first().unwrap();
+                        cdr.iter()
+                            .filter(|t| t.0 > threshold as usize)
+                            .for_each(|t2| {
+                                if t2.1.len() > 0 {
+                                    line.push((
+                                        column.ref_pos() as u64,
+                                        t2.0 as u32,
+                                        t2.1[0].to_ascii_uppercase(),
+                                    ));
+                                }
+                            });
                     }
-                    let unique_elements = seqs.iter().cloned().unique().collect_vec();
-                    let mut unique_frequency = vec![];
-                    for unique_elem in unique_elements.iter() {
-                        unique_frequency.push((
-                            seqs.iter().filter(|&elem| elem == unique_elem).count(),
-                            unique_elem,
-                        ));
+                    // Should we have sparse occurrence table?
+                    //eprintln!("{:?} {:?}",  range.path, lambda(column.ref_id() as usize).unwrap_or(&column.ref_id().to_string()));
+                    // lambda(column.ref_id() as usize).unwrap_or(&column.ref_id().to_string())
+                    // == range.path
+                    // &&
+                    if prefetch_range.start <= column.ref_pos() as u64
+                        && column.ref_pos() as u64 <= prefetch_range.end
+                    {
+                        line.push((column.ref_pos() as u64, column.entries().len() as u32, '*'));
                     }
-                    unique_frequency.sort_by_key(|t| t.0);
-                    unique_frequency.reverse();
-                    let d: usize = unique_frequency.iter().map(|t| t.0).sum();
-                    let threshold = d as f64 * freq;
-                    // let minor = d - seqs[0].0;
-                    // let second_minor = d - unique_frequency[1].0;
-                    let (_, cdr) = unique_frequency.split_first().unwrap();
-                    cdr.iter()
-                        .filter(|t| t.0 > threshold as usize)
-                        .for_each(|t2| {
-                            if t2.1.len() > 0 {
-                                line.push((
-                                    column.ref_pos() as u64,
-                                    t2.0 as u32,
-                                    t2.1[0].to_ascii_uppercase(),
-                                ));
-                            }
-                        });
                 }
-                // Should we have sparse occurrence table?
-                //eprintln!("{:?} {:?}",  range.path, lambda(column.ref_id() as usize).unwrap_or(&column.ref_id().to_string()));
-                // lambda(column.ref_id() as usize).unwrap_or(&column.ref_id().to_string())
-                // == range.path
-                // &&
-                if prefetch_range.start <= column.ref_pos() as u64
-                    && column.ref_pos() as u64 <= prefetch_range.end
-                {
-                    line.push((column.ref_pos() as u64, column.entries().len() as u32, '*'));
-                }
-            }
-            //eprintln!("{:?}", line);
-            freq.insert(t.0, line);
-        });
+                //eprintln!("{:?}", line);
+
+                freq_tmp.insert(t.0, line);
+            });
+        }
+        let mut freq = &mut *vis[0].frequency.get_mut().unwrap();
+        freq.extend(freq_tmp);
     }
-    eprintln!("{:?}", freq.keys());
+
+    //eprintln!("{:?}", freq.keys());
     if sort_by_name {
+        let mut list = &mut *vis[0].list.get_mut().unwrap();
         list.sort_by(|a, b| {
             a.0.cmp(&b.0)
                 .then(a.1.name().cmp(&b.1.name()))
@@ -1123,257 +1156,280 @@ where
     let mut last_prev_index = 0;
     //let mut compressed_list = BTreeMap::<u64, usize>::new();
     let mut compressed_list = vec![];
-    let mut index_list = Vec::with_capacity(list.len());
+    let mut index_list = Vec::with_capacity(vis[0].list.lock().unwrap().len());
     let mut supplementary_list = vec![];
     let mut suppl_map = HashMap::new();
-    if split {
-        let mut end_map = HashMap::new();
+    {
+        let mut list = &mut *vis[0].list.get_mut().unwrap();
+        if split {
+            let mut end_map = HashMap::new();
 
-        let new_list = {
-            list.sort_by(|a, b| {
-                a.0.cmp(&b.0)
-                    .then(a.1.name().cmp(&b.1.name()))
-                    .then(a.1.start().cmp(&b.1.start()))
-            });
-            list.clone()
-        };
-        new_list
-            .iter()
-            .group_by(|elt| elt.0)
-            .into_iter()
-            .for_each(|t| {
-                let sample_id = t.0.clone();
-                t.1.group_by(|elt| elt.1.name()).into_iter().for_each(|s| {
-                    let mut items: Vec<&(u64, Record)> = s.1.into_iter().collect();
-                    if items.len() > 1 {
-                        let last: &(u64, Record) =
-                            items.iter().max_by_key(|t| t.1.calculate_end()).unwrap();
-                        end_map.insert(
-                            (sample_id, s.0),
-                            (
-                                items[0].1.calculate_end(),
-                                last.1.start(),
-                                last.1.calculate_end(),
-                                items.len(),
-                            ),
-                        );
-                        items.sort_by(|a, b| {
-                            a.0.cmp(&b.0).then(a.1.name().cmp(&b.1.name())).then(
-                                (a.1.cigar().soft_clipping(!a.1.flag().is_reverse_strand())
-                                    + a.1.cigar().hard_clipping(!a.1.flag().is_reverse_strand()))
-                                .cmp(
-                                    &((b.1.cigar().soft_clipping(!b.1.flag().is_reverse_strand()))
-                                        + (b.1
-                                            .cigar()
-                                            .hard_clipping(!b.1.flag().is_reverse_strand()))),
+            let new_list = {
+                list.sort_by(|a, b| {
+                    a.0.cmp(&b.0)
+                        .then(a.1.name().cmp(&b.1.name()))
+                        .then(a.1.start().cmp(&b.1.start()))
+                });
+                list.clone()
+            };
+            new_list
+                .iter()
+                .group_by(|elt| elt.0)
+                .into_iter()
+                .for_each(|t| {
+                    let sample_id = t.0.clone();
+                    t.1.group_by(|elt| elt.1.name()).into_iter().for_each(|s| {
+                        let mut items: Vec<&(u64, Record)> = s.1.into_iter().collect();
+                        if items.len() > 1 {
+                            let last: &(u64, Record) =
+                                items.iter().max_by_key(|t| t.1.calculate_end()).unwrap();
+                            end_map.insert(
+                                (sample_id, s.0),
+                                (
+                                    items[0].1.calculate_end(),
+                                    last.1.start(),
+                                    last.1.calculate_end(),
+                                    items.len(),
                                 ),
-                            )
-                        });
-                        //suppl_map.insert((sample_id, s.0), )
-                        for (idx, item) in items.iter().enumerate() {
-                            if idx > 0 {
-                                // Add head
-                                suppl_map
-                                    .entry((sample_id, s.0))
-                                    .or_insert(vec![])
-                                    .push(item.1.start());
-                            }
-                            if idx < items.len() - 1 {
-                                // Add tail
-                                suppl_map
-                                    .entry((sample_id, s.0))
-                                    .or_insert(vec![])
-                                    .push(item.1.calculate_end());
+                            );
+                            items.sort_by(|a, b| {
+                                a.0.cmp(&b.0).then(a.1.name().cmp(&b.1.name())).then(
+                                    (a.1.cigar().soft_clipping(!a.1.flag().is_reverse_strand())
+                                        + a.1
+                                            .cigar()
+                                            .hard_clipping(!a.1.flag().is_reverse_strand()))
+                                    .cmp(
+                                        &((b.1
+                                            .cigar()
+                                            .soft_clipping(!b.1.flag().is_reverse_strand()))
+                                            + (b.1
+                                                .cigar()
+                                                .hard_clipping(!b.1.flag().is_reverse_strand()))),
+                                    ),
+                                )
+                            });
+                            //suppl_map.insert((sample_id, s.0), )
+                            for (idx, item) in items.iter().enumerate() {
+                                if idx > 0 {
+                                    // Add head
+                                    suppl_map
+                                        .entry((sample_id, s.0))
+                                        .or_insert(vec![])
+                                        .push(item.1.start());
+                                }
+                                if idx < items.len() - 1 {
+                                    // Add tail
+                                    suppl_map
+                                        .entry((sample_id, s.0))
+                                        .or_insert(vec![])
+                                        .push(item.1.calculate_end());
+                                }
                             }
                         }
-                    }
-                })
-                //group.into_iter().for_each(|t| {})
-            });
-
-        if sort_by_name {
-            if false {
-                // sort_by_cigar {
-                list.sort_by(|a, b| {
-                    a.0.cmp(&b.0).then(a.1.name().cmp(&b.1.name())).then(
-                        (a.1.cigar().soft_clipping(!a.1.flag().is_reverse_strand())
-                            + a.1.cigar().hard_clipping(!a.1.flag().is_reverse_strand()))
-                        .cmp(
-                            &((b.1.cigar().soft_clipping(!b.1.flag().is_reverse_strand()))
-                                + (b.1.cigar().hard_clipping(!b.1.flag().is_reverse_strand()))),
-                        ),
-                    )
+                    })
+                    //group.into_iter().for_each(|t| {})
                 });
+
+            if sort_by_name {
+                if false {
+                    // sort_by_cigar {
+                    list.sort_by(|a, b| {
+                        a.0.cmp(&b.0).then(a.1.name().cmp(&b.1.name())).then(
+                            (a.1.cigar().soft_clipping(!a.1.flag().is_reverse_strand())
+                                + a.1.cigar().hard_clipping(!a.1.flag().is_reverse_strand()))
+                            .cmp(
+                                &((b.1.cigar().soft_clipping(!b.1.flag().is_reverse_strand()))
+                                    + (b.1.cigar().hard_clipping(!b.1.flag().is_reverse_strand()))),
+                            ),
+                        )
+                    });
+                } else {
+                    list.sort_by(|a, b| {
+                        /*
+                        a.0.cmp(&b.0).then(a.1.name().cmp(&b.1.name())).then(
+                            /*a.1.cigar()
+                            .soft_clipping(!a.1.flag().is_reverse_strand())
+                            .cmp(&b.1.cigar().soft_clipping(!a.1.flag().is_reverse_strand())),*/
+                            a.1.aligned_query_start().cmp(&b.1.aligned_query_start()),
+                        )*/
+                        a.0.cmp(&b.0).then(a.1.name().cmp(&b.1.name())).then(
+                            (a.1.cigar().soft_clipping(true) + a.1.cigar().hard_clipping(true))
+                                .cmp(
+                                    &((b.1.cigar().soft_clipping(true))
+                                        + (b.1.cigar().hard_clipping(true))),
+                                ),
+                        )
+                    });
+                }
             } else {
-                list.sort_by(|a, b| {
-                    /*
-                    a.0.cmp(&b.0).then(a.1.name().cmp(&b.1.name())).then(
-                        /*a.1.cigar()
-                        .soft_clipping(!a.1.flag().is_reverse_strand())
-                        .cmp(&b.1.cigar().soft_clipping(!a.1.flag().is_reverse_strand())),*/
-                        a.1.aligned_query_start().cmp(&b.1.aligned_query_start()),
-                    )*/
-                    a.0.cmp(&b.0).then(a.1.name().cmp(&b.1.name())).then(
-                        (a.1.cigar().soft_clipping(true) + a.1.cigar().hard_clipping(true)).cmp(
-                            &((b.1.cigar().soft_clipping(true))
-                                + (b.1.cigar().hard_clipping(true))),
-                        ),
-                    )
-                });
+                list.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.start().cmp(&b.1.start())));
             }
-        } else {
-            list.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.start().cmp(&b.1.start())));
-        }
 
-        if split_only {
-            list = list
-                .into_iter()
-                .filter(|(sample_id, record)| end_map.contains_key(&(*sample_id, record.name())))
-                .collect();
-        }
-
-        list.iter().group_by(|elt| elt.0).into_iter().for_each(|t| {
-            // let mut heap = BinaryHeap::<(i64, usize)>::new();
-            let mut packing_vec = vec![0u64];
-            let mut name_index = HashMap::new();
-            prev_index += 1;
-            let sample_id = t.0;
-            (t.1).enumerate().for_each(|(e, k)| {
-                let end = if !packing {
-                    range.end() as i32
-                } else if let Some(end) = end_map.get(&(sample_id, k.1.name())) {
-                    end.2
-                } else {
-                    k.1.calculate_end()
-                };
-
-                let mut index = if sort_by_name {
-                    prev_index += 1;
-                    e
-                } else if let Some(index) = name_index.get(k.1.name()) {
-                    *index
-                } else if let Some(index) = packing_vec
-                    .iter_mut()
-                    .enumerate()
-                    .find(|(_, item)| **item < k.1.start() as u64)
-                {
-                    *index.1 = end as u64;
-                    index.0
-                } else {
-                    packing_vec.push(end as u64);
-                    prev_index += 1;
-                    packing_vec.len() - 1
-                };
-                if let Some(end) = end_map.get(&(sample_id, k.1.name())) {
-                    if None == name_index.get(k.1.name()) {
-                        supplementary_list.push((
-                            k.1.name().to_vec(),
-                            index + last_prev_index,
-                            index + last_prev_index + end.3,
-                            end.0,
-                            end.1,
-                        ));
-                    }
-                }
-                if let Some(max_cov) = max_coverage {
-                    if index > max_cov as usize {
-                        index = max_cov as usize;
-                    }
-                }
-                index_list.push(index + last_prev_index);
-                name_index.insert(k.1.name(), index);
-            });
-            if let Some(max_cov) = max_coverage {
-                prev_index = max_cov as usize + last_prev_index;
+            if split_only {
+                /*let replace = list
+                    .iter()
+                    .filter(|(sample_id, record)| end_map.contains_key(&(*sample_id, record.name())))
+                    .collect();end_map
+                //list.replace(list)
+                std::mem::replace(list, replace);*/
+                //vis[0].split_only(&end_map);
+                let replace_list = list
+                    .iter()
+                    .filter(|(sample_id, record)| {
+                        end_map.contains_key(&(*sample_id, record.name()))
+                    })
+                    .map(|t| t.clone())
+                    .collect();
+                std::mem::replace(list, replace_list);
+                //list = vis[0].list.get_mut();
             }
-            compressed_list.push((t.0, prev_index));
-            last_prev_index = prev_index;
-        });
-    } else {
-        if packing {
+
             list.iter().group_by(|elt| elt.0).into_iter().for_each(|t| {
                 // let mut heap = BinaryHeap::<(i64, usize)>::new();
-                let mut packing = vec![0u64];
+                let mut packing_vec = vec![0u64];
+                let mut name_index = HashMap::new();
                 prev_index += 1;
-                (t.1).for_each(|k| {
-                    let mut index = if let Some(index) = packing
+                let sample_id = t.0;
+                (t.1).enumerate().for_each(|(e, k)| {
+                    let end = if !packing {
+                        range.end() as i32
+                    } else if let Some(end) = end_map.get(&(sample_id, k.1.name())) {
+                        end.2
+                    } else {
+                        k.1.calculate_end()
+                    };
+
+                    let mut index = if sort_by_name {
+                        prev_index += 1;
+                        e
+                    } else if let Some(index) = name_index.get(k.1.name()) {
+                        *index
+                    } else if let Some(index) = packing_vec
                         .iter_mut()
                         .enumerate()
                         .find(|(_, item)| **item < k.1.start() as u64)
                     {
-                        //packing[index.0] = k.1.calculate_end() as u64;
-                        *index.1 = k.1.calculate_end() as u64;
+                        *index.1 = end as u64;
                         index.0
                     } else {
-                        packing.push(k.1.calculate_end() as u64);
+                        packing_vec.push(end as u64);
                         prev_index += 1;
-                        packing.len() - 1
-                        //prev_index - 1
-                    }; /*
-                       let index: usize = if heap.peek() != None
-                           && -heap.peek().unwrap().0 < k.1.start() as i64
-                       {
-                           let hp = heap.pop().unwrap();
-                           // let index = hp.1;
-                           heap.push((-k.1.calculate_end() as i64, hp.1));
-                           hp.1
-                       } else {
-                           let index = prev_index;
-                           prev_index += 1;
-                           heap.push((-k.1.calculate_end() as i64, index));
-                           index
-                       };*/
-                    //let index =
+                        packing_vec.len() - 1
+                    };
+                    if let Some(end) = end_map.get(&(sample_id, k.1.name())) {
+                        if None == name_index.get(k.1.name()) {
+                            supplementary_list.push((
+                                k.1.name().to_vec(),
+                                index + last_prev_index,
+                                index + last_prev_index + end.3,
+                                end.0,
+                                end.1,
+                            ));
+                        }
+                    }
                     if let Some(max_cov) = max_coverage {
                         if index > max_cov as usize {
                             index = max_cov as usize;
-                            prev_index = max_cov as usize + last_prev_index;
                         }
                     }
                     index_list.push(index + last_prev_index);
-                    // eprintln!("{:?}", packing);
-                    //(index, (k.0, k.1))
-                }); //.collect::<Vec<(usize, (u64, Record))>>()
-                    // compressed_list.push(prev_index);
-                    //compressed_list.insert(t.0, prev_index);
-                    //prev_index += 1;
+                    name_index.insert(k.1.name(), index);
+                });
                 if let Some(max_cov) = max_coverage {
                     prev_index = max_cov as usize + last_prev_index;
                 }
                 compressed_list.push((t.0, prev_index));
-                //eprintln!("{:?} {:?} {:?}", compressed_list, packing, index_list);
                 last_prev_index = prev_index;
-                //(t.0, ((t.1).0, (t.1).1))
-                // .collect::<&(u64, Record)>(). // collect::<Vec<(usize, (u64, Record))>>
             });
         } else {
-            // Now does not specify the maximal length by max_coverage.
-            index_list = (0..list.len()).collect();
+            if packing {
+                list.iter().group_by(|elt| elt.0).into_iter().for_each(|t| {
+                    // let mut heap = BinaryHeap::<(i64, usize)>::new();
+                    let mut packing = vec![0u64];
+                    prev_index += 1;
+                    (t.1).for_each(|k| {
+                        let mut index = if let Some(index) = packing
+                            .iter_mut()
+                            .enumerate()
+                            .find(|(_, item)| **item < k.1.start() as u64)
+                        {
+                            //packing[index.0] = k.1.calculate_end() as u64;
+                            *index.1 = k.1.calculate_end() as u64;
+                            index.0
+                        } else {
+                            packing.push(k.1.calculate_end() as u64);
+                            prev_index += 1;
+                            packing.len() - 1
+                            //prev_index - 1
+                        }; /*
+                           let index: usize = if heap.peek() != None
+                               && -heap.peek().unwrap().0 < k.1.start() as i64
+                           {
+                               let hp = heap.pop().unwrap();
+                               // let index = hp.1;
+                               heap.push((-k.1.calculate_end() as i64, hp.1));
+                               hp.1
+                           } else {
+                               let index = prev_index;
+                               prev_index += 1;
+                               heap.push((-k.1.calculate_end() as i64, index));
+                               index
+                           };*/
+                        //let index =
+                        if let Some(max_cov) = max_coverage {
+                            if index > max_cov as usize {
+                                index = max_cov as usize;
+                                prev_index = max_cov as usize + last_prev_index;
+                            }
+                        }
+                        index_list.push(index + last_prev_index);
+                        // eprintln!("{:?}", packing);
+                        //(index, (k.0, k.1))
+                    }); //.collect::<Vec<(usize, (u64, Record))>>()
+                        // compressed_list.push(prev_index);
+                        //compressed_list.insert(t.0, prev_index);
+                        //prev_index += 1;
+                    if let Some(max_cov) = max_coverage {
+                        prev_index = max_cov as usize + last_prev_index;
+                    }
+                    compressed_list.push((t.0, prev_index));
+                    //eprintln!("{:?} {:?} {:?}", compressed_list, packing, index_list);
+                    last_prev_index = prev_index;
+                    //(t.0, ((t.1).0, (t.1).1))
+                    // .collect::<&(u64, Record)>(). // collect::<Vec<(usize, (u64, Record))>>
+                });
+            } else {
+                // Now does not specify the maximal length by max_coverage.
+                index_list = (0..list.len()).collect();
 
-            // list.sort_by(|a, b| a.0.cmp(&b.0));
-            // eprintln!("{}", list.len());
-            list.iter().group_by(|elt| elt.0).into_iter().for_each(
-                |(sample_sequential_id, sample)| {
-                    let count = sample.count();
-                    prev_index += count;
-                    // compressed_list.push(prev_index);
-                    // compressed_list.insert(sample_sequential_id, prev_index);
-                    compressed_list.push((sample_sequential_id, prev_index));
-                },
-            )
+                // list.sort_by(|a, b| a.0.cmp(&b.0));
+                // eprintln!("{}", list.len());
+                list.iter().group_by(|elt| elt.0).into_iter().for_each(
+                    |(sample_sequential_id, sample)| {
+                        let count = sample.count();
+                        prev_index += count;
+                        // compressed_list.push(prev_index);
+                        // compressed_list.insert(sample_sequential_id, prev_index);
+                        compressed_list.push((sample_sequential_id, prev_index));
+                    },
+                )
+            }
         }
     }
     eprintln!("{:?}", compressed_list);
+    let list = &*vis[0].list.lock().unwrap();
+    let ann = &*vis[0].annotation.lock().unwrap();
+    let freq = &*vis[0].frequency.lock().unwrap();
 
     Ok(if matches.is_present("web") {
         server(
             matches.clone(),
-            range,
-            prefetch_range,
+            range.clone(),
+            prefetch_range.clone(),
             args.clone(),
-            list,
-            ann,
-            freq,
+            list.to_vec(),
+            ann.to_vec(),
+            freq.clone(),
             compressed_list,
             index_list,
             prev_index,
@@ -1384,7 +1440,7 @@ where
         bam_record_vis(
             matches,
             vec![VisRef::new(
-                range,
+                range.clone(),
                 &list,
                 &ann,
                 &freq,
