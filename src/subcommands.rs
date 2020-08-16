@@ -29,7 +29,7 @@ use std::{
     fs::File,
     io, mem,
     path::Path,
-    sync::Mutex,
+    sync::{Arc, Mutex},
 };
 
 pub fn bam_vis(
@@ -978,13 +978,13 @@ pub fn bin(matches: &ArgMatches, threads: u16) -> () {
 pub struct VisPrecursor {
     range: StringRegion,
     prefetch_range: StringRegion,
-    list: Mutex<Vec<(u64, Record)>>,
-    annotation: Mutex<Vec<(u64, bed::Record)>>,
-    frequency: Mutex<BTreeMap<u64, Vec<(u64, u32, char)>>>,
+    list: Arc<Mutex<Vec<(u64, Record)>>>,
+    annotation: Arc<Mutex<Vec<(u64, bed::Record)>>>,
+    frequency: Arc<Mutex<BTreeMap<u64, Vec<(u64, u32, char)>>>>,
     //list: Cell<Vec<(u64, Record)>>,
     //annotation: Cell<Vec<(u64, bed::Record)>>,
     //frequency: Cell<BTreeMap<u64, Vec<(u64, u32, char)>>>,
-    index_list: Mutex<Vec<usize>>,
+    index_list: Arc<Mutex<Vec<usize>>>,
     //suppl_list: Mutex<Vec<(Vec<u8>, usize, usize, usize, usize)>>
 }
 
@@ -999,13 +999,30 @@ impl VisPrecursor {
         VisPrecursor {
             range,
             prefetch_range,
-            list: Mutex::new(list),
-            annotation: Mutex::new(annotation),
-            frequency: Mutex::new(frequency),
-            index_list: Mutex::new(vec![]),
+            list: Arc::new(Mutex::new(list)),
+            annotation: Arc::new(Mutex::new(annotation)),
+            frequency: Arc::new(Mutex::new(frequency)),
+            index_list: Arc::new(Mutex::new(vec![])),
             //suppl_list: Mutex::new(vec![]),
         }
-    }
+    } /*
+      fn vis_ref(
+          self,
+          prev_index: usize,
+          compressed_list: Vec<(u64, usize)>,
+          supplementary_list: std::vec::Vec<(std::vec::Vec<u8>, usize, usize, i32, i32)>,
+      ) -> VisRef<'static> {
+          VisRef {
+              range: self.range,
+              list: &self.list.into_inner().unwrap(),
+              annotation: &self.annotation.into_inner().unwrap(),
+              frequency: &self.frequency.into_inner().unwrap(),
+              compressed_list: &compressed_list,
+              index_list: &self.index_list.into_inner().unwrap(),
+              prev_index,
+              supplementary_list: &supplementary_list,
+          }
+      }*/
     /*
     fn split_only(&mut self, end_map: &HashMap<(u64, &[u8]), (i32, i32, i32, usize)>) {
         let list = &*self.list.lock().unwrap();
@@ -1163,7 +1180,7 @@ where
     let mut last_prev_index = 0;
     //let mut compressed_list = BTreeMap::<u64, usize>::new();
     let mut compressed_list = vec![];
-    let mut index_list = Vec::with_capacity(vis[0].list.lock().unwrap().len());
+    //let mut index_list = Vec::with_capacity(vis[0].list.lock().unwrap().len());
     let mut supplementary_list = vec![];
     let mut suppl_map = HashMap::new();
 
@@ -1409,7 +1426,11 @@ where
                                     prev_index = max_cov as usize + last_prev_index;
                                 }
                             }
-                            index_list.push(index + last_prev_index);
+                            vis[k.2]
+                                .index_list
+                                .lock()
+                                .unwrap()
+                                .push(index + last_prev_index);
                             // eprintln!("{:?}", packing);
                             //(index, (k.0, k.1))
                         }); //.collect::<Vec<(usize, (u64, Record))>>()
@@ -1449,11 +1470,12 @@ where
         }
     }
     eprintln!("{:?}", compressed_list);
-    let list = &*vis[0].list.lock().unwrap();
-    let ann = &*vis[0].annotation.lock().unwrap();
-    let freq = &*vis[0].frequency.lock().unwrap();
 
     Ok(if matches.is_present("web") {
+        let list = &*vis[0].list.lock().unwrap();
+        let ann = &*vis[0].annotation.lock().unwrap();
+        let freq = &*vis[0].frequency.lock().unwrap();
+        let index_list = &*vis[0].index_list.lock().unwrap();
         server(
             matches.clone(),
             range.clone(),
@@ -1463,24 +1485,63 @@ where
             ann.to_vec(),
             freq.clone(),
             compressed_list,
-            index_list,
+            index_list.to_vec(),
             prev_index,
             supplementary_list,
             threads,
         )?;
     } else {
-        bam_record_vis(
-            matches,
-            vec![VisRef::new(
+        let mut vis_ref = Vec::with_capacity(vis.len());
+        for i in vis {
+            let list = i.list.lock().unwrap();
+            let ann = i.annotation.lock().unwrap();
+            let freq = i.frequency.lock().unwrap();
+            let index_list = i.index_list.lock().unwrap();
+            let vis_item = VisRef::new(
                 range.clone(),
                 &list,
-                &ann,
-                &freq,
+                &i.annotation.lock().unwrap(),
+                &i.frequency.lock().unwrap(),
                 &compressed_list,
-                &index_list,
+                &i.index_list.lock().unwrap(),
                 prev_index,
                 &supplementary_list,
-            )],
+            );
+            vis_ref.push(vis_item);
+        }
+        /*let vis_ref = vis
+        .into_iter()
+        .map(|i| {
+            let val = Arc::try_unwrap(i.list).unwrap().into_inner().unwrap();
+            return VisRef::new(
+                range.clone(),
+                &val,
+                &Arc::try_unwrap(i.annotation).unwrap().into_inner().unwrap(),
+                &Arc::try_unwrap(i.frequency).unwrap().into_inner().unwrap(),
+                &compressed_list,
+                &Arc::try_unwrap(i.index_list).unwrap().into_inner().unwrap(),
+                prev_index,
+                &supplementary_list,
+            );
+        })
+        .collect::<Vec<_>>();*/
+        bam_record_vis(
+            matches, vis_ref,
+            /*vis.into_iter()
+            .map(|i| {
+                let val = Arc::try_unwrap(i.list).unwrap().into_inner().unwrap();
+                return VisRef::new(
+                    range.clone(),
+                    &val,
+                    &Arc::try_unwrap(i.annotation).unwrap().into_inner().unwrap(),
+                    &Arc::try_unwrap(i.frequency).unwrap().into_inner().unwrap(),
+                    &compressed_list,
+                    &Arc::try_unwrap(i.index_list).unwrap().into_inner().unwrap(),
+                    prev_index,
+                    &supplementary_list,
+                );
+            })
+            .collect::<Vec<_>>(),*/
             lambda,
         )?;
     })
