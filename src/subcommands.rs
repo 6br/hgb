@@ -27,7 +27,7 @@ use std::{
     cell::Cell,
     collections::{BTreeMap, BTreeSet, HashMap},
     fs::File,
-    io,
+    io, mem,
     path::Path,
     sync::Mutex,
 };
@@ -984,7 +984,7 @@ pub struct VisPrecursor {
     //list: Cell<Vec<(u64, Record)>>,
     //annotation: Cell<Vec<(u64, bed::Record)>>,
     //frequency: Cell<BTreeMap<u64, Vec<(u64, u32, char)>>>,
-    // index_list: Mutex<Vec<usize>>,
+    index_list: Mutex<Vec<usize>>,
     //suppl_list: Mutex<Vec<(Vec<u8>, usize, usize, usize, usize)>>
 }
 
@@ -1002,7 +1002,7 @@ impl VisPrecursor {
             list: Mutex::new(list),
             annotation: Mutex::new(annotation),
             frequency: Mutex::new(frequency),
-            //index_list: Mutex::new(vec![]),
+            index_list: Mutex::new(vec![]),
             //suppl_list: Mutex::new(vec![]),
         }
     }
@@ -1056,20 +1056,24 @@ where
         .and_then(|a| a.parse::<f64>().ok()); // default 0.2
                                               // Calculate coverage; it won't work on sort_by_name
                                               // let mut frequency = BTreeMap::new(); // Vec::with_capacity();
-    {
-        let mut ann = &mut *vis[0].annotation.get_mut().unwrap();
-        ann.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.start().cmp(&b.1.start())));
-    }
-    {
-        let mut list = &mut *vis[0].list.get_mut().unwrap();
 
-        list.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.start().cmp(&b.1.start())));
+    {
+        for i in vis.iter() {
+            let mut list = i.list.lock().unwrap();
+            let mut annotation = i.annotation.lock().unwrap();
+            list.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.start().cmp(&b.1.start())));
+            annotation.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.start().cmp(&b.1.start())));
+        }
+        //let mut list = &mut *vis[0].list.get_mut().unwrap();
+
+        //list.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.start().cmp(&b.1.start())));
     }
 
     if pileup {
-        let mut freq_tmp = BTreeMap::new();
-        {
-            let mut list = &*vis[0].list.lock().unwrap();
+        //let mut freq_tmp = BTreeMap::new();
+        for i in vis.iter() {
+            let mut list = i.list.lock().unwrap();
+            let mut freq = i.frequency.lock().unwrap();
 
             list.iter().group_by(|elt| elt.0).into_iter().for_each(|t| {
                 let mut line =
@@ -1134,21 +1138,24 @@ where
                 }
                 //eprintln!("{:?}", line);
 
-                freq_tmp.insert(t.0, line);
+                //freq_tmp.insert(t.0, line);
+                freq.insert(t.0, line);
             });
         }
-        let mut freq = &mut *vis[0].frequency.get_mut().unwrap();
-        freq.extend(freq_tmp);
+        //let mut freq = &mut *vis[0].frequency.get_mut().unwrap();
+        //freq.extend(freq_tmp);
     }
 
     //eprintln!("{:?}", freq.keys());
-    if sort_by_name {
-        let mut list = &mut *vis[0].list.get_mut().unwrap();
-        list.sort_by(|a, b| {
-            a.0.cmp(&b.0)
-                .then(a.1.name().cmp(&b.1.name()))
-                .then(a.1.start().cmp(&b.1.start()))
-        });
+    for i in vis.iter() {
+        let mut list = i.list.lock().unwrap();
+        if sort_by_name {
+            list.sort_by(|a, b| {
+                a.0.cmp(&b.0)
+                    .then(a.1.name().cmp(&b.1.name()))
+                    .then(a.1.start().cmp(&b.1.start()))
+            });
+        }
     }
 
     // Packing for each genome
@@ -1159,29 +1166,47 @@ where
     let mut index_list = Vec::with_capacity(vis[0].list.lock().unwrap().len());
     let mut supplementary_list = vec![];
     let mut suppl_map = HashMap::new();
+
+    // New_list is merged list to decide the order of alignments.
+    let mut new_list = {
+        // new_list is a tuple (sample_id, record, range_id), whose record needs to be cloned.
+        let mut new_list = vec![];
+        for (index, i) in vis.iter().enumerate() {
+            let mut list = i.list.lock().unwrap();
+            list.sort_by(|a, b| {
+                a.0.cmp(&b.0)
+                    .then(a.1.name().cmp(&b.1.name()))
+                    .then(a.1.start().cmp(&b.1.start()))
+            });
+            new_list.append(
+                &mut list
+                    .iter()
+                    .map(|t| (t.0, t.1.clone(), index))
+                    .collect::<Vec<_>>(),
+            );
+        }
+        // Should we mark the duplicated alignment as "this is duplicated so you sholdn't display more than once"?
+
+        new_list
+    };
+
     {
-        let mut list = &mut *vis[0].list.get_mut().unwrap();
+        //let mut list = &mut *vis[0].list.get_mut().unwrap();
         if split {
             let mut end_map = HashMap::new();
 
-            let new_list = {
-                list.sort_by(|a, b| {
-                    a.0.cmp(&b.0)
-                        .then(a.1.name().cmp(&b.1.name()))
-                        .then(a.1.start().cmp(&b.1.start()))
-                });
-                list.clone()
-            };
-            new_list
+            //Avoid immutable borrow occurs here.
+            let tmp_list = new_list.clone();
+            tmp_list
                 .iter()
                 .group_by(|elt| elt.0)
                 .into_iter()
                 .for_each(|t| {
                     let sample_id = t.0.clone();
                     t.1.group_by(|elt| elt.1.name()).into_iter().for_each(|s| {
-                        let mut items: Vec<&(u64, Record)> = s.1.into_iter().collect();
+                        let mut items: Vec<&(u64, Record, usize)> = s.1.into_iter().collect();
                         if items.len() > 1 {
-                            let last: &(u64, Record) =
+                            let last: &(u64, Record, usize) =
                                 items.iter().max_by_key(|t| t.1.calculate_end()).unwrap();
                             end_map.insert(
                                 (sample_id, s.0),
@@ -1233,7 +1258,7 @@ where
             if sort_by_name {
                 if false {
                     // sort_by_cigar {
-                    list.sort_by(|a, b| {
+                    new_list.sort_by(|a, b| {
                         a.0.cmp(&b.0).then(a.1.name().cmp(&b.1.name())).then(
                             (a.1.cigar().soft_clipping(!a.1.flag().is_reverse_strand())
                                 + a.1.cigar().hard_clipping(!a.1.flag().is_reverse_strand()))
@@ -1244,7 +1269,7 @@ where
                         )
                     });
                 } else {
-                    list.sort_by(|a, b| {
+                    new_list.sort_by(|a, b| {
                         /*
                         a.0.cmp(&b.0).then(a.1.name().cmp(&b.1.name())).then(
                             /*a.1.cigar()
@@ -1262,149 +1287,156 @@ where
                     });
                 }
             } else {
-                list.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.start().cmp(&b.1.start())));
+                new_list.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.start().cmp(&b.1.start())));
             }
-
             if split_only {
-                /*let replace = list
-                    .iter()
-                    .filter(|(sample_id, record)| end_map.contains_key(&(*sample_id, record.name())))
-                    .collect();end_map
-                //list.replace(list)
-                std::mem::replace(list, replace);*/
-                //vis[0].split_only(&end_map);
-                let replace_list = list
-                    .iter()
-                    .filter(|(sample_id, record)| {
+                new_list = new_list
+                    .into_iter()
+                    .filter(|(sample_id, record, _range_id)| {
                         end_map.contains_key(&(*sample_id, record.name()))
                     })
-                    .map(|t| t.clone())
                     .collect();
-                std::mem::replace(list, replace_list);
                 //list = vis[0].list.get_mut();
             }
 
-            list.iter().group_by(|elt| elt.0).into_iter().for_each(|t| {
-                // let mut heap = BinaryHeap::<(i64, usize)>::new();
-                let mut packing_vec = vec![0u64];
-                let mut name_index = HashMap::new();
-                prev_index += 1;
-                let sample_id = t.0;
-                (t.1).enumerate().for_each(|(e, k)| {
-                    let end = if !packing {
-                        range.end() as i32
-                    } else if let Some(end) = end_map.get(&(sample_id, k.1.name())) {
-                        end.2
-                    } else {
-                        k.1.calculate_end()
-                    };
-
-                    let mut index = if sort_by_name {
-                        prev_index += 1;
-                        e
-                    } else if let Some(index) = name_index.get(k.1.name()) {
-                        *index
-                    } else if let Some(index) = packing_vec
-                        .iter_mut()
-                        .enumerate()
-                        .find(|(_, item)| **item < k.1.start() as u64)
-                    {
-                        *index.1 = end as u64;
-                        index.0
-                    } else {
-                        packing_vec.push(end as u64);
-                        prev_index += 1;
-                        packing_vec.len() - 1
-                    };
-                    if let Some(end) = end_map.get(&(sample_id, k.1.name())) {
-                        if None == name_index.get(k.1.name()) {
-                            supplementary_list.push((
-                                k.1.name().to_vec(),
-                                index + last_prev_index,
-                                index + last_prev_index + end.3,
-                                end.0,
-                                end.1,
-                            ));
-                        }
-                    }
-                    if let Some(max_cov) = max_coverage {
-                        if index > max_cov as usize {
-                            index = max_cov as usize;
-                        }
-                    }
-                    index_list.push(index + last_prev_index);
-                    name_index.insert(k.1.name(), index);
-                });
-                if let Some(max_cov) = max_coverage {
-                    prev_index = max_cov as usize + last_prev_index;
-                }
-                compressed_list.push((t.0, prev_index));
-                last_prev_index = prev_index;
-            });
-        } else {
-            if packing {
-                list.iter().group_by(|elt| elt.0).into_iter().for_each(|t| {
+            new_list
+                .iter()
+                .group_by(|elt| elt.0)
+                .into_iter()
+                .for_each(|t| {
                     // let mut heap = BinaryHeap::<(i64, usize)>::new();
-                    let mut packing = vec![0u64];
+                    let mut packing_vec = vec![0u64];
+                    let mut name_index = HashMap::new();
                     prev_index += 1;
-                    (t.1).for_each(|k| {
-                        let mut index = if let Some(index) = packing
+                    let sample_id = t.0;
+                    (t.1).enumerate().for_each(|(e, k)| {
+                        let end = if !packing {
+                            range.end() as i32
+                        } else if let Some(end) = end_map.get(&(sample_id, k.1.name())) {
+                            end.2
+                        } else {
+                            k.1.calculate_end()
+                        };
+
+                        let mut index = if sort_by_name {
+                            prev_index += 1;
+                            e
+                        } else if let Some(index) = name_index.get(k.1.name()) {
+                            *index
+                        } else if let Some(index) = packing_vec
                             .iter_mut()
                             .enumerate()
                             .find(|(_, item)| **item < k.1.start() as u64)
                         {
-                            //packing[index.0] = k.1.calculate_end() as u64;
-                            *index.1 = k.1.calculate_end() as u64;
+                            *index.1 = end as u64;
                             index.0
                         } else {
-                            packing.push(k.1.calculate_end() as u64);
+                            packing_vec.push(end as u64);
                             prev_index += 1;
-                            packing.len() - 1
-                            //prev_index - 1
-                        }; /*
-                           let index: usize = if heap.peek() != None
-                               && -heap.peek().unwrap().0 < k.1.start() as i64
-                           {
-                               let hp = heap.pop().unwrap();
-                               // let index = hp.1;
-                               heap.push((-k.1.calculate_end() as i64, hp.1));
-                               hp.1
-                           } else {
-                               let index = prev_index;
-                               prev_index += 1;
-                               heap.push((-k.1.calculate_end() as i64, index));
-                               index
-                           };*/
-                        //let index =
+                            packing_vec.len() - 1
+                        };
+                        if let Some(end) = end_map.get(&(sample_id, k.1.name())) {
+                            if None == name_index.get(k.1.name()) {
+                                supplementary_list.push((
+                                    k.1.name().to_vec(),
+                                    index + last_prev_index,
+                                    index + last_prev_index + end.3,
+                                    end.0,
+                                    end.1,
+                                ));
+                            }
+                        }
                         if let Some(max_cov) = max_coverage {
                             if index > max_cov as usize {
                                 index = max_cov as usize;
-                                prev_index = max_cov as usize + last_prev_index;
                             }
                         }
-                        index_list.push(index + last_prev_index);
-                        // eprintln!("{:?}", packing);
-                        //(index, (k.0, k.1))
-                    }); //.collect::<Vec<(usize, (u64, Record))>>()
-                        // compressed_list.push(prev_index);
-                        //compressed_list.insert(t.0, prev_index);
-                        //prev_index += 1;
+                        vis[k.2]
+                            .index_list
+                            .lock()
+                            .unwrap()
+                            .push(index + last_prev_index);
+                        name_index.insert(k.1.name(), index);
+                    });
                     if let Some(max_cov) = max_coverage {
                         prev_index = max_cov as usize + last_prev_index;
                     }
                     compressed_list.push((t.0, prev_index));
-                    //eprintln!("{:?} {:?} {:?}", compressed_list, packing, index_list);
                     last_prev_index = prev_index;
-                    //(t.0, ((t.1).0, (t.1).1))
-                    // .collect::<&(u64, Record)>(). // collect::<Vec<(usize, (u64, Record))>>
                 });
+        } else {
+            if packing {
+                new_list
+                    .iter()
+                    .group_by(|elt| elt.0)
+                    .into_iter()
+                    .for_each(|t| {
+                        // let mut heap = BinaryHeap::<(i64, usize)>::new();
+                        let mut packing = vec![0u64];
+                        prev_index += 1;
+                        (t.1).for_each(|k| {
+                            let mut index = if let Some(index) = packing
+                                .iter_mut()
+                                .enumerate()
+                                .find(|(_, item)| **item < k.1.start() as u64)
+                            {
+                                //packing[index.0] = k.1.calculate_end() as u64;
+                                *index.1 = k.1.calculate_end() as u64;
+                                index.0
+                            } else {
+                                packing.push(k.1.calculate_end() as u64);
+                                prev_index += 1;
+                                packing.len() - 1
+                                //prev_index - 1
+                            }; /*
+                               let index: usize = if heap.peek() != None
+                                   && -heap.peek().unwrap().0 < k.1.start() as i64
+                               {
+                                   let hp = heap.pop().unwrap();
+                                   // let index = hp.1;
+                                   heap.push((-k.1.calculate_end() as i64, hp.1));
+                                   hp.1
+                               } else {
+                                   let index = prev_index;
+                                   prev_index += 1;
+                                   heap.push((-k.1.calculate_end() as i64, index));
+                                   index
+                               };*/
+                            //let index =
+                            if let Some(max_cov) = max_coverage {
+                                if index > max_cov as usize {
+                                    index = max_cov as usize;
+                                    prev_index = max_cov as usize + last_prev_index;
+                                }
+                            }
+                            index_list.push(index + last_prev_index);
+                            // eprintln!("{:?}", packing);
+                            //(index, (k.0, k.1))
+                        }); //.collect::<Vec<(usize, (u64, Record))>>()
+                            // compressed_list.push(prev_index);
+                            //compressed_list.insert(t.0, prev_index);
+                            //prev_index += 1;
+                        if let Some(max_cov) = max_coverage {
+                            prev_index = max_cov as usize + last_prev_index;
+                        }
+                        compressed_list.push((t.0, prev_index));
+                        //eprintln!("{:?} {:?} {:?}", compressed_list, packing, index_list);
+                        last_prev_index = prev_index;
+                        //(t.0, ((t.1).0, (t.1).1))
+                        // .collect::<&(u64, Record)>(). // collect::<Vec<(usize, (u64, Record))>>
+                    });
             } else {
                 // Now does not specify the maximal length by max_coverage.
-                index_list = (0..list.len()).collect();
+                // index_list = (0..list.len()).collect();
+                for i in vis.iter() {
+                    let mut index_list = i.index_list.lock().unwrap(); // = (0..new_list.len()).collect();
+                    let temp_index_list = (0..new_list.len()).collect();
+                    mem::replace(&mut *index_list, temp_index_list);
+                }
 
                 // list.sort_by(|a, b| a.0.cmp(&b.0));
                 // eprintln!("{}", list.len());
-                list.iter().group_by(|elt| elt.0).into_iter().for_each(
+                new_list.iter().group_by(|elt| elt.0).into_iter().for_each(
                     |(sample_sequential_id, sample)| {
                         let count = sample.count();
                         prev_index += count;
