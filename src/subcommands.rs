@@ -183,7 +183,7 @@ pub fn bam_vis(
                     freq,
                 ));
             }
-            bam_record_vis_pre_calculate(matches, &args, &precursor, threads, |idx| {
+            bam_record_vis_pre_calculate(matches, &args, precursor, threads, |idx| {
                 Some(bam_files[idx])
             })?;
         }
@@ -846,7 +846,7 @@ pub fn vis_query(
                     BTreeMap::new(),
                 ));
             }
-            bam_record_vis_pre_calculate(matches, &args, &precursor, threads, |idx| {
+            bam_record_vis_pre_calculate(matches, &args, precursor, threads, |idx| {
                 reader.header().get_name(idx).and_then(|t| Some(t.as_str()))
             })?;
         }
@@ -1043,7 +1043,7 @@ impl VisPrecursor {
 pub fn bam_record_vis_pre_calculate<'a, F>(
     matches: &ArgMatches,
     args: &Vec<String>,
-    vis: &Vec<VisPrecursor>,
+    mut vis: Vec<VisPrecursor>,
     /*range: StringRegion,
     prefetch_range: StringRegion,
     mut list: Vec<(u64, Record)>,
@@ -1472,31 +1472,8 @@ where
         }
     }
     eprintln!("{:?}", compressed_list);
-    let mut vis_orig = Vec::with_capacity(vis.len());
 
-    for i in vis {
-        let list = i.list.lock().unwrap();
-        let ann = i.annotation.lock().unwrap();
-        let freq = i.frequency.lock().unwrap();
-        let index_list = i.index_list.lock().unwrap();
-        let vis_item = VisOrig::new(
-            range.clone(),
-            list.to_vec(),
-            ann.to_vec(), //i.annotation.lock().unwrap(),
-            *i.frequency.lock().unwrap(),
-            &compressed_list,
-            index_list.to_vec(), //i.index_list.lock().unwrap(),
-            prev_index,
-            &supplementary_list,
-        );
-        vis_orig.push(vis_item);
-    }
-    let vis_ref = vis_orig
-        .into_iter()
-        .map(|t| t.convert())
-        .collect::<Vec<_>>();
-
-    if matches.is_present("web") {
+    Ok(if matches.is_present("web") {
         let list = &*vis[0].list.lock().unwrap();
         let ann = &*vis[0].annotation.lock().unwrap();
         let freq = &*vis[0].frequency.lock().unwrap();
@@ -1516,8 +1493,7 @@ where
             threads,
         )?;
     } else {
-        //let mut vis_ref = Vec::with_capacity(vis.len());
-        /*
+        let mut vis_ref = Vec::with_capacity(vis.len());
         for i in vis {
             let list = i.list.lock().unwrap();
             let ann = i.annotation.lock().unwrap();
@@ -1525,32 +1501,16 @@ where
             let index_list = i.index_list.lock().unwrap();
             let vis_item = VisOrig::new(
                 range.clone(),
-                list.to_vec(),
-                ann.to_vec(), //i.annotation.lock().unwrap(),
-                *i.frequency.lock().unwrap(),
-                &compressed_list,
-                index_list.to_vec(), //i.index_list.lock().unwrap(),
+                list,
+                i.annotation.lock().unwrap(),
+                i.frequency.lock().unwrap(),
+                compressed_list,
+                i.index_list.lock().unwrap(),
                 prev_index,
-                &supplementary_list,
-            )
-            .convert();
-            */
-        /*
-        vis_ref.push(
-            VisOrig::new(
-                range.clone(),
-                list.to_vec(),
-                ann.to_vec(), //i.annotation.lock().unwrap(),
-                *i.frequency.lock().unwrap(),
-                &compressed_list,
-                index_list.to_vec(), //i.index_list.lock().unwrap(),
-                prev_index,
-                &supplementary_list,
-            )
-            .convert(),
-        );
-        */
-        //}
+                supplementary_list,
+            ).convert();
+            vis_ref.push(vis_item);
+        }
         /*let vis_ref = vis
         .into_iter()
         .map(|i| {
@@ -1571,27 +1531,22 @@ where
             matches, vis_ref,
             /*vis.into_iter()
             .map(|i| {
-                let list = i.list.lock().unwrap();
-                let ann = i.annotation.lock().unwrap();
-                let freq = i.frequency.lock().unwrap();
-                let index_list = i.index_list.lock().unwrap();
-                VisOrig::new(
+                let val = Arc::try_unwrap(i.list).unwrap().into_inner().unwrap();
+                return VisRef::new(
                     range.clone(),
-                    list.to_vec(),
-                    ann.to_vec(), //i.annotation.lock().unwrap(),
-                    *i.frequency.lock().unwrap(),
+                    &val,
+                    &Arc::try_unwrap(i.annotation).unwrap().into_inner().unwrap(),
+                    &Arc::try_unwrap(i.frequency).unwrap().into_inner().unwrap(),
                     &compressed_list,
-                    index_list.to_vec(), //i.index_list.lock().unwrap(),
+                    &Arc::try_unwrap(i.index_list).unwrap().into_inner().unwrap(),
                     prev_index,
                     &supplementary_list,
-                )
+                );
             })
-            .map(|mut t| t.convert())
             .collect::<Vec<_>>(),*/
             lambda,
         )?;
-    }
-    Ok(())
+    })
 }
 
 #[cfg(not(feature = "web"))]
