@@ -236,7 +236,7 @@ impl VisOrig {
         }
     }
 
-    pub fn convert(&mut self) -> VisRef {
+    pub fn convert<'a>(self) -> VisRef<'a> {
         VisRef {
             range: self.range.clone(),
             list: &self.list,

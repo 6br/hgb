@@ -223,7 +223,7 @@ where
 
 pub fn bam_record_vis<'a, F>(
     matches: &ArgMatches,
-    vis: Vec<VisOrig>,
+    vis: Vec<VisRef>,
     lambda: F,
 ) -> Result<(), Box<dyn std::error::Error>>
 where
@@ -255,7 +255,7 @@ where
         //Multi-ranged frequency vis has not yet been supported.
         let vis = &vis[0];
         let range = &vis.range;
-        let frequency = &vis.frequency;
+        let frequency = vis.frequency;
 
         return frequency_vis(matches, range, frequency, lambda);
     }
@@ -325,7 +325,7 @@ where
     //let annotation_count = annotation.iter().unique_by(|s| s.0).count(); // annotation.len();
     let annotation_count = vis
         .iter()
-        .map(|a| &a.annotation)
+        .map(|a| a.annotation)
         .collect::<Vec<_>>()
         .into_iter()
         .flatten()
