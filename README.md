@@ -33,6 +33,11 @@ cargo run --release -- vis --help
 
 The input BAM file **must** be indexed using `samtools index`. The input BAM file *needed to* be calculated MD tag using `samtools calmd` if mismatches are to be visualized.
 
+```bash
+samtools calmd -b aln.bam ref.fasta > input.bam
+samtools index input.bam
+```
+
 * A simple example:
 
 ```bash
