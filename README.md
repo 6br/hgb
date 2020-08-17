@@ -25,7 +25,7 @@ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 ```bash
 git clone https://github.com/6br/hgb
 cargo build --release
-cargo run -- vis --help
+cargo run --release -- vis --help
 ```
 
 ## Usage
@@ -35,43 +35,43 @@ The input BAM file **must** be indexed using `samtools index`. The input BAM fil
 * A simple example:
 
 ```bash
-cargo run -- vis -a input.bam -o output.png -r chr1:91234-92334
+cargo run --release -- vis -a input.bam -o output.png -r chr1:91234-92334
 ```
 
 * A simple examples with two bam files:
 
 ```bash
-cargo run -- vis -a input1.bam input2.bam -o output.png -r chr1:91234-92334
+cargo run --release -- vis -a input1.bam input2.bam -o output.png -r chr1:91234-92334
 ```
 
 * A simple examples with two bam files of split alignments:
 
 ```bash
-cargo run -- vis -a input1.bam input2.bam -o output.png -r chr1:91234-92334 -s
+cargo run --release -- vis -a input1.bam input2.bam -o output.png -r chr1:91234-92334 -s
 ```
 
 * A simple examples with two bam files of only split alignments:
 
 ```bash
-cargo run -- vis -a input1.bam input2.bam -o output.png -r chr1:91234-92334 -s -u
+cargo run --release -- vis -a input1.bam input2.bam -o output.png -r chr1:91234-92334 -s -u
 ```
 
 * A simple examples with two bam files with read quality:
 
 ```bash
-cargo run -- vis -a input1.bam input2.bam -o output.png -r chr1:91234-92334 -q
+cargo run --release -- vis -a input1.bam input2.bam -o output.png -r chr1:91234-92334 -q
 ```
 
 * A simple examples with two bam files with hidden legends:
 
 ```bash
-cargo run -- vis -a input1.bam input2.bam -o output.png -r chr1:91234-92334 -l
+cargo run --release -- vis -a input1.bam input2.bam -o output.png -r chr1:91234-92334 -l
 ```
 
 * A simple examples with two bam files without cigars:
 
 ```bash
-cargo run -- vis -a input1.bam input2.bam -o output.png -r chr1:91234-92334 -n -I
+cargo run --release -- vis -a input1.bam input2.bam -o output.png -r chr1:91234-92334 -n -I
 ```
 
 ## Author
