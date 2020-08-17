@@ -18,7 +18,9 @@ use ghi::range::{Format, InvertedRecordEntire, Set};
 use ghi::twopass_alignment::{Alignment, AlignmentBuilder};
 use ghi::vis::{bam_record_vis, RecordIter};
 use ghi::writer::GhiWriter;
-use ghi::{gff, reader::IndexedReader, simple_buffer::ChromosomeBuffer, IndexWriter, VisRef};
+use ghi::{
+    gff, reader::IndexedReader, simple_buffer::ChromosomeBuffer, IndexWriter, VisOrig, VisRef,
+};
 use io::{BufReader, Error, ErrorKind, Write};
 use itertools::EitherOrBoth::{Both, Left};
 use itertools::Itertools;
@@ -1497,16 +1499,16 @@ where
             let ann = i.annotation.lock().unwrap();
             let freq = i.frequency.lock().unwrap();
             let index_list = i.index_list.lock().unwrap();
-            let vis_item = VisRef::new(
+            let vis_item = VisOrig::new(
                 range.clone(),
-                &list,
-                &i.annotation.lock().unwrap(),
-                &i.frequency.lock().unwrap(),
-                &compressed_list,
-                &i.index_list.lock().unwrap(),
+                list,
+                i.annotation.lock().unwrap(),
+                i.frequency.lock().unwrap(),
+                compressed_list,
+                i.index_list.lock().unwrap(),
                 prev_index,
-                &supplementary_list,
-            );
+                supplementary_list,
+            ).convert();
             vis_ref.push(vis_item);
         }
         /*let vis_ref = vis

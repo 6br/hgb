@@ -1,4 +1,4 @@
-use crate::{bed, VisPreset, VisRef};
+use crate::{bed, Vis, VisOrig, VisPreset, VisRef};
 use bam::record::{
     tags::{StringType, TagValue},
     Cigar,
@@ -223,7 +223,7 @@ where
 
 pub fn bam_record_vis<'a, F>(
     matches: &ArgMatches,
-    vis: Vec<VisRef>,
+    vis: Vec<VisOrig>,
     lambda: F,
 ) -> Result<(), Box<dyn std::error::Error>>
 where
@@ -255,7 +255,7 @@ where
         //Multi-ranged frequency vis has not yet been supported.
         let vis = &vis[0];
         let range = &vis.range;
-        let frequency = vis.frequency;
+        let frequency = &vis.frequency;
 
         return frequency_vis(matches, range, frequency, lambda);
     }
@@ -325,7 +325,7 @@ where
     //let annotation_count = annotation.iter().unique_by(|s| s.0).count(); // annotation.len();
     let annotation_count = vis
         .iter()
-        .map(|a| a.annotation)
+        .map(|a| &a.annotation)
         .collect::<Vec<_>>()
         .into_iter()
         .flatten()
@@ -348,13 +348,13 @@ where
     for (index, area) in areas.iter().enumerate() {
         let vis = &vis[index];
         let range = &vis.range;
-        let frequency = vis.frequency;
-        let list = vis.list;
-        let annotation = vis.annotation;
-        let compressed_list = vis.compressed_list;
-        let index_list = vis.index_list;
+        let frequency = &vis.frequency;
+        let list = &vis.list;
+        let annotation = &vis.annotation;
+        let compressed_list = &vis.compressed_list;
+        let index_list = &vis.index_list;
         let prev_index = vis.prev_index;
-        let supplementary_list = vis.supplementary_list;
+        let supplementary_list = &vis.supplementary_list;
 
         // After this point, we should be able to draw construct a chart context
         // let areas = root.split_by_breakpoints([], compressed_list);

@@ -202,6 +202,54 @@ impl Vis {
     }
 }
 
+pub struct VisOrig {
+    range: StringRegion,
+    list: Vec<(u64, bam::Record)>,
+    annotation: Vec<(u64, bed::Record)>,
+    frequency: BTreeMap<u64, Vec<(u64, u32, char)>>,
+    compressed_list: Vec<(u64, usize)>,
+    index_list: Vec<usize>,
+    prev_index: usize,
+    supplementary_list: Vec<(Vec<u8>, usize, usize, i32, i32)>,
+}
+
+impl VisOrig {
+    pub fn new(
+        range: StringRegion,
+        list: Vec<(u64, bam::Record)>,
+        annotation: Vec<(u64, bed::Record)>,
+        frequency: BTreeMap<u64, Vec<(u64, u32, char)>>,
+        compressed_list: Vec<(u64, usize)>,
+        index_list: Vec<usize>,
+        prev_index: usize,
+        supplementary_list: Vec<(Vec<u8>, usize, usize, i32, i32)>,
+    ) -> Self {
+        VisOrig {
+            range,
+            list,
+            annotation,
+            frequency,
+            compressed_list,
+            index_list,
+            prev_index,
+            supplementary_list,
+        }
+    }
+
+    pub fn convert(&mut self) -> VisRef {
+        VisRef {
+            range: self.range.clone(),
+            list: &self.list,
+            annotation: &self.annotation,
+            frequency: &self.frequency,
+            compressed_list: &self.compressed_list,
+            index_list: &self.index_list,
+            prev_index: self.prev_index.clone(),
+            supplementary_list: &self.supplementary_list,
+        }
+    }
+}
+
 pub struct VisRef<'a> {
     range: StringRegion,
     list: &'a Vec<(u64, bam::Record)>,
