@@ -1,5 +1,5 @@
 [package]
-name = "rust_project"
+name = "hgb"
 version = "0.1.0"
 authors = ["6br <tfdvrt@gmail.com>"]
 edition = "2018"
@@ -7,16 +7,14 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [lib]
-name = "ghi"
+name = "hgb"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [[bin]]
-name = "ghi"
+name = "hgb"
 path = "src/main.rs"
 
 [dependencies]
-#bam = "*" 
-#bam = { git = "https://bitbucket.org/6br/bam" }
 bio-types = { git = "https://github.com/6br/rust-bio-types", branch="alignment_fix" }
 bam = { git = "https://github.com/6br/bam" }
 #bio = { git = "https://github.com/rust-bio/rust-bio" }
