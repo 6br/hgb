@@ -30,7 +30,7 @@ cargo run -- vis --help
 
 ## Usage
 
-The input BAM file **must** be indexed using `samtools index`.
+The input BAM file **must** be indexed using `samtools index`. The input BAM file *needed to* be calculated MD tag using `samtools calmd` if mismatches are needed to be visualized.
 
 * A simple example:
 
