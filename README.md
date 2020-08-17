@@ -2,7 +2,7 @@
 
 A hybrid genome browser for zooming out long-read alignments
 
-You can get this image in seconds with command line option.
+You can get these images in seconds.
 
 ![alignments](fig/alignments.png)
 
@@ -29,6 +29,8 @@ cargo run -- vis --help
 ```
 
 ## Usage
+
+The input BAM file **must** be indexed using `samtools index`.
 
 * A simple example:
 
