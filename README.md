@@ -24,6 +24,7 @@ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
 ```bash
 git clone https://github.com/6br/hgb
+cd hgb
 cargo build --release
 cargo run --release -- vis --help
 ```
