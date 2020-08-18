@@ -80,10 +80,10 @@ cargo run --release -- vis -a input1.bam input2.bam -o output.png -r chr1:91234-
 cargo run --release -- vis -a input1.bam input2.bam -o output.png -r chr1:91234-92334 -m 30
 ```
 
-* A simple examples with two bam files without cigars:
+* A simple examples with two bam files without insertion cigars:
 
 ```bash
-cargo run --release -- vis -a input1.bam input2.bam -o output.png -r chr1:91234-92334 -n -I
+cargo run --release -- vis -a input1.bam input2.bam -o output.png -r chr1:91234-92334 -I
 ```
 
 ## Author
