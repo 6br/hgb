@@ -100,7 +100,7 @@ where
     fn read_into(&mut self, record: &mut Record) -> std::io::Result<bool> {
         if let Some(next_record) = self.0.next() {
             // record = next_record.1;
-            std::mem::replace(record, next_record.1.clone());
+            let _ = std::mem::replace(record, next_record.1.clone());
             Ok(true)
         } else {
             Ok(false)
@@ -242,7 +242,7 @@ where
     let preset: Option<VisPreset> = matches.value_of_t("preset").ok(); // .unwrap_or_else(|e| e.exit());
     eprintln!("Preset: {:?}", preset);
     let no_margin = matches.is_present("no-scale");
-    let prefetch_range = matches.is_present("prefetch-range");
+    let _prefetch_range = matches.is_present("prefetch-range");
     let output = matches.value_of("output").unwrap();
     let no_cigar = matches.is_present("no-cigar");
     let packing = !matches.is_present("no-packing");
