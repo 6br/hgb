@@ -12,6 +12,7 @@ fn main() {
         .setting(AppSettings::SubcommandRequiredElseHelp)
         .setting(AppSettings::UnifiedHelpMessage)
         .setting(AppSettings::ArgRequiredElseHelp)
+        .setting(AppSettings::ColoredHelp)
         .version("0.1")
         .author("6br. ")
         .about(
@@ -31,6 +32,8 @@ fn main() {
         )
         .subcommand(
             App::new("build")
+                .setting(AppSettings::ArgRequiredElseHelp)
+                .setting(AppSettings::ColoredHelp)
                 .about("Constructs hybrid genome index from bam/bed files")
                 .arg(
                     Arg::new("bam")
@@ -73,6 +76,8 @@ fn main() {
         )
         .subcommand(
             App::new("query")
+                .setting(AppSettings::ArgRequiredElseHelp)
+                .setting(AppSettings::ColoredHelp)
                 .about("Extracts bam/bed from hybrid genome index with ranged query")
                 .arg(
                     Arg::new("range")
