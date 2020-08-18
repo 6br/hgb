@@ -11,6 +11,7 @@ fn main() {
         // .setting(AppSettings::ArgsNegateSubcommands)
         .setting(AppSettings::SubcommandRequiredElseHelp)
         .setting(AppSettings::UnifiedHelpMessage)
+        .setting(AppSettings::ArgRequiredElseHelp)
         .version("0.1")
         .author("6br. ")
         .about(
@@ -223,6 +224,8 @@ fn main() {
         )
         .subcommand(
             App::new("vis")
+                .setting(AppSettings::ArgRequiredElseHelp)
+                .setting(AppSettings::ColoredHelp)
                 .about("Visualizes genomic data e.g. alignments and annotations")
                 .arg(
                     Arg::new("range")
