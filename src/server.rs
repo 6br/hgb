@@ -7,7 +7,7 @@ use actix_web::http::header::{ContentDisposition, DispositionType};
 use actix_web::{http,HttpRequest, Result, web, Responder, error, middleware::Logger};
 use std::{sync::{RwLock, Mutex},  collections::BTreeMap, fs};
 use clap::{App,  ArgMatches, Arg, AppSettings};
-use ghi::{bed, vis::bam_record_vis, Vis, VisRef, simple_buffer::ChromosomeBuffer};
+use ghi::{bed, vis::bam_record_vis, Vis, VisRef, simple_buffer::ChromosomeBuffer, VisOrig};
 use genomic_range::StringRegion;
 use bam::Record;
 use itertools::Itertools;
@@ -285,6 +285,7 @@ async fn index(data: web::Data<RwLock<Item>>, list: web::Data<RwLock<Vec<(u64, R
             );
             // If the end is exceeds the prefetch region, raise error.
             // let arg_vec = vec!["ghb", "vis", "-t", "1", "-r",  "parse"];
+            //bam_record_vis(&matches, vec![VisOrig::new(string_range, list.read().unwrap().to_vec(), ann.to_vec(), *freq, compressed_list, index_list.to_vec(), prev_index, supplementary_list)],|_| None).unwrap();
             bam_record_vis(&matches, vec![VisRef::new(string_range, &list.read().unwrap(), ann, freq, compressed_list, index_list, prev_index, supplementary_list)],|_| None).unwrap();
             let end3 = start.elapsed();
             eprintln!(

@@ -7,7 +7,7 @@ use actix_web::http::header::{ContentDisposition, DispositionType};
 use actix_web::{HttpRequest, Result, web, Responder, error, middleware::Logger};
 use std::{sync::{RwLock},  collections::{BTreeSet}, fs};
 use clap::{App,  ArgMatches, Arg, AppSettings};
-use ghi::{vis::bam_record_vis, Vis, simple_buffer::ChromosomeBuffer, VisRef};
+use ghi::{vis::bam_record_vis, Vis, simple_buffer::ChromosomeBuffer, VisRef, VisOrig};
 use genomic_range::StringRegion;
 use bam::Record;
 use itertools::Itertools;

@@ -202,27 +202,28 @@ impl Vis {
     }
 }
 
-pub struct VisOrig {
+#[derive(Clone)]
+pub struct VisOrig<'a> {
     range: StringRegion,
     list: Vec<(u64, bam::Record)>,
     annotation: Vec<(u64, bed::Record)>,
     frequency: BTreeMap<u64, Vec<(u64, u32, char)>>,
-    compressed_list: Vec<(u64, usize)>,
+    compressed_list: &'a Vec<(u64, usize)>,
     index_list: Vec<usize>,
     prev_index: usize,
-    supplementary_list: Vec<(Vec<u8>, usize, usize, i32, i32)>,
+    supplementary_list: &'a Vec<(Vec<u8>, usize, usize, i32, i32)>,
 }
 
-impl VisOrig {
+impl<'a> VisOrig<'a> {
     pub fn new(
         range: StringRegion,
         list: Vec<(u64, bam::Record)>,
         annotation: Vec<(u64, bed::Record)>,
         frequency: BTreeMap<u64, Vec<(u64, u32, char)>>,
-        compressed_list: Vec<(u64, usize)>,
+        compressed_list: &'a Vec<(u64, usize)>,
         index_list: Vec<usize>,
         prev_index: usize,
-        supplementary_list: Vec<(Vec<u8>, usize, usize, i32, i32)>,
+        supplementary_list: &'a Vec<(Vec<u8>, usize, usize, i32, i32)>,
     ) -> Self {
         VisOrig {
             range,
@@ -236,7 +237,7 @@ impl VisOrig {
         }
     }
 
-    pub fn convert(&mut self) -> VisRef {
+    pub fn convert(&self) -> VisRef {
         VisRef {
             range: self.range.clone(),
             list: &self.list,
@@ -250,6 +251,7 @@ impl VisOrig {
     }
 }
 
+#[derive(Clone)]
 pub struct VisRef<'a> {
     range: StringRegion,
     list: &'a Vec<(u64, bam::Record)>,

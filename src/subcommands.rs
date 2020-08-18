@@ -1501,14 +1501,15 @@ where
             let index_list = i.index_list.lock().unwrap();
             let vis_item = VisOrig::new(
                 range.clone(),
-                list,
-                i.annotation.lock().unwrap(),
-                i.frequency.lock().unwrap(),
-                compressed_list,
-                i.index_list.lock().unwrap(),
+                list.to_vec(),
+                i.annotation.lock().unwrap().to_vec(),
+                i.frequency.lock().unwrap().clone(),
+                &compressed_list,
+                i.index_list.lock().unwrap().to_vec(),
                 prev_index,
-                supplementary_list,
-            ).convert();
+                &supplementary_list,
+            );
+            //let vis_ref_item = vis_item.clone();
             vis_ref.push(vis_item);
         }
         /*let vis_ref = vis
@@ -1528,20 +1529,30 @@ where
         })
         .collect::<Vec<_>>();*/
         bam_record_vis(
-            matches, vis_ref,
+            matches,
+            vis_ref
+                .clone()
+                .into_iter()
+                .map(|t| t.convert())
+                .collect::<Vec<_>>(),
             /*vis.into_iter()
             .map(|i| {
-                let val = Arc::try_unwrap(i.list).unwrap().into_inner().unwrap();
-                return VisRef::new(
+                let list = i.list.lock().unwrap();
+                let ann = i.annotation.lock().unwrap();
+                let freq = i.frequency.lock().unwrap();
+                let index_list = i.index_list.lock().unwrap();
+                let vis_item = VisOrig::new(
                     range.clone(),
-                    &val,
-                    &Arc::try_unwrap(i.annotation).unwrap().into_inner().unwrap(),
-                    &Arc::try_unwrap(i.frequency).unwrap().into_inner().unwrap(),
+                    list.to_vec(),
+                    i.annotation.lock().unwrap().to_vec(),
+                    i.frequency.lock().unwrap().clone(),
                     &compressed_list,
-                    &Arc::try_unwrap(i.index_list).unwrap().into_inner().unwrap(),
+                    i.index_list.lock().unwrap().to_vec(),
                     prev_index,
                     &supplementary_list,
                 );
+                //let vis_ref_item = vis_item.clone();
+                return vis_item.convert().clone();
             })
             .collect::<Vec<_>>(),*/
             lambda,
