@@ -2,7 +2,7 @@
 
 A hybrid genome browser for zooming out long-read alignments
 
-You can get these images in seconds.
+Screenshots in seconds.
 
 ![alignments](fig/alignments.png)
 
@@ -10,7 +10,7 @@ You can get these images in seconds.
 
 ## Feature
 
-* A light-weight binary to visualize read alignments.
+* A light-weight binary to visualize read alignments as PNG/JPG/BMP files.
 * Visualize read alignments more than 100 samples at once.
 * Much more options to visualize read alignments.
 
