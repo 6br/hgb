@@ -109,52 +109,6 @@ fn main() {
                 )
                 .arg(Arg::new("filter").short('f').about("Pre-filter"))
                 .arg(Arg::new("binary").short('b').about("Binary"))
-                /*                .arg(Arg::new("vis").short('v').about("Binary"))
-                .arg(Arg::new("no-cigar").short('n').about("Binary"))
-                .arg(Arg::new("packing").short('p').about("Binary"))
-                .arg(Arg::new("legend").short('l').about("Legend"))
-                .arg(Arg::new("quality").short('q').about("Quality"))
-                .arg(Arg::new("x").short('x').takes_value(true).about("x"))
-                .arg(Arg::new("y").short('y').takes_value(true).about("y"))
-                .arg(
-                    Arg::new("freq-height")
-                        .short('Y')
-                        .takes_value(true)
-                        .about("yf"),
-                )
-                .arg(
-                    Arg::new("max-coverage")
-                        .short('m')
-                        .takes_value(true)
-                        .about("Max coverage"),
-                )
-                .arg(Arg::new("split-alignment").short('s').about("No-md"))
-                .arg(Arg::new("no-insertion").short('z').about("No-md"))
-                .arg(Arg::new("only-split-alignment").short('u').about("No-md"))
-                .arg(
-                    Arg::new("hide-alignment")
-                        .short('A')
-                        .about("Hide alignment"),
-                )
-                .arg(Arg::new("all-bases").short('B').about("Show all bases"))
-                .arg(Arg::new("pileup").short('P').about("Show coverage plot"))
-                .arg(
-                    Arg::new("sort-by-name")
-                        .short('N')
-                        .about("Sort-by-name (read-id)"),
-                )
-                .arg(
-                    Arg::new("sort-by-cigar")
-                        .short('C')
-                        .about("Display split alignment name"),
-                )
-                // .arg(Arg::new("insertion").short('').about("No-md"))
-                .arg(
-                    Arg::new("graph")
-                        .short('g')
-                        .takes_value(true)
-                        .about("graph"),
-                )*/
                 .arg(
                     Arg::new("output")
                         .short('o')
@@ -199,7 +153,6 @@ fn main() {
                     Arg::new("id")
                         .short('i')
                         .takes_value(true)
-                        //            .multiple(true)
                         .about("annotation sample to fetch (alignment | annotation)"),
                 )
                 .arg(
@@ -276,6 +229,7 @@ fn main() {
                         .short('r')
                         .takes_value(true)
                         .multiple(true)
+                        .required(true)
                         .about("Genomic range to visualize. Format is chr:from-to."),
                 )
                 .arg(
