@@ -1500,7 +1500,7 @@ where
             //let freq = i.frequency.lock().unwrap();
             //let index_list = i.index_list.lock().unwrap();
             let vis_item = VisOrig::new(
-                range.clone(),
+                i.range,
                 i.list.lock().unwrap().to_vec(),
                 i.annotation.lock().unwrap().to_vec(),
                 i.frequency.lock().unwrap().clone(),
