@@ -1495,13 +1495,13 @@ where
     } else {
         let mut vis_ref = Vec::with_capacity(vis.len());
         for i in vis {
-            let list = i.list.lock().unwrap();
-            let ann = i.annotation.lock().unwrap();
-            let freq = i.frequency.lock().unwrap();
-            let index_list = i.index_list.lock().unwrap();
+            //let list = i.list.lock().unwrap();
+            //let ann = i.annotation.lock().unwrap();
+            //let freq = i.frequency.lock().unwrap();
+            //let index_list = i.index_list.lock().unwrap();
             let vis_item = VisOrig::new(
                 range.clone(),
-                list.to_vec(),
+                i.list.lock().unwrap().to_vec(),
                 i.annotation.lock().unwrap().to_vec(),
                 i.frequency.lock().unwrap().clone(),
                 &compressed_list,

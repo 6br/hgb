@@ -229,13 +229,15 @@ pub fn bam_record_vis_orig<'a, F>(
 where
     F: Fn(usize) -> Option<&'a str>,
 {
+    eprintln!("aa");
     bam_record_vis(
         matches,
         vis.iter()
             .map(|t| *Box::new(t.convert()))
             .collect::<Vec<_>>(),
         lambda,
-    )
+    )?;
+    Ok(())
 }
 
 pub fn bam_record_vis<'a, F>(
