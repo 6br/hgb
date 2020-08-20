@@ -27,6 +27,7 @@ pub mod simple_buffer;
 #[no_mangle]
 pub mod twopass_alignment;
 pub mod vis;
+pub mod vis_orig;
 pub mod writer;
 
 use bam::IndexedReader;

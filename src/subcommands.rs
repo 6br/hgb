@@ -16,7 +16,7 @@ use ghi::index::{Chunk, Region, VirtualOffset};
 use ghi::range::Default;
 use ghi::range::{Format, InvertedRecordEntire, Set};
 use ghi::twopass_alignment::{Alignment, AlignmentBuilder};
-use ghi::vis::{bam_record_vis, RecordIter};
+use ghi::vis_orig::{bam_record_vis_orig, RecordIter};
 use ghi::writer::GhiWriter;
 use ghi::{
     gff, reader::IndexedReader, simple_buffer::ChromosomeBuffer, IndexWriter, VisOrig, VisRef,
@@ -1528,14 +1528,9 @@ where
             );
         })
         .collect::<Vec<_>>();*/
-        bam_record_vis(
-            matches,
-            vis_ref
-                .clone()
-                .into_iter()
-                .map(|t| t.convert())
-                .collect::<Vec<_>>(),
-            /*vis.into_iter()
+        bam_record_vis_orig(
+            matches, vis_ref,
+            /*
             .map(|i| {
                 let list = i.list.lock().unwrap();
                 let ann = i.annotation.lock().unwrap();
