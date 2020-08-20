@@ -220,7 +220,7 @@ where
     }
     Ok(())
 }
-/*
+
 pub fn bam_record_vis_orig<'a, F>(
     matches: &ArgMatches,
     vis: Vec<VisOrig>,
@@ -231,11 +231,13 @@ where
 {
     bam_record_vis(
         matches,
-        vis.iter().map(|t| &t.convert()).collect::<Vec<_>>(),
+        vis.iter()
+            .map(|t| *Box::new(t.convert()))
+            .collect::<Vec<_>>(),
         lambda,
     )
 }
-*/
+
 pub fn bam_record_vis<'a, F>(
     matches: &ArgMatches,
     vis: Vec<VisRef>,

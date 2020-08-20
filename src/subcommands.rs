@@ -16,7 +16,7 @@ use ghi::index::{Chunk, Region, VirtualOffset};
 use ghi::range::Default;
 use ghi::range::{Format, InvertedRecordEntire, Set};
 use ghi::twopass_alignment::{Alignment, AlignmentBuilder};
-use ghi::vis_orig::{bam_record_vis_orig, RecordIter};
+use ghi::vis::{bam_record_vis_orig, RecordIter};
 use ghi::writer::GhiWriter;
 use ghi::{
     gff, reader::IndexedReader, simple_buffer::ChromosomeBuffer, IndexWriter, VisOrig, VisRef,
