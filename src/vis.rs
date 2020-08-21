@@ -1,4 +1,4 @@
-use crate::{bed, Vis, VisOrig, VisPreset, VisRef};
+use crate::{VisOrig, VisPreset, VisRef};
 use bam::record::{
     tags::{StringType, TagValue},
     Cigar,
@@ -366,7 +366,7 @@ where
     let areas_len = vis.len();
 
     for (index, area) in areas.iter().enumerate() {
-        let area = area.margin(10,10,0,0);
+        let area = area.margin(10, 10, 0, 0);
         let vis = &vis[index];
         let range = &vis.range;
         let frequency = &vis.frequency;
