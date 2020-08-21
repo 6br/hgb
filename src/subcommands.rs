@@ -1223,7 +1223,9 @@ where
 
             //Avoid immutable borrow occurs here.
             let mut tmp_list = new_list.clone();
-            tmp_list.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.start().cmp(&b.1.start())));
+            tmp_list.sort_by(|a, b| a.0.cmp(&b.0)
+            .then(a.1.name().cmp(&b.1.name()))
+            .then(a.1.start().cmp(&b.1.start())));
             //eprintln!("{:#?}", tmp_list);
             tmp_list
                 .iter()
