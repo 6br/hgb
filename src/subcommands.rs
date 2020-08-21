@@ -1097,7 +1097,7 @@ where
     if pileup {
         //let mut freq_tmp = BTreeMap::new();
         for i in vis.iter() {
-            let mut list = i.list.lock().unwrap();
+            let list = i.list.lock().unwrap();
             let mut freq = i.frequency.lock().unwrap();
 
             list.iter().group_by(|elt| elt.0).into_iter().for_each(|t| {
@@ -1198,7 +1198,7 @@ where
         // new_list is a tuple (sample_id, record, range_id), whose record needs to be cloned.
         let mut new_list = vec![];
         for (index, i) in vis.iter().enumerate() {
-            let mut list = i.list.lock().unwrap();
+            let list = i.list.lock().unwrap();
             /*list.sort_by(|a, b| {
                 a.0.cmp(&b.0)
                     .then(a.1.name().cmp(&b.1.name()))
@@ -1320,7 +1320,7 @@ where
                 new_list.sort_by(|a, b| {
                     a.0.cmp(&b.0).then(
                         (a.1.start() as u64 + (a.2 as u64) << 32)
-                            .cmp(&(b.1.start() as u64 + (a.2 as u64) << 32)),
+                            .cmp(&(b.1.start() as u64 + (b.2 as u64) << 32)),
                     )
                 });
             }
