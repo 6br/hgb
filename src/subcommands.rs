@@ -1236,7 +1236,7 @@ where
                         if items.len() > 1 {
                             let last: &(u64, Record, usize) =
                                 items.iter().max_by_key(|t| t.1.calculate_end()).unwrap();
-                            eprintln!("{:?}", last);
+                            //eprintln!("{:?}", last);
                             end_map.insert(
                                 (sample_id, s.0),
                                 (
