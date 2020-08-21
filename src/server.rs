@@ -4,7 +4,7 @@ use rand::Rng;
 use std::time::Instant;
 use actix_cors::Cors;
 use actix_web::http::header::{ContentDisposition, DispositionType};
-use actix_web::{http,HttpRequest, Result, web, Responder, error, middleware::Logger};
+use actix_web::{HttpRequest, Result, web, Responder, error, middleware::Logger};
 use std::{sync::{RwLock},  collections::BTreeMap, fs};
 use clap::{App,  ArgMatches, Arg, AppSettings};
 use ghi::{bed, vis::bam_record_vis, Vis, VisRef};
@@ -215,18 +215,17 @@ async fn get_dzi(data: web::Data<RwLock<Item>>) -> impl Responder {
     return web::Json(data.read().unwrap().dzi.clone());
 }
 
-async fn get_index(data: web::Data<RwLock<Item>>) -> Result<NamedFile> {
+async fn get_index(_data: web::Data<RwLock<Item>>) -> Result<NamedFile> {
     return Ok(NamedFile::open(format!("static/index.html"))?);
 }
 
-async fn get_js(data: web::Data<RwLock<Item>>) -> Result<NamedFile> {
+async fn get_js(_data: web::Data<RwLock<Item>>) -> Result<NamedFile> {
     return Ok(NamedFile::open(format!("static/openseadragon.min.js"))?);
 }
 
-async fn get_js_map(data: web::Data<RwLock<Item>>) -> Result<NamedFile> {
+async fn get_js_map(_data: web::Data<RwLock<Item>>) -> Result<NamedFile> {
     return Ok(NamedFile::open(format!("static/openseadragon.min.js.map"))?);
 }
-
 
 async fn index(data: web::Data<RwLock<Item>>, list: web::Data<RwLock<Vec<(u64, Record)>>>, req: HttpRequest) -> Result<NamedFile> {
     let start = Instant::now();

@@ -209,19 +209,19 @@ async fn get_dzi(data: web::Data<RwLock<Item>>) -> impl Responder {
     return web::Json(data.read().unwrap().dzi.clone());
 }
 
-async fn get_index(data: web::Data<RwLock<Item>>) -> Result<NamedFile> {
+async fn get_index(_data: web::Data<RwLock<Item>>) -> Result<NamedFile> {
     return Ok(NamedFile::open(format!("static/index.html"))?);
 }
 
-async fn get_js(data: web::Data<RwLock<Item>>) -> Result<NamedFile> {
+async fn get_js(_data: web::Data<RwLock<Item>>) -> Result<NamedFile> {
     return Ok(NamedFile::open(format!("static/openseadragon.min.js"))?);
 }
 
-async fn get_js_map(data: web::Data<RwLock<Item>>) -> Result<NamedFile> {
+async fn get_js_map(_data: web::Data<RwLock<Item>>) -> Result<NamedFile> {
     return Ok(NamedFile::open(format!("static/openseadragon.min.js.map"))?);
 }
 
-async fn get_js_aux(data: web::Data<RwLock<Item>>) -> Result<NamedFile> {
+async fn get_js_aux(_data: web::Data<RwLock<Item>>) -> Result<NamedFile> {
     return Ok(NamedFile::open(format!("static/openseadragon-scalebar.js"))?);
 }
 
