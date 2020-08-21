@@ -1499,16 +1499,18 @@ where
                         //(t.0, ((t.1).0, (t.1).1))
                         // .collect::<&(u64, Record)>(). // collect::<Vec<(usize, (u64, Record))>>
                     });
+                let mut tmp_interval = 0;
                 new_list.iter().group_by(|elt| elt.0).into_iter().for_each(
                     |(sample_sequential_id, sample)| {
                         let mut count = sample.count();
                         if let Some(max_cov) = max_coverage {
                             count = max_cov as usize;
                         }
+                        tmp_interval += count;
                         //prev_index += count;
                         // compressed_list.push(prev_index);
                         // compressed_list.insert(sample_sequential_id, prev_index);
-                        compressed_list.push((sample_sequential_id, count));
+                        compressed_list.push((sample_sequential_id, tmp_interval));
                     },
                 )
             } else {

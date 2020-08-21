@@ -621,7 +621,6 @@ where
             }
         } else {
             // For each sample:
-
             let mut prev_index = 0;
             chart.draw_series(
                 compressed_list
@@ -633,12 +632,12 @@ where
                             let mut bar2 = Rectangle::new(
                                 [
                                     (range.start(), prev_index),
-                                    (range.end(), prev_index + count),
+                                    (range.end(), count),
                                 ],
                                 stroke.stroke_width(y / 2), // filled(), //stroke_width(100),
                             );
                             bar2.set_margin(1, 0, 0, 0);
-                            prev_index += count;
+                            prev_index = count;
                             Some(bar2)
                         } else {
                             None
@@ -1069,7 +1068,7 @@ where
                             Palette99::pick(idx).filled(),
                         )
                     });
-                if let Some(f) = snp_frequency {
+                if let Some(_f) = snp_frequency {
                     for i in ['A', 'C', 'G', 'T'].iter() {
                         let color = nt_color(*i).unwrap();
                         chart.draw_series(
