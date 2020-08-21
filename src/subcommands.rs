@@ -1043,7 +1043,7 @@ impl VisPrecursor {
 pub fn bam_record_vis_pre_calculate<'a, F>(
     matches: &ArgMatches,
     args: &Vec<String>,
-    mut vis: Vec<VisPrecursor>,
+    vis: Vec<VisPrecursor>,
     /*range: StringRegion,
     prefetch_range: StringRegion,
     mut list: Vec<(u64, Record)>,
@@ -1223,9 +1223,11 @@ where
 
             //Avoid immutable borrow occurs here.
             let mut tmp_list = new_list.clone();
-            tmp_list.sort_by(|a, b| a.0.cmp(&b.0)
-            .then(a.1.name().cmp(&b.1.name()))
-            .then(a.1.start().cmp(&b.1.start())));
+            tmp_list.sort_by(|a, b| {
+                a.0.cmp(&b.0)
+                    .then(a.1.name().cmp(&b.1.name()))
+                    .then(a.1.start().cmp(&b.1.start()))
+            });
             //eprintln!("{:#?}", tmp_list);
             tmp_list
                 .iter()
@@ -1238,7 +1240,7 @@ where
                         if items.len() > 1 {
                             let last: &(u64, Record, usize) =
                                 items.iter().max_by_key(|t| t.1.calculate_end()).unwrap();
-                            //eprintln!("{:?}", last);
+                            eprintln!("Split: {:?}", last);
                             end_map.insert(
                                 (sample_id, s.0),
                                 (
