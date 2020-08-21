@@ -363,6 +363,7 @@ where
     root.fill(&WHITE)?;
     let root = root.margin(0, 0, 0, 0);
     let areas = root.split_evenly((1, vis.len()));
+    let areas_len = vis.len();
 
     for (index, area) in areas.iter().enumerate() {
         let vis = &vis[index];
@@ -678,15 +679,17 @@ where
                     ))?;
                 }
             } else {*/
-            chart.draw_series(supplementary_list.iter().map(|i| {
-                let stroke = BLACK;
-                let mut bar2 = Rectangle::new(
-                    [(i.3 as u64, i.1), (i.4 as u64, i.2)],
-                    stroke.stroke_width(1), // filled(), // (y / 4), // filled(), //stroke_width(100),
-                );
-                bar2.set_margin(y / 4, y / 4, 0, 0);
-                bar2
-            }))?;
+            if areas_len <= 1 {
+                chart.draw_series(supplementary_list.iter().map(|i| {
+                    let stroke = BLACK;
+                    let mut bar2 = Rectangle::new(
+                        [(i.3 as u64, i.1), (i.4 as u64, i.2)],
+                        stroke.stroke_width(1), // filled(), // (y / 4), // filled(), //stroke_width(100),
+                    );
+                    bar2.set_margin(y / 4, y / 4, 0, 0);
+                    bar2
+                }))?;
+            }
             //}
         }
         let mut split_frequency = vec![];
@@ -731,7 +734,7 @@ where
 
                 bars.push(bar);
                 if colored_by_name {
-                    let color = Palette99::pick(name_to_num(data.1.name()));
+                    let color = Palette99::pick(name_to_num(data.1.name())).mix(0.8);
                     let mut inner_bar =
                         Rectangle::new([(start, index), (end, index + 1)], color.filled());
                     inner_bar.set_margin(3, 3, 0, 0);

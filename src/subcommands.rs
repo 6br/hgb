@@ -1082,6 +1082,12 @@ where
             let mut annotation = i.annotation.lock().unwrap();
             list.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.start().cmp(&b.1.start())));
             annotation.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.start().cmp(&b.1.start())));
+            /*eprintln!(
+                "{:?}",
+                list.iter()
+                    .map(|t| String::from_utf8_lossy(t.1.name()))
+                    .collect::<Vec<_>>(),
+            );*/
         }
         //let mut list = &mut *vis[0].list.get_mut().unwrap();
 
@@ -1166,9 +1172,10 @@ where
     }
 
     //eprintln!("{:?}", freq.keys());
-    for i in vis.iter() {
-        let mut list = i.list.lock().unwrap();
-        if sort_by_name {
+    if sort_by_name {
+        for i in vis.iter() {
+            let mut list = i.list.lock().unwrap();
+
             list.sort_by(|a, b| {
                 a.0.cmp(&b.0)
                     .then(a.1.name().cmp(&b.1.name()))
@@ -1192,11 +1199,11 @@ where
         let mut new_list = vec![];
         for (index, i) in vis.iter().enumerate() {
             let mut list = i.list.lock().unwrap();
-            list.sort_by(|a, b| {
+            /*list.sort_by(|a, b| {
                 a.0.cmp(&b.0)
                     .then(a.1.name().cmp(&b.1.name()))
                     .then(a.1.start().cmp(&b.1.start()))
-            });
+            });*/
             new_list.append(
                 &mut list
                     .iter()
@@ -1204,7 +1211,7 @@ where
                     .collect::<Vec<_>>(),
             );
         }
-        // Should we mark the duplicated alignment as "this is duplicated so you sholdn't display more than once"?
+        // Should we mark the duplicated alignment as "this is duplicated so you shouldn't display more than once"?
 
         new_list
     };
@@ -1215,7 +1222,9 @@ where
             let mut end_map = HashMap::new();
 
             //Avoid immutable borrow occurs here.
-            let tmp_list = new_list.clone();
+            let mut tmp_list = new_list.clone();
+            tmp_list.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.start().cmp(&b.1.start())));
+            //eprintln!("{:#?}", tmp_list);
             tmp_list
                 .iter()
                 .group_by(|elt| elt.0)
@@ -1227,6 +1236,7 @@ where
                         if items.len() > 1 {
                             let last: &(u64, Record, usize) =
                                 items.iter().max_by_key(|t| t.1.calculate_end()).unwrap();
+                            eprintln!("{:?}", last);
                             end_map.insert(
                                 (sample_id, s.0),
                                 (
@@ -1306,7 +1316,13 @@ where
                     });
                 }
             } else {
-                new_list.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.start().cmp(&b.1.start())));
+                //new_list.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.start().cmp(&b.1.start())));
+                new_list.sort_by(|a, b| {
+                    a.0.cmp(&b.0).then(
+                        (a.1.start() as u64 + (a.2 as u64) << 32)
+                            .cmp(&(b.1.start() as u64 + (a.2 as u64) << 32)),
+                    )
+                });
             }
             if split_only {
                 new_list = new_list
@@ -1315,8 +1331,18 @@ where
                         end_map.contains_key(&(*sample_id, record.name()))
                     })
                     .collect();
-                //list = vis[0].list.get_mut();
+                for i in vis.iter() {
+                    let mut list = i.list.lock().unwrap();
+                    *list = list
+                        .clone()
+                        .into_iter()
+                        .filter(|(sample_id, record)| {
+                            end_map.contains_key(&(*sample_id, record.name()))
+                        })
+                        .collect::<Vec<_>>();
+                }
             }
+            //eprintln!("{:#?}", new_list);
 
             new_list
                 .iter()
@@ -1329,12 +1355,13 @@ where
                     prev_index += 1;
                     let sample_id = t.0;
                     (t.1).enumerate().for_each(|(e, k)| {
-                        let end = if !packing {
-                            range.end() as i32
+                        let end: u64 = if !packing {
+                            (vis.len() as u64 + 1) << 32 //range.end() as i32
                         } else if let Some(end) = end_map.get(&(sample_id, k.1.name())) {
-                            end.2
+                            // eprintln!("{:?} {:?}", sample_id, k.1.name());
+                            end.2 as u64 + ((vis.len() as u64) << 32)
                         } else {
-                            k.1.calculate_end()
+                            k.1.calculate_end() as u64 + ((k.2 as u64) << 32)
                         };
 
                         let mut index = if sort_by_name {
@@ -1347,10 +1374,10 @@ where
                             .enumerate()
                             .find(|(_, item)| **item < k.1.start() as u64)
                         {
-                            *index.1 = end as u64;
+                            *index.1 = end;
                             index.0
                         } else {
-                            packing_vec.push(end as u64);
+                            packing_vec.push(end);
                             prev_index += 1;
                             packing_vec.len() - 1
                         };
@@ -1376,7 +1403,27 @@ where
                             .unwrap()
                             .push(index + last_prev_index);
                         name_index.insert(k.1.name(), index);
+                        //eprintln!("{:?} {:?}", index, String::from_utf8_lossy(k.1.name()));
                     });
+                    /*eprintln!(
+                        "{:?}\n{:?}\n{:?}\n{:?}",
+                        vis[0].index_list.lock().unwrap(),
+                        vis[0]
+                            .list
+                            .lock()
+                            .unwrap()
+                            .iter()
+                            .map(|t| String::from_utf8_lossy(t.1.name()))
+                            .collect::<Vec<_>>(),
+                        vis[1].index_list.lock().unwrap(),
+                        vis[1]
+                            .list
+                            .lock()
+                            .unwrap()
+                            .iter()
+                            .map(|t| String::from_utf8_lossy(t.1.name()))
+                            .collect::<Vec<_>>(),
+                    );*/
                     if let Some(max_cov) = max_coverage {
                         prev_index = max_cov as usize + last_prev_index;
                     }
@@ -1442,30 +1489,47 @@ where
                         if let Some(max_cov) = max_coverage {
                             prev_index = max_cov as usize + last_prev_index;
                         }
-                        compressed_list.push((t.0, prev_index));
+                        //compressed_list.push((t.0, prev_index));
                         //eprintln!("{:?} {:?} {:?}", compressed_list, packing, index_list);
                         last_prev_index = prev_index;
                         //(t.0, ((t.1).0, (t.1).1))
                         // .collect::<&(u64, Record)>(). // collect::<Vec<(usize, (u64, Record))>>
                     });
+                new_list.iter().group_by(|elt| elt.0).into_iter().for_each(
+                    |(sample_sequential_id, sample)| {
+                        let mut count = sample.count();
+                        if let Some(max_cov) = max_coverage {
+                            count = max_cov as usize;
+                        }
+                        //prev_index += count;
+                        // compressed_list.push(prev_index);
+                        // compressed_list.insert(sample_sequential_id, prev_index);
+                        compressed_list.push((sample_sequential_id, count));
+                    },
+                )
             } else {
+                eprintln!("Not packing, not split; multi samples are not supported.");
                 // Now does not specify the maximal length by max_coverage.
                 // index_list = (0..list.len()).collect();
+                //let mut prev_index = 0;
                 for i in vis.iter() {
                     let mut index_list = i.index_list.lock().unwrap(); // = (0..new_list.len()).collect();
+                                                                       //let temp_index_list = (prev_index..prev_index + i.list.lock().unwrap().len()).collect();
+                                                                       //prev_index += i.list.lock().unwrap().len();
                     let temp_index_list = (0..new_list.len()).collect();
                     mem::replace(&mut *index_list, temp_index_list);
                 }
 
                 // list.sort_by(|a, b| a.0.cmp(&b.0));
                 // eprintln!("{}", list.len());
+                //new_list.sort_by_key(|elt| elt.0);
                 new_list.iter().group_by(|elt| elt.0).into_iter().for_each(
                     |(sample_sequential_id, sample)| {
                         let count = sample.count();
                         prev_index += count;
                         // compressed_list.push(prev_index);
                         // compressed_list.insert(sample_sequential_id, prev_index);
-                        compressed_list.push((sample_sequential_id, prev_index));
+                        //compressed_list.push((sample_sequential_id, count));
                     },
                 )
             }
