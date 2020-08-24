@@ -895,7 +895,7 @@ where
                           bars.push(bar2);
                       };*/
                     if !no_cigar {
-                        let mut prev_ref = bam.start() as u64;
+                        let mut prev_ref = bam.start() as u64 - 1;
                         let mut prev_pixel_ref = start + 1;
                         let left_top = chart.as_coord_spec().translate(&(start, index));
                         let right_bottom = chart.as_coord_spec().translate(&(end, index + 1));
@@ -911,6 +911,7 @@ where
                                         while k.0 > prev_ref {
                                             let entry = a.next();
                                             if let Some(entry) = entry {
+                                                //eprintln!("{:?}", entry.ref_pos_nt());
                                                 if entry.is_insertion() {
                                                     if prev_ref >= range.start() as u64 && insertion
                                                     {
@@ -922,7 +923,6 @@ where
                                                         color = Some(INS_COL);
                                                     }
                                                 } else if entry.is_deletion() {
-                                                    prev_ref = entry.ref_pos_nt().unwrap().0 as u64;
                                                     if prev_ref > range.end() as u64 {
                                                         break;
                                                     }
@@ -933,6 +933,7 @@ where
                                                         //bars.push(bar);
                                                         color = Some(WHITE);
                                                     }
+                                                    prev_ref = entry.ref_pos_nt().unwrap().0 as u64;
                                                 } else if entry.is_seq_match() {
                                                     prev_ref = entry.ref_pos_nt().unwrap().0 as u64;
                                                     if prev_ref > range.end() as u64 {
@@ -1024,7 +1025,7 @@ where
                                                 }
                                             }
                                             prev_ref = reference as u64;
-                                            if reference > range.end() as u32+1 {
+                                            if reference > range.end() as u32 {
                                                 break;
                                             }
                                         }
@@ -1042,7 +1043,7 @@ where
                                                 prev_ref = reference as u64;
                                                 bars.push(bar);
                                             }
-                                            if reference >= range.end() as u32+1 {
+                                            if reference >= range.end() as u32 {
                                                 break;
                                             }
                                         }
