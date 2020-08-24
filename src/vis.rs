@@ -170,6 +170,7 @@ where
             } else {
                 (range.start() - 1)..(range.end() + 1)
             };
+            let x_offset = if range.start() - range.end() == 1 {coverages[i].get_x_axis_pixel_range().len() / 2} else {0};
             let mut chart = ChartBuilder::on(&coverages[i])
                 // Set the caption of the chart
                 //.caption(format!("{}", range), ("sans-serif", 20).into_font())

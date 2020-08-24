@@ -60,13 +60,7 @@ pub fn bam_vis(
             let ranges_tmp: Vec<String> = values
                 .into_iter()
                 .map(|record| {
-                    format!(
-                        "{}:{}-{}",
-                        record.chrom(),
-                        record.start(),
-                        record.end()
-                    )
-                    .to_string()
+                    format!("{}:{}-{}", record.chrom(), record.start(), record.end()).to_string()
                 })
                 .collect();
             ranges.extend(ranges_tmp);
