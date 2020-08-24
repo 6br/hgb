@@ -388,7 +388,7 @@ where
     };
 
     for (index, area) in areas.iter().enumerate() {
-        let area = area.margin(10, 10, 0, 0);
+        let area = area.margin(0, 0, 0, 0);
         let vis = &vis[index];
         let range = &vis.range;
         let frequency = &vis.frequency;
@@ -406,7 +406,7 @@ where
             top_margin + (prev_index as u32 + axis_count as u32 + annotation_count as u32 * 2) * y,
         );
         eprintln!("{:?} {:?} {:?}", prev_index, axis_count, annotation_count);
-        let y_area_size = if no_margin { 0 } else { 40 };
+        let y_area_size = if no_margin { 0 } else { 25 };
         let x_spec = if no_margin && range.end() - range.start() <= 5000 {
             range.start()..range.end()
         } else {
