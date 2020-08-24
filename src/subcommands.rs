@@ -60,7 +60,13 @@ pub fn bam_vis(
             let ranges_tmp: Vec<String> = values
                 .into_iter()
                 .map(|record| {
-                    format!("{}:{}-{}", record.chrom(), record.start(), record.end()).to_string()
+                    format!(
+                        "{}:{}-{}",
+                        record.chrom(),
+                        record.start(),
+                        record.end()
+                    )
+                    .to_string()
                 })
                 .collect();
             ranges.extend(ranges_tmp);
@@ -154,7 +160,7 @@ pub fn bam_vis(
                     idx += 1;
                 }
             }
-            eprintln!("{:?}", freq);
+            //eprintln!("{:?}", freq);
 
             if let Some(bed_files) = matches.values_of("bed") {
                 let bed_files: Vec<&str> = bed_files.collect();
@@ -748,131 +754,150 @@ pub fn vis_query(
     if let Some(o) = matches.value_of("INPUT") {
         let mut reader: IndexedReader<BufReader<File>> =
             IndexedReader::from_path_with_additional_threads(o, threads - 1).unwrap();
-        if let Some(ranges) = matches.values_of("range") {
-            let ranges: Vec<&str> = ranges.collect();
-            let mut precursor = Vec::with_capacity(ranges.len());
-            let prefetch_ranges: Vec<&str> = matches
-                .values_of("prefetch-range")
-                .and_then(|t| Some(t.collect()))
-                .unwrap_or(vec![]);
+        let mut ranges: Vec<String> = vec![];
+        if let Some(bed_range) = matches.value_of("bed-range") {
+            let mut reader = bed::Reader::from_file(bed_range)?;
+            let mut values = vec![];
+            for record in reader.records() {
+                let record = record?;
+                values.push(record);
+                //                let range =
+                //                    format!("{}:{}-{}", record.chrom(), record.start(), record.end()).to_string();
+                //                ranges.push(&range.as_ref());
+            }
+            let ranges_tmp: Vec<String> = values
+                .into_iter()
+                .map(|record| {
+                    format!("{}:{}-{}", record.chrom(), record.start(), record.end()).to_string()
+                })
+                .collect();
+            ranges.extend(ranges_tmp);
+        }
+        if let Some(ranges_str) = matches.values_of("range") {
+            let ranges_tmp: Vec<String> = ranges_str.into_iter().map(|t| t.to_string()).collect();
+            ranges.extend(ranges_tmp);
+        }
+        let mut precursor = Vec::with_capacity(ranges.len());
+        let prefetch_ranges: Vec<&str> = matches
+            .values_of("prefetch-range")
+            .and_then(|t| Some(t.collect()))
+            .unwrap_or(vec![]);
 
-            /*let ranged_zip = if let Some(prefetch_ranges) = prefetch_ranges {
-                ranges.into_iter().zip(prefetch_ranges)
-            } else {
-                ranges.into_iter().zip(ranges.clone())
-            };*/
-            for eob in ranges.into_iter().zip_longest(prefetch_ranges) {
-                let (range, prefetch_str) = match eob {
-                    Both(a, b) => (a, b),
-                    Left(a) => (a, a),
-                    _ => panic!("Range is not specified."),
-                };
-                let string_range = StringRegion::new(range).unwrap();
-                let prefetch_range = StringRegion::new(prefetch_str).unwrap();
+        /*let ranged_zip = if let Some(prefetch_ranges) = prefetch_ranges {
+            ranges.into_iter().zip(prefetch_ranges)
+        } else {
+            ranges.into_iter().zip(ranges.clone())
+        };*/
+        for eob in ranges.into_iter().zip_longest(prefetch_ranges) {
+            let (range, prefetch_str) = match eob {
+                Both(a, b) => (a, b.to_string()),
+                Left(a) => (a.clone(), a),
+                _ => panic!("Range is not specified."),
+            };
+            let string_range = StringRegion::new(&range).unwrap();
+            let prefetch_range = StringRegion::new(&prefetch_str).unwrap();
 
-                eprintln!("Retrieving: {} (prefetch: {})", range, prefetch_range);
-                // let start = Instant::now();
-                let closure = |x: &str| reader.reference_id(x);
+            eprintln!("Retrieving: {} (prefetch: {})", range, prefetch_range);
+            // let start = Instant::now();
+            let closure = |x: &str| reader.reference_id(x);
 
-                let _reference_name = &string_range.path;
+            let _reference_name = &string_range.path;
 
-                let range = Region::convert(&prefetch_range, closure).unwrap();
-                let viewer = reader.fetch(&range).unwrap();
-                if matches.is_present("whole-chromosome") {
-                    let buffer: ChromosomeBuffer = ChromosomeBuffer::new(reader, matches.clone());
-                    buffered_server::server(
-                        matches.clone(),
-                        string_range,
-                        prefetch_range,
-                        args,
-                        buffer,
-                        threads,
-                    )?;
-                    return Ok(());
-                }
-
-                let sample_ids_opt: Option<Vec<u64>> = matches
-                    .values_of("id")
-                    //.unwrap()
-                    .and_then(|a| Some(a.map(|t| t.parse::<u64>().unwrap()).collect()));
-                let sample_id_cond = sample_ids_opt.is_some();
-                let sample_ids = sample_ids_opt.unwrap_or(vec![]);
-                let filter = matches.is_present("filter");
-
-                let format_type_opt = matches.value_of_t::<Format>("type");
-                let format_type_cond = format_type_opt.is_ok();
-                let format_type = format_type_opt.unwrap_or(Format::Default(Default {}));
-                /*let out = std::io::stdout();
-                let out_writer = match matches.value_of("output") {
-                    Some(x) => {
-                        let path = Path::new(x);
-                        Box::new(File::create(&path).unwrap()) as Box<dyn Write>
-                    }
-                    None => Box::new(out.lock()) as Box<dyn Write>,
-                };
-                let output = io::BufWriter::with_capacity(1048576, out_writer);*/
-
-                /*let end0 = start.elapsed();
-                eprintln!(
-                    "{}.{:03} sec.",
-                    end0.as_secs(),
-                    end0.subsec_nanos() / 1_000_000
-                );*/
-                let mut list = vec![];
-                let mut ann = vec![];
-                //let mut list2 = vec![];
-                //let mut samples = BTreeMap::new();
-                let _ = viewer.into_iter().for_each(|t| {
-                    //eprintln!("{:?}", t.clone().unwrap());
-                    let f = t.unwrap();
-                    if !sample_id_cond || sample_ids.iter().any(|&i| i == f.sample_id()) {
-                        let sample_id = f.sample_id();
-                        let data = f.data();
-                        if !format_type_cond
-                            || std::mem::discriminant(&format_type) == std::mem::discriminant(&data)
-                        {
-                            match data {
-                                Format::Range(rec) => {
-                                    for i in rec.to_record(&prefetch_range.path) {
-                                        if !filter
-                                            || (i.end() as u64 > range.start()
-                                                && range.end() > i.start() as u64)
-                                        {
-                                            ann.push((sample_id, i))
-                                        }
-                                    }
-                                }
-                                Format::Alignment(Alignment::Object(rec)) => {
-                                    for i in rec {
-                                        if !filter
-                                            || (i.calculate_end() as u64 > range.start()
-                                                && range.end() > i.start() as u64)
-                                        {
-                                            if !i.flag().is_secondary()
-                                                && i.query_len() > min_read_len
-                                            {
-                                                list.push((sample_id, i));
-                                            }
-                                        }
-                                    }
-                                }
-                                _ => {}
-                            }
-                        }
-                    }
-                });
-                precursor.push(VisPrecursor::new(
+            let range = Region::convert(&prefetch_range, closure).unwrap();
+            let viewer = reader.fetch(&range).unwrap();
+            if matches.is_present("whole-chromosome") {
+                let buffer: ChromosomeBuffer = ChromosomeBuffer::new(reader, matches.clone());
+                buffered_server::server(
+                    matches.clone(),
                     string_range,
                     prefetch_range,
-                    list,
-                    ann,
-                    BTreeMap::new(),
-                ));
+                    args,
+                    buffer,
+                    threads,
+                )?;
+                return Ok(());
             }
-            bam_record_vis_pre_calculate(matches, &args, precursor, threads, |idx| {
-                reader.header().get_name(idx).and_then(|t| Some(t.as_str()))
-            })?;
+
+            let sample_ids_opt: Option<Vec<u64>> = matches
+                .values_of("id")
+                //.unwrap()
+                .and_then(|a| Some(a.map(|t| t.parse::<u64>().unwrap()).collect()));
+            let sample_id_cond = sample_ids_opt.is_some();
+            let sample_ids = sample_ids_opt.unwrap_or(vec![]);
+            let filter = matches.is_present("filter");
+
+            let format_type_opt = matches.value_of_t::<Format>("type");
+            let format_type_cond = format_type_opt.is_ok();
+            let format_type = format_type_opt.unwrap_or(Format::Default(Default {}));
+            /*let out = std::io::stdout();
+            let out_writer = match matches.value_of("output") {
+                Some(x) => {
+                    let path = Path::new(x);
+                    Box::new(File::create(&path).unwrap()) as Box<dyn Write>
+                }
+                None => Box::new(out.lock()) as Box<dyn Write>,
+            };
+            let output = io::BufWriter::with_capacity(1048576, out_writer);*/
+
+            /*let end0 = start.elapsed();
+            eprintln!(
+                "{}.{:03} sec.",
+                end0.as_secs(),
+                end0.subsec_nanos() / 1_000_000
+            );*/
+            let mut list = vec![];
+            let mut ann = vec![];
+            //let mut list2 = vec![];
+            //let mut samples = BTreeMap::new();
+            let _ = viewer.into_iter().for_each(|t| {
+                //eprintln!("{:?}", t.clone().unwrap());
+                let f = t.unwrap();
+                if !sample_id_cond || sample_ids.iter().any(|&i| i == f.sample_id()) {
+                    let sample_id = f.sample_id();
+                    let data = f.data();
+                    if !format_type_cond
+                        || std::mem::discriminant(&format_type) == std::mem::discriminant(&data)
+                    {
+                        match data {
+                            Format::Range(rec) => {
+                                for i in rec.to_record(&prefetch_range.path) {
+                                    if !filter
+                                        || (i.end() as u64 > range.start()
+                                            && range.end() > i.start() as u64)
+                                    {
+                                        ann.push((sample_id, i))
+                                    }
+                                }
+                            }
+                            Format::Alignment(Alignment::Object(rec)) => {
+                                for i in rec {
+                                    if !filter
+                                        || (i.calculate_end() as u64 > range.start()
+                                            && range.end() > i.start() as u64)
+                                    {
+                                        if !i.flag().is_secondary() && i.query_len() > min_read_len
+                                        {
+                                            list.push((sample_id, i));
+                                        }
+                                    }
+                                }
+                            }
+                            _ => {}
+                        }
+                    }
+                }
+            });
+            precursor.push(VisPrecursor::new(
+                string_range,
+                prefetch_range,
+                list,
+                ann,
+                BTreeMap::new(),
+            ));
         }
+        bam_record_vis_pre_calculate(matches, &args, precursor, threads, |idx| {
+            reader.header().get_name(idx).and_then(|t| Some(t.as_str()))
+        })?;
     }
     Ok(())
 }
