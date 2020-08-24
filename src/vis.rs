@@ -923,7 +923,7 @@ where
                                                     }
                                                 } else if entry.is_deletion() {
                                                     prev_ref = entry.ref_pos_nt().unwrap().0 as u64;
-                                                    if prev_ref > range.end() as u64+1 {
+                                                    if prev_ref > range.end() as u64 {
                                                         break;
                                                     }
                                                     if prev_ref >= range.start() as u64 {
@@ -935,7 +935,7 @@ where
                                                     }
                                                 } else if entry.is_seq_match() {
                                                     prev_ref = entry.ref_pos_nt().unwrap().0 as u64;
-                                                    if prev_ref > range.end() as u64+1 {
+                                                    if prev_ref > range.end() as u64 {
                                                         break;
                                                     }
                                                     // If all bases shows the SNPs
@@ -949,7 +949,7 @@ where
                                                     /* Mismatch */
                                                     prev_ref = entry.ref_pos_nt().unwrap().0 as u64;
 
-                                                    if prev_ref > range.end() as u64+1 {
+                                                    if prev_ref > range.end() as u64 {
                                                         break;
                                                     }
                                                     if prev_ref >= range.start() as u64 {
