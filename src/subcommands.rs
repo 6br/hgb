@@ -41,6 +41,10 @@ pub fn bam_vis(
         .value_of("min-read-length")
         .and_then(|a| a.parse::<u32>().ok())
         .unwrap_or(0u32);
+    let neighbor = matches
+        .value_of("neighbor")
+        .and_then(|a| a.parse::<u64>().ok())
+        .unwrap_or(0u64);
     if let Some(bam_files) = matches.values_of("bam") {
         let bam_files: Vec<&str> = bam_files.collect();
         let mut ranges: Vec<String> = vec![];
@@ -54,7 +58,13 @@ pub fn bam_vis(
             let ranges_tmp: Vec<String> = values
                 .into_iter()
                 .map(|record| {
-                    format!("{}:{}-{}", record.chrom(), record.start(), record.end()).to_string()
+                    format!(
+                        "{}:{}-{}",
+                        record.chrom(),
+                        record.start() - neighbor,
+                        record.end() + neighbor
+                    )
+                    .to_string()
                 })
                 .collect();
             ranges.extend(ranges_tmp);
