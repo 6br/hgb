@@ -903,7 +903,7 @@ where
                         //if let Ok(mut a) = bam.alignment_entries() {
                         match (quality, bam.alignment_entries()) {
                             (false, Ok(mut a)) => {
-                                for i in left_top.0 + 1..right_bottom.0 + 1 {
+                                'outer: for i in left_top.0 + 1..right_bottom.0 + 1 {
                                     let k =
                                         chart.as_coord_spec().reverse_translate((i, left_top.1));
                                     let mut color = None;
@@ -924,7 +924,7 @@ where
                                                     }
                                                 } else if entry.is_deletion() {
                                                     if prev_ref > range.end() as u64 {
-                                                        break;
+                                                        break 'outer;
                                                     }
                                                     if prev_ref >= range.start() as u64 {
                                                         //let mut bar = Rectangle::new([(prev_ref , index), (prev_ref + 1, index + 1)], WHITE.filled());
@@ -937,7 +937,7 @@ where
                                                 } else if entry.is_seq_match() {
                                                     prev_ref = entry.ref_pos_nt().unwrap().0 as u64;
                                                     if prev_ref > range.end() as u64 {
-                                                        break;
+                                                        break 'outer;
                                                     }
                                                     // If all bases shows the SNPs
                                                     if prev_ref >= range.start() as u64 && all_bases
@@ -951,7 +951,7 @@ where
                                                     prev_ref = entry.ref_pos_nt().unwrap().0 as u64;
 
                                                     if prev_ref > range.end() as u64 {
-                                                        break;
+                                                        break 'outer;
                                                     }
                                                     if prev_ref >= range.start() as u64 {
                                                         let record_nt =
