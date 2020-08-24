@@ -1059,8 +1059,8 @@ where
     .value_of("threads")
     .and_then(|t| t.parse::<u16>().ok())
     .unwrap_or(1u16);*/
-    let range = &vis[0].range.clone();
-    let prefetch_range = &vis[0].prefetch_range.clone();
+    //let range = &vis[0].range.clone();
+    //let prefetch_range = &vis[0].prefetch_range.clone();
 
     let pileup = matches.is_present("pileup");
     let split_only = matches.is_present("only-split-alignment");
@@ -1099,6 +1099,8 @@ where
         for i in vis.iter() {
             let list = i.list.lock().unwrap();
             let mut freq = i.frequency.lock().unwrap();
+            //let range = i.range; //.clone();
+            let prefetch_range = &i.prefetch_range; //&vis[0].prefetch_range.clone();
 
             list.iter().group_by(|elt| elt.0).into_iter().for_each(|t| {
                 let mut line =
@@ -1240,7 +1242,7 @@ where
                         if items.len() > 1 {
                             let last: &(u64, Record, usize) =
                                 items.iter().max_by_key(|t| t.1.calculate_end()).unwrap();
-                            eprintln!("Split: {:?}", last);
+                            //eprintln!("Split: {:?}", last);
                             end_map.insert(
                                 (sample_id, s.0),
                                 (
@@ -1548,6 +1550,8 @@ where
         let ann = &*vis[0].annotation.lock().unwrap();
         let freq = &*vis[0].frequency.lock().unwrap();
         let index_list = &*vis[0].index_list.lock().unwrap();
+        let range = &vis[0].range;
+        let prefetch_range = &vis[0].prefetch_range; //.clone();
         server(
             matches.clone(),
             range.clone(),

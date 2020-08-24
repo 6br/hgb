@@ -365,6 +365,28 @@ where
     let areas = root.split_evenly((1, vis.len()));
     let areas_len = vis.len();
 
+    let y_max = match max_coverage {
+        Some(a) => a,
+        _ => vis
+            .iter()
+            .map(|t| {
+                t.frequency
+                    .iter()
+                    .map(|(_, values)| values.iter().map(|t| t.1).max().unwrap_or(1))
+                    .max()
+                    .unwrap_or(1)
+            })
+            .max()
+            .unwrap_or(1),
+        /*if frequency.len() > 0 {
+
+            let coverages = coverage.split_evenly((frequency.len(), 1));
+            for (i, (sample_sequential_id, values)) in frequency.iter().rev().enumerate() {
+                values.iter().map(|t| t.1).max().unwrap_or(1),
+            }
+        }*/
+    };
+
     for (index, area) in areas.iter().enumerate() {
         let area = area.margin(10, 10, 0, 0);
         let vis = &vis[index];
@@ -630,10 +652,7 @@ where
                         if count > 0 {
                             let stroke = Palette99::pick(*sample_sequential_id as usize);
                             let mut bar2 = Rectangle::new(
-                                [
-                                    (range.start(), prev_index),
-                                    (range.end(), count),
-                                ],
+                                [(range.start(), prev_index), (range.end(), count)],
                                 stroke.stroke_width(y / 2), // filled(), //stroke_width(100),
                             );
                             bar2.set_margin(1, 0, 0, 0);
@@ -1025,10 +1044,10 @@ where
             let coverages = coverage.split_evenly((frequency.len(), 1));
             for (i, (sample_sequential_id, values)) in frequency.iter().rev().enumerate() {
                 let idx = *sample_sequential_id as usize;
-                let y_max = match max_coverage {
+                /*let y_max = match max_coverage {
                     Some(a) => a,
                     _ => values.iter().map(|t| t.1).max().unwrap_or(1),
-                };
+                };*/
                 let mut chart = ChartBuilder::on(&coverages[i])
                     // Set the caption of the chart
                     //.caption(format!("{}", range), ("sans-serif", 20).into_font())
