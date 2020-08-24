@@ -18,15 +18,12 @@ use ghi::range::{Format, InvertedRecordEntire, Set};
 use ghi::twopass_alignment::{Alignment, AlignmentBuilder};
 use ghi::vis::{bam_record_vis_orig, RecordIter};
 use ghi::writer::GhiWriter;
-use ghi::{
-    gff, reader::IndexedReader, simple_buffer::ChromosomeBuffer, IndexWriter, VisOrig, VisRef,
-};
+use ghi::{gff, reader::IndexedReader, simple_buffer::ChromosomeBuffer, IndexWriter, VisOrig};
 use io::{BufReader, Error, ErrorKind, Write};
 use itertools::EitherOrBoth::{Both, Left};
 use itertools::Itertools;
 use log::{debug, info};
 use std::{
-    cell::Cell,
     collections::{BTreeMap, BTreeSet, HashMap},
     fs::File,
     io, mem,
