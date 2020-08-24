@@ -53,9 +53,6 @@ pub fn bam_vis(
             for record in reader.records() {
                 let record = record?;
                 values.push(record);
-                //                let range =
-                //                    format!("{}:{}-{}", record.chrom(), record.start(), record.end()).to_string();
-                //                ranges.push(&range.as_ref());
             }
             let ranges_tmp: Vec<String> = values
                 .into_iter()
