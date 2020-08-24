@@ -46,147 +46,170 @@ pub fn bam_vis(
         .unwrap_or(0u32);
     if let Some(bam_files) = matches.values_of("bam") {
         let bam_files: Vec<&str> = bam_files.collect();
-
-        if let Some(ranges) = matches.values_of("range") {
-            let ranges: Vec<&str> = ranges.collect();
-            let mut precursor = Vec::with_capacity(ranges.len());
-            let prefetch_ranges: Vec<&str> = matches
-                .values_of("prefetch-range")
-                .and_then(|t| Some(t.collect()))
-                .unwrap_or(vec![]);
-            /*let ranged_zip = if let Some(prefetch_ranges) = prefetch_ranges {
-                ranges.into_iter().zip(prefetch_ranges)
-            } else {
-                ranges.into_iter().zip(ranges.clone())
-            };*/
-            for eob in ranges.into_iter().zip_longest(prefetch_ranges) {
-                let (range, prefetch_str) = match eob {
-                    Both(a, b) => (a, b),
-                    Left(a) => (a, a),
-                    _ => panic!("Range is not specified."),
-                };
-                let string_range = StringRegion::new(range).unwrap();
-                let prefetch_range = StringRegion::new(prefetch_str).unwrap();
-                /*let prefetch_range = if let Some(prefetch_ranges) = prefetch_ranges {
-                    StringRegion::new(prefetch_ranges[index])?
-                } else {
-                    string_range
-                };*/
-                let mut list: Vec<(u64, Record)> = vec![];
-                println!("Input file: {:?}", bam_files);
-                for (index, bam_path) in bam_files.iter().enumerate() {
-                    println!("Loading {}", bam_path);
-                    // let reader = bam::BamReader::from_path(bam_path, threads).unwrap();
-                    let mut reader2 = bam::IndexedReader::build()
-                        .additional_threads(threads - 1)
-                        .from_path(bam_path)?;
-
-                    // Here all threads can be used, but I suspect that runs double
-                    //reader2.fetch()
-                    let ref_id = reader2
-                        .header()
-                        .reference_id(prefetch_range.path.as_ref())
-                        .ok_or(Error::new(ErrorKind::Other, "Invalid reference id."))?;
-                    let viewer = reader2.fetch(&bam::bam_reader::Region::new(
-                        ref_id,
-                        prefetch_range.start as u32,
-                        prefetch_range.end as u32,
-                    ))?;
-                    for record in viewer {
-                        let record = record?;
-                        if !record.flag().is_secondary() && record.query_len() > min_read_len {
-                            list.push((index as u64, record));
-                        }
-                    }
-                }
-                let mut ann = vec![];
-                let mut idx = bam_files.len();
-                let mut freq = BTreeMap::new();
-                if let Some(freq_files) = matches.values_of("frequency") {
-                    // let bed_files: Vec<_> = matches.values_of("bed").unwrap().collect();
-                    // frequency bed file needs to be (start, score).
-                    let freq_files: Vec<&str> = freq_files.collect();
-                    for (_idx, bed_path) in freq_files.iter().enumerate() {
-                        info!("Loading {}", bed_path);
-                        let mut reader = bed::Reader::from_file(bed_path)?;
-                        let mut values = vec![];
-                        for record in reader.records() {
-                            let record = record?;
-                            if record.end() > prefetch_range.start()
-                                && record.start() < prefetch_range.end()
-                                && record.chrom() == prefetch_range.path
-                            {
-                                values.push((
-                                    record.start(),
-                                    record
-                                        .score()
-                                        .and_then(|t| t.parse::<u32>().ok())
-                                        .unwrap_or(0),
-                                    '*',
-                                ));
-                            }
-                        }
-                        freq.insert(idx as u64, values);
-                        idx += 1;
-                    }
-                }
-
-                if let Some(bed_files) = matches.values_of("bed") {
-                    let bed_files: Vec<&str> = bed_files.collect();
-                    for (_idx, bed_path) in bed_files.iter().enumerate() {
-                        info!("Loading {}", bed_path);
-                        let mut reader = bed::Reader::from_file(bed_path)?;
-                        for record in reader.records() {
-                            let record = record?;
-                            if record.end() > prefetch_range.start()
-                                && record.start() < prefetch_range.end()
-                                && record.chrom() == prefetch_range.path
-                            {
-                                ann.push((idx as u64, record));
-                            }
-                        }
-                        idx += 1;
-                    }
-                }
-                if let Some(gff_files) = matches.values_of("gff3") {
-                    let gff_files: Vec<&str> = gff_files.collect();
-                    for (_idx, gff_path) in gff_files.iter().enumerate() {
-                        info!("Loading {}", gff_path);
-                        let mut reader =
-                            gff::Reader::from_file(gff_path, gff::GffType::GFF3).unwrap();
-                        for gff_record in reader.records() {
-                            let gff = gff_record?;
-                            if *gff.end() > prefetch_range.start()
-                                && *gff.start() < prefetch_range.end()
-                                && gff.seqname() == prefetch_range.path
-                            {
-                                let mut record = bed::Record::new();
-                                record.set_chrom(gff.seqname());
-                                record.set_start(*gff.start());
-                                record.set_end(*gff.end());
-                                record.set_name(&gff.attributes()["gene_id"]);
-                                record.set_score(&gff.score().unwrap_or(0).to_string());
-                                if let Some(strand) = gff.strand() {
-                                    record.push_aux(strand.strand_symbol()); // Strand
-                                }
-                                ann.push((idx as u64, record));
-                            }
-                        }
-                        idx += 1;
-                    }
-                }
-                precursor.push(VisPrecursor::new(
-                    string_range,
-                    prefetch_range,
-                    list,
-                    ann,
-                    freq,
-                ));
+        let mut ranges: Vec<String> = vec![];
+        if let Some(bed_range) = matches.value_of("bed-range") {
+            let mut reader = bed::Reader::from_file(bed_range)?;
+            let mut values = vec![];
+            for record in reader.records() {
+                let record = record?;
+                values.push(record);
+                //                let range =
+                //                    format!("{}:{}-{}", record.chrom(), record.start(), record.end()).to_string();
+                //                ranges.push(&range.as_ref());
             }
-            bam_record_vis_pre_calculate(matches, &args, precursor, threads, |idx| {
-                Some(bam_files[idx])
-            })?;
+            let ranges_tmp: Vec<String> = values
+                .into_iter()
+                .map(|record| {
+                    format!("{}:{}-{}", record.chrom(), record.start(), record.end()).to_string()
+                })
+                .collect();
+            ranges.extend(ranges_tmp);
         }
+        if let Some(ranges_str) = matches.values_of("range") {
+            let ranges_tmp: Vec<String> = ranges_str.into_iter().map(|t| t.to_string()).collect();
+            ranges.extend(ranges_tmp);
+        }
+        let mut precursor = Vec::with_capacity(ranges.len());
+        /*let prefetch_ranges: Vec<String> = matches
+        .values_of("prefetch-range")
+        .and_then(|t| Some(t.map(|t| t.to_string()).collect()))
+        .unwrap_or(vec![]);*/
+        let prefetch_ranges: Vec<&str> = matches
+            .values_of("prefetch-range")
+            .and_then(|t| Some(t.collect()))
+            .unwrap_or(vec![]);
+        /*let ranged_zip = if let Some(prefetch_ranges) = prefetch_ranges {
+            ranges.into_iter().zip(prefetch_ranges)
+        } else {
+            ranges.into_iter().zip(ranges.clone())
+        };*/
+        for eob in ranges.into_iter().zip_longest(prefetch_ranges) {
+            let (range, prefetch_str) = match eob {
+                Both(a, b) => (a, b.to_string()),
+                Left(a) => (a.clone(), a),
+                _ => panic!("Range is not specified."),
+            };
+            let string_range = StringRegion::new(&range).unwrap();
+            let prefetch_range = StringRegion::new(&prefetch_str).unwrap();
+            /*let prefetch_range = if let Some(prefetch_ranges) = prefetch_ranges {
+                StringRegion::new(prefetch_ranges[index])?
+            } else {
+                string_range
+            };*/
+            let mut list: Vec<(u64, Record)> = vec![];
+            println!("Input file: {:?}", bam_files);
+            for (index, bam_path) in bam_files.iter().enumerate() {
+                println!("Loading {}", bam_path);
+                // let reader = bam::BamReader::from_path(bam_path, threads).unwrap();
+                let mut reader2 = bam::IndexedReader::build()
+                    .additional_threads(threads - 1)
+                    .from_path(bam_path)?;
+
+                // Here all threads can be used, but I suspect that runs double
+                //reader2.fetch()
+                let ref_id = reader2
+                    .header()
+                    .reference_id(prefetch_range.path.as_ref())
+                    .ok_or(Error::new(ErrorKind::Other, "Invalid reference id."))?;
+                let viewer = reader2.fetch(&bam::bam_reader::Region::new(
+                    ref_id,
+                    prefetch_range.start as u32,
+                    prefetch_range.end as u32,
+                ))?;
+                for record in viewer {
+                    let record = record?;
+                    if !record.flag().is_secondary() && record.query_len() > min_read_len {
+                        list.push((index as u64, record));
+                    }
+                }
+            }
+            let mut ann = vec![];
+            let mut idx = bam_files.len();
+            let mut freq = BTreeMap::new();
+            if let Some(freq_files) = matches.values_of("frequency") {
+                // let bed_files: Vec<_> = matches.values_of("bed").unwrap().collect();
+                // frequency bed file needs to be (start, score).
+                let freq_files: Vec<&str> = freq_files.collect();
+                for (_idx, bed_path) in freq_files.iter().enumerate() {
+                    info!("Loading {}", bed_path);
+                    let mut reader = bed::Reader::from_file(bed_path)?;
+                    let mut values = vec![];
+                    for record in reader.records() {
+                        let record = record?;
+                        if record.end() > prefetch_range.start()
+                            && record.start() < prefetch_range.end()
+                            && record.chrom() == prefetch_range.path
+                        {
+                            values.push((
+                                record.start(),
+                                record
+                                    .score()
+                                    .and_then(|t| t.parse::<u32>().ok())
+                                    .unwrap_or(0),
+                                '*',
+                            ));
+                        }
+                    }
+                    freq.insert(idx as u64, values);
+                    idx += 1;
+                }
+            }
+            eprintln!("{:?}", freq);
+
+            if let Some(bed_files) = matches.values_of("bed") {
+                let bed_files: Vec<&str> = bed_files.collect();
+                for (_idx, bed_path) in bed_files.iter().enumerate() {
+                    info!("Loading {}", bed_path);
+                    let mut reader = bed::Reader::from_file(bed_path)?;
+                    for record in reader.records() {
+                        let record = record?;
+                        if record.end() > prefetch_range.start()
+                            && record.start() < prefetch_range.end()
+                            && record.chrom() == prefetch_range.path
+                        {
+                            ann.push((idx as u64, record));
+                        }
+                    }
+                    idx += 1;
+                }
+            }
+            if let Some(gff_files) = matches.values_of("gff3") {
+                let gff_files: Vec<&str> = gff_files.collect();
+                for (_idx, gff_path) in gff_files.iter().enumerate() {
+                    info!("Loading {}", gff_path);
+                    let mut reader = gff::Reader::from_file(gff_path, gff::GffType::GFF3).unwrap();
+                    for gff_record in reader.records() {
+                        let gff = gff_record?;
+                        if *gff.end() > prefetch_range.start()
+                            && *gff.start() < prefetch_range.end()
+                            && gff.seqname() == prefetch_range.path
+                        {
+                            let mut record = bed::Record::new();
+                            record.set_chrom(gff.seqname());
+                            record.set_start(*gff.start());
+                            record.set_end(*gff.end());
+                            record.set_name(&gff.attributes()["gene_id"]);
+                            record.set_score(&gff.score().unwrap_or(0).to_string());
+                            if let Some(strand) = gff.strand() {
+                                record.push_aux(strand.strand_symbol()); // Strand
+                            }
+                            ann.push((idx as u64, record));
+                        }
+                    }
+                    idx += 1;
+                }
+            }
+            precursor.push(VisPrecursor::new(
+                string_range,
+                prefetch_range,
+                list,
+                ann,
+                freq,
+            ));
+        }
+        bam_record_vis_pre_calculate(matches, &args, precursor, threads, |idx| {
+            bam_files.get(idx).and_then(|t| Some(*t))
+        })?;
     }
     Ok(())
 }
