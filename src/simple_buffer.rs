@@ -386,12 +386,12 @@ impl ChromosomeBuffer {
         &self,
         string_range: &StringRegion,
         list: &mut Vec<(u64, bam::Record)>,
-        list_btree: &mut BTreeSet<u64>,
+        _list_btree: &mut BTreeSet<u64>,
     ) -> Option<Vis> {
         let closure = |x: &str| self.reader.reference_id(x);
         let _reference_name = &string_range.path;
         let range = Region::convert(string_range, closure).unwrap();
-        let freq = &self.freq;
+        let _freq = &self.freq;
 
         /*let mut list: Vec<(u64, bam::Record)> = self
         .bins

@@ -903,7 +903,7 @@ where
                         //if let Ok(mut a) = bam.alignment_entries() {
                         match (quality, bam.alignment_entries()) {
                             (false, Ok(mut a)) => {
-                                for i in left_top.0 + 1..right_bottom.0 {
+                                for i in left_top.0 + 1..right_bottom.0 + 1 {
                                     let k =
                                         chart.as_coord_spec().reverse_translate((i, left_top.1));
                                     let mut color = None;
@@ -923,7 +923,7 @@ where
                                                     }
                                                 } else if entry.is_deletion() {
                                                     prev_ref = entry.ref_pos_nt().unwrap().0 as u64;
-                                                    if prev_ref > range.end() as u64 {
+                                                    if prev_ref > range.end() as u64+1 {
                                                         break;
                                                     }
                                                     if prev_ref >= range.start() as u64 {
@@ -935,7 +935,7 @@ where
                                                     }
                                                 } else if entry.is_seq_match() {
                                                     prev_ref = entry.ref_pos_nt().unwrap().0 as u64;
-                                                    if prev_ref > range.end() as u64 {
+                                                    if prev_ref > range.end() as u64+1 {
                                                         break;
                                                     }
                                                     // If all bases shows the SNPs
@@ -949,7 +949,7 @@ where
                                                     /* Mismatch */
                                                     prev_ref = entry.ref_pos_nt().unwrap().0 as u64;
 
-                                                    if prev_ref > range.end() as u64 {
+                                                    if prev_ref > range.end() as u64+1 {
                                                         break;
                                                     }
                                                     if prev_ref >= range.start() as u64 {
@@ -1024,7 +1024,7 @@ where
                                                 }
                                             }
                                             prev_ref = reference as u64;
-                                            if reference > range.end() as u32 {
+                                            if reference > range.end() as u32+1 {
                                                 break;
                                             }
                                         }
@@ -1042,7 +1042,7 @@ where
                                                 prev_ref = reference as u64;
                                                 bars.push(bar);
                                             }
-                                            if reference >= range.end() as u32 {
+                                            if reference >= range.end() as u32+1 {
                                                 break;
                                             }
                                         }
