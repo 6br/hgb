@@ -742,6 +742,10 @@ pub fn vis_query(
         .value_of("min-read-length")
         .and_then(|a| a.parse::<u32>().ok())
         .unwrap_or(0u32);
+    let neighbor = matches
+        .value_of("neighbor")
+        .and_then(|a| a.parse::<u64>().ok())
+        .unwrap_or(0u64);
     if let Some(o) = matches.value_of("INPUT") {
         let mut reader: IndexedReader<BufReader<File>> =
             IndexedReader::from_path_with_additional_threads(o, threads - 1).unwrap();
@@ -759,7 +763,13 @@ pub fn vis_query(
             let ranges_tmp: Vec<String> = values
                 .into_iter()
                 .map(|record| {
-                    format!("{}:{}-{}", record.chrom(), record.start(), record.end()).to_string()
+                    format!(
+                        "{}:{}-{}",
+                        record.chrom(),
+                        record.start() - neighbor,
+                        record.end() + neighbor
+                    )
+                    .to_string()
                 })
                 .collect();
             ranges.extend(ranges_tmp);

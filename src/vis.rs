@@ -896,7 +896,7 @@ where
                       };*/
                     if !no_cigar {
                         let mut prev_ref = bam.start() as u64;
-                        let mut prev_pixel_ref = start+1;
+                        let mut prev_pixel_ref = start + 1;
                         let left_top = chart.as_coord_spec().translate(&(start, index));
                         let right_bottom = chart.as_coord_spec().translate(&(end, index + 1));
 
@@ -978,11 +978,11 @@ where
                                                 );
                                                 bar.set_margin(3, 3, 0, 0);
                                                 /*eprintln!(
-                                                    "{:?}",
-                                                    [
-                                                        (prev_pixel_ref, index),
-                                                        (prev_ref, index + 1)
-                                                    ]*/
+                                                "{:?}",
+                                                [
+                                                    (prev_pixel_ref, index),
+                                                    (prev_ref, index + 1)
+                                                ]*/
                                                 bars.push(bar);
                                             }
                                             prev_pixel_ref = k.0;
