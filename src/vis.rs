@@ -895,12 +895,13 @@ where
                           //vec![bar,bar2]
                           bars.push(bar2);
                       };*/
-                    if !no_cigar && bam.calculate_end() >= range.end() as i32 {
+                    if !no_cigar { // && bam.calculate_end() >= range.start() as i32 {
                         let mut prev_ref = bam.start() as u64 - 1;
                         let mut prev_pixel_ref = start + 1;
                         let left_top = chart.as_coord_spec().translate(&(start, index));
                         let right_bottom = chart.as_coord_spec().translate(&(end, index + 1));
                         let offset = if range.end() - range.start() == 1 {0} else { 1};
+                        //let prev_min = range.end();
 
                         //if let Ok(mut a) = bam.alignment_entries() {
                         match (quality, bam.alignment_entries()) {
@@ -910,7 +911,10 @@ where
                                         chart.as_coord_spec().reverse_translate((i, left_top.1));
                                     let mut color = None;
                                     if let Some(k) = k {
-                                        while k.0 > prev_ref {
+                                        while k.0 > prev_ref && prev_ref != bam.calculate_end() as u64 {
+                                            /*if prev_min < entry.ref_pos_nt().unwrap().0 as u64 {
+                                                prev_min = entry.ref_pos_nt().unwrap().0 as u64;
+                                            }*/
                                             let entry = a.next();
                                             if let Some(entry) = entry {
                                                 /*eprintln!(
