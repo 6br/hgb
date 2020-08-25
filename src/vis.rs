@@ -911,7 +911,12 @@ where
                                         while k.0 > prev_ref {
                                             let entry = a.next();
                                             if let Some(entry) = entry {
-                                                //eprintln!("{:?}", entry.ref_pos_nt());
+                                                eprintln!(
+                                                    "{:?} {:?} {:?}",
+                                                    entry.ref_pos_nt(),
+                                                    k.0,
+                                                    prev_ref
+                                                );
                                                 if entry.is_insertion() {
                                                     if prev_ref >= range.start() as u64 && insertion
                                                     {
@@ -924,7 +929,7 @@ where
                                                     }
                                                 } else if entry.is_deletion() {
                                                     if prev_ref > range.end() as u64 {
-                                                        break 'outer;
+                                                        break;
                                                     }
                                                     if prev_ref >= range.start() as u64 {
                                                         //let mut bar = Rectangle::new([(prev_ref , index), (prev_ref + 1, index + 1)], WHITE.filled());
@@ -937,7 +942,7 @@ where
                                                 } else if entry.is_seq_match() {
                                                     prev_ref = entry.ref_pos_nt().unwrap().0 as u64;
                                                     if prev_ref > range.end() as u64 {
-                                                        break 'outer;
+                                                        break;
                                                     }
                                                     // If all bases shows the SNPs
                                                     if prev_ref >= range.start() as u64 && all_bases
@@ -951,7 +956,7 @@ where
                                                     prev_ref = entry.ref_pos_nt().unwrap().0 as u64;
 
                                                     if prev_ref > range.end() as u64 {
-                                                        break 'outer;
+                                                        break;
                                                     }
                                                     if prev_ref >= range.start() as u64 {
                                                         let record_nt =
@@ -966,6 +971,8 @@ where
                                                         bars.push(bar);*/
                                                     }
                                                 }
+                                            } else {
+                                                break;
                                             }
                                         }
                                         if prev_ref >= range.start() as u64 {
