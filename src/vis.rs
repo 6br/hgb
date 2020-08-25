@@ -899,11 +899,12 @@ where
                         let mut prev_pixel_ref = start + 1;
                         let left_top = chart.as_coord_spec().translate(&(start, index));
                         let right_bottom = chart.as_coord_spec().translate(&(end, index + 1));
+                        let offset = if range.end() - range.start() == 1 {0} else { 1};
 
                         //if let Ok(mut a) = bam.alignment_entries() {
                         match (quality, bam.alignment_entries()) {
                             (false, Ok(mut a)) => {
-                                'outer: for i in left_top.0 + 1..right_bottom.0 + 1 {
+                                'outer: for i in left_top.0 + 1..right_bottom.0 + offset {
                                     let k =
                                         chart.as_coord_spec().reverse_translate((i, left_top.1));
                                     let mut color = None;
@@ -912,10 +913,11 @@ where
                                             let entry = a.next();
                                             if let Some(entry) = entry {
                                                 eprintln!(
-                                                    "{:?} {:?} {:?}",
+                                                    "{:?} {:?} {:?} {:?}",
                                                     entry.ref_pos_nt(),
                                                     k.0,
-                                                    prev_ref
+                                                    prev_ref,
+                                                    i
                                                 );
                                                 if entry.is_insertion() {
                                                     if prev_ref >= range.start() as u64 && insertion
