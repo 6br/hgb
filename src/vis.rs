@@ -745,10 +745,11 @@ where
         let mut split_frequency = vec![];
         //let mut snp_frequency = vec![];
         // For each alignment:
-        let series = {
-            //list.into_iter().enumerate().map(|(index, data)| {
-            let mut bars = vec![];
-            index_list
+        let series =
+            {
+                //list.into_iter().enumerate().map(|(index, data)| {
+                let mut bars = vec![];
+                index_list
                 .iter()
                 .zip(list.iter())
                 .filter(|(_, data)| {
@@ -894,7 +895,7 @@ where
                           //vec![bar,bar2]
                           bars.push(bar2);
                       };*/
-                    if !no_cigar {
+                    if !no_cigar && bam.calculate_end() >= range.end() as i32 {
                         let mut prev_ref = bam.start() as u64 - 1;
                         let mut prev_pixel_ref = start + 1;
                         let left_top = chart.as_coord_spec().translate(&(start, index));
@@ -912,13 +913,13 @@ where
                                         while k.0 > prev_ref {
                                             let entry = a.next();
                                             if let Some(entry) = entry {
-                                                eprintln!(
+                                                /*eprintln!(
                                                     "{:?} {:?} {:?} {:?}",
                                                     entry.ref_pos_nt(),
                                                     k.0,
                                                     prev_ref,
                                                     i
-                                                );
+                                                );*/
                                                 if entry.is_insertion() {
                                                     if prev_ref >= range.start() as u64 && insertion
                                                     {
@@ -1078,8 +1079,8 @@ where
                     }
                     //}).flatten().collect::<Vec<_>>())?;
                 });
-            bars
-        };
+                bars
+            };
         chart.draw_series(series)?;
         let end1 = start.elapsed();
         eprintln!(
