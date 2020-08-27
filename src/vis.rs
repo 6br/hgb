@@ -13,8 +13,9 @@ use plotters::coord::ReverseCoordTranslate;
 use plotters::prelude::Palette;
 use plotters::prelude::*;
 use plotters::style::RGBColor;
-
 use std::{collections::BTreeMap, fs::File, time::Instant};
+
+const PARBASE_THRESHOLD: u64 = 2;
 
 macro_rules! predefined_color {
     ($name:ident, $r:expr, $g:expr, $b:expr, $doc:expr) => {
@@ -170,14 +171,15 @@ where
             } else {
                 (range.start() - 1)..(range.end() + 1)
             };
-            let x_offset = if range.end() - range.start() == 1 {
-                coverages[i].get_pixel_range().0.len() / 2
+            let x_offset = if range.end() - range.start() <= PARBASE_THRESHOLD {
+                coverages[i].get_pixel_range().0.len()
+                    / ((range.end() - range.start()) * 2) as usize
             } else {
                 0usize
             };
             let x_label_formatter = {
                 &|x: &u64| {
-                    if *x == range.start() || range.end() - range.start() != 1 {
+                    if *x == range.start() || range.end() - range.start() > PARBASE_THRESHOLD {
                         format!("{}", x.to_formatted_string(&Locale::en))
                     } else {
                         format!("")
@@ -427,14 +429,14 @@ where
         } else {
             (range.start() - 1)..(range.end() + 1)
         };
-        let x_offset = if range.end() - range.start() == 1 {
-            area.get_pixel_range().0.len() / 2
+        let x_offset = if range.end() - range.start() <= PARBASE_THRESHOLD {
+            area.get_pixel_range().0.len() / ((range.end() - range.start()) * 2) as usize
         } else {
             0usize
         };
         let x_label_formatter = {
             &|x: &u64| {
-                if *x == range.start() || range.end() - range.start() != 1 {
+                if *x == range.start() || range.end() - range.start() > PARBASE_THRESHOLD {
                     format!("{}", x.to_formatted_string(&Locale::en))
                 } else {
                     format!("")
@@ -910,7 +912,7 @@ where
                         //if let Ok(mut a) = bam.alignment_entries() {
                         match (quality, bam.alignment_entries()) {
                             (false, Ok(mut a)) => {
-                                'outer: for i in left_top.0 + 1..right_bottom.0 + offset {
+                                for i in left_top.0 + 1..right_bottom.0 + offset {
                                     let k =
                                         chart.as_coord_spec().reverse_translate((i, left_top.1));
                                     let mut color = None;

@@ -55,21 +55,43 @@ pub fn bam_vis(
                 let record = record?;
                 values.push(record);
             }
-            let ranges_tmp: Vec<String> = values
-                .into_iter()
-                .map(|record| {
-                    format!(
-                        "{}:{}-{}",
-                        record.chrom(),
-                        record.start() - neighbor,
-                        record.end() + neighbor
-                    )
-                    .to_string()
-                })
-                .collect();
+            let ranges_tmp: Vec<String> = if let Some(ranges_str) = matches.value_of("range") {
+                //let ranges_tmp: Vec<String> =
+                //    ranges_str.into_iter().map(|t| t.to_string()).collect();
+                let string_range = StringRegion::new(&ranges_str).unwrap();
+                values
+                    .into_iter()
+                    .filter(|record| {
+                        record.chrom() == string_range.path
+                            && (record.end() > string_range.start()
+                                && string_range.end() > record.start())
+                    })
+                    .map(|record| {
+                        format!(
+                            "{}:{}-{}",
+                            record.chrom(),
+                            record.start() - neighbor,
+                            record.end() + neighbor
+                        )
+                        .to_string()
+                    })
+                    .collect()
+            } else {
+                values
+                    .into_iter()
+                    .map(|record| {
+                        format!(
+                            "{}:{}-{}",
+                            record.chrom(),
+                            record.start() - neighbor,
+                            record.end() + neighbor
+                        )
+                        .to_string()
+                    })
+                    .collect()
+            };
             ranges.extend(ranges_tmp);
-        }
-        if let Some(ranges_str) = matches.values_of("range") {
+        } else if let Some(ranges_str) = matches.values_of("range") {
             let ranges_tmp: Vec<String> = ranges_str.into_iter().map(|t| t.to_string()).collect();
             ranges.extend(ranges_tmp);
         }
