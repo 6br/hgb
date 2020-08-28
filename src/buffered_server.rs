@@ -62,6 +62,8 @@ fn id_to_range<'a>(range: &StringRegion, args: &Vec<String>, zoom: u64, path: u6
                     .multiple(true)
                     .about("A subset of sorted bed for coverage plot (start and score fields are used)"),
             )                .arg(Arg::new("whole-chromosome").short('W').about("Pretend as if the prefetch range is the whole chromosome"))
+            .arg(Arg::new("bed-range").short('J').takes_value(true).about("Visualize multiple region where BED file specifies"))
+            .arg(Arg::new("neighbor").short('K').takes_value(true).about("Visualize specified base-pair neighbor of BED region"))
             .arg(
                 Arg::new("format")
                     .short('O')
@@ -74,6 +76,13 @@ fn id_to_range<'a>(range: &StringRegion, args: &Vec<String>, zoom: u64, path: u6
             .arg(Arg::new("no-packing").short('p').about("Disable read packing"))
             .arg(Arg::new("no-legend").short('l').about("Hide legend"))
             .arg(Arg::new("colored-by-name").short('n').about("Set read colors by read name"))
+            .arg(
+                Arg::new("colored-by-motif")
+                    .short('D')
+                    .takes_value(true)
+                    .default_value("C:T:CG")
+                    .about("Colored by specified motif (for bisulfite sequencing)"),
+            )
             .arg(Arg::new("meaningless").short('Q').about("Set square width (overwritten)"))
             .arg(Arg::new("quality").short('q').about("Display reads by quality value"))
             .arg(Arg::new("x").short('x').takes_value(true).about("The width of image"))

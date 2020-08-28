@@ -1010,7 +1010,9 @@ where
                                                             entry.record_pos_nt().unwrap().1;
                                                         color = nt_color(record_nt as char);
                                                     }
-                                                    if colored_by_motif {
+                                                    if prev_ref >= range.start() as u64
+                                                        && colored_by_motif
+                                                    {
                                                         if let Some(colored_by_motif_vec) =
                                                             &colored_by_motif_vec
                                                         {
@@ -1029,7 +1031,11 @@ where
                                                                 "{}{}",
                                                                 ref_nt, next_ref_nt
                                                             );
-                                                            if string == colored_by_motif_vec[2] {
+                                                            eprintln!(
+                                                                "{} {}",
+                                                                string, colored_by_motif_vec[2]
+                                                            );
+                                                             if string == colored_by_motif_vec[2] {
                                                                 if colored_by_motif_vec[0]
                                                                     .chars()
                                                                     .nth(0)
