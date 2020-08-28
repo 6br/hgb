@@ -28,7 +28,7 @@ macro_rules! predefined_color {
         let $name: RGBAColor = RGBColor($r, $g, $b).mix($a);
     }*/
 }
-
+predefined_color!(DEF_COL, 150, 150, 150, /*0.75,*/ "The default color");
 predefined_color!(
     NEG_COL,
     150,
@@ -287,6 +287,10 @@ where
     let only_translocation = matches.is_present("only-translocation");
     let end_split = matches.is_present("end-split-callets");
     let square = matches.is_present("square");
+    let colored_by_motif = matches.occurrences_of("colored-by-motif") != 0;
+    let colored_by_motif_vec: Option<Vec<String>> = matches
+        .value_of("colored-by-motif")
+        .and_then(|t| Some(t.split(":").map(|t| t.to_string()).collect()));
     if hide_alignment {
         //Multi-ranged frequency vis has not yet been supported.
         let vis = &vis[0];
@@ -312,7 +316,7 @@ where
     let y = matches
         .value_of("y")
         .and_then(|a| a.parse::<u32>().ok())
-        .unwrap_or(15u32);
+        .unwrap_or(20u32);
     let freq_size = matches
         .value_of("freq-height")
         .and_then(|a| a.parse::<u32>().ok())
@@ -761,7 +765,9 @@ where
                     //chart.draw_series(index_list.into_par_iter().zip(list).map(|(index, data)| {
                     //for (index, data) in list.iter().enumerate() {
                     let bam = &data.1;
-                    let color = if bam.flag().is_reverse_strand() {
+                    let color = if colored_by_motif {
+                        DEF_COL
+                    } else if bam.flag().is_reverse_strand() {
                         NEG_COL
                     } else {
                         POS_COL
@@ -916,6 +922,7 @@ where
                                     let k =
                                         chart.as_coord_spec().reverse_translate((i, left_top.1));
                                     let mut color = None;
+                                    let mut stick_out = false;
                                     if let Some(k) = k {
                                         while k.0 > prev_ref
                                             && prev_ref != bam.calculate_end() as u64
@@ -941,6 +948,7 @@ where
                                                         //bars.push(bar);
                                                         //prev_ref = 0;
                                                         color = Some(INS_COL);
+                                                        stick_out = true;
                                                     }
                                                 } else if entry.is_deletion() {
                                                     if prev_ref > range.end() as u64 {
@@ -966,6 +974,42 @@ where
                                                             entry.record_pos_nt().unwrap().1;
                                                         color = nt_color(record_nt as char);
                                                     }
+                                                    if colored_by_motif {
+                                                        if let Some(colored_by_motif_vec) =
+                                                            &colored_by_motif_vec
+                                                        {
+                                                            let record_nt =
+                                                                entry.record_pos_nt().unwrap().1;
+                                                            let ref_nt = entry
+                                                                .ref_nt()
+                                                                .and_then(|t| Some(t as char))
+                                                                .unwrap_or(' ');
+                                                            let next_ref_nt = a
+                                                                .next()
+                                                                .and_then(|t| t.ref_nt())
+                                                                .and_then(|t| Some(t as char))
+                                                                .unwrap_or(' ');
+                                                            let string = format!(
+                                                                "{}{}",
+                                                                ref_nt, next_ref_nt
+                                                            );
+                                                            if string == colored_by_motif_vec[2] {
+                                                                if colored_by_motif_vec[0]
+                                                                    .chars()
+                                                                    .nth(0)
+                                                                    == Some(record_nt as char)
+                                                                {
+                                                                    color = Some(RED);
+                                                                } else if colored_by_motif_vec[1]
+                                                                    .chars()
+                                                                    .nth(0)
+                                                                    == Some(record_nt as char)
+                                                                {
+                                                                    color = Some(BLUE);
+                                                                }
+                                                            }
+                                                        }
+                                                    }
                                                 } else {
                                                     /* Mismatch */
                                                     prev_ref = entry.ref_pos_nt().unwrap().0 as u64;
@@ -973,7 +1017,9 @@ where
                                                     if prev_ref > range.end() as u64 {
                                                         break;
                                                     }
-                                                    if prev_ref >= range.start() as u64 {
+                                                    if prev_ref >= range.start() as u64
+                                                        && !colored_by_motif
+                                                    {
                                                         let record_nt =
                                                             entry.record_pos_nt().unwrap().1;
                                                         color = nt_color(record_nt as char);
@@ -999,7 +1045,12 @@ where
                                                     ],
                                                     color.filled(),
                                                 );
-                                                bar.set_margin(3, 3, 0, 0);
+
+                                                if stick_out {
+                                                    bar.set_margin(2, 2, 0, 0);
+                                                } else {
+                                                    bar.set_margin(3, 3, 0, 0);
+                                                }
                                                 /*eprintln!(
                                                 "{:?}",
                                                 [

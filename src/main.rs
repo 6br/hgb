@@ -356,6 +356,13 @@ fn main() {
                 .arg(Arg::new("square").short('Q').about("Set square width (overwritten)"))
                 .arg(Arg::new("quality").short('q').about("Display reads by quality value"))
                 .arg(Arg::new("colored-by-name").short('n').about("Set read colors by read name"))
+                .arg(
+                    Arg::new("colored-by-motif")
+                        .short('D')
+                        .takes_value(true)
+                        .default_value("C:T:CG")
+                        .about("Colored by specified motif (for bisulfite sequencing)"),
+                )
                 .arg(Arg::new("x").short('x').takes_value(true).about("The width of image"))
                 .arg(Arg::new("y").short('y').takes_value(true).about("The height of each read alignment"))
                 .arg(Arg::new("web").short('w').takes_value(true).about("Serve the web server"))
