@@ -772,7 +772,7 @@ where
                 }
             } else {*/
             if areas_len <= 1 {
-                chart.draw_series(supplementary_list.iter().map(|i| {
+                chart.draw_series(supplementary_list.iter().filter(|t| t.3 < t.4).map(|i| {
                     let stroke = BLACK;
                     let mut bar2 = Rectangle::new(
                         [(i.3 as u64, i.1), (i.4 as u64, i.2)],
@@ -1031,11 +1031,11 @@ where
                                                                 "{}{}",
                                                                 ref_nt, next_ref_nt
                                                             );
-                                                            eprintln!(
+                                                            /*eprintln!(
                                                                 "{} {}",
                                                                 string, colored_by_motif_vec[2]
-                                                            );
-                                                             if string == colored_by_motif_vec[2] {
+                                                            );*/
+                                                            if string == colored_by_motif_vec[2] {
                                                                 if colored_by_motif_vec[0]
                                                                     .chars()
                                                                     .nth(0)
