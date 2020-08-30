@@ -73,7 +73,7 @@ fn id_to_range<'a>(range: &StringRegion, args: &Vec<String>, zoom: u64, path: u6
             .arg(Arg::new("colored-by-name").short('n').about("Set read colors by read name"))
             .arg(
                 Arg::new("colored-by-motif")
-                    .short('D')
+                    .short('E')
                     .takes_value(true)
                     .default_value("C:T:CG")
                     .about("Colored by specified motif (for bisulfite sequencing)"),
