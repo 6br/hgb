@@ -17,6 +17,7 @@ pub mod binary;
 pub mod builder;
 pub mod checker_index;
 pub mod compression;
+pub mod features;
 pub mod gff;
 pub mod header;
 pub mod index;
