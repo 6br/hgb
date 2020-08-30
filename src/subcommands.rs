@@ -11,6 +11,7 @@ use crate::server::server;
 use ghi::bed;
 use ghi::binary::GhbWriter;
 use ghi::builder::InvertedRecordBuilder;
+use ghi::features::*;
 use ghi::header::Header;
 use ghi::index::{Chunk, Region, VirtualOffset};
 use ghi::range::Default;
@@ -100,6 +101,23 @@ pub fn bam_vis(
         .values_of("prefetch-range")
         .and_then(|t| Some(t.map(|t| t.to_string()).collect()))
         .unwrap_or(vec![]);*/
+        let dict = if let Some(gff_files) = matches.values_of("gff3") {
+            let gff_files: Vec<&str> = gff_files.collect();
+            if matches.occurrences_of("dictionary") > 0 {
+                let dict = tmp_new(
+                    gff_files
+                        .clone()
+                        .into_iter()
+                        .map(|t| t.to_string())
+                        .collect::<Vec<_>>(),
+                );
+                dict
+            } else {
+                Database::new()
+            }
+        } else {
+            Database::new()
+        };
         let prefetch_ranges: Vec<&str> = matches
             .values_of("prefetch-range")
             .and_then(|t| Some(t.collect()))
@@ -115,7 +133,11 @@ pub fn bam_vis(
                 Left(a) => (a.clone(), a),
                 _ => panic!("Range is not specified."),
             };
-            let string_range = StringRegion::new(&range).unwrap();
+            let string_range = dict
+                .convert(&range)
+                .and_then(|t| Some(t.clone()))
+                .unwrap_or_else(|| StringRegion::new(&range).unwrap());
+            //let string_range = StringRegion::new(&range).unwrap();
             let prefetch_range = StringRegion::new(&prefetch_str).unwrap();
             /*let prefetch_range = if let Some(prefetch_ranges) = prefetch_ranges {
                 StringRegion::new(prefetch_ranges[index])?
@@ -201,7 +223,7 @@ pub fn bam_vis(
             }
             if let Some(gff_files) = matches.values_of("gff3") {
                 let gff_files: Vec<&str> = gff_files.collect();
-                for (_idx, gff_path) in gff_files.iter().enumerate() {
+                for (_idx, gff_path) in gff_files.into_iter().enumerate() {
                     info!("Loading {}", gff_path);
                     let mut reader = gff::Reader::from_file(gff_path, gff::GffType::GFF3).unwrap();
                     for gff_record in reader.records() {
@@ -233,7 +255,7 @@ pub fn bam_vis(
                 freq,
             ));
         }
-        bam_record_vis_pre_calculate(matches, &args, precursor, threads, |idx| {
+        bam_record_vis_pre_calculate(matches, &args, precursor, dict, threads, |idx| {
             bam_files.get(idx).and_then(|t| Some(*t))
         })?;
     }
@@ -775,6 +797,23 @@ pub fn vis_query(
         .value_of("neighbor")
         .and_then(|a| a.parse::<u64>().ok())
         .unwrap_or(0u64);
+    let dict = if let Some(gff_files) = matches.values_of("gff3") {
+        let gff_files: Vec<&str> = gff_files.collect();
+        if matches.occurrences_of("dictionary") > 0 {
+            let dict = tmp_new(
+                gff_files
+                    .clone()
+                    .into_iter()
+                    .map(|t| t.to_string())
+                    .collect::<Vec<_>>(),
+            );
+            dict
+        } else {
+            Database::new()
+        }
+    } else {
+        Database::new()
+    };
     if let Some(o) = matches.value_of("INPUT") {
         let mut reader: IndexedReader<BufReader<File>> =
             IndexedReader::from_path_with_additional_threads(o, threads - 1).unwrap();
@@ -925,7 +964,7 @@ pub fn vis_query(
                 BTreeMap::new(),
             ));
         }
-        bam_record_vis_pre_calculate(matches, &args, precursor, threads, |idx| {
+        bam_record_vis_pre_calculate(matches, &args, precursor, dict, threads, |idx| {
             reader.header().get_name(idx).and_then(|t| Some(t.as_str()))
         })?;
     }
@@ -1122,6 +1161,7 @@ pub fn bam_record_vis_pre_calculate<'a, F>(
     matches: &ArgMatches,
     args: &Vec<String>,
     vis: Vec<VisPrecursor>,
+    dict: Database,
     /*range: StringRegion,
     prefetch_range: StringRegion,
     mut list: Vec<(u64, Record)>,

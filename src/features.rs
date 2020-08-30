@@ -21,6 +21,18 @@ pub struct Database {
     pub gene_name_tree: GeneNameEachReference,
 }
 
+impl Database {
+    pub fn new() -> Database {
+        Database {
+            gene_name_tree: BTreeMap::new(),
+        }
+    }
+
+    pub fn convert(self: &Database, str: &String) -> Option<&StringRegion> {
+        self.gene_name_tree["default"].get(str)
+    }
+}
+
 #[derive(Debug, PartialEq)]
 pub struct Feature {
     pub start_offset: u64,
@@ -41,9 +53,9 @@ struct FeatureSet {
 
 fn opt_strand_to_opt_bool(strand: Option<Strand>) -> Option<bool> {
     strand.and_then(|strand| match strand {
-        Forward => Some(false),
-        Reverse => Some(true),
-        Unknown => None,
+        Strand::Forward => Some(false),
+        Strand::Reverse => Some(true),
+        Strand::Unknown => None,
     })
 }
 /*
@@ -102,7 +114,7 @@ fn record_to_nodes(
 // tmpNew should be replicated with a novel implementation.
 // Required input list is sorted by coordinates.
 //pub fn tmp_new(graph: Arc<Graph>, config: &Config) -> Database {
-pub fn tmp_new(features: Vec<String>, db_name: String, rocksdb_init: &bool) -> Database {
+pub fn tmp_new(features: Vec<String>) -> Database {
     let mut gene_per_ref = GeneNameEachReference::new();
     //for data in config.reference.data.iter() {
     let mut gene: GeneNameTree = GeneNameTree::new();

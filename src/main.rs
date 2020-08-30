@@ -319,6 +319,7 @@ fn main() {
                 .arg(Arg::new("no-legend").short('l').about("Hide legend"))
                 .arg(Arg::new("square").short('Q').about("Set square width (overwritten)"))
                 .arg(Arg::new("quality").short('q').about("Display reads by quality value"))
+                .arg(Arg::new("dictionary").short('D').about("Use gene-name dictionary from GFF/GTF file"))
                 .arg(Arg::new("colored-by-name").short('n').about("Set read colors by read name"))
                 .arg(
                     Arg::new("colored-by-motif")

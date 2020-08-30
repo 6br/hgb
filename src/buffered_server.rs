@@ -75,6 +75,7 @@ fn id_to_range<'a>(range: &StringRegion, args: &Vec<String>, zoom: u64, path: u6
             .arg(Arg::new("no-scale").short('S').about("Do not show y-axis scale"))
             .arg(Arg::new("no-packing").short('p').about("Disable read packing"))
             .arg(Arg::new("no-legend").short('l').about("Hide legend"))
+            .arg(Arg::new("dictionary").short('D').about("Use gene-name dictionary from GFF/GTF file"))
             .arg(Arg::new("colored-by-name").short('n').about("Set read colors by read name"))
             .arg(
                 Arg::new("colored-by-motif")
