@@ -23,9 +23,9 @@ pub struct Database {
 
 impl Database {
     pub fn new() -> Database {
-        Database {
-            gene_name_tree: BTreeMap::new(),
-        }
+        let mut gene_name_tree = BTreeMap::new();
+        gene_name_tree.insert("default".to_string(), BTreeMap::new());
+        Database { gene_name_tree }
     }
 
     pub fn convert(self: &Database, str: &String) -> Option<&StringRegion> {
@@ -126,6 +126,9 @@ pub fn tmp_new(features: Vec<String>) -> Database {
             /*Some("bed") => {
                 vec.push(tmp_new_internal(feature, &graph, &hashmap));
             }*/
+            Some("gff") => {
+                tmp_new_gene_internal(feature, &mut gene, gff::GffType::GFF3);
+            }
             Some("gff3") => {
                 tmp_new_gene_internal(feature, &mut gene, gff::GffType::GFF3);
             }
@@ -154,13 +157,12 @@ fn tmp_new_gene_internal(url: String, gene: &mut GeneNameTree, gff_type: gff::Gf
             return;
         }
     };
-
     let mut index = 0;
     for record in reader.records() {
         index += 1;
         match record {
             Ok(rec) => match rec.feature_type() {
-                "gene" => {
+                "gene" | "transcript" => {
                     let reg = match opt_strand_to_opt_bool(rec.strand()) {
                         Some(false) => StringRegion {
                             path: rec.seqname().to_string(),

@@ -282,7 +282,6 @@ pub fn bam_record_vis_orig<'a, F>(
 where
     F: Fn(usize) -> Option<&'a str>,
 {
-    eprintln!("aa");
     bam_record_vis(
         matches,
         vis.iter()

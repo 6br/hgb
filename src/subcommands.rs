@@ -48,6 +48,24 @@ pub fn bam_vis(
         .unwrap_or(0u64);
     if let Some(bam_files) = matches.values_of("bam") {
         let bam_files: Vec<&str> = bam_files.collect();
+
+        let dict = if let Some(gff_files) = matches.values_of("gff3") {
+            let gff_files: Vec<&str> = gff_files.collect();
+            if matches.occurrences_of("dictionary") > 0 {
+                let dict = tmp_new(
+                    gff_files
+                        .into_iter()
+                        .map(|t| t.to_string())
+                        .collect::<Vec<_>>(),
+                );
+                dict
+            } else {
+                Database::new()
+            }
+        } else {
+            Database::new()
+        };
+        //eprintln!("{:?}", dict.convert(&"K7EJQ1".to_string()));
         let mut ranges: Vec<String> = vec![];
         if let Some(bed_range) = matches.value_of("bed-range") {
             let mut reader = bed::Reader::from_file(bed_range)?;
@@ -59,7 +77,15 @@ pub fn bam_vis(
             let ranges_tmp: Vec<String> = if let Some(ranges_str) = matches.value_of("range") {
                 //let ranges_tmp: Vec<String> =
                 //    ranges_str.into_iter().map(|t| t.to_string()).collect();
-                let string_range = StringRegion::new(&ranges_str).unwrap();
+                //let string_range = StringRegion::new(&ranges_str).unwrap();
+                let string_range = dict
+                    .convert(&ranges_str.to_string())
+                    .map(|t| {
+                        let mut s = t.clone();
+                        s.extend(neighbor);
+                        s
+                    })
+                    .unwrap_or_else(|| StringRegion::new(ranges_str).unwrap());
                 values
                     .into_iter()
                     .filter(|record| {
@@ -96,28 +122,15 @@ pub fn bam_vis(
             let ranges_tmp: Vec<String> = ranges_str.into_iter().map(|t| t.to_string()).collect();
             ranges.extend(ranges_tmp);
         }
+        if ranges.len() == 0 {
+            panic!("Nothing to display in given genomic range.");
+        }
         let mut precursor = Vec::with_capacity(ranges.len());
         /*let prefetch_ranges: Vec<String> = matches
         .values_of("prefetch-range")
         .and_then(|t| Some(t.map(|t| t.to_string()).collect()))
         .unwrap_or(vec![]);*/
-        let dict = if let Some(gff_files) = matches.values_of("gff3") {
-            let gff_files: Vec<&str> = gff_files.collect();
-            if matches.occurrences_of("dictionary") > 0 {
-                let dict = tmp_new(
-                    gff_files
-                        .clone()
-                        .into_iter()
-                        .map(|t| t.to_string())
-                        .collect::<Vec<_>>(),
-                );
-                dict
-            } else {
-                Database::new()
-            }
-        } else {
-            Database::new()
-        };
+
         let prefetch_ranges: Vec<&str> = matches
             .values_of("prefetch-range")
             .and_then(|t| Some(t.collect()))
@@ -133,12 +146,25 @@ pub fn bam_vis(
                 Left(a) => (a.clone(), a),
                 _ => panic!("Range is not specified."),
             };
+            eprintln!("{:?}", dict.convert(&range).and_then(|t| Some(t.clone())));
             let string_range = dict
                 .convert(&range)
-                .and_then(|t| Some(t.clone()))
+                .map(|t| {
+                    let mut s = t.clone();
+                    s.extend(neighbor);
+                    s
+                })
                 .unwrap_or_else(|| StringRegion::new(&range).unwrap());
             //let string_range = StringRegion::new(&range).unwrap();
-            let prefetch_range = StringRegion::new(&prefetch_str).unwrap();
+            let prefetch_range = dict
+                .convert(&prefetch_str)
+                .map(|t| {
+                    let mut s = t.clone();
+                    s.extend(neighbor);
+                    s
+                })
+                .unwrap_or_else(|| StringRegion::new(&prefetch_str).unwrap());
+            //let prefetch_range = StringRegion::new(&prefetch_str).unwrap();
             /*let prefetch_range = if let Some(prefetch_ranges) = prefetch_ranges {
                 StringRegion::new(prefetch_ranges[index])?
             } else {
@@ -225,7 +251,14 @@ pub fn bam_vis(
                 let gff_files: Vec<&str> = gff_files.collect();
                 for (_idx, gff_path) in gff_files.into_iter().enumerate() {
                     info!("Loading {}", gff_path);
-                    let mut reader = gff::Reader::from_file(gff_path, gff::GffType::GFF3).unwrap();
+                    let path = Path::new(&gff_path);
+                    info!("Parsing:  {:?}", path);
+                    let fileformat = match path.extension().unwrap_or_default().to_str() {
+                        Some("gff") | Some("gff3") => gff::GffType::GFF3,
+                        Some("gtf") => gff::GffType::GTF2,
+                        _ => panic!("Unsupported gff format {:?}", path),
+                    };
+                    let mut reader = gff::Reader::from_file(gff_path, fileformat).unwrap();
                     for gff_record in reader.records() {
                         let gff = gff_record?;
                         if *gff.end() > prefetch_range.start()
@@ -233,10 +266,13 @@ pub fn bam_vis(
                             && gff.seqname() == prefetch_range.path
                         {
                             let mut record = bed::Record::new();
+                            //eprintln!("{:?}", &gff);
                             record.set_chrom(gff.seqname());
                             record.set_start(*gff.start());
                             record.set_end(*gff.end());
-                            record.set_name(&gff.attributes()["gene_id"]);
+                            record.set_name(gff.attributes().get("gene_name").unwrap_or(
+                                gff.attributes().get("gene_id").unwrap_or(&"".to_string()),
+                            ));
                             record.set_score(&gff.score().unwrap_or(0).to_string());
                             if let Some(strand) = gff.strand() {
                                 record.push_aux(strand.strand_symbol()); // Strand
@@ -1650,7 +1686,7 @@ where
                 // eprintln!("{}", list.len());
                 //new_list.sort_by_key(|elt| elt.0);
                 new_list.iter().group_by(|elt| elt.0).into_iter().for_each(
-                    |(sample_sequential_id, sample)| {
+                    |(_sample_sequential_id, sample)| {
                         let count = sample.count();
                         prev_index += count;
                         // compressed_list.push(prev_index);

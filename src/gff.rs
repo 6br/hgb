@@ -26,6 +26,7 @@ use std::io;
 use std::path::Path;
 
 use bio_types::strand::Strand;
+use io::BufReader;
 
 /// `GffType`
 ///
@@ -68,10 +69,10 @@ pub struct Reader<R: io::Read> {
     gff_type: GffType,
 }
 
-impl Reader<fs::File> {
+impl Reader<BufReader<fs::File>> {
     /// Read GFF from given file path in given format.
     pub fn from_file<P: AsRef<Path>>(path: P, fileformat: GffType) -> io::Result<Self> {
-        fs::File::open(path).map(|f| Reader::new(f, fileformat))
+        fs::File::open(path).map(|f| Reader::new(BufReader::with_capacity(1048576, f), fileformat))
     }
 }
 
