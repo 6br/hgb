@@ -693,12 +693,12 @@ where
                 // Check that the sum of each group is +/- 4.
                 // assert_eq!(4, group.iter().fold(0_i32, |a, b| a + b).abs());
                 let count = *sample; //.count();
-                if count > 0 {
+                if count > 0 && compressed_list.len() > 1 {
                     let idx = *sample_sequential_id as usize;
                     // let idx = sample.next().0;
                     let chart = chart.draw_series(LineSeries::new(
                         vec![(range.start(), count), (range.end(), count)],
-                        Palette99::pick(idx).stroke_width(y / 3 * 4),
+                        Palette99::pick(idx).stroke_width(y / 4 * 3),
                     ))?;
                     if !no_margin {
                         chart

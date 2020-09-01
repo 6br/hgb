@@ -851,6 +851,7 @@ pub fn vis_query(
         Database::new()
     };
     if let Some(o) = matches.value_of("INPUT") {
+
         let mut reader: IndexedReader<BufReader<File>> =
             IndexedReader::from_path_with_additional_threads(o, threads - 1).unwrap();
         let mut ranges: Vec<String> = vec![];
