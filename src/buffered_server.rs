@@ -425,10 +425,14 @@ pub async fn server(matches: ArgMatches, range: StringRegion, prefetch_range: St
         .value_of("zoom-range")
         .and_then(|a| a.parse::<u32>().ok())
         .unwrap_or(if matches.is_present("whole-chromosome") {6u32} else{8u32});
+    let max_coverage = matches
+        .value_of("max-coverage")
+        .and_then(|a| a.parse::<u32>().ok())
+        .unwrap_or(prev_index as u32);
     let square = matches.is_present("square");
     let x = if square {
         top_margin
-        + (prev_index as u32 + axis_count as u32 + annotation_count as u32 * 2) * y
+        + (max_coverage + axis_count as u32 + annotation_count as u32 * 2) * y
         + freq.len() as u32 * freq_size
     } else {matches
         .value_of("x")
