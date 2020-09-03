@@ -372,9 +372,9 @@ pub struct Param {
 
 const fn num_bits<T>() -> usize { std::mem::size_of::<T>() * 8 }
 
-fn log_2(x: i32) -> u32 {
+fn log_2(x: i64) -> u32 {
     assert!(x > 0);
-    num_bits::<i32>() as u32 - x.leading_zeros() - 1
+    num_bits::<i64>() as u32 - x.leading_zeros() - 1
 }
 
 #[actix_rt::main]
@@ -398,10 +398,14 @@ supplementary_list: Vec<(Vec<u8>, usize, usize, i32, i32)>,threads: u16) -> std:
         .value_of("freq-height")
         .and_then(|a| a.parse::<u32>().ok())
         .unwrap_or(50u32);
+    let max_coverage = matches
+        .value_of("max-coverage")
+        .and_then(|a| a.parse::<u32>().ok())
+        .unwrap_or(prev_index as u32);
     let square = matches.is_present("square");
     let x = if square {
         top_margin
-        + (prev_index as u32 + axis_count as u32 + annotation_count as u32 * 2) * y
+        + (max_coverage + axis_count as u32 + annotation_count as u32 * 2) * y
         + freq.len() as u32 * freq_size
     } else {matches
         .value_of("x")
@@ -425,8 +429,9 @@ supplementary_list: Vec<(Vec<u8>, usize, usize, i32, i32)>,threads: u16) -> std:
         .unwrap_or(rng.gen::<u32>().to_string());
     
     let x_width = all as u32 / diff as u32 * x;
-    // eprintln!("{} {} {}", all,diff,x);
-    let max_zoom = log_2(x_width as i32) + 1;
+    eprintln!("Total len: {}, partial len: {}, x_width: {}({}), x: {}", all,diff,x_width, x_width as i64, x);
+
+    let max_zoom = log_2(x_width as i64) + 1;
     //let min_zoom_margin = 
     let min_zoom = max_zoom - 8;// + (prev_index );
 
@@ -435,7 +440,7 @@ supplementary_list: Vec<(Vec<u8>, usize, usize, i32, i32)>,threads: u16) -> std:
         Ok(_) => {},
     };
     let params = Param{x_scale, max_y:x, prefetch_max: all, max_zoom, min_zoom, criteria:diff, y_freq: freq_size, x, y, cache_dir};
-    eprintln!("{:?}, threads: {}, zoom: {}", params, threads, log_2(x_width as i32) + 1);
+    eprintln!("{:?}, threads: {}, zoom: {}", params, threads, log_2(x_width as i64) + 1);
     println!("Server is running on {}", bind);
     // Create some global state prior to building the server
     //#[allow(clippy::mutex_atomic)] // it's intentional.
