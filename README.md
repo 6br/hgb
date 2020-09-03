@@ -8,7 +8,7 @@ Screenshots in seconds.
 
 ![large](fig/large.png)
 
-## Feature
+## Features
 
 * A light-weight binary to visualize read alignments as PNG/JPG/BMP files.
 * Visualize read alignments more than 100 samples at once.
