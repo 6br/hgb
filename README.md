@@ -8,6 +8,10 @@ Screenshots in seconds.
 
 ![large](fig/large.png)
 
+Integrated with [udon](https://github.com/ocxtal/udon):
+
+![udon](fig/udon.png)
+
 ## Feature
 
 * A light-weight binary to visualize read alignments as PNG/JPG/BMP files.
@@ -43,6 +47,13 @@ samtools index input.bam
 ```bash
 cargo run --release -- vis -a input.bam -o output.png -r chr1:91234-92334
 ```
+
+* A simple example with [udon](https://github.com/ocxtal/udon) mode:
+
+```bash
+cargo run --release -- vis -a input.bam -o output.png -l -U -r chr1:91234-92334
+```
+
 
 * A simple examples with two bam files:
 
