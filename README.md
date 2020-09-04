@@ -6,7 +6,7 @@ Screenshots in seconds.
 
 ![alignments](fig/alignments.png)
 
-Integrated with [udon](https://github.com/ocxtal/udon):
+Integrated with [Udon](https://github.com/ocxtal/udon):
 
 ![udon](fig/udon.png)
 
@@ -46,12 +46,11 @@ samtools index input.bam
 cargo run --release -- vis -a input.bam -o output.png -r chr1:91234-92334
 ```
 
-* A simple example with [udon](https://github.com/ocxtal/udon) mode:
+* A simple example with [Udon](https://github.com/ocxtal/udon) mode:
 
 ```bash
 cargo run --release -- vis -a input.bam -o output.png -l -U -r chr1:91234-92334
 ```
-
 
 * A simple examples with two bam files:
 
