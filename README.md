@@ -10,7 +10,7 @@ Integrated with [udon](https://github.com/ocxtal/udon):
 
 ![udon](fig/udon.png)
 
-## Feature
+## Features
 
 * A light-weight binary to visualize read alignments as PNG/JPG/BMP files.
 * Visualize read alignments more than 100 samples at once.
