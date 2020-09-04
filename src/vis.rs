@@ -110,9 +110,9 @@ predefined_color!(G_COL, 209, 113, 5, "The predefined G color");
 // Now I adapt nordtheme. https://www.nordtheme.com/
 predefined_color!(
     NEG_COL,
-    0x5e,
-    0x81,
-    0xac,
+    0x81, //0x5e,
+    0xa1, //0x81,
+    0xc1, //0xac,
     /*0.75,*/
     "The predefined negative-str color"
 );
@@ -124,7 +124,8 @@ predefined_color!(
     /*0.75,*/
     "The predefined positive-str color"
 );
-predefined_color!(INS_COL, 0xb4, 0x8e, 0xad, "The predefined insertion color");
+//predefined_color!(INS_COL, 0xb4, 0x8e, 0xad, "The predefined insertion color");
+predefined_color!(INS_COL, 153,0,153, "The predefined insertion color");
 predefined_color!(
     SPL_COL,
     0x8f,
@@ -133,10 +134,10 @@ predefined_color!(
     "The predefined split-alignment color"
 );
 predefined_color!(N_COL, 80, 80, 80, "The predefined N color");
-predefined_color!(A_COL, 0, 200, 0, "The predefined A color");
-predefined_color!(C_COL, 0, 0, 200, "The predefined C color");
-predefined_color!(T_COL, 255, 0, 40, "The predefined T color");
-predefined_color!(G_COL, 209, 113, 5, "The predefined G color");
+predefined_color!(A_COL, 3, 175, 122, "The predefined A color"); //#00c800
+predefined_color!(C_COL, 0, 90, 255, "The predefined C color"); // #0000c8
+predefined_color!(T_COL, 255, 75, 0, "The predefined T color"); // #ff0000
+predefined_color!(G_COL, 128, 64, 0, "The predefined G color"); // 209,113,5
 
 //RGBColor();
 
