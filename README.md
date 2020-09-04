@@ -6,8 +6,6 @@ Screenshots in seconds.
 
 ![alignments](fig/alignments.png)
 
-![large](fig/large.png)
-
 Integrated with [udon](https://github.com/ocxtal/udon):
 
 ![udon](fig/udon.png)
@@ -96,6 +94,10 @@ cargo run --release -- vis -a input1.bam input2.bam -o output.png -r chr1:91234-
 ```bash
 cargo run --release -- vis -a input1.bam input2.bam -o output.png -r chr1:91234-92334 -I
 ```
+
+## Gallery
+
+![large](fig/large.png)
 
 ## Author
 
