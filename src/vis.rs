@@ -1173,6 +1173,19 @@ where
                         );
                         bar.set_margin(3, 3, 0, 0);
                         bars.push(bar);
+                        if insertion {
+                            let cv = &x[1][.. 3];
+                            let color = RGBColor(cv[0], cv[1], cv[2]).mix(0.2);
+                            let mut bar = Rectangle::new(
+                                [
+                                    (prev_pixel_ref as u64, index),
+                                    (prev_ref as u64, index + 1),
+                                ],
+                                color.filled(),
+                            );
+                            bar.set_margin(2, 2, 0, 0);
+                            bars.push(bar);
+                        }
                     }
                 }
                 else if !no_cigar && ! udon {
