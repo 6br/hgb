@@ -134,7 +134,7 @@ predefined_color!(
     "The predefined split-alignment color"
 );
 predefined_color!(N_COL, 80, 80, 80, "The predefined N color");
-predefined_color!(A_COL, 119,217,168, "The predefined A color"); //#00c800
+predefined_color!(A_COL, 119, 217, 168, "The predefined A color"); //#00c800
 predefined_color!(C_COL, 0, 90, 255, "The predefined C color"); // #0000c8
 predefined_color!(T_COL, 255, 75, 0, "The predefined T color"); // #ff0000
 predefined_color!(G_COL, 128, 64, 0, "The predefined G color"); // 209,113,5
@@ -1113,7 +1113,10 @@ where
 
                     let pixels_per_column = window.len() as f64 / opt_len as f64;
                     let scaler = UdonScaler::new(&UdonPalette::default(), pixels_per_column);
-                    let base_color: [[u8; 4]; 2] = [[255, 191, 191, 0], [191, 191, 255, 0]];
+                    let base_color: [[[u8; 4]; 2]; 2] = [
+                        [[255, 202, 191, 255], [255, 255, 255, 255]],
+                        [[191, 228, 255, 255], [255, 255, 255, 255]]
+                    ];
                     let udon = Udon::build(
                         record.cigar().raw(),
                         record.sequence().raw(),
@@ -1142,14 +1145,14 @@ where
                             offset_in_pixels,
                             &scaler
                     ).expect("Failed to decode udon ribbon. Would be a bug.");
-                    ribbon.append_on_basecolor(base_color[record.flag().is_reverse_strand() as usize]).correct_gamma();
+                    ribbon.append_on_basecolor(&base_color[record.flag().is_reverse_strand() as usize]).correct_gamma();
                     let horizontal_offset = window_range.start;
                     let left_blank  = horizontal_offset;
                     let right_blank = opt_len.saturating_sub(ribbon.len() + horizontal_offset);
                     let ribbon_len  = opt_len - (left_blank + right_blank);
 
                     for (i, &x) in ribbon[.. ribbon_len].into_iter().enumerate() {
-                        let cv = &x.to_le_bytes()[.. 3];
+                        let cv = &x[0][.. 3];
                         let color = RGBColor(cv[0], cv[1], cv[2]);
                         let prev_pixel_ref = if i == 0 {
                             window.start+ (offset_in_pixels * pixels_per_column) as usize +1+ ((horizontal_offset + i) as f64 * pixels_per_column) as usize // start as usize
