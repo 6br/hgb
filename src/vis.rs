@@ -13,9 +13,64 @@ use plotters::coord::ReverseCoordTranslate;
 use plotters::prelude::Palette;
 use plotters::prelude::*;
 use plotters::style::RGBColor;
-use std::{collections::BTreeMap, fs::File, time::Instant};
+use std::ops::Range;
+use std::{
+    collections::{BTreeMap, HashMap},
+    fs::File,
+    time::Instant,
+};
+use udon::{Udon, UdonPalette, UdonScaler, UdonUtils};
 
 const PARBASE_THRESHOLD: u64 = 2;
+
+//Copied from
+trait RangeUtils
+where
+    Self: Sized,
+{
+    fn has_overlap(&self, query: &Self) -> bool;
+    fn clip(&self, query: &Self) -> Option<Self>;
+    fn scale(&self, divisor: f64) -> (Self, f64);
+}
+
+impl RangeUtils for Range<usize> {
+    fn has_overlap(&self, query: &Range<usize>) -> bool {
+        if query.start > self.end {
+            return false;
+        }
+        if self.start > query.end {
+            return false;
+        }
+        return true;
+    }
+
+    fn clip(&self, query: &Range<usize>) -> Option<Range<usize>> {
+        /* clip query range by self (window). returns local range in the window */
+        if query.start > self.end {
+            return None;
+        }
+        if self.start > query.end {
+            return None;
+        }
+
+        Some(Range::<usize> {
+            start: query.start.saturating_sub(self.start),
+            end: query.end.min(self.end).saturating_sub(self.start),
+        })
+    }
+
+    fn scale(&self, divisor: f64) -> (Range<usize>, f64) {
+        let start = self.start as f64 / divisor;
+        let offset = start.fract();
+
+        let range = Range::<usize> {
+            start: start as usize,
+            end: (self.end as f64 / divisor).ceil() as usize,
+        };
+
+        (range, offset)
+    }
+}
 
 macro_rules! predefined_color {
     ($name:ident, $r:expr, $g:expr, $b:expr, $doc:expr) => {
@@ -59,9 +114,9 @@ predefined_color!(G_COL, 209, 113, 5, "The predefined G color");
 // Now I adapt nordtheme. https://www.nordtheme.com/
 predefined_color!(
     NEG_COL,
-    0x5e,
-    0x81,
-    0xac,
+    0x81, //0x5e,
+    0xa1, //0x81,
+    0xc1, //0xac,
     /*0.75,*/
     "The predefined negative-str color"
 );
@@ -73,7 +128,8 @@ predefined_color!(
     /*0.75,*/
     "The predefined positive-str color"
 );
-predefined_color!(INS_COL, 0xb4, 0x8e, 0xad, "The predefined insertion color");
+//predefined_color!(INS_COL, 0xb4, 0x8e, 0xad, "The predefined insertion color");
+predefined_color!(INS_COL, 153, 0, 153, "The predefined insertion color");
 predefined_color!(
     SPL_COL,
     0x8f,
@@ -82,10 +138,10 @@ predefined_color!(
     "The predefined split-alignment color"
 );
 predefined_color!(N_COL, 80, 80, 80, "The predefined N color");
-predefined_color!(A_COL, 0, 200, 0, "The predefined A color");
-predefined_color!(C_COL, 0, 0, 200, "The predefined C color");
-predefined_color!(T_COL, 255, 0, 40, "The predefined T color");
-predefined_color!(G_COL, 209, 113, 5, "The predefined G color");
+predefined_color!(A_COL, 119, 217, 168, "The predefined A color"); //#00c800
+predefined_color!(C_COL, 0, 90, 255, "The predefined C color"); // #0000c8
+predefined_color!(T_COL, 255, 75, 0, "The predefined T color"); // #ff0000
+predefined_color!(G_COL, 128, 64, 0, "The predefined G color"); // 209,113,5
 
 //RGBColor();
 
@@ -308,7 +364,8 @@ where
     let _prefetch_range = matches.is_present("prefetch-range");
     let output = matches.value_of("output").unwrap();
     let no_cigar = matches.is_present("no-cigar");
-    let _packing = !matches.is_present("no-packing");
+    let udon = matches.is_present("udon");
+    let packing = !matches.is_present("no-packing");
     let quality = matches.is_present("quality");
     let legend = !matches.is_present("no-legend");
     let insertion = !matches.is_present("no-insertion");
@@ -686,57 +743,58 @@ where
                 .filter_map(|s| s)
         )?;
         */
-
-        if legend || no_margin {
-            for (sample_sequential_id, sample) in compressed_list.iter()
-            // list2.into_iter().group_by(|elt| elt.0).into_iter()
-            {
-                // Check that the sum of each group is +/- 4.
-                // assert_eq!(4, group.iter().fold(0_i32, |a, b| a + b).abs());
-                let count = *sample; //.count();
-                if count > 0 {
-                    let idx = *sample_sequential_id as usize;
-                    // let idx = sample.next().0;
-                    let chart = chart.draw_series(LineSeries::new(
-                        vec![(range.start(), count), (range.end(), count)],
-                        Palette99::pick(idx).stroke_width(y / 3 * 4),
-                    ))?;
-                    if !no_margin {
-                        chart
-                            .label(format!("{}", lambda(idx).unwrap_or(&idx.to_string())))
-                            .legend(move |(x, y)| {
-                                Rectangle::new(
-                                    [(x - 5, y - 5), (x + 5, y + 5)],
-                                    Palette99::pick(idx).filled(),
-                                )
-                            });
-                    }
-                }
-                //prev_index += count;
-            }
-        } else {
-            // For each sample:
-            let mut prev_index = 0;
-            chart.draw_series(
-                compressed_list
-                    .iter()
-                    .map(|(sample_sequential_id, sample)| {
-                        let count = *sample;
-                        if count > 0 {
-                            let stroke = Palette99::pick(*sample_sequential_id as usize);
-                            let mut bar2 = Rectangle::new(
-                                [(range.start(), prev_index), (range.end(), count)],
-                                stroke.stroke_width(y / 2), // filled(), //stroke_width(100),
-                            );
-                            bar2.set_margin(1, 0, 0, 0);
-                            prev_index = count;
-                            Some(bar2)
-                        } else {
-                            None
+        if compressed_list.len() > 1 {
+            if legend || no_margin {
+                for (sample_sequential_id, sample) in compressed_list.iter()
+                // list2.into_iter().group_by(|elt| elt.0).into_iter()
+                {
+                    // Check that the sum of each group is +/- 4.
+                    // assert_eq!(4, group.iter().fold(0_i32, |a, b| a + b).abs());
+                    let count = *sample; //.count();
+                    if count > 0 {
+                        let idx = *sample_sequential_id as usize;
+                        // let idx = sample.next().0;
+                        let chart = chart.draw_series(LineSeries::new(
+                            vec![(range.start(), count), (range.end(), count)],
+                            Palette99::pick(idx).stroke_width(y / 3 * 4),
+                        ))?;
+                        if !no_margin {
+                            chart
+                                .label(format!("{}", lambda(idx).unwrap_or(&idx.to_string())))
+                                .legend(move |(x, y)| {
+                                    Rectangle::new(
+                                        [(x - 5, y - 5), (x + 5, y + 5)],
+                                        Palette99::pick(idx).filled(),
+                                    )
+                                });
                         }
-                    })
-                    .filter_map(|t| t),
-            )?;
+                    }
+                    //prev_index += count;
+                }
+            } else {
+                // For each sample:
+                let mut prev_index = 0;
+                chart.draw_series(
+                    compressed_list
+                        .iter()
+                        .map(|(sample_sequential_id, sample)| {
+                            let count = *sample;
+                            if count > 0 {
+                                let stroke = Palette99::pick(*sample_sequential_id as usize);
+                                let mut bar2 = Rectangle::new(
+                                    [(range.start(), prev_index), (range.end(), count)],
+                                    stroke.stroke_width(y / 2), // filled(), //stroke_width(100),
+                                );
+                                bar2.set_margin(1, 0, 0, 0);
+                                prev_index = count;
+                                Some(bar2)
+                            } else {
+                                None
+                            }
+                        })
+                        .filter_map(|t| t),
+                )?;
+            }
         }
 
         // For each supplementary alignment:
@@ -929,27 +987,101 @@ where
                             Some(_) => {} // panic!("Unexpected type"),
                             _ => {}
                         }
-                    } /*
-                      if legend {
-                      } else {
-                          let mut bar2 =
-                              Rectangle::new([(start, index), (end, index + 1)], stroke.stroke_width(2));
-                          bar2.set_margin(1, 1, 0, 0);
-                          //vec![bar,bar2]
-                          bars.push(bar2);
-                      };*/
-                    if !no_cigar {
-                        // && bam.calculate_end() >= range.start() as i32 {
-                        let mut prev_ref = bam.start() as u64 - 1;
-                        let mut prev_pixel_ref = start + 1;
-                        let left_top = chart.as_coord_spec().translate(&(start, index));
-                        let right_bottom = chart.as_coord_spec().translate(&(end, index + 1));
-                        let offset = if range.end() - range.start() == 1 {
-                            0
+                } /*
+                  if legend {
+                  } else {
+                      let mut bar2 =
+                          Rectangle::new([(start, index), (end, index + 1)], stroke.stroke_width(2));
+                      bar2.set_margin(1, 1, 0, 0);
+                      //vec![bar,bar2]
+                      bars.push(bar2);
+                  };*/
+                if !no_cigar && udon {
+                    let record = bam;
+                    let left_top = chart.as_coord_spec().translate(&(range.start-1, index));
+                    let right_bottom = chart.as_coord_spec().translate(&(range.end+1, index + 1));
+
+                    let opt_len = (right_bottom.0 - left_top.0) as usize;
+
+                    let window = Range::<usize> {
+                        start: range.start() as usize - 1usize,
+                        end:   range.end() as usize + 1usize
+                    };
+
+                    let pixels_per_column = window.len() as f64 / opt_len as f64;
+                    let scaler = UdonScaler::new(&UdonPalette::default(), pixels_per_column);
+                    let base_color: [[[u8; 4]; 2]; 2] = [
+                        [[255, 202, 191, 255], [255, 255, 255, 255]],
+                        [[191, 228, 255, 255], [255, 255, 255, 255]]
+                    ];
+                    let udon = Udon::build(
+                        record.cigar().raw(),
+                        record.sequence().raw(),
+                        if let Some(TagValue::String(s, _)) = record.tags().get(b"MD") { s } else {
+                                panic!("Each BAM record must have MD string. Inspect `samtools calmd` for restoring missing MD strings.")
+                        }
+                    ).expect("Failed to create udon index. Would be a bug.");
+
+                    /* compose span, skip if out of the window */
+                    let range = Range::<usize> {
+                            start: record.start() as usize,
+                            end:   record.start() as usize + udon.reference_span()
+                    };
+                    //if !window.has_overlap(&range) /* || range.len() < window.len() / 8 */ { continue; }
+
+                    /* compute local ranges */
+                    let udon_range   = range.clip(&window).unwrap();
+                    let window_range = window.clip(&range).unwrap();
+                    //if 3 * window_range.len() < window.len() { break; }
+                    let (window_range, offset_in_pixels) = window_range.scale(pixels_per_column);
+                    //eprintln!("{:?}, {:?}, {:?} {:?}", range, udon_range, offset_in_pixels, window_range);
+
+                    /* slice ribbon scaled */
+                    let mut ribbon = udon.decode_scaled(
+                            &udon_range,
+                            offset_in_pixels,
+                            &scaler
+                    ).expect("Failed to decode udon ribbon. Would be a bug.");
+                    ribbon.append_on_basecolor(&base_color[record.flag().is_reverse_strand() as usize]).correct_gamma();
+                    let horizontal_offset = window_range.start;
+                    let left_blank  = horizontal_offset;
+                    let right_blank = opt_len.saturating_sub(ribbon.len() + horizontal_offset);
+                    let ribbon_len  = opt_len - (left_blank + right_blank);
+
+                    for (i, &x) in ribbon[.. ribbon_len].into_iter().enumerate() {
+                        let cv = &x[0][.. 3];
+                        let color = RGBColor(cv[0], cv[1], cv[2]);
+                        let prev_pixel_ref = if i == 0 {
+                            window.start+ (offset_in_pixels * pixels_per_column) as usize +1+ ((horizontal_offset + i) as f64 * pixels_per_column) as usize // start as usize
                         } else {
-                            1
+                            window.start+1+ ((horizontal_offset + i) as f64 * pixels_per_column) as usize
                         };
-                        //let prev_min = range.end();
+                        let prev_ref = if i == ribbon_len-1 {
+                            end as usize
+                        } else {
+                            window.start + ((horizontal_offset + i + 1) as f64 * pixels_per_column) as usize
+                        };
+                        let mut bar = Rectangle::new(
+                            [
+                                (prev_pixel_ref as u64, index),
+                                (prev_ref as u64, index + 1),
+                            ],
+                            color.filled(),
+                        );
+                        bar.set_margin(3, 3, 0, 0);
+                        bars.push(bar);
+                    }
+                }
+                else if !no_cigar && ! udon {
+                    let mut prev_ref = bam.start() as u64 - 1;
+                    let mut prev_pixel_ref = start + 1;
+                    let left_top = chart.as_coord_spec().translate(&(start, index));
+                    let right_bottom = chart.as_coord_spec().translate(&(end, index + 1));
+                    let offset = if range.end() - range.start() == 1 {
+                        0
+                    } else {
+                        1
+                    };
 
                         //if let Ok(mut a) = bam.alignment_entries() {
                         match (quality, bam.alignment_entries()) {

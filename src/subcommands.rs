@@ -578,21 +578,7 @@ pub fn split(matches: &ArgMatches, threads: u16) -> () {
                         prev_index += 1;
                         packing.len() - 1
                         //prev_index - 1
-                    }; /*
-                       let index: usize = if heap.peek() != None
-                           && -heap.peek().unwrap().0 < k.1.start() as i64
-                       {
-                           let hp = heap.pop().unwrap();
-                           // let index = hp.1;
-                           heap.push((-k.1.calculate_end() as i64, hp.1));
-                           hp.1
-                       } else {
-                           let index = prev_index;
-                           prev_index += 1;
-                           heap.push((-k.1.calculate_end() as i64, index));
-                           index
-                       };*/
-                    //let index =
+                    };
                     if let Some(max_cov) = max_coverage {
                         if index > max_cov as usize {
                             index = max_cov as usize;
@@ -601,26 +587,17 @@ pub fn split(matches: &ArgMatches, threads: u16) -> () {
                     }
                     index_list.push(index + last_prev_index);
                     // eprintln!("{:?}", packing);
-                    //(index, (k.0, k.1))
-                }); //.collect::<Vec<(usize, (u64, Record))>>()
-                    // compressed_list.push(prev_index);
-                    //compressed_list.insert(t.0, prev_index);
-                    //prev_index += 1;
+                });
                 if let Some(max_cov) = max_coverage {
                     prev_index = max_cov as usize + last_prev_index;
                 }
-                // compressed_list.push((t.0, prev_index));
-                //eprintln!("{:?} {:?} {:?}", compressed_list, packing, index_list);
                 last_prev_index = prev_index;
-                //(t.0, ((t.1).0, (t.1).1))
-                // .collect::<&(u64, Record)>(). // collect::<Vec<(usize, (u64, Record))>>
             });
 
             for ((_, mut record), index) in list.into_iter().zip(index_list) {
                 record.tags_mut().push_num(b"YY", index as i32);
                 writer.write(&record).unwrap();
             }
-            //packingwriteln!(&mut output, "{}\t{}", name, len).unwrap();
         }
     }
 }
