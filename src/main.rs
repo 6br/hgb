@@ -392,7 +392,9 @@ fn main() {
                         .about("Sets the input file to use")
                         .required(true)
                         .index(1),
-                ),
+                )
+                .arg(Arg::new("header").short('z').about("Outputs only header"))
+                .arg(Arg::new("formatted-header").short('f').about("Outputs formatted header")),
         )
         .get_matches();
 
