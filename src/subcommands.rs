@@ -1,12 +1,12 @@
+use bam;
+use bam::{Record, RecordWriter};
+use clap::ArgMatches;
+use genomic_range::StringRegion;
+
 #[cfg(feature = "web")]
 use crate::buffered_server;
 #[cfg(feature = "web")]
 use crate::server::server;
-use bam;
-use bam::{Record, RecordWriter};
-use clap::ArgMatches;
-use faimm::Fai;
-use genomic_range::StringRegion;
 
 use ghi::bed;
 use ghi::binary::GhbWriter;
@@ -124,9 +124,18 @@ pub fn bam_vis(
             let mut list: Vec<(u64, Record)> = vec![];
             println!("Input file: {:?}", bam_files);
             let lambda = |range: String| {
-                let fa = Fai::from_file("jrg.m.xg.fa.fai").expect("Error opening fa");
-                let chr_index = fa.tid(&range).expect("Cannot find chr in index");
-                let end = fa.size(chr_index)?;
+                let reader2 = bam::IndexedReader::build()
+                    .additional_threads(threads - 1)
+                    .from_path(bam_files[0])?;
+                eprintln!("{:?}", range);
+                let ref_id = reader2
+                    .header()
+                    .reference_id(&range)
+                    .ok_or(Error::new(ErrorKind::Other, "Invalid reference id."))?;
+                let end = reader2
+                    .header()
+                    .reference_len(ref_id)
+                    .ok_or(Error::new(ErrorKind::Other, "Invalid reference id."))?;
                 Ok(StringRegion {
                     path: range,
                     start: 1,
