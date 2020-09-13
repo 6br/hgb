@@ -1,12 +1,12 @@
-use bam;
-use bam::{Record, RecordWriter};
-use clap::ArgMatches;
-use genomic_range::StringRegion;
-
 #[cfg(feature = "web")]
 use crate::buffered_server;
 #[cfg(feature = "web")]
 use crate::server::server;
+use bam;
+use bam::{Record, RecordWriter};
+use clap::ArgMatches;
+use faimm::Fai;
+use genomic_range::StringRegion;
 
 use ghi::bed;
 use ghi::binary::GhbWriter;
@@ -115,8 +115,7 @@ pub fn bam_vis(
                 Left(a) => (a.clone(), a),
                 _ => panic!("Range is not specified."),
             };
-            let string_range = StringRegion::new(&range).unwrap();
-            let prefetch_range = StringRegion::new(&prefetch_str).unwrap();
+
             /*let prefetch_range = if let Some(prefetch_ranges) = prefetch_ranges {
                 StringRegion::new(prefetch_ranges[index])?
             } else {
@@ -124,6 +123,32 @@ pub fn bam_vis(
             };*/
             let mut list: Vec<(u64, Record)> = vec![];
             println!("Input file: {:?}", bam_files);
+            let lambda = |range: String| {
+                let fa = Fai::from_file("jrg.m.xg.fa.fai").expect("Error opening fa");
+                let chr_index = fa.tid(&range).expect("Cannot find chr in index");
+                let end = fa.size(chr_index)?;
+                Ok(StringRegion {
+                    path: range,
+                    start: 1,
+                    end: end as u64,
+                })
+            };
+            let string_range = StringRegion::new(&range)
+                .or_else(
+                    |_| -> std::result::Result<
+                        genomic_range::StringRegion,
+                        Box<dyn std::error::Error>,
+                    > { return lambda(range) },
+                )
+                .unwrap();
+            let prefetch_range = StringRegion::new(&prefetch_str)
+                .or_else(
+                    |_| -> std::result::Result<
+                        genomic_range::StringRegion,
+                        Box<dyn std::error::Error>,
+                    > { return lambda(prefetch_str) },
+                )
+                .unwrap();
             for (index, bam_path) in bam_files.iter().enumerate() {
                 println!("Loading {}", bam_path);
                 // let reader = bam::BamReader::from_path(bam_path, threads).unwrap();
@@ -149,6 +174,9 @@ pub fn bam_vis(
                     }
                 }
             }
+            //    (string_range, prefetch_range)
+            //};
+
             let mut ann = vec![];
             let mut idx = bam_files.len();
             let mut freq = BTreeMap::new();
