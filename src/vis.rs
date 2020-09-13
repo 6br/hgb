@@ -380,6 +380,7 @@ where
     let only_translocation = matches.is_present("only-translocation");
     let end_split = matches.is_present("end-split-callets");
     let square = matches.is_present("square");
+    let dynamic_partition = matches.is_present("dynamic-partition");
     let colored_by_motif = matches.occurrences_of("colored-by-motif") != 0;
     let colored_by_motif_vec: Option<Vec<String>> = matches
         .value_of("colored-by-motif")
@@ -476,7 +477,14 @@ where
     let approximate_one_pixel = 1; //((range.end() - range.start()) / x as u64) as u32;
     root.fill(&WHITE)?;
     let root = root.margin(0, 0, 0, 0);
-    let areas = root.split_evenly((1, vis.len()));
+    
+    let areas = if !dynamic_partition {
+        root.split_evenly((1, vis.len()))
+    } else {
+        let x_axis_sum: u64 = vis.iter().map(|t| t.range.interval()).sum();
+        let x_axis = vis.iter().map(|t| (t.range.interval() * x_axis_sum / x_len as u64) as u32).collect::<Vec<u32>>();
+        root.split_by_breakpoints(x_axis,[0])
+    };
     let areas_len = vis.len();
 
     let y_max = match max_coverage {

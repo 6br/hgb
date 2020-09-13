@@ -331,6 +331,7 @@ fn main() {
                 .arg(Arg::new("y").short('y').takes_value(true).about("The height of each read alignment"))
                 .arg(Arg::new("web").short('w').takes_value(true).about("Serve the web server"))
                 .arg(Arg::new("whole-chromosome").short('W').about("Pretend as if the prefetch range is the whole chromosome"))
+                .arg(Arg::new("dynamic-partition").short('D').about("Divide multiple genomic range with dynamic width"))
                 .arg(
                     Arg::new("format")
                         .short('O')
