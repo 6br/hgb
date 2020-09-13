@@ -124,8 +124,8 @@ pub fn bam_vis(
             let mut list: Vec<(u64, Record)> = vec![];
             println!("Input file: {:?}", bam_files);
             let reader2 = bam::IndexedReader::build()
-            .additional_threads(threads - 1)
-            .from_path(bam_files[0])?;
+                .additional_threads(threads - 1)
+                .from_path(bam_files[0])?;
             let lambda = |range: String| {
                 eprintln!("{:?}", range);
                 let ref_id = reader2
