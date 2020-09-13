@@ -482,8 +482,14 @@ where
         root.split_evenly((1, vis.len()))
     } else {
         let x_axis_sum: u64 = vis.iter().map(|t| t.range.interval()).sum();
-        let x_axis = vis.iter().map(|t| (t.range.interval() * x_axis_sum / x_len as u64) as u32).collect::<Vec<u32>>();
-        root.split_by_breakpoints(x_axis,[0])
+        let mut x_axis = vis.iter().map(|t| (t.range.interval() * x_len as u64 / x_axis_sum) as u32).scan(0, |acc, x| {
+            *acc = *acc + x;
+            Some(*acc)
+        }).collect::<Vec<u32>>();
+        x_axis.pop();
+        //eprintln!("{:?} {:?} {:?} {}", x_axis, x_axis_sum, x_len, vis.len());
+        let y_axis: Vec<u32> = vec![];
+        root.split_by_breakpoints(x_axis, y_axis)
     };
     let areas_len = vis.len();
 
