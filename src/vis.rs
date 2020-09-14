@@ -491,7 +491,7 @@ where
             })
             .collect::<Vec<u32>>();
         x_axis.pop();
-        //eprintln!("{:?} {:?} {:?} {}", x_axis, x_axis_sum, x_len, vis.len());
+        eprintln!("{:?}", x_axis);
         let y_axis: Vec<u32> = vec![];
         root.split_by_breakpoints(x_axis, y_axis)
     };
