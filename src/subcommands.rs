@@ -1340,8 +1340,10 @@ where
                     t.1.group_by(|elt| elt.1.name()).into_iter().for_each(|s| {
                         let mut items: Vec<&(u64, Record, usize)> = s.1.into_iter().collect();
                         if items.len() > 1 {
-                            let last: &(u64, Record, usize) =
-                                items.iter().max_by_key(|t| t.1.calculate_end()).unwrap();
+                            let last: &(u64, Record, usize) = items
+                                .iter()
+                                .max_by_key(|t| t.1.calculate_end() as u64 + ((t.2 as u64) << 32))
+                                .unwrap();
                             //eprintln!("Split: {:?}", last);
                             end_map.insert(
                                 (sample_id, s.0),
