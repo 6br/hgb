@@ -47,6 +47,16 @@ pub fn bam_vis(
         .unwrap_or(0u64);
     if let Some(bam_files) = matches.values_of("bam") {
         let bam_files: Vec<&str> = bam_files.collect();
+        let mut bam_readers = bam_files
+            .iter()
+            .map(|bam_path| {
+                bam::IndexedReader::build()
+                    .additional_threads(threads - 1)
+                    .from_path(bam_path)
+                    .unwrap()
+            })
+            .collect::<Vec<_>>();
+
         let mut ranges: Vec<String> = vec![];
         if let Some(bed_range) = matches.value_of("bed-range") {
             let mut reader = bed::Reader::from_file(bed_range)?;
@@ -123,9 +133,7 @@ pub fn bam_vis(
             };*/
             let mut list: Vec<(u64, Record)> = vec![];
             println!("Input file: {:?}", bam_files);
-            let reader2 = bam::IndexedReader::build()
-                .additional_threads(threads - 1)
-                .from_path(bam_files[0])?;
+            let reader2 = &mut bam_readers[0];
             let lambda = |range: String| {
                 eprintln!("{:?}", range);
                 let ref_id = reader2
@@ -158,12 +166,12 @@ pub fn bam_vis(
                     > { return lambda(prefetch_str) },
                 )
                 .unwrap();
-            for (index, bam_path) in bam_files.iter().enumerate() {
-                println!("Loading {}", bam_path);
+            for (index, mut reader2) in &mut bam_readers.iter_mut().enumerate() {
+                //println!("Loading {}", bam_path);
                 // let reader = bam::BamReader::from_path(bam_path, threads).unwrap();
-                let mut reader2 = bam::IndexedReader::build()
-                    .additional_threads(threads - 1)
-                    .from_path(bam_path)?;
+                //let mut reader2 = bam::IndexedReader::build()
+                //    .additional_threads(threads - 1)
+                //    .from_path(bam_path)?;
 
                 // Here all threads can be used, but I suspect that runs double
                 //reader2.fetch()
