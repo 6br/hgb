@@ -1167,6 +1167,7 @@ where
     let sort_by_name = matches.is_present("sort-by-name");
     let packing = !matches.is_present("no-packing");
     let split = matches.is_present("split-alignment");
+    let read_per_line = matches.is_present("read-par-line");
     let max_coverage = matches
         .value_of("max-coverage")
         .and_then(|a| a.parse::<u32>().ok());
@@ -1469,7 +1470,11 @@ where
                         } else if let Some(end) = end_map.get(&(sample_id, k.1.name())) {
                             // eprintln!("{:?} {:?}", sample_id, k.1.name());
                             // 1 line for only split alignments.
-                            end.2 as u64 + ((end.4 as u64) << 32)
+                            if read_per_line {
+                                end.2 as u64 + ((vis.len() as u64) << 32)
+                            } else {
+                                end.2 as u64 + ((end.4 as u64) << 32)
+                            }
                         } else {
                             k.1.calculate_end() as u64 + ((k.2 as u64) << 32)
                         };

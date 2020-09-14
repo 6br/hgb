@@ -320,6 +320,7 @@ fn main() {
                 .arg(Arg::new("square").short('Q').about("Set square width (overwritten)"))
                 .arg(Arg::new("quality").short('q').about("Display reads by quality value"))
                 .arg(Arg::new("colored-by-name").short('n').about("Set read colors by read name"))
+                .arg(Arg::new("read-par-line").short('1').about("Show one line one read on split-alignment mode"))
                 .arg(
                     Arg::new("colored-by-motif")
                         .short('E')
