@@ -380,6 +380,7 @@ where
     let only_translocation = matches.is_present("only-translocation");
     let end_split = matches.is_present("end-split-callets");
     let square = matches.is_present("square");
+    let x_as_range = matches.is_present("x-as-range");
     let dynamic_partition = matches.is_present("dynamic-partition");
     let colored_by_motif = matches.occurrences_of("colored-by-motif") != 0;
     let colored_by_motif_vec: Option<Vec<String>> = matches
@@ -471,7 +472,13 @@ where
     let y_len = top_margin
         + (prev_index as u32 + axis_count as u32 + annotation_count as u32 * 2) * y
         + freq_len as u32 * freq_size;
-    let x_len = if square { y_len } else { x };
+    let x_len = if square {
+        y_len
+    } else if x_as_range {
+        vis[0].range.interval() as u32
+    } else {
+        x
+    };
 
     let root = BitMapBackend::new(output, (x_len, y_len)).into_drawing_area();
     let approximate_one_pixel = 1; //((range.end() - range.start()) / x as u64) as u32;
