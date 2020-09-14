@@ -166,7 +166,7 @@ pub fn bam_vis(
                     > { return lambda(prefetch_str) },
                 )
                 .unwrap();
-            for (index, mut reader2) in &mut bam_readers.iter_mut().enumerate() {
+            for (index, reader2) in &mut bam_readers.iter_mut().enumerate() {
                 //println!("Loading {}", bam_path);
                 // let reader = bam::BamReader::from_path(bam_path, threads).unwrap();
                 //let mut reader2 = bam::IndexedReader::build()
@@ -1350,6 +1350,7 @@ where
                                     last.1.start(),
                                     last.1.calculate_end(),
                                     items.len(),
+                                    last.2,
                                 ),
                             );
                             items.sort_by(|a, b| {
@@ -1465,7 +1466,8 @@ where
                             (vis.len() as u64 + 1) << 32 //range.end() as i32
                         } else if let Some(end) = end_map.get(&(sample_id, k.1.name())) {
                             // eprintln!("{:?} {:?}", sample_id, k.1.name());
-                            end.2 as u64 + ((vis.len() as u64) << 32)
+                            // 1 line for only split alignments.
+                            end.2 as u64 + ((end.4 as u64) << 32)
                         } else {
                             k.1.calculate_end() as u64 + ((k.2 as u64) << 32)
                         };
