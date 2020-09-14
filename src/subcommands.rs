@@ -1428,8 +1428,8 @@ where
                 //new_list.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.start().cmp(&b.1.start())));
                 new_list.sort_by(|a, b| {
                     a.0.cmp(&b.0).then(
-                        (a.1.start() as u64 + (a.2 as u64) << 32)
-                            .cmp(&(b.1.start() as u64 + (b.2 as u64) << 32)),
+                        (a.1.start() as u64 + ((a.2 as u64) << 32))
+                            .cmp(&(b.1.start() as u64 + ((b.2 as u64) << 32))),
                     )
                 });
             }
