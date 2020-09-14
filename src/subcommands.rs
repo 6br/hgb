@@ -1480,7 +1480,7 @@ where
                         } else if let Some(index) = packing_vec
                             .iter_mut()
                             .enumerate()
-                            .find(|(_, item)| **item < k.1.start() as u64)
+                            .find(|(_, item)| **item < k.1.start() as u64 + ((k.2 as u64) << 32))
                         {
                             *index.1 = end;
                             index.0
@@ -1549,16 +1549,15 @@ where
                         let mut packing = vec![0u64];
                         prev_index += 1;
                         (t.1).for_each(|k| {
-                            let mut index = if let Some(index) = packing
-                                .iter_mut()
-                                .enumerate()
-                                .find(|(_, item)| **item < k.1.start() as u64)
-                            {
+                            let mut index = if let Some(index) =
+                                packing.iter_mut().enumerate().find(|(_, item)| {
+                                    **item < k.1.start() as u64 + ((k.2 as u64) << 32)
+                                }) {
                                 //packing[index.0] = k.1.calculate_end() as u64;
-                                *index.1 = k.1.calculate_end() as u64+ ((k.2 as u64) << 32);
+                                *index.1 = k.1.calculate_end() as u64 + ((k.2 as u64) << 32);
                                 index.0
                             } else {
-                                packing.push(k.1.calculate_end() as u64+ ((k.2 as u64) << 32));
+                                packing.push(k.1.calculate_end() as u64 + ((k.2 as u64) << 32));
                                 prev_index += 1;
                                 packing.len() - 1
                                 //prev_index - 1
