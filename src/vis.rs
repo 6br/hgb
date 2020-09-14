@@ -475,7 +475,9 @@ where
     let x_len = if square {
         y_len
     } else if x_as_range {
-        vis[0].range.interval() as u32
+        vis.iter()
+            .map(|t| t.range.interval() as u32)
+            .sum::<u32>()
     } else {
         x
     };
