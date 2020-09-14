@@ -1555,10 +1555,10 @@ where
                                 .find(|(_, item)| **item < k.1.start() as u64)
                             {
                                 //packing[index.0] = k.1.calculate_end() as u64;
-                                *index.1 = k.1.calculate_end() as u64;
+                                *index.1 = k.1.calculate_end() as u64+ ((k.2 as u64) << 32);
                                 index.0
                             } else {
-                                packing.push(k.1.calculate_end() as u64);
+                                packing.push(k.1.calculate_end() as u64+ ((k.2 as u64) << 32));
                                 prev_index += 1;
                                 packing.len() - 1
                                 //prev_index - 1
