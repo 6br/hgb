@@ -860,7 +860,7 @@ where
                     ))?;
                 }
             } else {*/
-            if areas_len <= 1 {
+            if vis.len() <= 1 {
                 chart.draw_series(supplementary_list.iter().filter(|t| t.3 < t.4).map(|i| {
                     let stroke = BLACK;
                     let mut bar2 = Rectangle::new(
