@@ -323,6 +323,12 @@ fn main() {
                 .arg(Arg::new("read-par-line").short('1').about("Show one line one read on split-alignment mode"))
                 .arg(Arg::new("x-as-range").short('9').about("Set X as the interval of the input range"))
                 .arg(
+                    Arg::new("range-index")
+                        .short('8')
+                        .takes_value(true)
+                        .about("Choose a range index to visualize when multiple ranges are specified."),
+                )
+                .arg(
                     Arg::new("colored-by-motif")
                         .short('E')
                         .takes_value(true)

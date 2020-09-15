@@ -351,7 +351,7 @@ where
 
 pub fn bam_record_vis<'a, F>(
     matches: &ArgMatches,
-    vis: Vec<VisRef>,
+    mut vis: Vec<VisRef>,
     lambda: F,
 ) -> Result<(), Box<dyn std::error::Error>>
 where
@@ -394,6 +394,9 @@ where
 
         return frequency_vis(matches, range, frequency, lambda);
     }
+    let vis_index = matches
+        .value_of("vis-index")
+        .and_then(|a| a.parse::<usize>().ok());
     let max_coverage = matches
         .value_of("max-coverage")
         .and_then(|a| a.parse::<u32>().ok());
@@ -469,15 +472,16 @@ where
     let prev_index = vis.iter().map(|a| a.prev_index).max().unwrap();
     let freq_len = vis.iter().map(|a| a.frequency.len()).max().unwrap();
     let top_margin = if no_margin { 0 } else { 40 };
+    if let Some(val) = vis_index {
+        vis = vec![vis[val].clone()];
+    }
     let y_len = top_margin
         + (prev_index as u32 + axis_count as u32 + annotation_count as u32 * 2) * y
         + freq_len as u32 * freq_size;
     let x_len = if square {
         y_len
     } else if x_as_range {
-        vis.iter()
-            .map(|t| t.range.interval() as u32)
-            .sum::<u32>()
+        vis.iter().map(|t| t.range.interval() as u32).sum::<u32>()
     } else {
         x
     };
