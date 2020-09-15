@@ -473,6 +473,27 @@ where
     let freq_len = vis.iter().map(|a| a.frequency.len()).max().unwrap();
     let top_margin = if no_margin { 0 } else { 40 };
     let vis_len = vis.len();
+    let y_max = match max_coverage {
+        Some(a) => a,
+        _ => vis
+            .iter()
+            .map(|t| {
+                t.frequency
+                    .iter()
+                    .map(|(_, values)| values.iter().map(|t| t.1).max().unwrap_or(1))
+                    .max()
+                    .unwrap_or(1)
+            })
+            .max()
+            .unwrap_or(1),
+        /*if frequency.len() > 0 {
+
+            let coverages = coverage.split_evenly((frequency.len(), 1));
+            for (i, (sample_sequential_id, values)) in frequency.iter().rev().enumerate() {
+                values.iter().map(|t| t.1).max().unwrap_or(1),
+            }
+        }*/
+    };
     if let Some(val) = vis_index {
         vis = vec![vis[val].clone()];
     }
@@ -510,28 +531,6 @@ where
         root.split_by_breakpoints(x_axis, y_axis)
     };
     //let areas_len = vis.len();
-
-    let y_max = match max_coverage {
-        Some(a) => a,
-        _ => vis
-            .iter()
-            .map(|t| {
-                t.frequency
-                    .iter()
-                    .map(|(_, values)| values.iter().map(|t| t.1).max().unwrap_or(1))
-                    .max()
-                    .unwrap_or(1)
-            })
-            .max()
-            .unwrap_or(1),
-        /*if frequency.len() > 0 {
-
-            let coverages = coverage.split_evenly((frequency.len(), 1));
-            for (i, (sample_sequential_id, values)) in frequency.iter().rev().enumerate() {
-                values.iter().map(|t| t.1).max().unwrap_or(1),
-            }
-        }*/
-    };
 
     for (index, area) in areas.iter().enumerate() {
         let area = area.margin(0, 0, 0, 0);
