@@ -472,6 +472,7 @@ where
     let prev_index = vis.iter().map(|a| a.prev_index).max().unwrap();
     let freq_len = vis.iter().map(|a| a.frequency.len()).max().unwrap();
     let top_margin = if no_margin { 0 } else { 40 };
+    let vis_len = vis.len();
     if let Some(val) = vis_index {
         vis = vec![vis[val].clone()];
     }
@@ -508,7 +509,7 @@ where
         let y_axis: Vec<u32> = vec![];
         root.split_by_breakpoints(x_axis, y_axis)
     };
-    let areas_len = vis.len();
+    //let areas_len = vis.len();
 
     let y_max = match max_coverage {
         Some(a) => a,
@@ -860,7 +861,7 @@ where
                     ))?;
                 }
             } else {*/
-            if vis.len() <= 1 {
+            if vis_len <= 1 {
                 chart.draw_series(supplementary_list.iter().filter(|t| t.3 < t.4).map(|i| {
                     let stroke = BLACK;
                     let mut bar2 = Rectangle::new(
