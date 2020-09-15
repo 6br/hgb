@@ -395,7 +395,7 @@ where
         return frequency_vis(matches, range, frequency, lambda);
     }
     let vis_index = matches
-        .value_of("vis-index")
+        .value_of("range-index")
         .and_then(|a| a.parse::<usize>().ok());
     let max_coverage = matches
         .value_of("max-coverage")
