@@ -546,11 +546,16 @@ where
 
         // After this point, we should be able to draw construct a chart context
         // let areas = root.split_by_breakpoints([], compressed_list);
-
         let (alignment, coverage) = area.split_vertically(
             top_margin + (prev_index as u32 + axis_count as u32 + annotation_count as u32 * 2) * y,
         );
-        eprintln!("{:?} {:?} {:?}", prev_index, axis_count, annotation_count);
+        eprintln!(
+            "{:?} {:?} {:?} <{:?}>",
+            prev_index,
+            axis_count,
+            annotation_count,
+            top_margin + (prev_index as u32 + axis_count as u32 + annotation_count as u32 * 2) * y
+        );
         let y_area_size = if no_margin { 0 } else { 25 };
         let x_spec = if no_margin && range.end() - range.start() <= 5000 {
             range.start()..range.end()
