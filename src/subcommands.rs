@@ -1168,7 +1168,7 @@ where
     let packing = !matches.is_present("no-packing");
     let split = matches.is_present("split-alignment");
     let read_per_line = matches.is_present("read-per-line");
-    let read_per_two_node = matches.is_present("read-per-two-range")
+    let read_per_two_node = matches.is_present("read-per-two-range");
     let max_coverage = matches
         .value_of("max-coverage")
         .and_then(|a| a.parse::<u32>().ok());
