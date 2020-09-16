@@ -1471,7 +1471,7 @@ where
                             // eprintln!("{:?} {:?}", sample_id, k.1.name());
                             // 1 line for only split alignments.
                             if read_per_line {
-                                end.2 as u64 + ((vis.len() as u64) << 32)
+                                end.2 as u64 + ((end.4 as u64 + 1u64) << 32) //((vis.len() as u64) << 32)
                             } else {
                                 end.2 as u64 + ((end.4 as u64) << 32)
                             }
