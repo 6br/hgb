@@ -304,7 +304,7 @@ fn main() {
                     Arg::new("min-read-length")
                         .short('M')
                         .takes_value(true)
-                        .about("Mininum read length on coverage/alignment track"),
+                        .about("Minimum read mapping length on coverage/alignment track"),
                 )
                 .arg(
                     Arg::new("x-scale")
