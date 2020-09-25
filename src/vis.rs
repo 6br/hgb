@@ -158,7 +158,8 @@ fn nt_color(record_nt: char) -> Option<RGBColor> {
 fn name_to_num(name: &[u8]) -> usize {
     let mut uuid = 0usize;
     //name.iter().sum()
-    for &i in name[0..8].iter() {
+    let right_most = if name.len() > 8 { 8 } else {name.len()};
+    for &i in name[0..right_most].iter() {
         uuid += i as usize
     }
     uuid
