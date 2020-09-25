@@ -309,6 +309,8 @@ where
     let all_bases = matches.is_present("all-bases");
     let hide_alignment = matches.is_present("hide-alignment");
     let only_translocation = matches.is_present("only-translocation");
+    let output_translocation = matches.is_present("output-translocation");
+    let translocation_target = matches.value_of("translocation-target");
     let square = matches.is_present("square");
     if hide_alignment {
         return frequency_vis(matches, range, list, lambda);
@@ -1034,6 +1036,12 @@ where
                                     );*/
                                     if only_translocation && t[0] == range.path {
                                         None
+                                    } else if let Some(translocation_target) = translocation_target {
+                                        if translocation_target == t[0] {
+                                            Some(cigar.soft_clipping(strand == "+"))
+                                        } else {
+                                            None
+                                        }
                                     } else {
                                         Some(cigar.soft_clipping(strand == "+"))
                                     }
@@ -1062,6 +1070,9 @@ where
                                 bar.set_margin(0, 0, 0, 0);
                                 bars.push(bar);
                                 split_frequency.push((data.0, (start, approximate_one_pixel)));
+                                if output_translocation {
+                                    println!("S\t{}\t{}\tL", range.path, start);
+                                }
                             }
                             if ((is_larger && !bam.flag().is_reverse_strand())
                                 || (is_smaller && bam.flag().is_reverse_strand()))
@@ -1075,6 +1086,9 @@ where
                                 bar.set_margin(0, 0, 0, 0);
                                 bars.push(bar);
                                 split_frequency.push((data.0, (end, approximate_one_pixel)));
+                                if output_translocation {
+                                    println!("S\t{}\t{}\tR", range.path, end);
+                                }
                             }
                             /*eprintln!(
                                 "SA = {}, {:?},
