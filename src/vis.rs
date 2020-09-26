@@ -1071,7 +1071,7 @@ where
                                 bars.push(bar);
                                 split_frequency.push((data.0, (start, approximate_one_pixel)));
                                 if output_translocation {
-                                    println!("S\t{}\t{}\tL", range.path, start);
+                                    println!("S\t{}\t{}\tL\t{}", range.path, start, end);
                                 }
                             }
                             if ((is_larger && !bam.flag().is_reverse_strand())
@@ -1087,7 +1087,7 @@ where
                                 bars.push(bar);
                                 split_frequency.push((data.0, (end, approximate_one_pixel)));
                                 if output_translocation {
-                                    println!("S\t{}\t{}\tR", range.path, end);
+                                    println!("S\t{}\t{}\R\t{}", range.path, end, start);
                                 }
                             }
                             /*eprintln!(
