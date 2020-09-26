@@ -1087,7 +1087,7 @@ where
                                 bars.push(bar);
                                 split_frequency.push((data.0, (end, approximate_one_pixel)));
                                 if output_translocation {
-                                    println!("S\t{}\t{}\R\t{}", range.path, end, start);
+                                    println!("S\t{}\t{}\tR\t{}", range.path, end, start);
                                 }
                             }
                             /*eprintln!(
