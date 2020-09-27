@@ -231,7 +231,7 @@ where
     // let areas = root.split_by_breakpoints([], compressed_list);
     if frequency.len() > 0 {
         let coverages = root.split_evenly((frequency.len(), 1));
-        for (i, (sample_sequential_id, values)) in frequency.iter().enumerate() {
+        for (i, (sample_sequential_id, values)) in frequency.iter().rev().enumerate() {
             let idx = *sample_sequential_id as usize;
             let y_max = match max_coverage {
                 Some(a) => a,
@@ -1377,7 +1377,7 @@ where
 
     if frequency.len() > 0 {
         let coverages = coverage.split_evenly((frequency.len(), 1));
-        for (i, (sample_sequential_id, values)) in frequency.iter().enumerate() {
+        for (i, (sample_sequential_id, values)) in frequency.iter().rev().enumerate() {
             let idx = *sample_sequential_id as usize;
             let y_max = match max_coverage {
                 Some(a) => a,
