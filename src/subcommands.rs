@@ -1346,17 +1346,23 @@ where
                                 .iter()
                                 .max_by_key(|t| t.1.calculate_end() as u64 + ((t.2 as u64) << 32))
                                 .unwrap();
+                            let first: &(u64, Record, usize) = items
+                                .iter()
+                                .min_by_key(|t| t.1.calculate_end() as u64 + ((t.2 as u64) << 32))
+                                .unwrap();
                             //eprintln!("Split: {:?}", last);
-                            end_map.insert(
-                                (sample_id, s.0),
-                                (
-                                    items[0].1.calculate_end(),
-                                    last.1.start(),
-                                    last.1.calculate_end(),
-                                    items.len(),
-                                    last.2,
-                                ),
-                            );
+                            if !(split_only && read_per_two_node) || last.2 != first.2 {
+                                end_map.insert(
+                                    (sample_id, s.0),
+                                    (
+                                        items[0].1.calculate_end(),
+                                        last.1.start(),
+                                        last.1.calculate_end(),
+                                        items.len(),
+                                        last.2,
+                                    ),
+                                );
+                            }
                             items.sort_by(|a, b| {
                                 a.0.cmp(&b.0).then(a.1.name().cmp(&b.1.name())).then(
                                     (a.1.cigar().soft_clipping(!a.1.flag().is_reverse_strand())
