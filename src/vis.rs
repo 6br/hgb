@@ -361,6 +361,7 @@ where
     let start = Instant::now();
     let preset: Option<VisPreset> = matches.value_of_t("preset").ok(); // .unwrap_or_else(|e| e.exit());
     eprintln!("Preset: {:?}", preset);
+    let overlapping_annotation = matches.is_present("overlapping-annotation");
     let no_margin = matches.is_present("no-scale");
     let _prefetch_range = matches.is_present("prefetch-range");
     let output = matches.value_of("output").unwrap();
@@ -693,6 +694,10 @@ where
                                         stroke.filled(),
                                     )
                                 });
+                            if overlapping_annotation {
+                                println!("{}: {}", range, record.name().unwrap_or(&""))
+
+                            }
                         }
                     })
             });

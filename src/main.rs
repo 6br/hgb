@@ -348,6 +348,11 @@ fn main() {
                         .about("Output format (automatically detected; optionally used for server mode)"),
                 )
                 .arg(
+                    Arg::new("overlapping-annotation")
+                        .short('H')
+                        .about("Output a list of annotation overlapping the range"),
+                )
+                .arg(
                     Arg::new("snp-frequency")
                         .short('V')
                         .takes_value(true)
