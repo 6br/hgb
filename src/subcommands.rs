@@ -1164,6 +1164,7 @@ where
 
     let pileup = matches.is_present("pileup");
     let split_only = matches.is_present("only-split-alignment");
+    let split_exclude = matches.is_present("exclude-split-alignment");
     let sort_by_name = matches.is_present("sort-by-name");
     let packing = !matches.is_present("no-packing");
     let split = matches.is_present("split-alignment");
@@ -1455,6 +1456,24 @@ where
                         .into_iter()
                         .filter(|(sample_id, record)| {
                             end_map.contains_key(&(*sample_id, record.name()))
+                        })
+                        .collect::<Vec<_>>();
+                }
+            }
+            if split_exclude {
+                new_list = new_list
+                    .into_iter()
+                    .filter(|(sample_id, record, _range_id)| {
+                        !end_map.contains_key(&(*sample_id, record.name()))
+                    })
+                    .collect();
+                for i in vis.iter() {
+                    let mut list = i.list.lock().unwrap();
+                    *list = list
+                        .clone()
+                        .into_iter()
+                        .filter(|(sample_id, record)| {
+                            !end_map.contains_key(&(*sample_id, record.name()))
                         })
                         .collect::<Vec<_>>();
                 }
