@@ -397,6 +397,7 @@ fn main() {
                 .arg(Arg::new("split-alignment").short('s').about("Display split alignments in the same line"))
                 .arg(Arg::new("only-split-alignment").short('u').about("Display only split alignments or mate-paired reads on alignment track"))
                 .arg(Arg::new("exclude-split-alignment").short('5').about("Display only NOT split alignments or mate-paired reads on alignment track"))
+                .arg(Arg::new("full-length").short('4').about("Display only full-length match reads against prefetch range."))
                 .arg(Arg::new("udon").short('U').about("Colored by udon library"))
                 .arg(
                     Arg::new("sort-by-name")

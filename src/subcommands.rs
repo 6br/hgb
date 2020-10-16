@@ -45,6 +45,7 @@ pub fn bam_vis(
         .value_of("neighbor")
         .and_then(|a| a.parse::<u64>().ok())
         .unwrap_or(0u64);
+    let full_length = matches.is_present("full-length");
     if let Some(bam_files) = matches.values_of("bam") {
         let bam_files: Vec<&str> = bam_files.collect();
         let mut bam_readers = bam_files
@@ -186,7 +187,12 @@ pub fn bam_vis(
                 ))?;
                 for record in viewer {
                     let record = record?;
-                    if !record.flag().is_secondary() && record.query_len() > min_read_len {
+                    if !record.flag().is_secondary()
+                        && record.query_len() > min_read_len
+                        && (!full_length
+                            || record.start() >= prefetch_range.start as i32
+                                && record.calculate_end() <= prefetch_range.end as i32)
+                    {
                         list.push((index as u64, record));
                     }
                 }
