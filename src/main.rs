@@ -353,6 +353,11 @@ fn main() {
                         .about("Output a list of annotation overlapping the range"),
                 )
                 .arg(
+                    Arg::new("overlapping-reads")
+                        .short('7')
+                        .about("Output a list of read id overlapping the range"),
+                )
+                .arg(
                     Arg::new("snp-frequency")
                         .short('V')
                         .takes_value(true)

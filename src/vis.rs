@@ -362,6 +362,7 @@ where
     let preset: Option<VisPreset> = matches.value_of_t("preset").ok(); // .unwrap_or_else(|e| e.exit());
     eprintln!("Preset: {:?}", preset);
     let overlapping_annotation = matches.is_present("overlapping-annotation");
+    let overlapping_reads = matches.is_present("overlapping-reads");
     let no_margin = matches.is_present("no-scale");
     let _prefetch_range = matches.is_present("prefetch-range");
     let output = matches.value_of("output").unwrap();
@@ -926,6 +927,10 @@ where
                     bar.set_margin(2, 2, 0, 0);
 
                     bars.push(bar);
+
+                    if overlapping_reads {
+                        println!("{}", String::from_utf8_lossy(bam.name()));
+                    }
                     if colored_by_name {
                         let color = Palette99::pick(name_to_num(data.1.name())).mix(0.8);
                         let mut inner_bar =
