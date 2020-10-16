@@ -190,8 +190,8 @@ pub fn bam_vis(
                     if !record.flag().is_secondary()
                         && record.query_len() > min_read_len
                         && (!full_length
-                            || record.start() >= prefetch_range.start as i32
-                                && record.calculate_end() <= prefetch_range.end as i32)
+                            || record.start() <= prefetch_range.start as i32
+                                && record.calculate_end() >= prefetch_range.end as i32)
                     {
                         list.push((index as u64, record));
                     }
