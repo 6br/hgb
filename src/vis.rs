@@ -253,7 +253,6 @@ where
     if frequency.len() > 0 {
         let coverages = root.split_evenly((frequency.len(), 1));
         for (i, (sample_sequential_id, values)) in frequency.iter().rev().enumerate() {
-            // eprintln!("{} {}", i, sample_sequential_id);
             let idx = *sample_sequential_id as usize;
             let y_max = match max_coverage {
                 Some(a) => a,
@@ -382,6 +381,8 @@ where
     let hide_alignment = matches.is_present("hide-alignment");
     let only_translocation = matches.is_present("only-translocation");
     let end_split = matches.is_present("end-split-callets");
+    let output_translocation = matches.is_present("output-translocation");
+    let translocation_target = matches.value_of("translocation-target");
     let square = matches.is_present("square");
     let x_as_range = matches.is_present("x-as-range");
     let dynamic_partition = matches.is_present("dynamic-partition");
@@ -1005,6 +1006,9 @@ where
                                     bar.set_margin(0, 0, 0, 0);
                                     bars.push(bar);
                                     split_frequency.push((data.0, (start, approximate_one_pixel)));
+                                    if output_translocation {
+                                        println!("S\t{}\t{}\tR\t{}", range.path, end, start);
+                                    }
                                 }
                                 if ((is_larger && !bam.flag().is_reverse_strand())
                                     || (is_smaller && bam.flag().is_reverse_strand()))
@@ -1018,6 +1022,9 @@ where
                                     bar.set_margin(0, 0, 0, 0);
                                     bars.push(bar);
                                     split_frequency.push((data.0, (end, approximate_one_pixel)));
+                                    if output_translocation {
+                                        println!("S\t{}\t{}\tR\t{}", range.path, end, start);
+                                    }
                                 }
                                 /*eprintln!(
                                     "SA = {}, {:?},
