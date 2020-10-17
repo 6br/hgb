@@ -1094,7 +1094,7 @@ where
                             &udon_range,
                             offset_in_pixels,
                             &scaler
-                    ).expect("Failed to decode udon ribbon. Would be a bug.");
+                    ).expect(format!("Failed to decode udon ribbon. Would be a bug. Read id: {}", String::from_utf8_lossy(record.name())).as_str());
                     ribbon.append_on_basecolor(&base_color[record.flag().is_reverse_strand() as usize]).correct_gamma();
                     let horizontal_offset = window_range.start;
                     let left_blank  = horizontal_offset;
