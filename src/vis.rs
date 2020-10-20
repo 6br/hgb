@@ -1073,7 +1073,7 @@ where
                         if let Some(TagValue::String(s, _)) = record.tags().get(b"MD") { s } else {
                                 panic!("Each BAM record must have MD string. Inspect `samtools calmd` for restoring missing MD strings.")
                         }
-                    ).expect("Failed to create udon index. Would be a bug.");
+                    ).expect(format!("Failed to decode udon ribbon. Would be a bug. Read id: {}", String::from_utf8_lossy(record.name())).as_str());
 
                     /* compose span, skip if out of the window */
                     let range = Range::<usize> {
