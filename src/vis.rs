@@ -14,11 +14,7 @@ use plotters::prelude::Palette;
 use plotters::prelude::*;
 use plotters::style::RGBColor;
 use std::ops::Range;
-use std::{
-    collections::{BTreeMap, HashMap},
-    fs::File,
-    time::Instant,
-};
+use std::{collections::BTreeMap, fs::File, time::Instant};
 use udon::{Udon, UdonPalette, UdonScaler, UdonUtils};
 
 const PARBASE_THRESHOLD: u64 = 2;
