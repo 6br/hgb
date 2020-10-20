@@ -1073,7 +1073,7 @@ where
                         if let Some(TagValue::String(s, _)) = record.tags().get(b"MD") { s } else {
                                 panic!("Each BAM record must have MD string. Inspect `samtools calmd` for restoring missing MD strings.")
                         }
-                    ).expect(format!("Failed to decode udon ribbon. Would be a bug. Read id: {}", String::from_utf8_lossy(record.name())).as_str());
+                    ).expect(format!("Failed to decode udon ribbon. Would be a bug. Read id: {}, start: {}", String::from_utf8_lossy(record.name()), record.start()).as_str());
 
                     /* compose span, skip if out of the window */
                     let range = Range::<usize> {
@@ -1094,7 +1094,7 @@ where
                             &udon_range,
                             offset_in_pixels,
                             &scaler
-                    ).expect(format!("Failed to decode udon ribbon. Would be a bug. Read id: {}", String::from_utf8_lossy(record.name())).as_str());
+                    ).expect(format!("Failed to decode udon ribbon. Would be a bug. Read id: {}, start: {}", String::from_utf8_lossy(record.name()), record.start()).as_str());
                     ribbon.append_on_basecolor(&base_color[record.flag().is_reverse_strand() as usize]).correct_gamma();
                     let horizontal_offset = window_range.start;
                     let left_blank  = horizontal_offset;
