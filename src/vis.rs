@@ -929,35 +929,6 @@ where
 
                     bars.push(bar);
 
-                    if overlapping_reads {
-                        println!("{}", String::from_utf8_lossy(bam.name()));
-                    }
-                    if colored_by_name {
-                        let color = Palette99::pick(name_to_num(data.1.name())).mix(0.8);
-                        let mut inner_bar =
-                            Rectangle::new([(start, index), (end, index + 1)], color.filled());
-                        inner_bar.set_margin(3, 3, 0, 0);
-                        bars.push(inner_bar);
-                    } else if colored_by_tag {
-                        if let Some(colored_by_str) = colored_by_tag_vec {
-                            let tag: &[u8;2] = colored_by_str.as_bytes().try_into().expect("colored by tag with unexpected length: tag name must be two characters.");
-                           
-                            if let Some(TagValue::Int(tag_id,_)) = bam.tags().get(tag) {
-                                //eprintln!("{:?}", tag_id);
-                                let color = Palette99::pick(tag_id as usize).mix(0.8);
-                                let mut inner_bar =
-                                    Rectangle::new([(start, index), (end, index + 1)], color.filled());
-                                inner_bar.set_margin(3, 3, 0, 0);
-                                bars.push(inner_bar);
-                            } else {
-                                let color = DEF_COL;
-                                let mut inner_bar =
-                                    Rectangle::new([(start, index), (end, index + 1)], color.filled());
-                                inner_bar.set_margin(3, 3, 0, 0);
-                                bars.push(inner_bar);
-                            }
-                        }
-                    }
 
                     // eprintln!("{:?}", [(start, index), (end, index + 1)]);
 
@@ -1386,8 +1357,38 @@ where
                             }
                         }
                     }
-                    //}).flatten().collect::<Vec<_>>())?;
+                    
+                    if overlapping_reads {
+                        println!("{}", String::from_utf8_lossy(bam.name()));
+                    }
+                    if colored_by_name {
+                        let color = Palette99::pick(name_to_num(data.1.name())).mix(0.8);
+                        let mut inner_bar =
+                            Rectangle::new([(start, index), (end, index + 1)], color.filled());
+                        inner_bar.set_margin(3, 3, 0, 0);
+                        bars.push(inner_bar);
+                    } else if colored_by_tag {
+                        if let Some(colored_by_str) = colored_by_tag_vec {
+                            let tag: &[u8;2] = colored_by_str.as_bytes().try_into().expect("colored by tag with unexpected length: tag name must be two characters.");
+                           
+                            if let Some(TagValue::Int(tag_id,_)) = bam.tags().get(tag) {
+                                //eprintln!("{:?}", tag_id);
+                                let color = Palette99::pick(tag_id as usize).mix(0.8);
+                                let mut inner_bar =
+                                    Rectangle::new([(start, index), (end, index + 1)], color.filled());
+                                inner_bar.set_margin(3, 3, 0, 0);
+                                bars.push(inner_bar);
+                            } else {
+                                let color = DEF_COL;
+                                let mut inner_bar =
+                                    Rectangle::new([(start, index), (end, index + 1)], color.filled());
+                                inner_bar.set_margin(3, 3, 0, 0);
+                                bars.push(inner_bar);
+                            }
+                        }
+                    }
                 });
+
             bars
         };
         chart.draw_series(series)?;
