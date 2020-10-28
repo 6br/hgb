@@ -336,6 +336,13 @@ fn main() {
                         .default_value("C:T:CG")
                         .about("Colored by specified motif (for bisulfite sequencing)"),
                 )
+                .arg(
+                    Arg::new("colored-by-tag")
+                        .short('0')
+                        .takes_value(true)
+                        .default_value("HP")
+                        .about("Colored by specified tags on read alignments"),
+                )
                 .arg(Arg::new("x").short('x').takes_value(true).about("The width of image"))
                 .arg(Arg::new("y").short('y').takes_value(true).about("The height of each read alignment"))
                 .arg(Arg::new("web").short('w').takes_value(true).about("Serve the web server"))
@@ -401,7 +408,7 @@ fn main() {
                 )
                 .arg(Arg::new("split-alignment").short('s').about("Display split alignments in the same line"))
                 .arg(Arg::new("only-split-alignment").short('u').about("Display only split alignments or mate-paired reads on alignment track"))
-                .arg(Arg::new("exclude-split-alignment").short('5').about("Display only NOT split alignments or mate-paired reads on alignment track"))
+                .arg(Arg::new("exclude-split-alignment").short('3').about("Display only NOT split alignments or mate-paired reads on alignment track"))
                 .arg(Arg::new("full-length").short('4').about("Display only full-length match reads against prefetch range."))
                 .arg(Arg::new("udon").short('U').about("Colored by udon library"))
                 .arg(

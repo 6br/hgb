@@ -805,7 +805,7 @@ pub fn vis_query(
         .unwrap_or(0u64);
     if let Some(o) = matches.value_of("INPUT") {
         let mut reader: IndexedReader<BufReader<File>> =
-            IndexedReader::from_path_with_additional_threads(o, threads - 1).unwrap();
+            IndexedReader::from_path_with_additional_threads(o, threads - 1).map_err(|e| Error::new(e.kind(), format!("Failed to read GHB/GHI file: {}", e))).unwrap();
         let mut ranges: Vec<String> = vec![];
         if let Some(bed_range) = matches.value_of("bed-range") {
             let mut reader = bed::Reader::from_file(bed_range)?;

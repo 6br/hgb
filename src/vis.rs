@@ -1,6 +1,6 @@
 use crate::{VisOrig, VisPreset, VisRef};
 use bam::record::{
-    tags::{StringType, TagValue},
+    tags::{IntegerType, StringType, TagValue},
     Cigar,
 };
 use bam::{Record, RecordReader};
@@ -13,6 +13,7 @@ use plotters::coord::ReverseCoordTranslate;
 use plotters::prelude::Palette;
 use plotters::prelude::*;
 use plotters::style::RGBColor;
+use std::convert::TryInto;
 use std::ops::Range;
 use std::{collections::BTreeMap, fs::File, time::Instant};
 use udon::{Udon, UdonPalette, UdonScaler, UdonUtils};
@@ -386,6 +387,9 @@ where
     let colored_by_motif_vec: Option<Vec<String>> = matches
         .value_of("colored-by-motif")
         .and_then(|t| Some(t.split(":").map(|t| t.to_string()).collect()));
+    let colored_by_tag = matches.occurrences_of("colored-by-tag") != 0;
+    let colored_by_tag_vec = matches.value_of("colored-by-tag");
+
     if hide_alignment {
         //Multi-ranged frequency vis has not yet been supported.
         let vis = &vis[0];
@@ -934,6 +938,25 @@ where
                             Rectangle::new([(start, index), (end, index + 1)], color.filled());
                         inner_bar.set_margin(3, 3, 0, 0);
                         bars.push(inner_bar);
+                    } else if colored_by_tag {
+                        if let Some(colored_by_str) = colored_by_tag_vec {
+                            let tag: &[u8;2] = colored_by_str.as_bytes().try_into().expect("colored by tag with unexpected length: tag name must be two characters.");
+                           
+                            if let Some(TagValue::Int(tag_id,_)) = bam.tags().get(tag) {
+                                //eprintln!("{:?}", tag_id);
+                                let color = Palette99::pick(tag_id as usize).mix(0.8);
+                                let mut inner_bar =
+                                    Rectangle::new([(start, index), (end, index + 1)], color.filled());
+                                inner_bar.set_margin(3, 3, 0, 0);
+                                bars.push(inner_bar);
+                            } else {
+                                let color = DEF_COL;
+                                let mut inner_bar =
+                                    Rectangle::new([(start, index), (end, index + 1)], color.filled());
+                                inner_bar.set_margin(3, 3, 0, 0);
+                                bars.push(inner_bar);
+                            }
+                        }
                     }
 
                     // eprintln!("{:?}", [(start, index), (end, index + 1)]);
