@@ -1418,17 +1418,19 @@ where
 
         if freq_len > 0 {
             let coverages = coverage.split_evenly((freq_len, 1));
-            for (i, (sample_sequential_id, values)) in frequency.iter().enumerate() {
+            for (i, &sample_sequential_id) in freq_len_ids.iter().enumerate() {
+                //}
+                //for (i, (sample_sequential_id, values)) in frequency.iter().enumerate() {
                 let idx = *sample_sequential_id as usize;
                 /*let y_max = match max_coverage {
                     Some(a) => a,
                     _ => values.iter().map(|t| t.1).max().unwrap_or(1),
                 };*/
-                let absolute_index = freq_len_ids
-                    .iter()
-                    .position(|x| x == &sample_sequential_id)
-                    .unwrap();
-                let mut chart = ChartBuilder::on(&coverages[absolute_index])
+                /*let absolute_index = freq_len_ids
+                .iter()
+                .position(|x| x == &sample_sequential_id)
+                .unwrap();*/
+                let mut chart = ChartBuilder::on(&coverages[i])
                     // Set the caption of the chart
                     //.caption(format!("{}", range), ("sans-serif", 20).into_font())
                     // Set the size of the label region
@@ -1446,72 +1448,76 @@ where
                     // We can also change the format of the label text
                     // .x_label_formatter(&|x| format!("{:.3}", x))
                     .draw()?;
-                let color = if let Some(_) = snp_frequency {
-                    Palette99::pick(idx).stroke_width(2)
-                } else {
-                    Palette99::pick(idx).filled()
-                }; // BLUE
-                chart
-                    .draw_series(
-                        Histogram::vertical(&chart).style(color).data(
-                            values
+                if let Some(values) = frequency.get(sample_sequential_id) {
+                    let color = if let Some(_) = snp_frequency {
+                        Palette99::pick(idx).stroke_width(2)
+                    } else {
+                        Palette99::pick(idx).filled()
+                    }; // BLUE
+                    chart
+                        .draw_series(
+                            Histogram::vertical(&chart).style(color).data(
+                                values
+                                    .iter()
+                                    .filter(|t| {
+                                        t.0 >= range.start() && t.0 < range.end() && t.2 == '*'
+                                    })
+                                    .map(|t| (t.0, t.1)),
+                            ),
+                        )?
+                        .label(format!("{}", lambda(idx).unwrap_or(&idx.to_string())))
+                        .legend(move |(x, y)| {
+                            Rectangle::new(
+                                [(x - 5, y - 5), (x + 5, y + 5)],
+                                Palette99::pick(idx).filled(),
+                            )
+                        });
+                    if let Some(_f) = snp_frequency {
+                        for i in ['A', 'C', 'G', 'T'].iter() {
+                            let color = nt_color(*i).unwrap();
+                            chart.draw_series(
+                                Histogram::vertical(&chart).style(color.filled()).data(
+                                    values
+                                        .iter()
+                                        .filter(|t| {
+                                            t.0 >= range.start() && t.0 < range.end() && t.2 == *i
+                                        })
+                                        .map(|t| (t.0, t.1)),
+                                ),
+                            )?;
+                        }
+                    }
+
+                    chart.draw_series(
+                        Histogram::vertical(&chart).style(SPL_COL.filled()).data(
+                            split_frequency
                                 .iter()
-                                .filter(|t| t.0 >= range.start() && t.0 < range.end() && t.2 == '*')
-                                .map(|t| (t.0, t.1)),
+                                .filter(|&&t| {
+                                    t.0 == *sample_sequential_id
+                                        && (t.1).0 >= range.start()
+                                        && (t.1).0 < range.end()
+                                })
+                                .map(|t| t.1),
                         ),
-                    )?
-                    .label(format!("{}", lambda(idx).unwrap_or(&idx.to_string())))
+                    )?;
+
+                    /*if snp_frequency {
+                        [('A', A_COL), ]
+                    }*/
+                    /*.label(format!("{}", lambda(idx).unwrap_or(&idx.to_string())))
                     .legend(move |(x, y)| {
                         Rectangle::new(
                             [(x - 5, y - 5), (x + 5, y + 5)],
                             Palette99::pick(idx).filled(),
                         )
-                    });
-                if let Some(_f) = snp_frequency {
-                    for i in ['A', 'C', 'G', 'T'].iter() {
-                        let color = nt_color(*i).unwrap();
-                        chart.draw_series(
-                            Histogram::vertical(&chart).style(color.filled()).data(
-                                values
-                                    .iter()
-                                    .filter(|t| {
-                                        t.0 >= range.start() && t.0 < range.end() && t.2 == *i
-                                    })
-                                    .map(|t| (t.0, t.1)),
-                            ),
-                        )?;
+                    });*/
+                    if !no_margin {
+                        chart
+                            .configure_series_labels()
+                            .background_style(&WHITE.mix(0.8))
+                            .border_style(&BLACK)
+                            .draw()?;
                     }
-                }
-
-                chart.draw_series(
-                    Histogram::vertical(&chart).style(SPL_COL.filled()).data(
-                        split_frequency
-                            .iter()
-                            .filter(|&&t| {
-                                t.0 == *sample_sequential_id
-                                    && (t.1).0 >= range.start()
-                                    && (t.1).0 < range.end()
-                            })
-                            .map(|t| t.1),
-                    ),
-                )?;
-
-                /*if snp_frequency {
-                    [('A', A_COL), ]
-                }*/
-                /*.label(format!("{}", lambda(idx).unwrap_or(&idx.to_string())))
-                .legend(move |(x, y)| {
-                    Rectangle::new(
-                        [(x - 5, y - 5), (x + 5, y + 5)],
-                        Palette99::pick(idx).filled(),
-                    )
-                });*/
-                if !no_margin {
-                    chart
-                        .configure_series_labels()
-                        .background_style(&WHITE.mix(0.8))
-                        .border_style(&BLACK)
-                        .draw()?;
                 }
             }
         }
