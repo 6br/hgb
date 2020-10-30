@@ -311,7 +311,7 @@ pub fn bam_vis(
             ));
         }
         bam_record_vis_pre_calculate(matches, &args, precursor, threads, |idx| {
-            bam_files.get(idx).and_then(|t| Some(*t))
+            bam_files.get(idx / bam_interval).and_then(|t| Some(*t))
         })?;
     }
     Ok(())
