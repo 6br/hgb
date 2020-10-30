@@ -903,13 +903,23 @@ where
                     //for (index, data) in list.iter().enumerate() {
                     let bam = &data.1;
                     let color = if colored_by_motif {
-                        DEF_COL
+                        DEF_COL.mix(0.8)
+                    } else if colored_by_tag {
+                        if let Some(colored_by_str) = colored_by_tag_vec {
+                            let tag: &[u8;2] = colored_by_str.as_bytes().try_into().expect("colored by tag with unexpected length: tag name must be two characters.");
+                            if let Some(TagValue::Int(tag_id,_)) = bam.tags().get(tag) {
+                                Palette99::pick(tag_id as usize).mix(0.8)
+                            } else {
+                                DEF_COL.mix(0.8)
+                            }
+                        } else {
+                            DEF_COL.mix(0.8)
+                        }
                     } else if bam.flag().is_reverse_strand() {
-                        NEG_COL
+                        NEG_COL.mix(0.8)
                     } else {
-                        POS_COL
-                    }
-                    .mix(0.8);
+                        POS_COL.mix(0.8)
+                    };
                     let _stroke = Palette99::pick(data.0 as usize); //.unwrap(); //if data.0 % 2 == 0 { CYAN } else { GREEN };
                     let start = if bam.start() as u64 > range.start() {
                         bam.start() as u64
@@ -929,7 +939,32 @@ where
 
                     bars.push(bar);
 
-
+                    if colored_by_name {
+                        let color = Palette99::pick(name_to_num(data.1.name())).mix(0.8);
+                        let mut inner_bar =
+                            Rectangle::new([(start, index), (end, index + 1)], color.filled());
+                        inner_bar.set_margin(3, 3, 0, 0);
+                        bars.push(inner_bar);
+                    }/* else if colored_by_tag {
+                        if let Some(colored_by_str) = colored_by_tag_vec {
+                            let tag: &[u8;2] = colored_by_str.as_bytes().try_into().expect("colored by tag with unexpected length: tag name must be two characters.");
+                           
+                            if let Some(TagValue::Int(tag_id,_)) = bam.tags().get(tag) {
+                                //eprintln!("{:?}", tag_id);
+                                let color = Palette99::pick(tag_id as usize).mix(0.3);
+                                let mut inner_bar =
+                                    Rectangle::new([(start, index), (end, index + 1)], color.filled());
+                                inner_bar.set_margin(3, 3, 0, 0);
+                                bars.push(inner_bar);
+                            } else {
+                                let color = DEF_COL.mix(0.3);
+                                let mut inner_bar =
+                                    Rectangle::new([(start, index), (end, index + 1)], color.filled());
+                                inner_bar.set_margin(3, 3, 0, 0);
+                                bars.push(inner_bar);
+                            }
+                        }
+                    }*/
                     // eprintln!("{:?}", [(start, index), (end, index + 1)]);
 
                     //let mut bars =  //, bar2];
@@ -1361,34 +1396,7 @@ where
                     if overlapping_reads {
                         println!("{}", String::from_utf8_lossy(bam.name()));
                     }
-                    if colored_by_name {
-                        let color = Palette99::pick(name_to_num(data.1.name())).mix(0.8);
-                        let mut inner_bar =
-                            Rectangle::new([(start, index), (end, index + 1)], color.filled());
-                        inner_bar.set_margin(3, 3, 0, 0);
-                        bars.push(inner_bar);
-                    } else if colored_by_tag {
-                        if let Some(colored_by_str) = colored_by_tag_vec {
-                            let tag: &[u8;2] = colored_by_str.as_bytes().try_into().expect("colored by tag with unexpected length: tag name must be two characters.");
-                           
-                            if let Some(TagValue::Int(tag_id,_)) = bam.tags().get(tag) {
-                                //eprintln!("{:?}", tag_id);
-                                let color = Palette99::pick(tag_id as usize).mix(0.8);
-                                let mut inner_bar =
-                                    Rectangle::new([(start, index), (end, index + 1)], color.filled());
-                                inner_bar.set_margin(3, 3, 0, 0);
-                                bars.push(inner_bar);
-                            } else {
-                                let color = DEF_COL;
-                                let mut inner_bar =
-                                    Rectangle::new([(start, index), (end, index + 1)], color.filled());
-                                inner_bar.set_margin(3, 3, 0, 0);
-                                bars.push(inner_bar);
-                            }
-                        }
-                    }
                 });
-
             bars
         };
         chart.draw_series(series)?;

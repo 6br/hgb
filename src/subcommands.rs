@@ -1,4 +1,4 @@
-use bam;
+use bam::{self, record::tags::TagValue};
 use bam::{Record, RecordWriter};
 use clap::ArgMatches;
 use genomic_range::StringRegion;
@@ -25,6 +25,7 @@ use itertools::Itertools;
 use log::{debug, info};
 use std::{
     collections::{BTreeMap, BTreeSet, HashMap},
+    convert::TryInto,
     fs::File,
     io, mem,
     path::Path,
@@ -46,6 +47,17 @@ pub fn bam_vis(
         .and_then(|a| a.parse::<u64>().ok())
         .unwrap_or(0u64);
     let full_length = matches.is_present("full-length");
+    let separated_by_tag = matches.occurrences_of("separated-by-tag") != 0;
+    let separated_by_tag_vec = matches.value_of("separated-by-tag");
+    let separated_by_tag_offset = matches
+        .value_of("separated-by-tag-tracks")
+        .and_then(|a| a.parse::<usize>().ok());
+    let bam_interval = if separated_by_tag {
+        separated_by_tag_offset.unwrap()
+    } else {
+        1
+    };
+
     if let Some(bam_files) = matches.values_of("bam") {
         let bam_files: Vec<&str> = bam_files.collect();
         let mut bam_readers = bam_files
@@ -193,7 +205,21 @@ pub fn bam_vis(
                             || record.start() <= prefetch_range.start as i32
                                 && record.calculate_end() >= prefetch_range.end as i32)
                     {
-                        list.push((index as u64, record));
+                        let idx = if separated_by_tag {
+                            if let Some(colored_by_str) = separated_by_tag_vec {
+                                let tag: &[u8;2] = colored_by_str.as_bytes().try_into().expect("colored by tag with unexpected length: tag name must be two characters.");
+                                if let Some(TagValue::Int(tag_id, _)) = record.tags().get(tag) {
+                                    index * bam_interval + tag_id as usize
+                                } else {
+                                    index * bam_interval
+                                }
+                            } else {
+                                index * bam_interval
+                            }
+                        } else {
+                            index * bam_interval
+                        };
+                        list.push((idx as u64, record));
                     }
                 }
             }
@@ -201,7 +227,7 @@ pub fn bam_vis(
             //};
 
             let mut ann = vec![];
-            let mut idx = bam_files.len();
+            let mut idx = bam_files.len() * bam_interval;
             let mut freq = BTreeMap::new();
             if let Some(freq_files) = matches.values_of("frequency") {
                 // let bed_files: Vec<_> = matches.values_of("bed").unwrap().collect();
@@ -805,7 +831,9 @@ pub fn vis_query(
         .unwrap_or(0u64);
     if let Some(o) = matches.value_of("INPUT") {
         let mut reader: IndexedReader<BufReader<File>> =
-            IndexedReader::from_path_with_additional_threads(o, threads - 1).map_err(|e| Error::new(e.kind(), format!("Failed to read GHB/GHI file: {}", e))).unwrap();
+            IndexedReader::from_path_with_additional_threads(o, threads - 1)
+                .map_err(|e| Error::new(e.kind(), format!("Failed to read GHB/GHI file: {}", e)))
+                .unwrap();
         let mut ranges: Vec<String> = vec![];
         if let Some(bed_range) = matches.value_of("bed-range") {
             let mut reader = bed::Reader::from_file(bed_range)?;

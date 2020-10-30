@@ -343,6 +343,20 @@ fn main() {
                         .default_value("HP")
                         .about("Colored by specified tags on read alignments"),
                 )
+                .arg(
+                    Arg::new("separated-by-tag")
+                        .short('j')
+                        .takes_value(true)
+                        .default_value("HP")
+                        .about("Separated tracks by specified tags on read alignments"),
+                )
+                .arg(
+                    Arg::new("separated-by-tag-tracks")
+                        .short('k')
+                        .takes_value(true)
+                        .default_value("3")
+                        .about("The maximal number of tracks by specified tags on read alignments"),
+                )
                 .arg(Arg::new("x").short('x').takes_value(true).about("The width of image"))
                 .arg(Arg::new("y").short('y').takes_value(true).about("The height of each read alignment"))
                 .arg(Arg::new("web").short('w').takes_value(true).about("Serve the web server"))
