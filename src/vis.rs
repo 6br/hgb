@@ -1418,9 +1418,9 @@ where
 
         if freq_len > 0 {
             let coverages = coverage.split_evenly((freq_len, 1));
-            for (i, &sample_sequential_id) in freq_len_ids.iter().enumerate() {
+            for (i, &sample_sequential_id) in freq_len_ids.iter().rev().enumerate() {
                 //}
-                //for (i, (sample_sequential_id, values)) in frequency.iter().enumerate() {
+                //for (i, (sample_sequential_id, values)) in frequency.iter().rev().enumerate() {
                 let idx = *sample_sequential_id as usize;
                 /*let y_max = match max_coverage {
                     Some(a) => a,
