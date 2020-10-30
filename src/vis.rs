@@ -475,6 +475,14 @@ where
         .count(); // annotation.len();
     let prev_index = vis.iter().map(|a| a.prev_index).max().unwrap();
     let freq_len = vis.iter().map(|a| a.frequency.len()).max().unwrap();
+    let freq_len_ids = vis
+        .iter()
+        .map(|a| (a.frequency.len(), a.frequency.keys()))
+        .max_by_key(|t| t.0)
+        .unwrap()
+        .1
+        .collect::<Vec<_>>();
+
     let top_margin = if no_margin { 0 } else { 40 };
     let vis_len = vis.len();
     let y_max = match max_coverage {
@@ -1416,7 +1424,11 @@ where
                     Some(a) => a,
                     _ => values.iter().map(|t| t.1).max().unwrap_or(1),
                 };*/
-                let mut chart = ChartBuilder::on(&coverages[i])
+                let absolute_index = freq_len_ids
+                    .iter()
+                    .position(|x| x == &sample_sequential_id)
+                    .unwrap();
+                let mut chart = ChartBuilder::on(&coverages[absolute_index])
                     // Set the caption of the chart
                     //.caption(format!("{}", range), ("sans-serif", 20).into_font())
                     // Set the size of the label region
