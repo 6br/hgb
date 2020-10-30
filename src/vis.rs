@@ -1115,6 +1115,7 @@ where
                     //eprintln!("{:?}, {:?}, {:?} {:?}", range, udon_range, offset_in_pixels, window_range);
 
                     /* slice ribbon scaled */
+                    eprintln!("{:?} {:?} {:?} {:?} {:?}", window.len(), opt_len, offset_in_pixels, udon_range, record);
                     let mut ribbon = udon.decode_scaled(
                             &udon_range,
                             offset_in_pixels,
@@ -1407,8 +1408,8 @@ where
             end1.subsec_nanos() / 1_000_000
         );
 
-        if frequency.len() > 0 {
-            let coverages = coverage.split_evenly((frequency.len(), 1));
+        if freq_len > 0 {
+            let coverages = coverage.split_evenly((freq_len, 1));
             for (i, (sample_sequential_id, values)) in frequency.iter().rev().enumerate() {
                 let idx = *sample_sequential_id as usize;
                 /*let y_max = match max_coverage {
