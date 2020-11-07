@@ -314,7 +314,7 @@ fn main() {
                 .arg(Arg::new("neighbor").short('K').takes_value(true).about("Visualize specified base-pair neighbor of BED region"))
                 .arg(Arg::new("no-filter").short('f').about("Disable pre-filtering on loading BAM index (used for debugging)"))
                 .arg(Arg::new("no-cigar").short('c').about("Do not show cigar string"))
-                .arg(Arg::new("no-scale").short('S').about("Do not show y-axis scale"))
+                .arg(Arg::new("no-scale").short('S').about("Do not show y-axis scale and legends"))
                 .arg(Arg::new("no-packing").short('p').about("Disable read packing"))
                 .arg(Arg::new("no-legend").short('l').about("Hide legend"))
                 .arg(Arg::new("square").short('Q').about("Set square width (overwritten)"))
@@ -351,7 +351,7 @@ fn main() {
                         .about("Separated tracks by specified tags on read alignments"),
                 )
                 .arg(
-                    Arg::new("separated-by-tag-tracks")
+                    Arg::new("separated-by-tag-offset")
                         .short('k')
                         .takes_value(true)
                         .default_value("3")

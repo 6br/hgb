@@ -50,7 +50,7 @@ pub fn bam_vis(
     let separated_by_tag = matches.occurrences_of("separated-by-tag") != 0;
     let separated_by_tag_vec = matches.value_of("separated-by-tag");
     let separated_by_tag_offset = matches
-        .value_of("separated-by-tag-tracks")
+        .value_of("separated-by-tag-offset")
         .and_then(|a| a.parse::<usize>().ok());
     let bam_interval = if separated_by_tag {
         separated_by_tag_offset.unwrap()
@@ -311,7 +311,13 @@ pub fn bam_vis(
             ));
         }
         bam_record_vis_pre_calculate(matches, &args, precursor, threads, |idx| {
+            //            if separated_by_tag {
+            //                bam_files
+            //                    .get(idx / bam_interval)
+            //                    .and_then(|t| Some(format!("{}_{}", *t, idx % bam_interval).as_str()))
+            //            } else {
             bam_files.get(idx / bam_interval).and_then(|t| Some(*t))
+            //            }
         })?;
     }
     Ok(())
