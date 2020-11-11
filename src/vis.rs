@@ -546,7 +546,7 @@ where
         vec![]
     } else {
         //let x_axis_sum: u64 = vis.iter().map(|t| t.range.interval()).sum();
-        let x_axis_max: u64 = vis.iter().map(|t| t.range.interval()).sum();
+        let x_axis_max: u64 = vis.iter().map(|t| t.range.interval()).max();
         let x_axis = vis
             .iter()
             .map(|t| (t.range.interval() * 10 / x_axis_max) as usize)
