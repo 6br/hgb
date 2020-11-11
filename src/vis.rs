@@ -1121,7 +1121,7 @@ where
                     let record = bam;
                     let left_top = chart.as_coord_spec().translate(&(range.start-1, index));
                     let right_bottom = chart.as_coord_spec().translate(&(range.end+1, index + 1));
-
+                    eprintln!("{:?}, {:?}", left_top, right_bottom);
                     let opt_len = (right_bottom.0 - left_top.0) as usize;
 
                     let window = Range::<usize> {
