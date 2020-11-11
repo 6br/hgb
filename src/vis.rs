@@ -586,7 +586,7 @@ where
             annotation_count,
             top_margin + (prev_index as u32 + axis_count as u32 + annotation_count as u32 * 2) * y
         );
-        let y_area_size = if no_margin { 0 } else { 25 };
+        let y_area_size = if no_margin { if dynamic_partition{1}else{0} } else { 25 };
         let x_spec = if no_margin && range.end() - range.start() <= 5000 {
             range.start()..range.end()
         } else {
