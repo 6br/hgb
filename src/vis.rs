@@ -378,6 +378,7 @@ where
     let hide_alignment = matches.is_present("hide-alignment");
     let only_translocation = matches.is_present("only-translocation");
     let end_split = matches.is_present("end-split-callets");
+    let with_caption = matches.is_present("with-caption");
     let output_translocation = matches.is_present("output-translocation");
     let translocation_target = matches.value_of("translocation-target");
     let square = matches.is_present("square");
@@ -607,6 +608,20 @@ where
             }
         };
         let mut chart = if no_margin {
+            if with_caption {
+                ChartBuilder::on(&alignment)
+                // Set the caption of the chart
+                // Set the size of the label region
+                .caption(format!("{}", range), ("sans-serif", 20).into_font())
+                .y_label_area_size(y_area_size)
+                .top_x_label_area_size(x_scale / 2)
+                .x_label_area_size(x_scale / 2)
+                // Finally attach a coordinate on the drawing area and make a chart context
+                .build_ranged(
+                    x_spec.clone(),
+                    0..(1 + prev_index + axis_count + annotation_count * 2),
+                )?
+            } else {
             ChartBuilder::on(&alignment)
                 // Set the caption of the chart
                 // Set the size of the label region
@@ -618,6 +633,7 @@ where
                     x_spec.clone(),
                     0..(1 + prev_index + axis_count + annotation_count * 2),
                 )?
+            }
         } else {
             ChartBuilder::on(&alignment)
                 // Set the caption of the chart
