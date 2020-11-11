@@ -1158,7 +1158,7 @@ where
                     //eprintln!("{:?}, {:?}, {:?} {:?}", range, udon_range, offset_in_pixels, window_range);
 
                     /* slice ribbon scaled */
-                    //eprintln!("{:?} {:?} {:?} {:?} {:?}", window.len(), opt_len, offset_in_pixels, udon_range, record);
+                    eprintln!("{:?} {:?} {:?} {:?} {:?}", window.len(), opt_len, offset_in_pixels, udon_range, record);
                     let mut ribbon = udon.decode_scaled(
                             &udon_range,
                             offset_in_pixels,
