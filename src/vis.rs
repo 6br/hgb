@@ -542,6 +542,24 @@ where
         let y_axis: Vec<u32> = vec![];
         root.split_by_breakpoints(x_axis, y_axis)
     };
+    let n_x_labels = if !dynamic_partition {
+        vec![]
+    } else {
+        //let x_axis_sum: u64 = vis.iter().map(|t| t.range.interval()).sum();
+        let x_axis_max: u64 = vis.iter().map(|t| t.range.interval()).sum();
+        let x_axis = vis
+            .iter()
+            .map(|t| (t.range.interval() * 10 / x_axis_max) as usize)
+            .map(|t| if t >= 1 {t} else {1}) // At least 1
+            //.scan(0, |acc, x| {
+            //    *acc = *acc + x;
+            //    Some(*acc)
+            //})
+            .collect::<Vec<usize>>();
+        //x_axis.pop();
+        eprintln!("{:?}", x_axis);
+        x_axis
+    };
     //let areas_len = vis.len();
 
     for (index, area) in areas.iter().enumerate() {
@@ -614,11 +632,12 @@ where
                     0..(1 + prev_index + axis_count + annotation_count * 2),
                 )?
         };
+        let x_labels = n_x_labels.get(index).unwrap_or(&10); //if dynamic_partition {} else {10};
         // Then we can draw a mesh
         chart
             .configure_mesh()
             // We can customize the maximum number of labels allowed for each axis
-            //.x_labels(5)
+            .x_labels(*x_labels) // Default value is 10
             .disable_x_axis()
             //.x_labels(1)
             .x_label_offset(x_offset as u32)
