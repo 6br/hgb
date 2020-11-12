@@ -1121,7 +1121,7 @@ where
                     let record = bam;
                     let left_top = chart.as_coord_spec().translate(&(range.start, index)); // range.start - 1 is better?
                     let right_bottom = chart.as_coord_spec().translate(&(range.end+1, index + 1));
-                    eprintln!("{:?}, {:?}", left_top, right_bottom);
+                    //eprintln!("{:?}, {:?}", left_top, right_bottom);
                     let opt_len = (right_bottom.0 - left_top.0) as usize;
 
                     let window = Range::<usize> {
@@ -1158,7 +1158,7 @@ where
                     //eprintln!("{:?}, {:?}, {:?} {:?}", range, udon_range, offset_in_pixels, window_range);
 
                     /* slice ribbon scaled */
-                    eprintln!("{:?} {:?} {:?} {:?} {:?}", window.len(), opt_len, offset_in_pixels, udon_range, record);
+                    //eprintln!("{:?} {:?} {:?} {:?} {:?}", window.len(), opt_len, offset_in_pixels, udon_range, record);
                     let mut ribbon = udon.decode_scaled(
                             &udon_range,
                             offset_in_pixels,
