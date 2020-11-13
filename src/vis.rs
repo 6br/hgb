@@ -507,8 +507,29 @@ where
             }
         }*/
     };
+    let mut n_x_labels = if !dynamic_partition {
+        vec![]
+    } else {
+        //let x_axis_sum: u64 = vis.iter().map(|t| t.range.interval()).sum();
+        let x_axis_max: u64 = vis.iter().map(|t| t.range.interval()).max().unwrap();
+        let x_axis = vis
+            .iter()
+            .map(|t| (t.range.interval() * 10 / x_axis_max) as usize)
+            .map(|t| if t >= 1 {t} else {1}) // At least 1
+            //.scan(0, |acc, x| {
+            //    *acc = *acc + x;
+            //    Some(*acc)
+            //})
+            .collect::<Vec<usize>>();
+        //x_axis.pop();
+        eprintln!("{:?}", x_axis);
+        x_axis
+    };
     if let Some(val) = vis_index {
         vis = vec![vis[val].clone()];
+        if dynamic_partition {
+            n_x_labels = vec![n_x_labels[val].clone()];
+        }
     }
     let y_len = top_margin
         + (prev_index as u32 + axis_count as u32 + annotation_count as u32 * 2) * y
@@ -542,24 +563,6 @@ where
         eprintln!("{:?}", x_axis);
         let y_axis: Vec<u32> = vec![];
         root.split_by_breakpoints(x_axis, y_axis)
-    };
-    let n_x_labels = if !dynamic_partition {
-        vec![]
-    } else {
-        //let x_axis_sum: u64 = vis.iter().map(|t| t.range.interval()).sum();
-        let x_axis_max: u64 = vis.iter().map(|t| t.range.interval()).max().unwrap();
-        let x_axis = vis
-            .iter()
-            .map(|t| (t.range.interval() * 10 / x_axis_max) as usize)
-            .map(|t| if t >= 1 {t} else {1}) // At least 1
-            //.scan(0, |acc, x| {
-            //    *acc = *acc + x;
-            //    Some(*acc)
-            //})
-            .collect::<Vec<usize>>();
-        //x_axis.pop();
-        eprintln!("{:?}", x_axis);
-        x_axis
     };
     //let areas_len = vis.len();
 
@@ -951,7 +954,7 @@ where
                         if let Some(colored_by_str) = colored_by_tag_vec {
                             let tag: &[u8;2] = colored_by_str.as_bytes().try_into().expect("colored by tag with unexpected length: tag name must be two characters.");
                             if let Some(TagValue::Int(tag_id,_)) = bam.tags().get(tag) {
-                                Palette99::pick(tag_id as usize).mix(0.4)
+                                Palette99::pick(tag_id as usize).mix(0.45)
                             } else {
                                 DEF_COL.mix(0.8)
                             }
@@ -1194,7 +1197,7 @@ where
                         bars.push(bar);
                     }
                 }
-                else if !no_cigar && ! udon {
+                else if !no_cigar && !udon {
                     let mut prev_ref = bam.start() as u64 - 1;
                     let mut prev_pixel_ref = start + 1;
                     let left_top = chart.as_coord_spec().translate(&(start, index));
