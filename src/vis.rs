@@ -522,7 +522,7 @@ where
             //})
             .collect::<Vec<usize>>();
         //x_axis.pop();
-        eprintln!("{:?}", x_axis);
+        //eprintln!("{:?}", x_axis);
         x_axis
     };
     if let Some(val) = vis_index {
@@ -531,6 +531,7 @@ where
             n_x_labels = vec![n_x_labels[val].clone()];
         }
     }
+    eprintln("n_x_labels: {:?}", n_x_labels);
     let y_len = top_margin
         + (prev_index as u32 + axis_count as u32 + annotation_count as u32 * 2) * y
         + freq_len as u32 * freq_size;
