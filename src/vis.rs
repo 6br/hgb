@@ -525,7 +525,7 @@ where
         //eprintln!("{:?}", x_axis);
         x_axis
     };
-    eprintln!("n_x_labels: {:?}", n_x_labels);
+    //eprintln!("n_x_labels: {:?}", n_x_labels);
     if let Some(val) = vis_index {
         vis = vec![vis[val].clone()];
         if dynamic_partition {
