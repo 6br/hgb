@@ -1200,7 +1200,7 @@ where
                 }
                 else if !no_cigar && !udon {
                     let mut prev_ref = bam.start() as u64 - 1;
-                    let mut prev_pixel_ref = start;
+                    let mut prev_pixel_ref = start-1;
                     let left_top = chart.as_coord_spec().translate(&(start, index));
                     let right_bottom = chart.as_coord_spec().translate(&(end, index + 1));
                     let offset = if range.end() - range.start() == 1 {
@@ -1255,7 +1255,7 @@ where
                                                         
                                                         //let mut bar = Rectangle::new([(prev_ref , index), (prev_ref + 1, index + 1)], WHITE.filled());
                                                         //bar.set_margin(2, 2, 0, 0);
-                                                        //eprintln!("White: {:?}", [(prev_pixel_ref, index), (prev_ref, index + 1)]);
+                                                        eprintln!("White: {:?}", [(prev_pixel_ref, index), (prev_ref, index + 1)]);
                                                         //bars.push(bar);
                                                         color = Some(WHITE);
                                                     }
@@ -1327,6 +1327,7 @@ where
                                                         let record_nt =
                                                             entry.record_pos_nt().unwrap().1;
                                                         color = nt_color(record_nt as char);
+                                                        eprintln!("Mismatch: {:?}", [(prev_pixel_ref, index), (prev_ref, index + 1)]);
                                                         //snp_frequency.push((data.0, (record_nt, start, approximate_one_pixel)));
 
                                                         /*let mut bar =
@@ -1344,8 +1345,8 @@ where
                                             if let Some(color) = color {
                                                 let mut bar = Rectangle::new(
                                                     [
-                                                        (prev_pixel_ref as u64, index),
-                                                        (prev_ref as u64, index + 1),
+                                                        (prev_pixel_ref as u64+1, index),
+                                                        (prev_ref as u64+1, index + 1),
                                                     ],
                                                     color.filled(),
                                                 );
@@ -1366,17 +1367,6 @@ where
                                             prev_pixel_ref = k.0;
                                         }
                                     }
-                                    /*if let Some((record_pos, record_nt)) = entry.record_pos_nt() {
-                                        print!("{} {}", record_pos, record_nt as char);
-                                    } else {
-                                        print!("-");
-                                    }
-                                    print!(", ");
-                                    if let Some((ref_pos, ref_nt)) = entry.ref_pos_nt() {
-                                        println!("{} {}", ref_pos, ref_nt as char);
-                                    } else {
-                                        println!("-");
-                                    }*/
                                 }
                             }
                             _ => {
