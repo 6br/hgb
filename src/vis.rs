@@ -1255,7 +1255,7 @@ where
                                                         
                                                         //let mut bar = Rectangle::new([(prev_ref , index), (prev_ref + 1, index + 1)], WHITE.filled());
                                                         //bar.set_margin(2, 2, 0, 0);
-                                                        eprintln!("White: {:?}", [(prev_pixel_ref, index), (prev_ref, index + 1)]);
+                                                        //eprintln!("White: {:?}", [(prev_pixel_ref, index), (prev_ref, index + 1)]);
                                                         //bars.push(bar);
                                                         color = Some(WHITE);
                                                     }
