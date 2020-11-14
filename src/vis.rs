@@ -18,7 +18,7 @@ use std::ops::Range;
 use std::{collections::BTreeMap, fs::File, time::Instant};
 use udon::{Udon, UdonPalette, UdonScaler, UdonUtils};
 
-const PARBASE_THRESHOLD: u64 = 2;
+const PARBASE_THRESHOLD: u64 = 5;
 
 //Copied from
 trait RangeUtils
@@ -1125,7 +1125,7 @@ where
                     let record = bam;
                     let left_top = chart.as_coord_spec().translate(&(range.start, index)); // range.start - 1 is better?
                     let right_bottom = chart.as_coord_spec().translate(&(range.end+1, index + 1));
-                    //eprintln!("{:?}, {:?}", left_top, right_bottom);
+                    eprintln!("{:?}, {:?}", left_top, right_bottom);
                     let opt_len = (right_bottom.0 - left_top.0) as usize;
 
                     let window = Range::<usize> {
@@ -1162,7 +1162,7 @@ where
                     //eprintln!("{:?}, {:?}, {:?} {:?}", range, udon_range, offset_in_pixels, window_range);
 
                     /* slice ribbon scaled */
-                    //eprintln!("{:?} {:?} {:?} {:?} {:?}", window.len(), opt_len, offset_in_pixels, udon_range, record);
+                    eprintln!("{:?} {:?} {:?} {:?} {:?}", window.len(), opt_len, offset_in_pixels, udon_range, record);
                     let mut ribbon = udon.decode_scaled(
                             &udon_range,
                             offset_in_pixels,
@@ -1200,11 +1200,11 @@ where
                 }
                 else if !no_cigar && !udon {
                     let mut prev_ref = bam.start() as u64 - 1;
-                    let mut prev_pixel_ref = start + 1;
+                    let mut prev_pixel_ref = start;
                     let left_top = chart.as_coord_spec().translate(&(start, index));
                     let right_bottom = chart.as_coord_spec().translate(&(end, index + 1));
                     let offset = if range.end() - range.start() == 1 {
-                        0
+                        1 // 0
                     } else {
                         1
                     };
@@ -1215,6 +1215,8 @@ where
                                 for i in left_top.0 + 1..right_bottom.0 + offset {
                                     let k =
                                         chart.as_coord_spec().reverse_translate((i, left_top.1));
+                                    //eprintln!("{:?} {:?}", i,k);
+
                                     let mut color = None;
                                     let mut stick_out = false;
                                     if let Some(k) = k {
@@ -1245,17 +1247,19 @@ where
                                                         stick_out = true;
                                                     }
                                                 } else if entry.is_deletion() {
+                                                    prev_ref = entry.ref_pos_nt().unwrap().0 as u64;
                                                     if prev_ref > range.end() as u64 {
                                                         break;
                                                     }
                                                     if prev_ref >= range.start() as u64 {
+                                                        
                                                         //let mut bar = Rectangle::new([(prev_ref , index), (prev_ref + 1, index + 1)], WHITE.filled());
                                                         //bar.set_margin(2, 2, 0, 0);
-                                                        //eprintln!("{:?}", [(prev_ref, index), (prev_ref + 1, index + 1)]);
+                                                        eprintln!("White: {:?}", [(prev_pixel_ref, index), (prev_ref, index + 1)]);
                                                         //bars.push(bar);
                                                         color = Some(WHITE);
                                                     }
-                                                    prev_ref = entry.ref_pos_nt().unwrap().0 as u64;
+        
                                                 } else if entry.is_seq_match() {
                                                     prev_ref = entry.ref_pos_nt().unwrap().0 as u64;
                                                     if prev_ref > range.end() as u64 {
@@ -1356,7 +1360,7 @@ where
                                                 [
                                                     (prev_pixel_ref, index),
                                                     (prev_ref, index + 1)
-                                                ]*/
+                                                ]);*/
                                                 bars.push(bar);
                                             }
                                             prev_pixel_ref = k.0;
