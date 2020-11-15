@@ -1255,7 +1255,7 @@ where
                                                         
                                                         //let mut bar = Rectangle::new([(prev_ref , index), (prev_ref + 1, index + 1)], WHITE.filled());
                                                         //bar.set_margin(2, 2, 0, 0);
-                                                        eprintln!("White: {:?}", [(prev_pixel_ref, index), (prev_ref, index + 1)]);
+                                                        //eprintln!("White: {:?}", [(prev_pixel_ref, index), (prev_ref, index + 1)]);
                                                         //bars.push(bar);
                                                         color = Some(WHITE);
                                                     }
@@ -1327,7 +1327,7 @@ where
                                                         let record_nt =
                                                             entry.record_pos_nt().unwrap().1;
                                                         color = nt_color(record_nt as char);
-                                                        eprintln!("Mismatch: {:?}", [(prev_pixel_ref, index), (prev_ref, index + 1)]);
+                                                        //eprintln!("Mismatch: {:?}", [(prev_pixel_ref, index), (prev_ref, index + 1)]);
                                                         //snp_frequency.push((data.0, (record_nt, start, approximate_one_pixel)));
 
                                                         /*let mut bar =
