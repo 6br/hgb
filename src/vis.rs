@@ -515,7 +515,7 @@ where
         let x_axis = vis
             .iter()
             .map(|t| (t.range.interval() * 10 / x_axis_max) as usize)
-            .map(|t| if t >= 1 {t} else {1}) // At least 1
+            .map(|t| if t >= 1 { t } else { 1 }) // At least 1
             //.scan(0, |acc, x| {
             //    *acc = *acc + x;
             //    Some(*acc)
@@ -591,7 +591,15 @@ where
             annotation_count,
             top_margin + (prev_index as u32 + axis_count as u32 + annotation_count as u32 * 2) * y
         );
-        let y_area_size = if no_margin { if dynamic_partition{1}else{0} } else { 25 };
+        let y_area_size = if no_margin {
+            if dynamic_partition {
+                1
+            } else {
+                0
+            }
+        } else {
+            25
+        };
         let x_spec = if no_margin && range.end() - range.start() <= 5000 {
             range.start()..range.end()
         } else {
@@ -614,29 +622,29 @@ where
         let mut chart = if no_margin {
             if with_caption {
                 ChartBuilder::on(&alignment)
-                // Set the caption of the chart
-                // Set the size of the label region
-                .caption(format!("{}", range), ("sans-serif", 20).into_font())
-                .y_label_area_size(y_area_size)
-                .top_x_label_area_size(x_scale / 2)
-                .x_label_area_size(x_scale / 2)
-                // Finally attach a coordinate on the drawing area and make a chart context
-                .build_ranged(
-                    x_spec.clone(),
-                    0..(1 + prev_index + axis_count + annotation_count * 2),
-                )?
+                    // Set the caption of the chart
+                    // Set the size of the label region
+                    .caption(format!("{}", range), ("sans-serif", 20).into_font())
+                    .y_label_area_size(y_area_size)
+                    .top_x_label_area_size(x_scale / 2)
+                    .x_label_area_size(x_scale / 2)
+                    // Finally attach a coordinate on the drawing area and make a chart context
+                    .build_ranged(
+                        x_spec.clone(),
+                        0..(1 + prev_index + axis_count + annotation_count * 2),
+                    )?
             } else {
-            ChartBuilder::on(&alignment)
-                // Set the caption of the chart
-                // Set the size of the label region
-                .y_label_area_size(y_area_size)
-                .top_x_label_area_size(x_scale / 2)
-                .x_label_area_size(x_scale / 2)
-                // Finally attach a coordinate on the drawing area and make a chart context
-                .build_ranged(
-                    x_spec.clone(),
-                    0..(1 + prev_index + axis_count + annotation_count * 2),
-                )?
+                ChartBuilder::on(&alignment)
+                    // Set the caption of the chart
+                    // Set the size of the label region
+                    .y_label_area_size(y_area_size)
+                    .top_x_label_area_size(x_scale / 2)
+                    .x_label_area_size(x_scale / 2)
+                    // Finally attach a coordinate on the drawing area and make a chart context
+                    .build_ranged(
+                        x_spec.clone(),
+                        0..(1 + prev_index + axis_count + annotation_count * 2),
+                    )?
             }
         } else {
             ChartBuilder::on(&alignment)
@@ -653,7 +661,7 @@ where
                 )?
         };
         let x_labels = n_x_labels.get(index).unwrap_or(&10); //if dynamic_partition {} else {10};
-        // Then we can draw a mesh
+                                                             // Then we can draw a mesh
         chart
             .configure_mesh()
             // We can customize the maximum number of labels allowed for each axis

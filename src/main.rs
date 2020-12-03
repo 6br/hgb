@@ -4,7 +4,10 @@ extern crate serde_derive;
 pub mod subcommands;
 #[cfg(feature = "web")]
 pub mod server;
+#[cfg(feature = "web")]
 pub mod buffered_server;
+#[cfg(feature = "web")]
+pub mod rest_server;
 
 use clap::{App, AppSettings, Arg};
 use env_logger;
@@ -361,6 +364,7 @@ fn main() {
                 .arg(Arg::new("y").short('y').takes_value(true).about("The height of each read alignment"))
                 .arg(Arg::new("web").short('w').takes_value(true).about("Serve the web server"))
                 .arg(Arg::new("whole-chromosome").short('W').about("Pretend as if the prefetch range is the whole chromosome"))
+                .arg(Arg::new("rest").short('>').about("Serve the web server with accepting any parameter"))
                 .arg(Arg::new("dynamic-partition").short('D').about("Divide multiple genomic range with dynamic width"))
                 .arg(
                     Arg::new("format")

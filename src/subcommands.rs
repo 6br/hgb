@@ -6,6 +6,8 @@ use genomic_range::StringRegion;
 #[cfg(feature = "web")]
 use crate::buffered_server;
 #[cfg(feature = "web")]
+use crate::rest_server;
+#[cfg(feature = "web")]
 use crate::server::server;
 
 use ghi::bed;
@@ -897,7 +899,18 @@ pub fn vis_query(
 
             let range = Region::convert(&prefetch_range, closure).unwrap();
             let viewer = reader.fetch(&range).unwrap();
-            if matches.is_present("whole-chromosome") {
+            if matches.is_present("whole-chromosome") && matches.is_present("web") {
+                let buffer: ChromosomeBuffer = ChromosomeBuffer::new(reader, matches.clone());
+                buffered_server::server(
+                    matches.clone(),
+                    string_range,
+                    prefetch_range,
+                    args,
+                    buffer,
+                    threads,
+                )?;
+                return Ok(());
+            } else if matches.is_present("rest") {
                 let buffer: ChromosomeBuffer = ChromosomeBuffer::new(reader, matches.clone());
                 buffered_server::server(
                     matches.clone(),
