@@ -15,7 +15,7 @@ use subcommands::*;
 use std::env;
 
 fn main() {
-    std::env::set_var("RUST_LOG", "actix_web=info");
+//    env::set_var("RUST_LOG", "actix_web=info");
     env_logger::init();
     let app = App::new("A hybrid genomic data visualization tool")
         // .setting(AppSettings::ArgsNegateSubcommands)

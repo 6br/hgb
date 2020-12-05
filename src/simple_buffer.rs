@@ -7,6 +7,7 @@ use bam::{record::tags::TagValue, Record};
 use clap::ArgMatches;
 use genomic_range::StringRegion;
 use itertools::Itertools;
+use log::debug;
 use std::{
     collections::{BTreeMap, BTreeSet, HashMap},
     fs::File,
@@ -84,19 +85,19 @@ impl ChromosomeBuffer {
     fn size_limit(&self) -> bool {
         //std::mem::size_of(self)
         //This is a very heuristic way.
-        eprintln!("Current bin size: {}", self.bins.keys().len());
+        debug!("Current bin size: {}", self.bins.keys().len());
         self.bins.keys().len() > 5000
     }
 
     fn size_limit_local(&self, bins: &BTreeSet<u64>) -> bool {
         //std::mem::size_of(self)
         //This is a very heuristic way.
-        eprintln!("Current local bin size: {}", bins.iter().len());
+        debug!("Current local bin size: {}", bins.iter().len());
         bins.iter().len() > 2000
     }
 
     pub fn add(&mut self, range: &StringRegion) -> (bool, Vec<(u64, Record)>, BTreeSet<u64>) {
-        eprintln!("Add: {}", range);
+        debug!("Add: {}", range);
         let closure = |x: &str| self.reader.reference_id(x);
         let reference_name = &range.path;
         let range = Region::convert(&range, closure).unwrap();
@@ -248,11 +249,10 @@ impl ChromosomeBuffer {
         range: &StringRegion,
         local_bins: &mut BTreeSet<u64>,
     ) -> (bool, Vec<(u64, Record)>) {
-        eprintln!("Add: {}", range);
+        debug!("Add: {}", range);
         let closure = |x: &str| self.reader.reference_id(x);
         let reference_name = &range.path;
         let range = Region::convert(&range, closure).unwrap();
-        //eprintln!("1");
         let mut reload_flag = false;
         // Check if overlap, and drop them if the chrom_id is different.
         if self.size_limit_local(local_bins) {
@@ -356,11 +356,11 @@ impl ChromosomeBuffer {
         let closure = |x: &str| self.reader.reference_id(x);
         let _reference_name = &string_range.path;
         let range = Region::convert(string_range, closure).unwrap();
-        eprintln!("List len: {}", list.len());
+        debug!("List len: {}", list.len());
 
         if !self.included(range.clone()) {
             let (reset_flag, new_list, bins) = self.add(string_range);
-            eprintln!("Loaded len: {}", new_list.len());
+            debug!("Loaded len: {}", new_list.len());
             if reset_flag {
                 std::mem::replace(list, new_list);
                 std::mem::replace(list_btree, bins);
@@ -368,7 +368,7 @@ impl ChromosomeBuffer {
                 list.extend(new_list);
                 list_btree.extend(bins)
             }
-            eprintln!("After load list len: {}", list.len());
+            debug!("After load list len: {}", list.len());
             //ann.extend(new_ann);
         }
 
@@ -379,7 +379,7 @@ impl ChromosomeBuffer {
             } else {
                 list.extend(new_list);
             }
-            eprintln!("After load list len: {}", list.len());
+            debug!("After load list len: {}", list.len());
         }
     }
     pub fn vis(

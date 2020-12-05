@@ -464,7 +464,7 @@ pub async fn server(matches: ArgMatches, range: StringRegion, prefetch_range: St
     };
     let params = Param{x_scale, max_y:x, prefetch_max: all, max_zoom, min_zoom, criteria:diff, y_freq: freq_size, x, y, cache_dir};
     eprintln!("{:?}, threads: {}, zoom: {}", params, threads, log_2(x_width as i64) + 1);
-    println!("Server is running on {}", bind);
+    println!("Buffered Server is running on {}", bind);
     // Create some global state prior to building the server
     //#[allow(clippy::mutex_atomic)] // it's intentional.
     //let counter1 = web::Data::new(Mutex::new((matches.clone(), range, list, annotation, freq)));
@@ -488,7 +488,8 @@ pub async fn server(matches: ArgMatches, range: StringRegion, prefetch_range: St
         .route("openseadragon.min.js.map", web::get().to(get_js_map))
         .route("openseadragon-scalebar.js", web::get().to(get_js_aux))
         .route("genome.dzi", web::get().to(get_dzi))
-        .route("/{zoom:.*}/{filename:.*}_0.{format:.*}", web::get().to(index)).service(actix_files::Files::new("/images", "static/images").show_files_listing()).wrap(Logger::default()).wrap(
+        .route("/{zoom:.*}/{filename:.*}_0.{format:.*}", web::get().to(index))
+        .service(actix_files::Files::new("/images", "static/images").show_files_listing()).wrap(Logger::default()).wrap(
             Cors::new().supports_credentials() /*allowed_origin("*").allowed_methods(vec!["GET", "POST"])
             .allowed_headers(vec![http::header::AUTHORIZATION, http::header::ACCEPT])
             .allowed_header(http::header::CONTENT_TYPE)

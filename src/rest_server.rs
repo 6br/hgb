@@ -4,14 +4,13 @@ use actix_files::NamedFile;
 use rand::Rng;
 use std::time::Instant;
 use actix_cors::Cors;
-use actix_web::http::header::{ContentDisposition, DispositionType};
-use actix_web::{Result, web, error, middleware::Logger};
+use actix_web::{HttpResponse, http::header::{ContentDisposition, DispositionType}};
+use actix_web::{Result, web, middleware::Logger};
 use std::{sync::{RwLock},  collections::{BTreeSet}, fs};
-use clap::{App,  ArgMatches, Arg, AppSettings};
+use clap::{App, AppSettings, Arg, ArgMatches, Error};
 use ghi::{vis::bam_record_vis, Vis, simple_buffer::ChromosomeBuffer, VisRef};
 use genomic_range::StringRegion;
 use bam::Record;
-use itertools::Itertools;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 use serde::{Deserialize};
@@ -38,13 +37,18 @@ pub struct RequestBody {
     prefetch: bool
 }
 
+#[derive(Serialize)]
+pub struct ResponseBody {
+    message:String
+}
+
 fn calculate_hash<T: Hash>(t: &T) -> u64 {
     let mut s = DefaultHasher::new();
     t.hash(&mut s);
     s.finish()
 }
 
-fn get_matches_from(args: Vec<String>) -> ArgMatches {
+fn get_matches_from(args: Vec<String>) -> Result<ArgMatches, Error> {
     let app = App::new("vis")
     .setting(AppSettings::AllArgsOverrideSelf)
     .about("Visualize GHB and other genomic data")
@@ -116,6 +120,7 @@ fn get_matches_from(args: Vec<String>) -> ArgMatches {
             .about("Colored by specified motif (for bisulfite sequencing)"),
     )
     .arg(Arg::new("meaningless").short('Q').about("Set square width (overwritten)"))
+    .arg(Arg::new("meaningless2").short('>').about("Serve the web server with accepting any parameter"))
     .arg(Arg::new("quality").short('q').about("Display reads by quality value"))
     .arg(Arg::new("x").short('x').takes_value(true).about("The width of image"))
     .arg(Arg::new("y").short('y').takes_value(true).about("The height of each read alignment"))
@@ -153,6 +158,9 @@ fn get_matches_from(args: Vec<String>) -> ArgMatches {
     )
     .arg(Arg::new("split-alignment").short('s').about("Display split alignments in the same "))
     .arg(Arg::new("only-split-alignment").short('u').about("Display only split alignments or mate-paired reads on alignment track"))
+    .arg(Arg::new("exclude-split-alignment").short('3').about("Display only NOT split alignments or mate-paired reads on alignment track"))
+    .arg(Arg::new("full-length").short('4').about("Display only full-length match reads against prefetch range."))
+    .arg(Arg::new("udon").short('U').about("Colored by udon library"))
     .arg(
         Arg::new("sort-by-name")
             .short('N')
@@ -215,37 +223,42 @@ fn get_matches_from(args: Vec<String>) -> ArgMatches {
             .about("(Optional) GHB format to display both alignment and annotation tracks")
             .index(1),
     );
-    app.get_matches_from(args)
+    app.try_get_matches_from(args)
 }
 
-fn id_to_range(range: &StringRegion, args: &Vec<String>, params: String, path_string: String) -> (ArgMatches, StringRegion) {
+fn id_to_range(range: &StringRegion, args: &Vec<String>, params: String, path_string: String) -> Result<(ArgMatches, StringRegion), Error> {
     let a: Vec<String> = params.split(" ").map(|t| t.to_string()).collect();
     let b: Vec<String> = vec!["-o".to_string(), path_string];
     let mut args = args.clone();
-    args.extend(a);
     args.extend(b);
+    args.extend(a);
     args.remove(0);
     args = args.into_iter().skip_while(|t| t != "vis").collect();
-    let matches = get_matches_from(args);
+    eprintln!("{:?}", args.join(" "));
+    let matches = get_matches_from(args)?;
     let ranges_str = matches.values_of("range").unwrap();
     let range = {
         let ranges_tmp: Vec<String> = ranges_str.into_iter().map(|t| t.to_string()).collect();
-        StringRegion::new(&ranges_tmp[0]).unwrap()
+        StringRegion::new(&ranges_tmp[ranges_tmp.len()-1]).unwrap()
     };
-    //eprintln!("{:?} {:?}", args.join(" "), range);
-    (matches, range)
+    eprintln!("{:?}", range);
+    Ok((matches, range))
 }
-fn id_to_range_ab_initio(params: String, path_string: String) -> (ArgMatches, Vec<String>) {
-    let mut args: Vec<String> = params.split(" ").map(|t| t.to_string()).collect();
+
+fn id_to_range_ab_initio(params: String, path_string: String) -> Result<(ArgMatches, Vec<String>), Error> {
+    let a: Vec<String> = params.split(" ").map(|t| t.to_string()).collect();
     let b: Vec<String> = vec!["-o".to_string(), path_string];
+    let mut args = vec!["vis".to_string()];
+    args.extend(a);
     args.extend(b);
-    let matches = get_matches_from(args.clone());
-    (matches, args)
+    eprintln!("{:?}", args);
+    let matches = get_matches_from(args.clone())?;
+    eprintln!("{:?}",  matches.value_of("INPUT") );
+    Ok((matches, args))
 }
 
 async fn index(item: web::Data<RwLock<Item>>, vis: web::Data<RwLock<Vis>>, list: web::Data<RwLock<Vec<(u64, Record)>>>, list_btree: web::Data<RwLock<BTreeSet<u64>>>, buffer: web::Data<RwLock<ChromosomeBuffer>>, request_body: web::Json<RequestBody>) -> Result<NamedFile> {
     let start = Instant::now();
-
     let format = &request_body.format.clone();
     let params = &request_body.params.clone();
     let prefetch = &request_body.prefetch.clone();
@@ -254,6 +267,7 @@ async fn index(item: web::Data<RwLock<Item>>, vis: web::Data<RwLock<Vis>>, list:
     let hash: u64 = calculate_hash(&request_body.into_inner());
     let args = &data.args;
     let path_string = format!("{}/{}.{}", cache_dir, hash, format);
+    eprintln!("{} {} {:?}", format, params, path_string);
 
     match NamedFile::open(path_string.clone()) {
         Ok(file) => Ok(file
@@ -277,7 +291,9 @@ async fn index(item: web::Data<RwLock<Item>>, vis: web::Data<RwLock<Vis>>, list:
                     end1.subsec_nanos() / 1_000_000
                 );
 
-                let (matches, string_range) = id_to_range(&data.range, args, params.to_string(), path_string.clone());
+                let (matches, string_range) = id_to_range(&data.range, args, params.to_string(), path_string.clone()).map_err(|t| HttpResponse::BadRequest().json(ResponseBody {
+                    message: String::from("parameter error"),
+                }))?;
                 let end2 = start.elapsed();
                 eprintln!(
                     "id_to_range: {}.{:03} sec.",
@@ -330,7 +346,9 @@ async fn index(item: web::Data<RwLock<Item>>, vis: web::Data<RwLock<Vis>>, list:
                 // bam_vis(matches, 1);
             } else {
                 //Visualization for unprefetch data. 
-                let (matches, args) = id_to_range_ab_initio(params.to_string(), path_string.clone());
+                let (matches, args) = id_to_range_ab_initio(params.to_string(), path_string.clone()).map_err(|t| HttpResponse::BadRequest().json(ResponseBody {
+                    message: format!("parameter error: {}", t)//String::from("parameter error: " + t.description()),
+                }))?;
                 let threads = matches
                     .value_of("threads")
                     .and_then(|t| t.parse::<u16>().ok())
@@ -377,7 +395,7 @@ pub async fn server(matches: ArgMatches, range: StringRegion, prefetch_range: St
         Err(e) => panic!("{}: {}", &cache_dir, e),
         Ok(_) => {},
     };
-    println!("Server is running on {}", bind);
+    println!("REST Server is running on {}", bind);
     // Create some global state prior to building the server
     //#[allow(clippy::mutex_atomic)] // it's intentional.
     //let counter1 = web::Data::new(Mutex::new((matches.clone(), range, list, annotation, freq)));
@@ -397,7 +415,8 @@ pub async fn server(matches: ArgMatches, range: StringRegion, prefetch_range: St
         //let buffer = buffer.clone();
         actix_web::App::new().data(list).data(list_btree)/*.app_data(web::Data::new(RwLock::new(list.clone()))).*/.app_data(counter.clone()).data(vis) //.app_data(vis.clone())
         .app_data(buffer.clone())
-        .route("/", web::post().to(index)).service(actix_files::Files::new("/images", "static/images").show_files_listing()).wrap(Logger::default()).wrap(
+        .route("/", web::post().to(index))
+        .wrap(Logger::default()).wrap(
             Cors::new().supports_credentials() /*allowed_origin("*").allowed_methods(vec!["GET", "POST"])
             .allowed_headers(vec![http::header::AUTHORIZATION, http::header::ACCEPT])
             .allowed_header(http::header::CONTENT_TYPE)

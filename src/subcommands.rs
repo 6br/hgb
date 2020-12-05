@@ -899,9 +899,9 @@ pub fn vis_query(
 
             let range = Region::convert(&prefetch_range, closure).unwrap();
             let viewer = reader.fetch(&range).unwrap();
-            if matches.is_present("whole-chromosome") && matches.is_present("web") {
+            if matches.is_present("rest") {
                 let buffer: ChromosomeBuffer = ChromosomeBuffer::new(reader, matches.clone());
-                buffered_server::server(
+                rest_server::server(
                     matches.clone(),
                     string_range,
                     prefetch_range,
@@ -910,7 +910,7 @@ pub fn vis_query(
                     threads,
                 )?;
                 return Ok(());
-            } else if matches.is_present("rest") {
+            } else if matches.is_present("whole-chromosome") && matches.is_present("web") {
                 let buffer: ChromosomeBuffer = ChromosomeBuffer::new(reader, matches.clone());
                 buffered_server::server(
                     matches.clone(),
