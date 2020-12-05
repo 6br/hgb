@@ -417,11 +417,10 @@ pub async fn server(matches: ArgMatches, range: StringRegion, prefetch_range: St
         .app_data(buffer.clone())
         .route("/", web::post().to(index))
         .wrap(Logger::default()).wrap(
-            Cors::new().supports_credentials() /*allowed_origin("*").allowed_methods(vec!["GET", "POST"])
+            Cors::default().supports_credentials() /*allowed_origin("*").allowed_methods(vec!["GET", "POST"])
             .allowed_headers(vec![http::header::AUTHORIZATION, http::header::ACCEPT])
             .allowed_header(http::header::CONTENT_TYPE)
             .max_age(3600)*/
-            .finish()
         )
     })
     .bind(bind)?
