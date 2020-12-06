@@ -282,7 +282,7 @@ where
                 .x_label_area_size(x_scale)
                 .y_label_area_size(y_area_size)
                 // Finally attach a coordinate on the drawing area and make a chart context
-                .build_ranged(x_spec.clone(), 0..y_max)?;
+                .build_cartesian_2d(x_spec.clone(), 0..y_max)?;
             chart
                 .configure_mesh()
                 // We can customize the maximum number of labels allowed for each axis
@@ -629,7 +629,7 @@ where
                     .top_x_label_area_size(x_scale / 2)
                     .x_label_area_size(x_scale / 2)
                     // Finally attach a coordinate on the drawing area and make a chart context
-                    .build_ranged(
+                    .build_cartesian_2d(
                         x_spec.clone(),
                         0..(1 + prev_index + axis_count + annotation_count * 2),
                     )?
@@ -641,7 +641,7 @@ where
                     .top_x_label_area_size(x_scale / 2)
                     .x_label_area_size(x_scale / 2)
                     // Finally attach a coordinate on the drawing area and make a chart context
-                    .build_ranged(
+                    .build_cartesian_2d(
                         x_spec.clone(),
                         0..(1 + prev_index + axis_count + annotation_count * 2),
                     )?
@@ -655,7 +655,7 @@ where
                 .x_label_area_size(x_scale / 2)
                 .y_label_area_size(y_area_size)
                 // Finally attach a coordinate on the drawing area and make a chart context
-                .build_ranged(
+                .build_cartesian_2d(
                     (range.start() - 1)..(range.end() + 1),
                     0..(1 + prev_index + axis_count + annotation_count * 2),
                 )?
@@ -1478,7 +1478,7 @@ where
                     .x_label_area_size(0)
                     .y_label_area_size(y_area_size)
                     // Finally attach a coordinate on the drawing area and make a chart context
-                    .build_ranged(x_spec.clone(), 0..y_max)?;
+                    .build_cartesian_2d(x_spec.clone(), 0..y_max)?;
                 chart
                     .configure_mesh()
                     // We can customize the maximum number of labels allowed for each axis
