@@ -1,6 +1,6 @@
 use crate::{VisOrig, VisPreset, VisRef};
 use bam::record::{
-    tags::{IntegerType, StringType, TagValue},
+    tags::{StringType, TagValue},
     Cigar,
 };
 use bam::{Record, RecordReader};
@@ -364,7 +364,7 @@ where
     let output = matches.value_of("output").unwrap();
     let no_cigar = matches.is_present("no-cigar");
     let udon = matches.is_present("udon");
-    let packing = !matches.is_present("no-packing");
+    let _packing = !matches.is_present("no-packing");
     let quality = matches.is_present("quality");
     let legend = !matches.is_present("no-legend");
     let insertion = !matches.is_present("no-insertion");
@@ -380,7 +380,7 @@ where
     let end_split = matches.is_present("end-split-callets");
     let with_caption = matches.is_present("with-caption");
     let output_translocation = matches.is_present("output-translocation");
-    let translocation_target = matches.value_of("translocation-target");
+    let _translocation_target = matches.value_of("translocation-target");
     let square = matches.is_present("square");
     let x_as_range = matches.is_present("x-as-range");
     let dynamic_partition = matches.is_present("dynamic-partition");

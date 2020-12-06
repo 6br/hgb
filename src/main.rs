@@ -548,6 +548,6 @@ fn main() {
             true => vis_query(matches, args, threads).unwrap(),
             false => bam_vis(matches, args, threads).unwrap(),
         }
-    } else if let Some(ref matches) = matches.subcommand_matches("server") {
+    } else if let Some(ref _matches) = matches.subcommand_matches("server") {
     }
 }

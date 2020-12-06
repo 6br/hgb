@@ -774,11 +774,7 @@ pub fn bam_query(matches: &ArgMatches, threads: u16) -> () {
         }
     }
 }
-pub fn bench_query(matches: &ArgMatches, args: Vec<String>, threads: u16) {
-    let min_read_len = matches
-        .value_of("min-read-length")
-        .and_then(|a| a.parse::<u32>().ok())
-        .unwrap_or(0u32);
+pub fn bench_query(matches: &ArgMatches, _args: Vec<String>, threads: u16) {
     if let Some(o) = matches.value_of("INPUT") {
         let mut reader: IndexedReader<BufReader<File>> =
             IndexedReader::from_path_with_additional_threads(o, threads - 1).unwrap();
@@ -810,7 +806,7 @@ pub fn bench_query(matches: &ArgMatches, args: Vec<String>, threads: u16) {
                 let _reference_name = &string_range.path;
 
                 let range = Region::convert(&prefetch_range, closure).unwrap();
-                let viewer = reader.fetch(&range).unwrap();
+                let _viewer = reader.fetch(&range).unwrap();
 
                 let mut buffer: ChromosomeBuffer = ChromosomeBuffer::new(reader, matches.clone());
                 let mut list = vec![];
@@ -1723,7 +1719,7 @@ where
                 // eprintln!("{}", list.len());
                 //new_list.sort_by_key(|elt| elt.0);
                 new_list.iter().group_by(|elt| elt.0).into_iter().for_each(
-                    |(sample_sequential_id, sample)| {
+                    |(_sample_sequential_id, sample)| {
                         let count = sample.count();
                         prev_index += count;
                         // compressed_list.push(prev_index);

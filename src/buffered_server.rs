@@ -11,6 +11,7 @@ use ghi::{vis::bam_record_vis, Vis, simple_buffer::ChromosomeBuffer, VisRef};
 use genomic_range::StringRegion;
 use bam::Record;
 use itertools::Itertools;
+use crate::server::{DZI, Size, Image};
 
 fn id_to_range<'a>(range: &StringRegion, args: &Vec<String>, zoom: u64, path: u64, param: &Param, path_string: String) -> (ArgMatches, StringRegion) {
     let app = App::new("vis")
@@ -270,7 +271,7 @@ async fn index(item: web::Data<RwLock<Item>>, vis: web::Data<RwLock<Vis>>, list:
             if min_zoom || zoom > max_zoom as u64 {
                 return Err(error::ErrorBadRequest("zoom level is not appropriate"));
             }
-            fs::create_dir( format!("{}/{}", cache_dir, zoom)); //error is permitted.
+            fs::create_dir_all( format!("{}/{}", cache_dir, zoom))?; //error is permitted.
             let end1 = start.elapsed();
             eprintln!(
                 "create dir: {}.{:03} sec.",
@@ -352,26 +353,7 @@ impl Item {
         Item{range, args:args,params:params,dzi:dzi}
     }
 }
-#[derive(Debug, Serialize, Deserialize, Clone)]
-struct DZI {
-    Image: Image,
-}
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
-struct Image {
-    xmlns: String,
-    Url: String,
-    Format: String,
-    Overlap: String,
-    TileSize: String,
-    Size: Size,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-struct Size {
-    Height: String,
-    Width: String
-}
 #[derive(Debug, Clone)]
 pub struct Param {
     x_scale: u32,
@@ -440,9 +422,9 @@ pub async fn server(matches: ArgMatches, range: StringRegion, prefetch_range: St
     let diff = range.end - range.start;
     let all = if matches.is_present("whole-chromosome") {vis.prefetch_max} else {prefetch_range.end - prefetch_range.start};
     let view_range = if matches.is_present("whole-chromosome") {StringRegion{path: prefetch_range.path, start: 1, end: vis.prefetch_max}} else {prefetch_range}; 
-    let size = Size{Height: x.to_string(), Width: ((all as u32 / diff as u32 + 1) * x).to_string()};
-    let image = Image{xmlns: "http://schemas.microsoft.com/deepzoom/2008".to_string(), Url: format!("http://{}/", bind).to_string(), Format: format.to_string(), Overlap: "0".to_string(), TileSize: x.to_string(), Size: size};
-    let dzi = DZI{Image: image};
+    let size = Size{height: x.to_string(), width: ((all as u32 / diff as u32 + 1) * x).to_string()};
+    let image = Image{xmlns: "http://schemas.microsoft.com/deepzoom/2008".to_string(), url: format!("http://{}/", bind).to_string(), format: format.to_string(), overlap: "0".to_string(), tile_size: x.to_string(), size: size};
+    let dzi = DZI{image: image};
     let x_scale = matches
         .value_of("x-scale")
         .and_then(|a| a.parse::<u32>().ok())

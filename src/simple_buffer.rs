@@ -63,6 +63,7 @@ impl ChromosomeBuffer {
     }
 
     //This range is at least once overlaps with bins?
+    /*
     fn overlap(&mut self, range: Region) -> bool {
         if range.ref_id() != self.ref_id {
             return false;
@@ -77,6 +78,7 @@ impl ChromosomeBuffer {
         }
         false
     }
+    */
 
     pub fn bins(&self) -> Vec<&usize> {
         self.bins.keys().collect::<Vec<&usize>>()
@@ -408,8 +410,8 @@ impl ChromosomeBuffer {
             .flatten()
             .collect();
         let matches = self.matches.clone();
-        let pileup = matches.is_present("pileup");
-        let split_only = matches.is_present("only-split-alignment");
+        let _pileup = matches.is_present("pileup");
+        let _split_only = matches.is_present("only-split-alignment");
         let sort_by_name = matches.is_present("sort-by-name");
         let packing = !matches.is_present("no-packing");
         let split = matches.is_present("split-alignment");

@@ -278,7 +278,7 @@ async fn index(data: web::Data<RwLock<Item>>, list: web::Data<RwLock<Vec<(u64, R
             if min_zoom || zoom > max_zoom as u64 {
                 return Err(error::ErrorBadRequest("zoom level is not appropriate"));
             }
-            fs::create_dir( format!("{}/{}", cache_dir, zoom)); //error is permitted.
+            fs::create_dir_all( format!("{}/{}", cache_dir, zoom))?; //error is permitted.
             let end1 = start.elapsed();
             eprintln!(
                 "create dir: {}.{:03} sec.",
@@ -335,24 +335,32 @@ impl Vis {
     }
 }*/
 #[derive(Debug, Serialize, Deserialize, Clone)]
-struct DZI {
-    Image: Image,
+pub struct DZI {
+    #[serde(rename = "Image")]
+    pub image: Image,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-struct Image {
-    xmlns: String,
-    Url: String,
-    Format: String,
-    Overlap: String,
-    TileSize: String,
-    Size: Size,
+pub struct Image {
+    pub xmlns: String,
+    #[serde(rename = "Url")]
+    pub url: String,
+    #[serde(rename = "Format")]
+    pub format: String,
+    #[serde(rename = "Overlap")]
+    pub overlap: String,
+    #[serde(rename = "TileSize")]
+    pub tile_size: String,
+    #[serde(rename = "Size")]
+    pub size: Size,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-struct Size {
-    Height: String,
-    Width: String
+pub struct Size {
+    #[serde(rename = "Height")]
+    pub height: String,
+    #[serde(rename = "Width")]
+    pub width: String
 }
 #[derive(Debug, Clone)]
 pub struct Param {
@@ -410,9 +418,9 @@ supplementary_list: Vec<(Vec<u8>, usize, usize, i32, i32)>,threads: u16) -> std:
     let diff = range.end - range.start;
     let all = if matches.is_present("whole-chromosome") {250000000} else {prefetch_range.end - prefetch_range.start};
 
-    let size = Size{Height: x.to_string(), Width: ((all as u32 / diff as u32 + 1) * x).to_string()};
-    let image = Image{xmlns: "http://schemas.microsoft.com/deepzoom/2008".to_string(), Url: format!("http://{}/", bind).to_string(), Format: "png".to_string(), Overlap: "0".to_string(), TileSize: x.to_string(), Size: size};
-    let dzi = DZI{Image: image};
+    let size = Size{height: x.to_string(), width: ((all as u32 / diff as u32 + 1) * x).to_string()};
+    let image = Image{xmlns: "http://schemas.microsoft.com/deepzoom/2008".to_string(), url: format!("http://{}/", bind).to_string(), format: "png".to_string(), overlap: "0".to_string(), tile_size: x.to_string(), size: size};
+    let dzi = DZI{image: image};
     let x_scale = matches
         .value_of("x-scale")
         .and_then(|a| a.parse::<u32>().ok())

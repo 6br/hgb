@@ -226,7 +226,7 @@ fn get_matches_from(args: Vec<String>) -> Result<ArgMatches, Error> {
     app.try_get_matches_from(args)
 }
 
-fn id_to_range(range: &StringRegion, args: &Vec<String>, params: String, path_string: String) -> Result<(ArgMatches, StringRegion), Error> {
+fn id_to_range(_range: &StringRegion, args: &Vec<String>, params: String, path_string: String) -> Result<(ArgMatches, StringRegion), Error> {
     let a: Vec<String> = params.split(" ").map(|t| t.to_string()).collect();
     let b: Vec<String> = vec!["-o".to_string(), path_string];
     let mut args = args.clone();
@@ -292,7 +292,7 @@ async fn index(item: web::Data<RwLock<Item>>, vis: web::Data<RwLock<Vis>>, list:
                 );
 
                 let (matches, string_range) = id_to_range(&data.range, args, params.to_string(), path_string.clone()).map_err(|t| HttpResponse::BadRequest().json(ResponseBody {
-                    message: String::from("parameter error"),
+                    message: format!("parameter error: {}", t)//String::from("parameter error: " + t.description()),
                 }))?;
                 let end2 = start.elapsed();
                 eprintln!(
@@ -368,7 +368,7 @@ async fn index(item: web::Data<RwLock<Item>>, vis: web::Data<RwLock<Vis>>, list:
 }
 
 #[actix_rt::main]
-pub async fn server(matches: ArgMatches, range: StringRegion, prefetch_range: StringRegion, args: Vec<String>, mut buffer:  ChromosomeBuffer, threads: u16) -> std::io::Result<()> {
+pub async fn server(matches: ArgMatches, _range: StringRegion, prefetch_range: StringRegion, args: Vec<String>, mut buffer:  ChromosomeBuffer, threads: u16) -> std::io::Result<()> {
     use actix_web::{web, HttpServer};
     // let list = buffer.add(&prefetch_range);
     let mut list = vec![];
@@ -378,8 +378,8 @@ pub async fn server(matches: ArgMatches, range: StringRegion, prefetch_range: St
     let vis = buffer.vis(&prefetch_range, &mut list, &mut list_btree).unwrap();
     let view_range = if matches.is_present("whole-chromosome") {StringRegion{path: prefetch_range.path, start: 1, end: vis.prefetch_max}} else {prefetch_range}; 
     //eprintln!("{:#?}", vis);
-    let annotation = &vis.annotation;
-    /*let prev_index = vis.prev_index;
+    /*let annotation = &vis.annotation;
+    let prev_index = vis.prev_index;
     let freq = &vis.freq;
     let annotation_count = annotation.iter().unique_by(|s| s.0).count(); // annotation.len();
     let format = matches
@@ -392,7 +392,7 @@ pub async fn server(matches: ArgMatches, range: StringRegion, prefetch_range: St
         .unwrap_or(rng.gen::<u32>().to_string());
 
     match fs::create_dir(&cache_dir) {
-        Err(e) => panic!("{}: {}", &cache_dir, e),
+        Err(e) => panic!("{}: {}", e, &cache_dir),
         Ok(_) => {},
     };
     println!("REST Server is running on {}", bind);
