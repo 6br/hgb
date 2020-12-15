@@ -1312,16 +1312,16 @@ where
                                                                 .and_then(|t| t.ref_nt())
                                                                 .and_then(|t| Some(t as char))
                                                                 .unwrap_or(' ');
-                                                            if bam.flag().is_reverse_strand() {
+                                                            if !bam.flag().is_reverse_strand() {
                                                                 let string = format!(
                                                                     "{}{}",
                                                                     switch_base(next_ref_nt), switch_base(ref_nt), 
                                                                 );
-                                                                /*eprintln!(
+                                                                if string == colored_by_motif_vec[2] {
+                                                                eprintln!(
                                                                     "{} {}",
                                                                     string, colored_by_motif_vec[2]
-                                                                );*/
-                                                                if string == colored_by_motif_vec[2] {
+                                                                );
                                                                     if colored_by_motif_vec[0]
                                                                         .chars()
                                                                         .nth(0)
@@ -1342,11 +1342,11 @@ where
                                                                     "{}{}",
                                                                     ref_nt, next_ref_nt
                                                                 );
-                                                                /*eprintln!(
+                                                                if string == colored_by_motif_vec[2] {
+                                                                eprintln!(
                                                                     "{} {}",
                                                                     string, colored_by_motif_vec[2]
-                                                                );*/
-                                                                if string == colored_by_motif_vec[2] {
+                                                                );
                                                                     if colored_by_motif_vec[0]
                                                                         .chars()
                                                                         .nth(0)
@@ -1361,7 +1361,6 @@ where
                                                                         color = Some(BLUE);
                                                                     }
                                                                 }
-                                                            
                                                             }
                                                         }
                                                     }
