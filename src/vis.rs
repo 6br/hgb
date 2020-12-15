@@ -162,6 +162,21 @@ fn name_to_num(name: &[u8]) -> usize {
     uuid
 }
 
+fn switch_base(c: char) -> char {
+    match c {
+        'a' => 't',
+        'c' => 'g',
+        't' => 'a',
+        'g' => 'c',
+        'u' => 'a',
+        'A' => 'T',
+        'C' => 'G',
+        'T' => 'A',
+        'G' => 'C',
+        'U' => 'A',
+        _ => 'N',
+    }
+}
 pub struct RecordIter<'a, I: Iterator<Item = &'a (u64, Record)>>(I);
 
 impl<'a, I> RecordIter<'a, I>
@@ -1297,28 +1312,56 @@ where
                                                                 .and_then(|t| t.ref_nt())
                                                                 .and_then(|t| Some(t as char))
                                                                 .unwrap_or(' ');
-                                                            let string = format!(
-                                                                "{}{}",
-                                                                ref_nt, next_ref_nt
-                                                            );
-                                                            /*eprintln!(
-                                                                "{} {}",
-                                                                string, colored_by_motif_vec[2]
-                                                            );*/
-                                                            if string == colored_by_motif_vec[2] {
-                                                                if colored_by_motif_vec[0]
-                                                                    .chars()
-                                                                    .nth(0)
-                                                                    == Some(record_nt as char)
-                                                                {
-                                                                    color = Some(RED);
-                                                                } else if colored_by_motif_vec[1]
-                                                                    .chars()
-                                                                    .nth(0)
-                                                                    == Some(record_nt as char)
-                                                                {
-                                                                    color = Some(BLUE);
+                                                            if bam.flag().is_reverse_strand() {
+                                                                let string = format!(
+                                                                    "{}{}",
+                                                                    switch_base(next_ref_nt), switch_base(ref_nt), 
+                                                                );
+                                                                /*eprintln!(
+                                                                    "{} {}",
+                                                                    string, colored_by_motif_vec[2]
+                                                                );*/
+                                                                if string == colored_by_motif_vec[2] {
+                                                                    if colored_by_motif_vec[0]
+                                                                        .chars()
+                                                                        .nth(0)
+                                                                        == Some(switch_base(record_nt as char))
+                                                                    {
+                                                                        color = Some(RED);
+                                                                    } else if colored_by_motif_vec[1]
+                                                                        .chars()
+                                                                        .nth(0)
+                                                                        == Some(switch_base(record_nt as char))
+                                                                    {
+                                                                        color = Some(BLUE);
+                                                                    }
                                                                 }
+                                                            
+                                                            } else {
+                                                                let string = format!(
+                                                                    "{}{}",
+                                                                    ref_nt, next_ref_nt
+                                                                );
+                                                                /*eprintln!(
+                                                                    "{} {}",
+                                                                    string, colored_by_motif_vec[2]
+                                                                );*/
+                                                                if string == colored_by_motif_vec[2] {
+                                                                    if colored_by_motif_vec[0]
+                                                                        .chars()
+                                                                        .nth(0)
+                                                                        == Some(record_nt as char)
+                                                                    {
+                                                                        color = Some(RED);
+                                                                    } else if colored_by_motif_vec[1]
+                                                                        .chars()
+                                                                        .nth(0)
+                                                                        == Some(record_nt as char)
+                                                                    {
+                                                                        color = Some(BLUE);
+                                                                    }
+                                                                }
+                                                            
                                                             }
                                                         }
                                                     }
