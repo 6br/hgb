@@ -1319,8 +1319,8 @@ where
                                                                 );
                                                                 if string == colored_by_motif_vec[2] {
                                                                 eprintln!(
-                                                                    "{} {}",
-                                                                    string, colored_by_motif_vec[2]
+                                                                    "FWD: {} {} {}",
+                                                                    string, colored_by_motif_vec[2], record_nt as char
                                                                 );
                                                                     if colored_by_motif_vec[0]
                                                                         .chars()
@@ -1344,8 +1344,8 @@ where
                                                                 );
                                                                 if string == colored_by_motif_vec[2] {
                                                                 eprintln!(
-                                                                    "{} {}",
-                                                                    string, colored_by_motif_vec[2]
+                                                                    "REV: {} {} {}",
+                                                                    string, colored_by_motif_vec[2], record_nt as char
                                                                 );
                                                                     if colored_by_motif_vec[0]
                                                                         .chars()
