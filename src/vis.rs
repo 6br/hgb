@@ -1316,7 +1316,7 @@ where
                                                     }
                                                 }
                                                 if !entry.is_deletion()
-                                                    && colored_by_motif //  prev_ref >= range.start() as u64 &&
+                                                    && colored_by_motif && prev_ref >= range.start() as u64 - 1
                                                 {
                                                     if let Some(colored_by_motif_vec) =
                                                         &colored_by_motif_vec
