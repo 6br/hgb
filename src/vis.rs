@@ -1295,75 +1295,6 @@ where
                                                             entry.record_pos_nt().unwrap().1;
                                                         color = nt_color(record_nt as char);
                                                     }
-                                                    if prev_ref >= range.start() as u64
-                                                        && colored_by_motif
-                                                    {
-                                                        if let Some(colored_by_motif_vec) =
-                                                            &colored_by_motif_vec
-                                                        {
-                                                            let record_nt =
-                                                                entry.record_pos_nt().unwrap().1;
-                                                            let ref_nt = entry
-                                                                .ref_nt()
-                                                                .and_then(|t| Some(t as char))
-                                                                .unwrap_or(' ');
-                                                            let next_ref_nt = a
-                                                                .next()
-                                                                .and_then(|t| t.ref_nt())
-                                                                .and_then(|t| Some(t as char))
-                                                                .unwrap_or(' ');
-                                                            let string = format!(
-                                                                "{}{}",
-                                                                ref_nt, next_ref_nt
-                                                            );
-                                                            if bam.flag().is_reverse_strand() {
-                                                                if string == colored_by_motif_vec[2] {
-                                                                eprintln!(
-                                                                    "REV: {} {} {}",
-                                                                    string, colored_by_motif_vec[2], record_nt as char
-                                                                );
-                                                                    let next_record_nt = a
-                                                                        .next()
-                                                                        .and_then(|t| t.record_pos_nt())
-                                                                        .and_then(|t| Some(t.1 as char))
-                                                                        .unwrap_or(' ');
-                                                                    if colored_by_motif_vec[0]
-                                                                        .chars()
-                                                                        .nth(0)
-                                                                        == Some(switch_base(next_record_nt as char))
-                                                                    {
-                                                                        color = Some(RED);
-                                                                    } else if colored_by_motif_vec[1]
-                                                                        .chars()
-                                                                        .nth(0)
-                                                                        == Some(switch_base(next_record_nt as char))
-                                                                    {
-                                                                        color = Some(BLUE);
-                                                                    }
-                                                                }
-                                                            } else {
-                                                                if string == colored_by_motif_vec[2] {
-                                                                eprintln!(
-                                                                    "FWD: {} {} {}",
-                                                                    string, colored_by_motif_vec[2], record_nt as char
-                                                                );
-                                                                    if colored_by_motif_vec[0]
-                                                                        .chars()
-                                                                        .nth(0)
-                                                                        == Some(record_nt as char)
-                                                                    {
-                                                                        color = Some(RED);
-                                                                    } else if colored_by_motif_vec[1]
-                                                                        .chars()
-                                                                        .nth(0)
-                                                                        == Some(record_nt as char)
-                                                                    {
-                                                                        color = Some(BLUE);
-                                                                    }
-                                                                }
-                                                            }
-                                                        }
-                                                    }
                                                 } else {
                                                     /* Mismatch */
                                                     prev_ref = entry.ref_pos_nt().unwrap().0 as u64;
@@ -1387,6 +1318,76 @@ where
                                                         bars.push(bar);*/
                                                     }
                                                 }
+                                                if prev_ref >= range.start() as u64
+                                                && colored_by_motif
+                                            {
+                                                if let Some(colored_by_motif_vec) =
+                                                    &colored_by_motif_vec
+                                                {
+                                                    let record_nt =
+                                                        entry.record_pos_nt().unwrap().1;
+                                                    let ref_nt = entry
+                                                        .ref_nt()
+                                                        .and_then(|t| Some(t as char))
+                                                        .unwrap_or(' ');
+                                                    let next_ref_nt = a
+                                                        .next()
+                                                        .and_then(|t| t.ref_nt())
+                                                        .and_then(|t| Some(t as char))
+                                                        .unwrap_or(' ');
+                                                    let string = format!(
+                                                        "{}{}",
+                                                        ref_nt, next_ref_nt
+                                                    );
+                                                    if bam.flag().is_reverse_strand() {
+                                                        if string == colored_by_motif_vec[2] {
+                                                            let next_record_nt = a
+                                                                .next()
+                                                                .and_then(|t| t.record_pos_nt())
+                                                                .and_then(|t| Some(t.1 as char))
+                                                                .unwrap_or(' ');
+                                                                eprintln!(
+                                                                    "REV: {} {} {} {}",
+                                                                    string, colored_by_motif_vec[2], record_nt as char, next_record_nt as char
+                                                                );
+                                                                if colored_by_motif_vec[0]
+                                                                .chars()
+                                                                .nth(0)
+                                                                == Some(switch_base(next_record_nt as char))
+                                                            {
+                                                                color = Some(RED);
+                                                            } else if colored_by_motif_vec[1]
+                                                                .chars()
+                                                                .nth(0)
+                                                                == Some(switch_base(next_record_nt as char))
+                                                            {
+                                                                color = Some(BLUE);
+                                                            }
+                                                        }
+                                                    } else {
+                                                        if string == colored_by_motif_vec[2] {
+                                                        eprintln!(
+                                                            "FWD: {} {} {}",
+                                                            string, colored_by_motif_vec[2], record_nt as char
+                                                        );
+                                                            if colored_by_motif_vec[0]
+                                                                .chars()
+                                                                .nth(0)
+                                                                == Some(record_nt as char)
+                                                            {
+                                                                color = Some(RED);
+                                                            } else if colored_by_motif_vec[1]
+                                                                .chars()
+                                                                .nth(0)
+                                                                == Some(record_nt as char)
+                                                            {
+                                                                color = Some(BLUE);
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+
                                             } else {
                                                 break;
                                             }
