@@ -217,7 +217,11 @@ pub fn bam_vis(
                                 }
                             } else {
                                 //index * bam_interval
-                                let track = if record.flag().is_reverse_strand() {1} else {0};
+                                let track = if record.flag().is_reverse_strand() {
+                                    1
+                                } else {
+                                    0
+                                };
                                 index * bam_interval + track
                             }
                         } else {
@@ -251,7 +255,8 @@ pub fn bam_vis(
                                 record.start(),
                                 record
                                     .score()
-                                    .and_then(|t| t.parse::<u32>().ok())
+                                    .and_then(|t| t.parse::<f32>().ok())
+                                    .and_then(|t| Some(t as u32))
                                     .unwrap_or(0),
                                 '*',
                             ));
