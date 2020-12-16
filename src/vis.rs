@@ -1316,31 +1316,35 @@ where
                                                                 "{}{}",
                                                                 ref_nt, next_ref_nt
                                                             );
-                                                            if !bam.flag().is_reverse_strand() {
+                                                            if bam.flag().is_reverse_strand() {
                                                                 if string == colored_by_motif_vec[2] {
                                                                 eprintln!(
-                                                                    "FWD: {} {} {}",
+                                                                    "REV: {} {} {}",
                                                                     string, colored_by_motif_vec[2], record_nt as char
                                                                 );
+                                                                    let next_record_nt = a
+                                                                        .next()
+                                                                        .and_then(|t| t.record_pos_nt())
+                                                                        .and_then(|t| Some(t.1 as char))
+                                                                        .unwrap_or(' ');
                                                                     if colored_by_motif_vec[0]
                                                                         .chars()
                                                                         .nth(0)
-                                                                        == Some(switch_base(record_nt as char))
+                                                                        == Some(switch_base(next_record_nt as char))
                                                                     {
                                                                         color = Some(RED);
                                                                     } else if colored_by_motif_vec[1]
                                                                         .chars()
                                                                         .nth(0)
-                                                                        == Some(switch_base(record_nt as char))
+                                                                        == Some(switch_base(next_record_nt as char))
                                                                     {
                                                                         color = Some(BLUE);
                                                                     }
                                                                 }
-                                                            
                                                             } else {
                                                                 if string == colored_by_motif_vec[2] {
                                                                 eprintln!(
-                                                                    "REV: {} {} {}",
+                                                                    "FWD: {} {} {}",
                                                                     string, colored_by_motif_vec[2], record_nt as char
                                                                 );
                                                                     if colored_by_motif_vec[0]
