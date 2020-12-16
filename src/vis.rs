@@ -972,9 +972,7 @@ where
                     //chart.draw_series(index_list.into_par_iter().zip(list).map(|(index, data)| {
                     //for (index, data) in list.iter().enumerate() {
                     let bam = &data.1;
-                    let color = if colored_by_motif {
-                        DEF_COL.mix(0.8)
-                    } else if colored_by_tag {
+                    let color = if colored_by_tag {
                         if let Some(colored_by_str) = colored_by_tag_vec {
                             let tag: &[u8;2] = colored_by_str.as_bytes().try_into().expect("colored by tag with unexpected length: tag name must be two characters.");
                             if let Some(TagValue::Int(tag_id,_)) = bam.tags().get(tag) {
@@ -1274,8 +1272,7 @@ where
                                                     if prev_ref > range.end() as u64 {
                                                         break;
                                                     }
-                                                    if prev_ref >= range.start() as u64 {
-                                                        
+                                                    if prev_ref >= range.start() as u64 && !colored_by_motif {
                                                         //let mut bar = Rectangle::new([(prev_ref , index), (prev_ref + 1, index + 1)], WHITE.filled());
                                                         //bar.set_margin(2, 2, 0, 0);
                                                         //eprintln!("White: {:?}", [(prev_pixel_ref, index), (prev_ref, index + 1)]);
@@ -1339,50 +1336,47 @@ where
                                                             "{}{}",
                                                             ref_nt, next_ref_nt
                                                         );
-                                                        if bam.flag().is_reverse_strand() {
-                                                            if string == colored_by_motif_vec[2] {
-                                                                let next_record_nt = a
-                                                                    .next()
-                                                                    .and_then(|t| t.record_pos_nt())
-                                                                    .and_then(|t| Some(t.1 as char))
-                                                                    .unwrap_or(' ');
-                                                                    eprintln!(
-                                                                        "REV: {} {} {} {}",
-                                                                        string, colored_by_motif_vec[2], record_nt as char, next_record_nt as char
-                                                                    );
-                                                                    if colored_by_motif_vec[0]
-                                                                    .chars()
-                                                                    .nth(0)
-                                                                    == Some(switch_base(next_record_nt as char))
-                                                                {
-                                                                    color = Some(RED);
-                                                                } else if colored_by_motif_vec[1]
-                                                                    .chars()
-                                                                    .nth(0)
-                                                                    == Some(switch_base(next_record_nt as char))
-                                                                {
-                                                                    color = Some(BLUE);
-                                                                }
+                                                        // let revcomp_string = format!("{}{}", switch_base(next_ref_nt), switch_base(ref_nt));
+                                                        if bam.flag().is_reverse_strand() && string == colored_by_motif_vec[2] {
+                                                            let next_record_nt = a
+                                                                .next()
+                                                                .and_then(|t| t.record_pos_nt())
+                                                                .and_then(|t| Some(t.1 as char))
+                                                                .unwrap_or(' ');
+                                                                eprintln!(
+                                                                    "REV: {} {} {} {}",
+                                                                    string, colored_by_motif_vec[2], record_nt as char, next_record_nt as char
+                                                                );
+                                                            if colored_by_motif_vec[0]
+                                                                .chars()
+                                                                .nth(0)
+                                                                == Some(switch_base(next_record_nt as char))
+                                                            {
+                                                                color = Some(RED);
+                                                            } else if colored_by_motif_vec[1]
+                                                                .chars()
+                                                                .nth(0)
+                                                                == Some(switch_base(next_record_nt as char))
+                                                            {
+                                                                color = Some(BLUE);
                                                             }
-                                                        } else {
-                                                            if string == colored_by_motif_vec[2] {
+                                                        } else if !bam.flag().is_reverse_strand() && string == colored_by_motif_vec[2] {
                                                             eprintln!(
                                                                 "FWD: {} {} {}",
                                                                 string, colored_by_motif_vec[2], record_nt as char
                                                             );
-                                                                if colored_by_motif_vec[0]
-                                                                    .chars()
-                                                                    .nth(0)
-                                                                    == Some(record_nt as char)
-                                                                {
-                                                                    color = Some(RED);
-                                                                } else if colored_by_motif_vec[1]
-                                                                    .chars()
-                                                                    .nth(0)
-                                                                    == Some(record_nt as char)
-                                                                {
-                                                                    color = Some(BLUE);
-                                                                }
+                                                            if colored_by_motif_vec[0]
+                                                                .chars()
+                                                                .nth(0)
+                                                                == Some(record_nt as char)
+                                                            {
+                                                                color = Some(RED);
+                                                            } else if colored_by_motif_vec[1]
+                                                                .chars()
+                                                                .nth(0)
+                                                                == Some(record_nt as char)
+                                                            {
+                                                                color = Some(BLUE);
                                                             }
                                                         }
                                                     }

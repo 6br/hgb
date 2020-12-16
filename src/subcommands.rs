@@ -216,7 +216,9 @@ pub fn bam_vis(
                                     index * bam_interval
                                 }
                             } else {
-                                index * bam_interval
+                                //index * bam_interval
+                                let track = if record.flag().is_reverse_strand() {1} else {0};
+                                index * bam_interval + track
                             }
                         } else {
                             index * bam_interval
