@@ -1315,8 +1315,8 @@ where
                                                         bars.push(bar);*/
                                                     }
                                                 }
-                                                if prev_ref >= range.start() as u64 && !entry.is_deletion()
-                                                    && colored_by_motif
+                                                if !entry.is_deletion()
+                                                    && colored_by_motif //  prev_ref >= range.start() as u64 &&
                                                 {
                                                     if let Some(colored_by_motif_vec) =
                                                         &colored_by_motif_vec
