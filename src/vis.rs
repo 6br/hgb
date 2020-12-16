@@ -1337,7 +1337,7 @@ where
                                                             ref_nt, next_ref_nt
                                                         );
                                                         eprintln!(
-                                                            "STR: {} {}",
+                                                            "STR: {}",
                                                             string
                                                         );
                                                         // let revcomp_string = format!("{}{}", switch_base(next_ref_nt), switch_base(ref_nt));
