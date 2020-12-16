@@ -1312,11 +1312,11 @@ where
                                                                 .and_then(|t| t.ref_nt())
                                                                 .and_then(|t| Some(t as char))
                                                                 .unwrap_or(' ');
+                                                            let string = format!(
+                                                                "{}{}",
+                                                                ref_nt, next_ref_nt
+                                                            );
                                                             if !bam.flag().is_reverse_strand() {
-                                                                let string = format!(
-                                                                    "{}{}",
-                                                                    switch_base(next_ref_nt), switch_base(ref_nt), 
-                                                                );
                                                                 if string == colored_by_motif_vec[2] {
                                                                 eprintln!(
                                                                     "FWD: {} {} {}",
@@ -1338,10 +1338,6 @@ where
                                                                 }
                                                             
                                                             } else {
-                                                                let string = format!(
-                                                                    "{}{}",
-                                                                    ref_nt, next_ref_nt
-                                                                );
                                                                 if string == colored_by_motif_vec[2] {
                                                                 eprintln!(
                                                                     "REV: {} {} {}",
