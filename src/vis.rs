@@ -1272,7 +1272,7 @@ where
                                                     if prev_ref > range.end() as u64 {
                                                         break;
                                                     }
-                                                    if prev_ref >= range.start() as u64 && !colored_by_motif {
+                                                    if prev_ref >= range.start() as u64 {
                                                         //let mut bar = Rectangle::new([(prev_ref , index), (prev_ref + 1, index + 1)], WHITE.filled());
                                                         //bar.set_margin(2, 2, 0, 0);
                                                         //eprintln!("White: {:?}", [(prev_pixel_ref, index), (prev_ref, index + 1)]);
