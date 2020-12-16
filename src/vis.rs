@@ -1353,13 +1353,13 @@ where
                                                                     if colored_by_motif_vec[0]
                                                                     .chars()
                                                                     .nth(0)
-                                                                    == Some(switch_base(next_record_nt as char))
+                                                                    == Some(record_nt as char)
                                                                 {
                                                                     color = Some(RED);
                                                                 } else if colored_by_motif_vec[1]
                                                                     .chars()
                                                                     .nth(0)
-                                                                    == Some(switch_base(next_record_nt as char))
+                                                                    == Some(record_nt as char)
                                                                 {
                                                                     color = Some(BLUE);
                                                                 }
