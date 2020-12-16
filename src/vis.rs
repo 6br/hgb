@@ -1336,10 +1336,6 @@ where
                                                             "{}{}",
                                                             ref_nt, next_ref_nt
                                                         );
-                                                        eprintln!(
-                                                            "STR: {}",
-                                                            string
-                                                        );
                                                         // let revcomp_string = format!("{}{}", switch_base(next_ref_nt), switch_base(ref_nt));
                                                         if bam.flag().is_reverse_strand() && string == colored_by_motif_vec[2] {
                                                             let next_record_nt = a
