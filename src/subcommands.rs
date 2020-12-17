@@ -1719,7 +1719,7 @@ where
                                                                        //let temp_index_list = (prev_index..prev_index + i.list.lock().unwrap().len()).collect();
                                                                        //prev_index += i.list.lock().unwrap().len();
                     let temp_index_list = (0..new_list.len()).collect();
-                    mem::replace(&mut *index_list, temp_index_list);
+                    mem::replace(&mut *index_list, temp_index_list).unwrap();
                 }
 
                 // list.sort_by(|a, b| a.0.cmp(&b.0));

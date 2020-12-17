@@ -523,6 +523,7 @@ where
             }
         }*/
     };
+    eprintln!("y_max: {}", y_max);
     let mut n_x_labels = if !dynamic_partition {
         vec![]
     } else {
