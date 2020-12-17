@@ -1338,6 +1338,10 @@ where
                                                             ref_nt, next_ref_nt
                                                         );
                                                         let revcomp_string = format!("{}{}", prev_nt, ref_nt);
+                                                        eprintln!(
+                                                            "Read: {} {} {} {} {}",
+                                                            prev_ref, string, revcomp_string, bam.flag().is_reverse_strand(), record_nt as char
+                                                        );
                                                         if bam.flag().is_reverse_strand() && revcomp_string == colored_by_motif_vec[2] {
                                                             /*let next_record_nt = a
                                                                 .next()
