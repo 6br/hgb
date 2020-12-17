@@ -1242,7 +1242,7 @@ where
                                     let mut color = None;
                                     let mut stick_out = false;
                                     if let Some(k) = k {
-                                        while k.0 >= prev_ref
+                                        while k.0 > prev_ref
                                             && prev_ref != bam.calculate_end() as u64
                                         {
                                             /*if prev_min < entry.ref_pos_nt().unwrap().0 as u64 {
@@ -1328,7 +1328,7 @@ where
                                                             .ref_nt()
                                                             .and_then(|t| Some(t as char))
                                                             .unwrap_or(' ');
-                                                        let next_ref_nt = a
+                                                        let next_ref_nt = a.clone()
                                                             .next()
                                                             .and_then(|t| t.ref_nt())
                                                             .and_then(|t| Some(t as char))
@@ -1339,8 +1339,8 @@ where
                                                         );
                                                         let revcomp_string = format!("{}{}", prev_nt, ref_nt);
                                                         eprintln!(
-                                                            "Read: {} {} {} {} {} {}",
-                                                            prev_ref, k.0, string, revcomp_string, bam.flag().is_reverse_strand(), record_nt as char
+                                                            "Read: {} {} {} {} {}",
+                                                            prev_ref, string, revcomp_string, bam.flag().is_reverse_strand(), record_nt as char
                                                         );
                                                         if bam.flag().is_reverse_strand() && revcomp_string == colored_by_motif_vec[2] {
                                                             /*let next_record_nt = a
