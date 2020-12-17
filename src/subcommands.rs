@@ -257,7 +257,13 @@ pub fn bam_vis(
                                     .score()
                                     .and_then(|t| t.parse::<f32>().ok())
                                     .and_then(|t| Some(t as u32))
-                                    .unwrap_or(0),
+                                    .unwrap_or(
+                                        record
+                                            .name()
+                                            .and_then(|t| t.parse::<f32>().ok())
+                                            .and_then(|t| Some(t as u32))
+                                            .unwrap_or(0),
+                                    ),
                                 '*',
                             ));
                         }

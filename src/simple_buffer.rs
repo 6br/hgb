@@ -364,8 +364,10 @@ impl ChromosomeBuffer {
             let (reset_flag, new_list, bins) = self.add(string_range);
             debug!("Loaded len: {}", new_list.len());
             if reset_flag {
-                std::mem::replace(list, new_list);
-                std::mem::replace(list_btree, bins);
+                *list = new_list;
+                *list_btree = bins;
+                // std::mem::replace(list, new_list);
+                // std::mem::replace(list_btree, bins);
             } else {
                 list.extend(new_list);
                 list_btree.extend(bins)
@@ -377,7 +379,8 @@ impl ChromosomeBuffer {
         if !self.included_local(range.clone(), list_btree) {
             let (reset_flag, new_list) = self.add_local(string_range, list_btree);
             if reset_flag {
-                std::mem::replace(list, new_list);
+                // std::mem::replace(list, new_list);
+                *list = new_list
             } else {
                 list.extend(new_list);
             }
