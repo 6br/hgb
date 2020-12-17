@@ -1221,6 +1221,7 @@ where
                 }
                 else if !no_cigar && !udon {
                     let mut prev_ref = bam.start() as u64 - 1;
+                    let mut prev_nt = ' ';
                     let mut prev_pixel_ref = start-1;
                     let left_top = chart.as_coord_spec().translate(&(start, index));
                     let right_bottom = chart.as_coord_spec().translate(&(end, index + 1));
@@ -1336,27 +1337,27 @@ where
                                                             "{}{}",
                                                             ref_nt, next_ref_nt
                                                         );
-                                                        // let revcomp_string = format!("{}{}", switch_base(next_ref_nt), switch_base(ref_nt));
-                                                        if bam.flag().is_reverse_strand() && string == colored_by_motif_vec[2] {
-                                                            let next_record_nt = a
+                                                        let revcomp_string = format!("{}{}", prev_nt, ref_nt);
+                                                        if bam.flag().is_reverse_strand() && revcomp_string == colored_by_motif_vec[2] {
+                                                            /*let next_record_nt = a
                                                                 .next()
                                                                 .and_then(|t| t.record_pos_nt())
                                                                 .and_then(|t| Some(t.1 as char))
-                                                                .unwrap_or(' ');
-                                                                eprintln!(
-                                                                    "REV: {} {} {} {}",
-                                                                    string, colored_by_motif_vec[2], record_nt as char, next_record_nt as char
-                                                                );
+                                                                .unwrap_or(' ');*/
+                                                            eprintln!(
+                                                                "REV: {} {} {} {}",
+                                                                string, revcomp_string, colored_by_motif_vec[2], record_nt as char
+                                                            );
                                                             if colored_by_motif_vec[0]
                                                                 .chars()
                                                                 .nth(0)
-                                                                == Some(switch_base(next_record_nt as char))
+                                                                == Some(switch_base(record_nt as char))
                                                             {
                                                                 color = Some(RED);
                                                             } else if colored_by_motif_vec[1]
                                                                 .chars()
                                                                 .nth(0)
-                                                                == Some(switch_base(next_record_nt as char))
+                                                                == Some(switch_base(record_nt as char))
                                                             {
                                                                 color = Some(BLUE);
                                                             }
@@ -1380,6 +1381,9 @@ where
                                                             }
                                                         }
                                                     }
+                                                }
+                                                if let Some(ref_pos_nt) = entry.ref_pos_nt() {
+                                                    prev_nt = ref_pos_nt.1 as char;
                                                 }
                                             } else {
                                                 break;
