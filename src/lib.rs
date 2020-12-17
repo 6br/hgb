@@ -21,7 +21,6 @@ pub mod header;
 pub mod index;
 pub mod range;
 pub mod reader;
-#[no_mangle]
 pub mod twopass_alignment;
 pub mod vis;
 pub mod writer;
