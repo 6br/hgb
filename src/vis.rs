@@ -8,6 +8,7 @@ use bio_types::strand::Strand;
 use clap::ArgMatches;
 use genomic_range::StringRegion;
 use itertools::Itertools;
+use log::debug;
 use num_format::{Locale, ToFormattedString};
 use plotters::coord::ReverseCoordTranslate;
 use plotters::prelude::Palette;
@@ -1317,7 +1318,7 @@ where
                                                     }
                                                 }
                                                 if !entry.is_deletion()
-                                                    && colored_by_motif && prev_ref >= range.start() as u64 - 1
+                                                    && colored_by_motif && prev_ref >= range.start() as u64
                                                 {
                                                     if let Some(colored_by_motif_vec) =
                                                         &colored_by_motif_vec
