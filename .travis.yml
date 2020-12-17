@@ -1,0 +1,26 @@
+cache: cargo
+language: rust
+rust:
+  - stable
+  - beta
+  - nightly
+jobs:
+  allow_failures:
+    - rust: nightly
+  fast_finish: true
+os:
+  - linux
+  - osx
+before_script:
+  - if [[ $TRAVIS_OS_NAME == "linux" ]]; then rustup target add x86_64-unknown-linux-musl; fi
+  - if [[ $TRAVIS_OS_NAME == "linux" ]]; then rustup target add x86_64-pc-windows-gnu; fi
+  - if [[ $TRAVIS_OS_NAME == "linux" ]]; then sudo apt-get -qq update; fi
+  - if [[ $TRAVIS_OS_NAME == "linux" ]]; then sudo apt-get -qq install binutils-mingw-w64-x86-64 g++-mingw-w64-x86-64; fi
+  - curl https://github.com/plotly/react-genome-viewer/raw/master/demo/data/index_test.bam -o $TRAVIS_BUILD_DIR/test/index_test.bam
+  - curl https://github.com/plotly/react-genome-viewer/raw/master/demo/data/index_test.bam.bai -o $TRAVIS_BUILD_DIR/test/index_test.bam.bai
+  - curl https://github.com/ingolia/SamTools/raw/master/samtools/test/test-in.bam -o $TRAVIS_BUILD_DIR/test/test-in.bam
+  - curl https://github.com/ingolia/SamTools/raw/master/samtools/test/test-in.bam.bai -o $TRAVIS_BUILD_DIR/test/test-in.bam.bai
+script:
+  - if [[ $TRAVIS_OS_NAME == "linux" ]]; then cargo build --release --target=x86_64-unknown-linux-musl; fi
+  - if [[ $TRAVIS_OS_NAME == "linux" ]]; then cargo build --release --target=x86_64-pc-windows-gnu;     fi
+  - if [[ $TRAVIS_OS_NAME == "osx"   ]]; then cargo build --release --target=x86_64-apple-darwin;       fi
