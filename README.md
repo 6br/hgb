@@ -1,5 +1,7 @@
 # hgb
 
+[![Build Status](https://travis-ci.org/6br/hgb.svg?branch=master)](https://travis-ci.org/6br/hgb)
+
 A hybrid genome browser for zooming out long-read alignments
 
 Screenshots in seconds.
