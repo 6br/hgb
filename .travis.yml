@@ -12,7 +12,10 @@ os:
   - linux
   - osx
 before_script:
-  - curl -o ${TRAVIS_BUILD_DIR}/6br/hgb/test/index_test.bam https://github.com/plotly/react-genome-viewer/raw/master/demo/data/index_test.bam
-  - curl -o ${TRAVIS_BUILD_DIR}/6br/hgb/test/index_test.bam.bai https://github.com/plotly/react-genome-viewer/raw/master/demo/data/index_test.bam.bai
-  - curl -o ${TRAVIS_BUILD_DIR}/6br/hgb/test/test-in.bam https://github.com/ingolia/SamTools/raw/master/samtools/test/test-in.bam
-  - curl -o ${TRAVIS_BUILD_DIR}/6br/hgb/test/test-in.bam.bai https://github.com/ingolia/SamTools/raw/master/samtools/test/test-in.bam.bai
+  - curl https://github.com/plotly/react-genome-viewer/raw/master/demo/data/index_test.bam -o $TRAVIS_BUILD_DIR/test/index_test.bam
+  - curl https://github.com/plotly/react-genome-viewer/raw/master/demo/data/index_test.bam.bai -o $TRAVIS_BUILD_DIR/test/index_test.bam.bai
+  - curl https://github.com/ingolia/SamTools/raw/master/samtools/test/test-in.bam -o $TRAVIS_BUILD_DIR/test/test-in.bam
+  - curl https://github.com/ingolia/SamTools/raw/master/samtools/test/test-in.bam.bai -o $TRAVIS_BUILD_DIR/test/test-in.bam.bai
+script:
+  - if [[ $TRAVIS_OS_NAME == "linux" ]]; then cargo build --release; fi
+  - if [[ $TRAVIS_OS_NAME == "osx"   ]]; then cargo build --release --target=x86_64-apple-darwin;       fi
