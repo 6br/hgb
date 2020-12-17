@@ -1338,7 +1338,7 @@ where
                                                             ref_nt, next_ref_nt
                                                         );
                                                         let revcomp_string = format!("{}{}", prev_nt, ref_nt);
-                                                        eprintln!(
+                                                        debug!(
                                                             "Read: {} {} {} {} {}",
                                                             prev_ref, string, revcomp_string, bam.flag().is_reverse_strand(), record_nt as char
                                                         );
