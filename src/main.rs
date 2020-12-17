@@ -9,7 +9,7 @@ pub mod buffered_server;
 #[cfg(feature = "web")]
 pub mod rest_server;
 
-use clap::{App, AppSettings, Arg};
+use clap::{App, AppSettings, Arg, ArgSettings};
 use env_logger;
 use subcommands::*;
 use std::env;
@@ -344,6 +344,7 @@ fn main() {
                         .short('0')
                         .takes_value(true)
                         .default_value("")
+                        .setting(ArgSettings::AllowEmptyValues)
                         .about("Colored by specified tags on read alignments"),
                 )
                 .arg(
@@ -351,6 +352,7 @@ fn main() {
                         .short('j')
                         .takes_value(true)
                         .default_value("")
+                        .setting(ArgSettings::AllowEmptyValues)
                         .about("Separated tracks by specified tags on read alignments"),
                 )
                 .arg(
