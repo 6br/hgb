@@ -209,20 +209,23 @@ pub fn bam_vis(
                     {
                         let idx = if separated_by_tag {
                             if let Some(colored_by_str) = separated_by_tag_vec {
-                                let tag: &[u8;2] = colored_by_str.as_bytes().try_into().expect("colored by tag with unexpected length: tag name must be two characters.");
-                                if let Some(TagValue::Int(tag_id, _)) = record.tags().get(tag) {
-                                    index * bam_interval + tag_id as usize
+                                if colored_by_str == "" {
+                                    let track = if record.flag().is_reverse_strand() {
+                                        1
+                                    } else {
+                                        0
+                                    };
+                                    index * bam_interval + track
                                 } else {
-                                    index * bam_interval
+                                    let tag: &[u8; 2] = colored_by_str.as_bytes().try_into().expect("colored by tag with unexpected length: tag name must be two characters.");
+                                    if let Some(TagValue::Int(tag_id, _)) = record.tags().get(tag) {
+                                        index * bam_interval + tag_id as usize
+                                    } else {
+                                        index * bam_interval
+                                    }
                                 }
                             } else {
-                                //index * bam_interval
-                                let track = if record.flag().is_reverse_strand() {
-                                    1
-                                } else {
-                                    0
-                                };
-                                index * bam_interval + track
+                                index * bam_interval
                             }
                         } else {
                             index * bam_interval

@@ -343,14 +343,14 @@ fn main() {
                     Arg::new("colored-by-tag")
                         .short('0')
                         .takes_value(true)
-                        .default_value("HP")
+                        .default_value("")
                         .about("Colored by specified tags on read alignments"),
                 )
                 .arg(
                     Arg::new("separated-by-tag")
                         .short('j')
                         .takes_value(true)
-                        .default_value("HP")
+                        .default_value("")
                         .about("Separated tracks by specified tags on read alignments"),
                 )
                 .arg(
