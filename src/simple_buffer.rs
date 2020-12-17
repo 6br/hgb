@@ -366,8 +366,8 @@ impl ChromosomeBuffer {
             if reset_flag {
                 *list = new_list;
                 *list_btree = bins;
-                // std::mem::replace(list, new_list);
-                // std::mem::replace(list_btree, bins);
+            // std::mem::replace(list, new_list);
+            // std::mem::replace(list_btree, bins);
             } else {
                 list.extend(new_list);
                 list_btree.extend(bins)

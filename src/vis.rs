@@ -976,11 +976,19 @@ where
                     let bam = &data.1;
                     let color = if colored_by_tag {
                         if let Some(colored_by_str) = colored_by_tag_vec {
-                            let tag: &[u8;2] = colored_by_str.as_bytes().try_into().expect("colored by tag with unexpected length: tag name must be two characters.");
-                            if let Some(TagValue::Int(tag_id,_)) = bam.tags().get(tag) {
-                                Palette9999::pick(tag_id as usize).mix(0.4)
+                            if colored_by_str == "" {
+                                if bam.flag().is_reverse_strand() {
+                                    NEG_COL.mix(0.8)
+                                } else {
+                                    POS_COL.mix(0.8)
+                                }
                             } else {
-                                DEF_COL.mix(0.8)
+                                let tag: &[u8;2] = colored_by_str.as_bytes().try_into().expect("colored by tag with unexpected length: tag name must be two characters.");
+                                if let Some(TagValue::Int(tag_id,_)) = bam.tags().get(tag) {
+                                    Palette9999::pick(tag_id as usize).mix(0.4)
+                                } else {
+                                    DEF_COL.mix(0.8)
+                                }
                             }
                         } else {
                             DEF_COL.mix(0.8)
