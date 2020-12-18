@@ -443,6 +443,7 @@ fn main() {
                         .about("Display each split-alignment connection as a colored line"),
                 )
                 .arg(Arg::new("no-insertion").short('I').about("Hide insertion callets on read alignments"))
+                .arg(Arg::new("no-deletion").short('+').about("Hide deletion callets on read alignments"))
                 .arg(
                     Arg::new("hide-alignment")
                         .short('A')

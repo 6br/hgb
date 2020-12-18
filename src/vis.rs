@@ -388,6 +388,7 @@ where
     let quality = matches.is_present("quality");
     let legend = !matches.is_present("no-legend");
     let insertion = !matches.is_present("no-insertion");
+    let deletion = !matches.is_present("no-deletion");
     let split = matches.is_present("split-alignment");
     let _split_only = matches.is_present("only-split-alignment");
     let _sort_by_name = matches.is_present("sort-by-name");
@@ -1289,7 +1290,7 @@ where
                                                     if prev_ref > range.end() as u64 {
                                                         break;
                                                     }
-                                                    if prev_ref >= range.start() as u64 {
+                                                    if prev_ref >= range.start() as u64 && deletion {
                                                         //let mut bar = Rectangle::new([(prev_ref , index), (prev_ref + 1, index + 1)], WHITE.filled());
                                                         //bar.set_margin(2, 2, 0, 0);
                                                         //eprintln!("White: {:?}", [(prev_pixel_ref, index), (prev_ref, index + 1)]);
