@@ -317,12 +317,15 @@ where
                                               .map(|t| *t));*/
             chart
                 .draw_series(
-                    Histogram::vertical(&chart).style(color.filled()).data(
-                        values
-                            .iter()
-                            .filter(|t| t.0 >= range.start() && t.0 < range.end() && t.2 == '*')
-                            .map(|t| (t.0, t.1)),
-                    ),
+                    Histogram::vertical(&chart)
+                        .style(color.filled())
+                        .margin(2)
+                        .data(
+                            values
+                                .iter()
+                                .filter(|t| t.0 >= range.start() && t.0 < range.end() && t.2 == '*')
+                                .map(|t| (t.0, t.1)),
+                        ),
                 )?
                 .label(format!("{}", lambda(idx).unwrap_or(&idx.to_string())))
                 .legend(move |(x, y)| {
@@ -1554,7 +1557,7 @@ where
                     }; // BLUE
                     chart
                         .draw_series(
-                            Histogram::vertical(&chart).style(color).data(
+                            Histogram::vertical(&chart).style(color).margin(2).data(
                                 values
                                     .iter()
                                     .filter(|t| {
@@ -1574,29 +1577,37 @@ where
                         for i in ['A', 'C', 'G', 'T'].iter() {
                             let color = nt_color(*i).unwrap();
                             chart.draw_series(
-                                Histogram::vertical(&chart).style(color.filled()).data(
-                                    values
-                                        .iter()
-                                        .filter(|t| {
-                                            t.0 >= range.start() && t.0 < range.end() && t.2 == *i
-                                        })
-                                        .map(|t| (t.0, t.1)),
-                                ),
+                                Histogram::vertical(&chart)
+                                    .style(color.filled())
+                                    .margin(2)
+                                    .data(
+                                        values
+                                            .iter()
+                                            .filter(|t| {
+                                                t.0 >= range.start()
+                                                    && t.0 < range.end()
+                                                    && t.2 == *i
+                                            })
+                                            .map(|t| (t.0, t.1)),
+                                    ),
                             )?;
                         }
                     }
 
                     chart.draw_series(
-                        Histogram::vertical(&chart).style(SPL_COL.filled()).data(
-                            split_frequency
-                                .iter()
-                                .filter(|&&t| {
-                                    t.0 == *sample_sequential_id
-                                        && (t.1).0 >= range.start()
-                                        && (t.1).0 < range.end()
-                                })
-                                .map(|t| t.1),
-                        ),
+                        Histogram::vertical(&chart)
+                            .style(SPL_COL.filled())
+                            .margin(2)
+                            .data(
+                                split_frequency
+                                    .iter()
+                                    .filter(|&&t| {
+                                        t.0 == *sample_sequential_id
+                                            && (t.1).0 >= range.start()
+                                            && (t.1).0 < range.end()
+                                    })
+                                    .map(|t| t.1),
+                            ),
                     )?;
 
                     /*if snp_frequency {
