@@ -318,6 +318,7 @@ fn main() {
                 .arg(Arg::new("no-filter").short('f').about("Disable pre-filtering on loading BAM index (used for debugging)"))
                 .arg(Arg::new("no-cigar").short('c').about("Do not show cigar string"))
                 .arg(Arg::new("no-scale").short('S').about("Do not show y-axis scale and legends"))
+                .arg(Arg::new("no-ruler").short('`').about("Do not show x-axis ruler"))
                 .arg(Arg::new("no-packing").short('p').about("Disable read packing"))
                 .arg(Arg::new("no-legend").short('l').about("Hide legend"))
                 .arg(Arg::new("square").short('Q').about("Set square width (overwritten)"))

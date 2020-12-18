@@ -376,6 +376,7 @@ where
     let overlapping_annotation = matches.is_present("overlapping-annotation");
     let overlapping_reads = matches.is_present("overlapping-reads");
     let no_margin = matches.is_present("no-scale");
+    let no_ruler = matches.is_present("no-ruler");
     let _prefetch_range = matches.is_present("prefetch-range");
     let output = matches.value_of("output").unwrap();
     let no_cigar = matches.is_present("no-cigar");
@@ -523,7 +524,7 @@ where
             }
         }*/
     };
-    eprintln!("y_max: {}", y_max);
+    debug!("y_max: {}", y_max);
     let mut n_x_labels = if !dynamic_partition {
         vec![]
     } else {
@@ -629,7 +630,9 @@ where
         };
         let x_label_formatter = {
             &|x: &u64| {
-                if *x == range.start() || range.end() - range.start() > PARBASE_THRESHOLD {
+                if (*x == range.start() || range.end() - range.start() > PARBASE_THRESHOLD)
+                    && !no_ruler
+                {
                     format!("{}", x.to_formatted_string(&Locale::en))
                 } else {
                     format!("")
