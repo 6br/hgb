@@ -1235,6 +1235,10 @@ where
     let split = matches.is_present("split-alignment");
     let read_per_line = matches.is_present("read-per-line");
     let read_per_two_node = matches.is_present("read-per-two-range");
+    let read_index = matches
+        .value_of("read-index")
+        .and_then(|a| a.parse::<usize>().ok());
+
     let max_coverage = matches
         .value_of("max-coverage")
         .and_then(|a| a.parse::<u32>().ok());
@@ -1744,6 +1748,18 @@ where
                         //compressed_list.push((sample_sequential_id, count));
                     },
                 )
+            }
+        }
+        for i in vis.iter() {
+            if let Some(val) = read_index {
+                let mut index_list = i.index_list.lock().unwrap();
+                let temp_index_list = (0..1).collect();
+
+                *index_list = temp_index_list;
+                let mut list = i.list.lock().unwrap();
+                let temp_list = vec![list[val].clone()];
+                *list = temp_list;
+                prev_index = 1;
             }
         }
     }

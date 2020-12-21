@@ -8,7 +8,7 @@ use bio_types::strand::Strand;
 use clap::ArgMatches;
 use genomic_range::StringRegion;
 use itertools::Itertools;
-use log::debug;
+use log::{debug, info};
 use num_format::{Locale, ToFormattedString};
 use plotters::coord::ReverseCoordTranslate;
 use plotters::prelude::Palette;
@@ -403,6 +403,7 @@ where
     let output_translocation = matches.is_present("output-translocation");
     let _translocation_target = matches.value_of("translocation-target");
     let square = matches.is_present("square");
+    let read_index = matches.is_present("read-index");
     let x_as_range = matches.is_present("x-as-range");
     let dynamic_partition = matches.is_present("dynamic-partition");
     let colored_by_motif = matches.occurrences_of("colored-by-motif") != 0;
@@ -606,7 +607,7 @@ where
         let (alignment, coverage) = area.split_vertically(
             y_len - freq_len as u32 * freq_size, //top_margin + (prev_index as u32 + axis_count as u32 + annotation_count as u32 * 2) * y,
         );
-        eprintln!(
+        info!(
             "{:?} {:?} {:?} <{:?}>",
             prev_index,
             axis_count,
@@ -622,6 +623,7 @@ where
         } else {
             25
         };
+        let x_area_size = if no_ruler { 0 } else { x_scale / 2 };
         let x_spec = if no_margin && range.end() - range.start() <= 5000 {
             range.start()..range.end()
         } else {
@@ -643,6 +645,11 @@ where
                 }
             }
         };
+        let y_spec_max = if read_index {
+            1
+        } else {
+            1 + prev_index + axis_count + annotation_count * 2
+        };
         let mut chart = if no_margin {
             if with_caption {
                 ChartBuilder::on(&alignment)
@@ -650,39 +657,40 @@ where
                     // Set the size of the label region
                     .caption(format!("{}", range), ("sans-serif", 20).into_font())
                     .y_label_area_size(y_area_size)
-                    .top_x_label_area_size(x_scale / 2)
-                    .x_label_area_size(x_scale / 2)
+                    .top_x_label_area_size(x_area_size)
+                    .x_label_area_size(x_area_size)
                     // Finally attach a coordinate on the drawing area and make a chart context
-                    .build_cartesian_2d(
-                        x_spec.clone(),
-                        0..(1 + prev_index + axis_count + annotation_count * 2),
-                    )?
+                    .build_cartesian_2d(x_spec.clone(), 0..y_spec_max)?
             } else {
                 ChartBuilder::on(&alignment)
                     // Set the caption of the chart
                     // Set the size of the label region
                     .y_label_area_size(y_area_size)
-                    .top_x_label_area_size(x_scale / 2)
-                    .x_label_area_size(x_scale / 2)
+                    .top_x_label_area_size(x_area_size)
+                    .x_label_area_size(x_area_size)
                     // Finally attach a coordinate on the drawing area and make a chart context
-                    .build_cartesian_2d(
-                        x_spec.clone(),
-                        0..(1 + prev_index + axis_count + annotation_count * 2),
-                    )?
+                    .build_cartesian_2d(x_spec.clone(), 0..y_spec_max)?
             }
         } else {
-            ChartBuilder::on(&alignment)
-                // Set the caption of the chart
-                .caption(format!("{}", range), ("sans-serif", 20).into_font())
-                // Set the size of the label region
-                .top_x_label_area_size(x_scale / 2)
-                .x_label_area_size(x_scale / 2)
-                .y_label_area_size(y_area_size)
-                // Finally attach a coordinate on the drawing area and make a chart context
-                .build_cartesian_2d(
-                    (range.start() - 1)..(range.end() + 1),
-                    0..(1 + prev_index + axis_count + annotation_count * 2),
-                )?
+            if with_caption {
+                ChartBuilder::on(&alignment)
+                    // Set the caption of the chart
+                    .caption(format!("{}", range), ("sans-serif", 20).into_font())
+                    // Set the size of the label region
+                    .top_x_label_area_size(x_area_size)
+                    .x_label_area_size(x_area_size)
+                    .y_label_area_size(y_area_size)
+                    // Finally attach a coordinate on the drawing area and make a chart context
+                    .build_cartesian_2d((range.start() - 1)..(range.end() + 1), 0..y_spec_max)?
+            } else {
+                ChartBuilder::on(&alignment)
+                    // Set the size of the label region
+                    .top_x_label_area_size(x_area_size)
+                    .x_label_area_size(x_area_size)
+                    .y_label_area_size(y_area_size)
+                    // Finally attach a coordinate on the drawing area and make a chart context
+                    .build_cartesian_2d((range.start() - 1)..(range.end() + 1), 0..y_spec_max)?
+            }
         };
         let x_labels = n_x_labels.get(index).unwrap_or(&10); //if dynamic_partition {} else {10};
                                                              // Then we can draw a mesh
@@ -967,6 +975,7 @@ where
         let mut split_frequency = vec![];
         //let mut snp_frequency = vec![];
         // For each alignment:
+
         let series = {
             //list.into_iter().enumerate().map(|(index, data)| {
             let mut bars = vec![];
@@ -1018,11 +1027,22 @@ where
                     };
                     /*chart
                     .draw_series(LineSeries::new(vec![(start, index), (end, index)], &color))?;*/
-                    let mut bar =
-                        Rectangle::new([(start, index), (end, index + 1)], color.filled());
-                    bar.set_margin(2, 2, 0, 0);
+                    /*if let Some(val) = read_index {
+                        if val == index {
+                            let mut bar =
+                            Rectangle::new([(start, 0), (end, 1)], color.filled());
+                            bar.set_margin(2, 2, 0, 0);
+                            bars.push(bar);
+                        } else {
+                            continue
+                        }
+                    } else {*/
+                        let mut bar =
+                            Rectangle::new([(start, index), (end, index + 1)], color.filled());
+                        bar.set_margin(2, 2, 0, 0);
 
-                    bars.push(bar);
+                        bars.push(bar);
+                    //}
 
                     if colored_by_name {
                         let color = Palette99::pick(name_to_num(data.1.name())).mix(0.8);
