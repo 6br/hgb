@@ -233,9 +233,6 @@ pub fn frequency_vis<'a, F>(
 where
     F: Fn(usize) -> Option<&'a str>,
 {
-    let vis = &vis[0];
-    let range = &vis.range;
-    let frequency = vis.frequency;
     let no_margin = matches.is_present("no-scale");
     let y_area_size = if no_margin { 0 } else { 40 };
     let output = matches.value_of("output").unwrap();
@@ -250,100 +247,161 @@ where
         .value_of("freq-height")
         .and_then(|a| a.parse::<u32>().ok())
         .unwrap_or(100u32);
+    let x_as_range = matches.is_present("x-as-range");
+    let dynamic_partition = matches.is_present("dynamic-partition");
+    let freq_len = vis.iter().map(|a| a.frequency.len()).max().unwrap();
+    let freq_len_ids = vis
+        .iter()
+        .map(|a| (a.frequency.len(), a.frequency.keys()))
+        .max_by_key(|t| t.0)
+        .unwrap()
+        .1
+        .collect::<Vec<_>>();
     let x_scale = matches
         .value_of("x-scale")
         .and_then(|a| a.parse::<u32>().ok())
         .unwrap_or(20u32)
-        / if frequency.len() > 1 {
-            frequency.len() as u32
+        / if freq_len > 1 {
+            freq_len as u32
         } else {
             1u32
         };
+    let x_len = if x_as_range {
+        vis.iter().map(|t| t.range.interval() as u32).sum::<u32>()
+    } else {
+        x
+    };
+    let y_max = match max_coverage {
+        Some(a) => a,
+        _ => vis
+            .iter()
+            .map(|t| {
+                t.frequency
+                    .iter()
+                    .map(|(_, values)| values.iter().map(|t| t.1).max().unwrap_or(1))
+                    .max()
+                    .unwrap_or(1)
+            })
+            .max()
+            .unwrap_or(1),
+        /*if frequency.len() > 0 {
+
+            let coverages = coverage.split_evenly((frequency.len(), 1));
+            for (i, (sample_sequential_id, values)) in frequency.iter().rev().enumerate() {
+                values.iter().map(|t| t.1).max().unwrap_or(1),
+            }
+        }*/
+    };
     // list.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.start().cmp(&b.1.start())));
     // Calculate coverage; it won't work on sort_by_name
 
     let root = BitMapBackend::new(output, (x, freq_size)).into_drawing_area();
     root.fill(&WHITE)?;
     let root = root.margin(0, 0, 0, 0);
+
+    let areas = if !dynamic_partition {
+        root.split_evenly((1, vis.len()))
+    } else {
+        let x_axis_sum: u64 = vis.iter().map(|t| t.range.interval()).sum();
+        let mut x_axis = vis
+            .iter()
+            .map(|t| (t.range.interval() * x_len as u64 / x_axis_sum) as u32)
+            .scan(0, |acc, x| {
+                *acc = *acc + x;
+                Some(*acc)
+            })
+            .collect::<Vec<u32>>();
+        x_axis.pop();
+        let y_axis: Vec<u32> = vec![];
+        root.split_by_breakpoints(x_axis, y_axis)
+    };
+    //let areas_len = vis.len();
     // After this point, we should be able to draw construct a chart context
     // let areas = root.split_by_breakpoints([], compressed_list);
-    if frequency.len() > 0 {
-        let coverages = root.split_evenly((frequency.len(), 1));
-        for (i, (sample_sequential_id, values)) in frequency.iter().rev().enumerate() {
-            let idx = *sample_sequential_id as usize;
-            let y_max = match max_coverage {
-                Some(a) => a,
-                _ => values.iter().map(|t| t.1).max().unwrap_or(1),
-            };
-            let x_spec = if no_margin && range.end() - range.start() <= 5000 {
-                range.start()..range.end()
-            } else {
-                (range.start() - 1)..(range.end() + 1)
-            };
-            let x_offset = if range.end() - range.start() <= PARBASE_THRESHOLD {
-                coverages[i].get_pixel_range().0.len()
-                    / ((range.end() - range.start()) * 2) as usize
-            } else {
-                0usize
-            };
-            let x_label_formatter = {
-                &|x: &u64| {
-                    if *x == range.start() || range.end() - range.start() > PARBASE_THRESHOLD {
-                        format!("{}", x.to_formatted_string(&Locale::en))
-                    } else {
-                        format!("")
+    if freq_len > 0 {
+        for (index, area) in areas.iter().enumerate() {
+            let area = area.margin(0, 0, 0, 0);
+            let vis = &vis[index];
+            let range = &vis.range;
+            let frequency = &vis.frequency;
+            let coverages = area.split_evenly((frequency.len(), 1));
+            for (i, &sample_sequential_id) in freq_len_ids.iter().rev().enumerate() {
+                //}
+                //for (i, (sample_sequential_id, values)) in frequency.iter().rev().enumerate() {
+                let idx = *sample_sequential_id as usize;
+
+                let x_spec = if no_margin && range.end() - range.start() <= 5000 {
+                    range.start()..range.end()
+                } else {
+                    (range.start() - 1)..(range.end() + 1)
+                };
+                let x_offset = if range.end() - range.start() <= PARBASE_THRESHOLD {
+                    coverages[i].get_pixel_range().0.len()
+                        / ((range.end() - range.start()) * 2) as usize
+                } else {
+                    0usize
+                };
+                let x_label_formatter = {
+                    &|x: &u64| {
+                        if *x == range.start() || range.end() - range.start() > PARBASE_THRESHOLD {
+                            format!("{}", x.to_formatted_string(&Locale::en))
+                        } else {
+                            format!("")
+                        }
                     }
-                }
-            };
-            let mut chart = ChartBuilder::on(&coverages[i])
-                // Set the caption of the chart
-                //.caption(format!("{}", range), ("sans-serif", 20).into_font())
-                // Set the size of the label region
-                .x_label_area_size(x_scale)
-                .y_label_area_size(y_area_size)
-                // Finally attach a coordinate on the drawing area and make a chart context
-                .build_cartesian_2d(x_spec.clone(), 0..y_max)?;
-            chart
-                .configure_mesh()
-                // We can customize the maximum number of labels allowed for each axis
-                .x_label_offset(x_offset as u32)
-                .x_label_style(("sans-serif", x_scale / 2).into_font())
-                // .y_labels(4)
-                .y_label_style(("sans-serif", 12).into_font())
-                // We can also change the format of the label text
-                .x_label_formatter(x_label_formatter)
-                // .x_label_formatter(&|x| format!("{}", x.to_formatted_string(&Locale::en)))
-                .draw()?;
-            let color = Palette99::pick(idx); // BLUE
-                                              /*eprintln!("{} {:?}", y_max, values
-                                              .iter()
-                                              .filter(|t| t.0 >= range.start() && t.0 < range.end())
-                                              .map(|t| *t));*/
-            chart
-                .draw_series(
-                    Histogram::vertical(&chart)
-                        .style(color.filled())
-                        .margin(2)
-                        .data(
-                            values
-                                .iter()
-                                .filter(|t| t.0 >= range.start() && t.0 < range.end() && t.2 == '*')
-                                .map(|t| (t.0, t.1)),
-                        ),
-                )?
-                .label(format!("{}", lambda(idx).unwrap_or(&idx.to_string())))
-                .legend(move |(x, y)| {
-                    Rectangle::new(
-                        [(x - 5, y - 5), (x + 5, y + 5)],
-                        Palette99::pick(idx).filled(),
-                    )
-                });
-            if !no_margin {
+                };
+                let mut chart = ChartBuilder::on(&coverages[i])
+                    // Set the caption of the chart
+                    //.caption(format!("{}", range), ("sans-serif", 20).into_font())
+                    // Set the size of the label region
+                    .x_label_area_size(x_scale)
+                    .y_label_area_size(y_area_size)
+                    // Finally attach a coordinate on the drawing area and make a chart context
+                    .build_cartesian_2d(x_spec.clone(), 0..y_max)?;
                 chart
-                    .configure_series_labels()
-                    .background_style(&WHITE.mix(0.8))
-                    .border_style(&BLACK)
+                    .configure_mesh()
+                    // We can customize the maximum number of labels allowed for each axis
+                    .x_label_offset(x_offset as u32)
+                    .x_label_style(("sans-serif", x_scale / 2).into_font())
+                    // .y_labels(4)
+                    .y_label_style(("sans-serif", 12).into_font())
+                    // We can also change the format of the label text
+                    .x_label_formatter(x_label_formatter)
+                    // .x_label_formatter(&|x| format!("{}", x.to_formatted_string(&Locale::en)))
                     .draw()?;
+                if let Some(values) = frequency.get(sample_sequential_id) {
+                let color = Palette99::pick(idx); // BLUE
+                                                /*eprintln!("{} {:?}", y_max, values
+                                                .iter()
+                                                .filter(|t| t.0 >= range.start() && t.0 < range.end())
+                                                .map(|t| *t));*/
+                chart
+                    .draw_series(
+                        Histogram::vertical(&chart)
+                            .style(color.filled())
+                            .margin(2)
+                            .data(
+                                values
+                                    .iter()
+                                    .filter(|t| t.0 >= range.start() && t.0 < range.end() && t.2 == '*')
+                                    .map(|t| (t.0, t.1)),
+                            ),
+                    )?
+                    .label(format!("{}", lambda(idx).unwrap_or(&idx.to_string())))
+                    .legend(move |(x, y)| {
+                        Rectangle::new(
+                            [(x - 5, y - 5), (x + 5, y + 5)],
+                            Palette99::pick(idx).filled(),
+                        )
+                    });
+                if !no_margin {
+                    chart
+                        .configure_series_labels()
+                        .background_style(&WHITE.mix(0.8))
+                        .border_style(&BLACK)
+                        .draw()?;
+                }
+            }
             }
         }
     }
