@@ -1751,13 +1751,18 @@ where
             }
         }
         for i in vis.iter() {
-            if let Some(val) = read_index {
+            if let Some(index) = read_index {
                 let mut index_list = i.index_list.lock().unwrap();
                 let temp_index_list = (0..1).collect();
 
                 *index_list = temp_index_list;
                 let mut list = i.list.lock().unwrap();
-                let temp_list = vec![list[val].clone()];
+                let temp_list = if let Some(item) = list.get(index) {
+                    vec![item.clone()]
+                } else {
+                    vec![]
+                };
+                //let temp_list = vec![list[index].clone()];
                 *list = temp_list;
                 prev_index = 1;
             }

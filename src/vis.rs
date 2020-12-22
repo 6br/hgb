@@ -6,7 +6,7 @@ use bam::record::{
 use bam::{Record, RecordReader};
 use bio_types::strand::Strand;
 use clap::ArgMatches;
-use genomic_range::StringRegion;
+//use genomic_range::StringRegion;
 use itertools::Itertools;
 use log::{debug, info};
 use num_format::{Locale, ToFormattedString};
@@ -225,13 +225,17 @@ where
 
 pub fn frequency_vis<'a, F>(
     matches: &ArgMatches,
-    range: &StringRegion,
-    frequency: &BTreeMap<u64, Vec<(u64, u32, char)>>,
+    //range: &StringRegion,
+    //frequency: &BTreeMap<u64, Vec<(u64, u32, char)>>,
+    vis: Vec<VisRef>,
     lambda: F,
 ) -> Result<(), Box<dyn std::error::Error>>
 where
     F: Fn(usize) -> Option<&'a str>,
 {
+    let vis = &vis[0];
+    let range = &vis.range;
+    let frequency = vis.frequency;
     let no_margin = matches.is_present("no-scale");
     let y_area_size = if no_margin { 0 } else { 40 };
     let output = matches.value_of("output").unwrap();
@@ -415,11 +419,11 @@ where
 
     if hide_alignment {
         //Multi-ranged frequency vis has not yet been supported.
-        let vis = &vis[0];
+        /*let vis = &vis[0];
         let range = &vis.range;
         let frequency = vis.frequency;
-
-        return frequency_vis(matches, range, frequency, lambda);
+        return frequency_vis(matches, range, frequency, lambda);*/
+        return frequency_vis(matches, vis, lambda);
     }
     let vis_index = matches
         .value_of("range-index")
@@ -650,15 +654,19 @@ where
         } else {
             1 + prev_index + axis_count + annotation_count * 2
         };
+        let top_x_area_size = if read_index { 0 } else { x_area_size };
         let mut chart = if no_margin {
             if with_caption {
                 ChartBuilder::on(&alignment)
                     // Set the caption of the chart
                     // Set the size of the label region
-                    .caption(format!("{}", range), ("sans-serif", 20).into_font())
+                    .caption(
+                        format!("{}", range),
+                        ("sans-serif", x_scale / 2).into_font(),
+                    )
                     .y_label_area_size(y_area_size)
                     .top_x_label_area_size(x_area_size)
-                    .x_label_area_size(x_area_size)
+                    .x_label_area_size(top_x_area_size)
                     // Finally attach a coordinate on the drawing area and make a chart context
                     .build_cartesian_2d(x_spec.clone(), 0..y_spec_max)?
             } else {
@@ -667,7 +675,7 @@ where
                     // Set the size of the label region
                     .y_label_area_size(y_area_size)
                     .top_x_label_area_size(x_area_size)
-                    .x_label_area_size(x_area_size)
+                    .x_label_area_size(top_x_area_size)
                     // Finally attach a coordinate on the drawing area and make a chart context
                     .build_cartesian_2d(x_spec.clone(), 0..y_spec_max)?
             }
@@ -675,10 +683,13 @@ where
             if with_caption {
                 ChartBuilder::on(&alignment)
                     // Set the caption of the chart
-                    .caption(format!("{}", range), ("sans-serif", 20).into_font())
+                    .caption(
+                        format!("{}", range),
+                        ("sans-serif", x_scale / 2).into_font(),
+                    )
                     // Set the size of the label region
                     .top_x_label_area_size(x_area_size)
-                    .x_label_area_size(x_area_size)
+                    .x_label_area_size(top_x_area_size)
                     .y_label_area_size(y_area_size)
                     // Finally attach a coordinate on the drawing area and make a chart context
                     .build_cartesian_2d((range.start() - 1)..(range.end() + 1), 0..y_spec_max)?
@@ -686,7 +697,7 @@ where
                 ChartBuilder::on(&alignment)
                     // Set the size of the label region
                     .top_x_label_area_size(x_area_size)
-                    .x_label_area_size(x_area_size)
+                    .x_label_area_size(top_x_area_size)
                     .y_label_area_size(y_area_size)
                     // Finally attach a coordinate on the drawing area and make a chart context
                     .build_cartesian_2d((range.start() - 1)..(range.end() + 1), 0..y_spec_max)?
