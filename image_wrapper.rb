@@ -14,4 +14,4 @@ for i in 0..READ_MAX
     spawn "#{bin} -t12 vis -_ #{i} -o dnd/#{i+1}.png #{cmd} -*"
 end
 # Coverage
-spawn "#{bin} -t12 vis #{cmd} -A -o dnd/#{READ_MAX+1}.png"
+spawn "#{bin} -t12 vis #{cmd} -P -A -o dnd/#{READ_MAX+1}.png"
