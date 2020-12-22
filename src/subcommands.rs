@@ -1765,6 +1765,9 @@ where
                 //let temp_list = vec![list[index].clone()];
                 *list = temp_list;
                 prev_index = 1;
+                let mut freq = i.frequency.lock().unwrap();
+                let tmp_freq = BTreeMap::new();
+                *freq = tmp_freq;
             }
         }
     }
