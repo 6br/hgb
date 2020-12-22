@@ -11,7 +11,7 @@ end
 `#{bin} -t12 vis -_ 10000 #{cmd} -o dnd/0.png`
 # Each read
 for i in 0..READ_MAX
-    `#{bin} -t12 vis -_ #{i} -o dnd/#{i+1}.png #{cmd} -*`
+    spawn "#{bin} -t12 vis -_ #{i} -o dnd/#{i+1}.png #{cmd} -*"
 end
 # Coverage
 `#{bin} -t12 vis #{cmd} -A -o dnd/#{READ_MAX+1}.png`
