@@ -1607,7 +1607,7 @@ where
             end1.subsec_nanos() / 1_000_000
         );
 
-        if freq_len > 0 {
+        if freq_len > 0 && !read_index {
             let coverages = coverage.split_evenly((freq_len, 1));
             for (i, &sample_sequential_id) in freq_len_ids.iter().rev().enumerate() {
                 //}
