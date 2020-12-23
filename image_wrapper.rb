@@ -1,8 +1,7 @@
 require 'json'
-
+READ_MAX=40
 cmd = ARGV.size > 0 ? ARGV.join(" ") : "-a result_b1_md.bam -s -S -p -r chr1:8869816-8899900 -l -U -y 20"
 bin = File.exist?("./target/debug/hgb") ? "./target/debug/hgb" : "./target/release/hgb"
-READ_MAX=20
 
 File.open("./dnd/reads.json", 'w') do |file|
   JSON.dump({"read_max"=>READ_MAX} , file)

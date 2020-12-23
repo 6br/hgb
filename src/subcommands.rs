@@ -1752,22 +1752,15 @@ where
         }
         for i in vis.iter() {
             if let Some(index) = read_index {
-                //FIXME() ERROR DUE TO MULTIPLE REGION
                 let mut index_list = i.index_list.lock().unwrap();
                 let read_indices: Vec<_> = index_list.iter().enumerate().filter(|&(_, &value)| value == index).map(|(index, _)| index).collect();
 
-                //let temp_index_list = (0..1).collect();
-                let temp_index_list = read_indices.iter().map(|_| 0).collect();
 
+                let temp_index_list = read_indices.iter().map(|_| 0).collect();
                 *index_list = temp_index_list;
                 let mut list = i.list.lock().unwrap();
                 let temp_list = read_indices.iter().map(|t| list[*t].clone()).collect();
-                /*let temp_list = if let Some(item) = list.get(index) {
-                    vec![item.clone()]
-                } else {
-                    vec![]
-                };*/
-                //let temp_list = vec![list[index].clone()];
+
                 *list = temp_list;
                 prev_index = 1;
                 let mut freq = i.frequency.lock().unwrap();
