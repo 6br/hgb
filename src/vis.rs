@@ -261,11 +261,7 @@ where
         .value_of("x-scale")
         .and_then(|a| a.parse::<u32>().ok())
         .unwrap_or(20u32)
-        / if freq_len > 1 {
-            freq_len as u32
-        } else {
-            1u32
-        };
+        / if freq_len > 1 { freq_len as u32 } else { 1u32 };
     let x_len = if x_as_range {
         vis.iter().map(|t| t.range.interval() as u32).sum::<u32>()
     } else {
@@ -370,38 +366,40 @@ where
                     // .x_label_formatter(&|x| format!("{}", x.to_formatted_string(&Locale::en)))
                     .draw()?;
                 if let Some(values) = frequency.get(sample_sequential_id) {
-                let color = Palette99::pick(idx); // BLUE
-                                                /*eprintln!("{} {:?}", y_max, values
-                                                .iter()
-                                                .filter(|t| t.0 >= range.start() && t.0 < range.end())
-                                                .map(|t| *t));*/
-                chart
-                    .draw_series(
-                        Histogram::vertical(&chart)
-                            .style(color.filled())
-                            .margin(2)
-                            .data(
-                                values
-                                    .iter()
-                                    .filter(|t| t.0 >= range.start() && t.0 < range.end() && t.2 == '*')
-                                    .map(|t| (t.0, t.1)),
-                            ),
-                    )?
-                    .label(format!("{}", lambda(idx).unwrap_or(&idx.to_string())))
-                    .legend(move |(x, y)| {
-                        Rectangle::new(
-                            [(x - 5, y - 5), (x + 5, y + 5)],
-                            Palette99::pick(idx).filled(),
-                        )
-                    });
-                if !no_margin {
+                    let color = Palette99::pick(idx); // BLUE
+                                                      /*eprintln!("{} {:?}", y_max, values
+                                                      .iter()
+                                                      .filter(|t| t.0 >= range.start() && t.0 < range.end())
+                                                      .map(|t| *t));*/
                     chart
-                        .configure_series_labels()
-                        .background_style(&WHITE.mix(0.8))
-                        .border_style(&BLACK)
-                        .draw()?;
+                        .draw_series(
+                            Histogram::vertical(&chart)
+                                .style(color.filled())
+                                .margin(2)
+                                .data(
+                                    values
+                                        .iter()
+                                        .filter(|t| {
+                                            t.0 >= range.start() && t.0 < range.end() && t.2 == '*'
+                                        })
+                                        .map(|t| (t.0, t.1)),
+                                ),
+                        )?
+                        .label(format!("{}", lambda(idx).unwrap_or(&idx.to_string())))
+                        .legend(move |(x, y)| {
+                            Rectangle::new(
+                                [(x - 5, y - 5), (x + 5, y + 5)],
+                                Palette99::pick(idx).filled(),
+                            )
+                        });
+                    if !no_margin {
+                        chart
+                            .configure_series_labels()
+                            .background_style(&WHITE.mix(0.8))
+                            .border_style(&BLACK)
+                            .draw()?;
+                    }
                 }
-            }
             }
         }
     }
