@@ -136,7 +136,7 @@ predefined_color!(
     "The predefined split-alignment color"
 );
 predefined_color!(N_COL, 80, 80, 80, "The predefined N color");
-predefined_color!(A_COL, 119, 217, 168, "The predefined A color"); //#00c800
+predefined_color!(A_COL, 119, 217, 168, "The predefined A color"); //#00c800, GREEN
 predefined_color!(C_COL, 0, 90, 255, "The predefined C color"); // #0000c8
 predefined_color!(T_COL, 255, 75, 0, "The predefined T color"); // #ff0000
 predefined_color!(G_COL, 128, 64, 0, "The predefined G color"); // 209,113,5

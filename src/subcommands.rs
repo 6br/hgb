@@ -1753,8 +1753,12 @@ where
         for i in vis.iter() {
             if let Some(index) = read_index {
                 let mut index_list = i.index_list.lock().unwrap();
-                let read_indices: Vec<_> = index_list.iter().enumerate().filter(|&(_, &value)| value == index).map(|(index, _)| index).collect();
-
+                let read_indices: Vec<_> = index_list
+                    .iter()
+                    .enumerate()
+                    .filter(|&(_, &value)| value == index)
+                    .map(|(index, _)| index)
+                    .collect();
 
                 let temp_index_list = read_indices.iter().map(|_| 0).collect();
                 *index_list = temp_index_list;
