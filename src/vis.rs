@@ -1503,9 +1503,9 @@ where
                                                     let mut bar = Rectangle::new(
                                                         [
                                                             (prev_pixel_ref as u64+1, index),
-                                                            (prev_pixel_ref as u64+2, index + 1),
+                                                            (prev_pixel_ref as u64, index + 1),
                                                         ],
-                                                        color.filled(),
+                                                        color.stroke_width(2),
                                                     );
                                                     bar.set_margin(1, 1, 0, 0);
                                                     bars.push(bar);
