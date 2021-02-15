@@ -1500,14 +1500,15 @@ where
                                         if prev_ref >= range.start() as u64 {
                                             if let Some(color) = color {
                                                 if stick_out {
+                                                    // If insertion
                                                     let mut bar = Rectangle::new(
                                                         [
                                                             (prev_pixel_ref as u64+1, index),
-                                                            (prev_pixel_ref as u64, index + 1),
+                                                            (prev_pixel_ref as u64+1, index + 1),
                                                         ],
                                                         color.stroke_width(2),
                                                     );
-                                                    bar.set_margin(1, 1, 0, 0);
+                                                    bar.set_margin(2, 2, 0, 0);
                                                     bars.push(bar);
                                                 } else {
                                                     let mut bar = Rectangle::new(
@@ -1517,7 +1518,7 @@ where
                                                         ],
                                                         color.filled(),
                                                     );
-                                                    bar.set_margin(2, 2, 0, 0);
+                                                    bar.set_margin(3, 3, 0, 0);
                                                     bars.push(bar);
                                                 }
                                                 /*eprintln!(
