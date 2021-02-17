@@ -453,10 +453,11 @@ supplementary_list: Vec<(Vec<u8>, usize, usize, i32, i32)>,threads: u16) -> std:
     let vis = Vis::new(range, annotation, freq, compressed_list, index_list, prev_index, supplementary_list, 250000000);
     let counter = web::Data::new(RwLock::new(Item::new(vis, args, params, dzi)));
     //let buffer = web::Data::new(RwLock::new(ChromosomeBuffer::new()));
+    let cross_origin_bool = matches.is_present("production");
 
     //https://github.com/actix/examples/blob/master/state/src/main.rs
     HttpServer::new(move|| {
-        let cross_origin = if matches.is_present("production") { Cors::default() } else { Cors::permissive() };
+        let cross_origin = if cross_origin_bool { Cors::default() } else { Cors::permissive() };
     
         actix_web::App::new().data(()).app_data(web::Data::new(RwLock::new(list.clone()))).app_data(counter.clone()).route("/", web::get().to(get_index))
         .route("openseadragon.min.js", web::get().to(get_js))

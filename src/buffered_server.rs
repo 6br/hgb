@@ -457,10 +457,11 @@ pub async fn server(matches: ArgMatches, range: StringRegion, prefetch_range: St
     let counter = web::Data::new(RwLock::new(Item::new(view_range, args, params, dzi)));
     //let vis = web::Data::new(RwLock::new(vis));
     let buffer = web::Data::new(RwLock::new(buffer));
+    let cross_origin_bool = matches.is_present("production");
 
     //https://github.com/actix/examples/blob/master/state/src/main.rs
     HttpServer::new(move|| {
-        let cross_origin = if matches.is_present("production") { Cors::default() } else { Cors::permissive() };
+        let cross_origin = if cross_origin_bool { Cors::default() } else { Cors::permissive() };
     
         let list = RwLock::new(list.clone());
         let list_btree = RwLock::new(list_btree.clone());//buffer =
