@@ -472,7 +472,7 @@ pub async fn server(matches: ArgMatches, range: StringRegion, prefetch_range: St
         .route("genome.dzi", web::get().to(get_dzi))
         .route("/{zoom:.*}/{filename:.*}_0.{format:.*}", web::get().to(index))
         .service(actix_files::Files::new("/images", "static/images").show_files_listing()).wrap(Logger::default()).wrap(
-            Cors::default().supports_credentials() /*allowed_origin("*").allowed_methods(vec!["GET", "POST"])
+            Cors::default() /*allowed_origin("*").allowed_methods(vec!["GET", "POST"])
             .allowed_headers(vec![http::header::AUTHORIZATION, http::header::ACCEPT])
             .allowed_header(http::header::CONTENT_TYPE)
             .max_age(3600)*/
