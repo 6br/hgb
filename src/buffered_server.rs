@@ -266,10 +266,9 @@ async fn index(item: web::Data<RwLock<Item>>, vis: web::Data<RwLock<Vis>>, list:
             let path_string = format!("{}/{}/{}_0.{}", cache_dir, zoom, path, format);
             let max_zoom = params.max_zoom as u64;
             //let min_zoom = ((&data.params).criteria << (max_zoom - zoom)) >= 10000000;
-            let min_zoom = zoom < params.min_zoom as u64;
-
-            if min_zoom || zoom > max_zoom as u64 {
-                return Err(error::ErrorBadRequest("zoom level is not appropriate"));
+            let min_zoom = params.min_zoom as u64;
+            if zoom < min_zoom || zoom > max_zoom as u64 {
+                return Err(error::ErrorBadRequest(format!("zoom level {} should be between {} and {}", zoom, min_zoom, max_zoom)));
             }
             fs::create_dir_all( format!("{}/{}", cache_dir, zoom))?; //error is permitted.
             let end1 = start.elapsed();
