@@ -277,7 +277,7 @@ async fn index(data: web::Data<RwLock<Item>>, list: web::Data<RwLock<Vec<(u64, R
             if zoom < min_zoom || zoom > max_zoom as u64 {
                 return Err(error::ErrorBadRequest(format!("zoom level {} should be between {} and {}", zoom, min_zoom, max_zoom)));
             }
-            fs::create_dir_all( format!("{}/{}", cache_dir, zoom))?; //error is permitted.
+            fs::create_dir_all( format!("{}/{}", cache_dir, zoom)); //error is permitted.
             let end1 = start.elapsed();
             eprintln!(
                 "create dir: {}.{:03} sec.",
@@ -302,7 +302,7 @@ async fn index(data: web::Data<RwLock<Item>>, list: web::Data<RwLock<Vec<(u64, R
                 end3.subsec_nanos() / 1_000_000
             );
             // bam_vis(matches, 1);
-            Ok(NamedFile::open(path_string).unwrap()
+            Ok(NamedFile::open(path_string)?
                 .set_content_disposition(ContentDisposition {
                     disposition: DispositionType::Attachment,
                     parameters: vec![],
