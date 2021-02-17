@@ -430,7 +430,7 @@ supplementary_list: Vec<(Vec<u8>, usize, usize, i32, i32)>,threads: u16) -> std:
         .value_of("cache-dir")
         .and_then(|a| Some(a.to_string()))
         .unwrap_or(rng.gen::<u32>().to_string());
-    
+
     let x_width = all as u32 / diff as u32 * x;
     // eprintln!("{} {} {}", all,diff,x);
     let max_zoom = log_2(x_width as i32) + 1;
@@ -456,13 +456,14 @@ supplementary_list: Vec<(Vec<u8>, usize, usize, i32, i32)>,threads: u16) -> std:
 
     //https://github.com/actix/examples/blob/master/state/src/main.rs
     HttpServer::new(move|| {
-        //let list = list.clone();
+        let cross_origin = if matches.is_present("production") { Cors::default() } else { Cors::permissive() };
+    
         actix_web::App::new().data(()).app_data(web::Data::new(RwLock::new(list.clone()))).app_data(counter.clone()).route("/", web::get().to(get_index))
         .route("openseadragon.min.js", web::get().to(get_js))
         .route("openseadragon.min.js.map", web::get().to(get_js_map))
         .route("genome.dzi", web::get().to(get_dzi))
         .route("/{zoom:.*}/{filename:.*}_0.png", web::get().to(index)).service(actix_files::Files::new("/images", "static/images").show_files_listing()).wrap(Logger::default()).wrap(
-            Cors::default() /*allowed_origin("*").allowed_methods(vec!["GET", "POST"])
+            cross_origin /*allowed_origin("*").allowed_methods(vec!["GET", "POST"])
             .allowed_headers(vec![http::header::AUTHORIZATION, http::header::ACCEPT])
             .allowed_header(http::header::CONTENT_TYPE)
             .max_age(3600)*/

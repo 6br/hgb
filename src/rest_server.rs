@@ -409,6 +409,8 @@ pub async fn server(matches: ArgMatches, _range: StringRegion, prefetch_range: S
 
     //https://github.com/actix/examples/blob/master/state/src/main.rs
     HttpServer::new(move|| {
+        let cross_origin = if matches.is_present("production") { Cors::default() } else { Cors::permissive() };
+    
         let list = RwLock::new(list.clone());
         let list_btree = RwLock::new(list_btree.clone());//buffer =
         let vis = RwLock::new(vis.clone()); 
@@ -417,7 +419,7 @@ pub async fn server(matches: ArgMatches, _range: StringRegion, prefetch_range: S
         .app_data(buffer.clone())
         .route("/", web::post().to(index))
         .wrap(Logger::default()).wrap(
-            Cors::default() /*allowed_origin("*").allowed_methods(vec!["GET", "POST"])
+            cross_origin /*allowed_origin("*").allowed_methods(vec!["GET", "POST"])
             .allowed_headers(vec![http::header::AUTHORIZATION, http::header::ACCEPT])
             .allowed_header(http::header::CONTENT_TYPE)
             .max_age(3600)*/
