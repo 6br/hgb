@@ -270,7 +270,7 @@ async fn index(item: web::Data<RwLock<Item>>, vis: web::Data<RwLock<Vis>>, list:
             if zoom < min_zoom || zoom > max_zoom as u64 {
                 return Err(error::ErrorBadRequest(format!("zoom level {} should be between {} and {}", zoom, min_zoom, max_zoom)));
             }
-            fs::create_dir_all( format!("{}/{}", cache_dir, zoom))?; //error is permitted.
+            fs::create_dir_all( format!("{}/{}", cache_dir, zoom)); //error is permitted.
             let end1 = start.elapsed();
             eprintln!(
                 "create dir: {}.{:03} sec.",

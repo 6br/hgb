@@ -302,7 +302,7 @@ async fn index(data: web::Data<RwLock<Item>>, list: web::Data<RwLock<Vec<(u64, R
                 end3.subsec_nanos() / 1_000_000
             );
             // bam_vis(matches, 1);
-            Ok(NamedFile::open(path_string)?
+            Ok(NamedFile::open(path_string).unwrap()
                 .set_content_disposition(ContentDisposition {
                     disposition: DispositionType::Attachment,
                     parameters: vec![],
