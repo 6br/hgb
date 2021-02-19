@@ -710,7 +710,7 @@ where
         let y_spec_max = if read_index {
             1
         } else {
-            1 + prev_index + axis_count + annotation_count * 2 + if twobit.is_some() {1} else {0}
+            1 + prev_index + axis_count + annotation_count * 2 + if twobit.is_some() {2} else {0}
         };
         let top_x_area_size = if read_index { 0 } else { x_area_size };
         let mut chart = if no_margin {
@@ -807,7 +807,7 @@ where
                     let mut bar = Rectangle::new([(pos, y_spec_max -1), (pos+1, y_spec_max)], color.filled());
                     bar.set_margin(2, 2, 0, 0);
                     bars.push(bar);
-                    let text = Text::new(format!("{}", base), (pos, y_spec_max -1), ("sans-serif", y-2));
+                    let text = Text::new(format!("{}", base), (pos, y_spec_max), ("sans-serif", y/4*3));
                     texts.push(text);
                     pos += 1;
                 }
