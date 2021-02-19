@@ -18,6 +18,7 @@ use std::convert::TryInto;
 use std::ops::Range;
 use std::{collections::BTreeMap, fs::File, time::Instant};
 use udon::{Udon, UdonPalette, UdonScaler, UdonUtils};
+use twobit::TwoBitFile;
 
 const PARBASE_THRESHOLD: u64 = 5;
 
@@ -472,6 +473,7 @@ where
         .and_then(|t| Some(t.split(":").map(|t| t.to_string()).collect()));
     let colored_by_tag = matches.occurrences_of("colored-by-tag") != 0;
     let colored_by_tag_vec = matches.value_of("colored-by-tag");
+    let twobit = matches.value_of("ref-column");
 
     if hide_alignment {
         //Multi-ranged frequency vis has not yet been supported.
@@ -708,7 +710,7 @@ where
         let y_spec_max = if read_index {
             1
         } else {
-            1 + prev_index + axis_count + annotation_count * 2
+            1 + prev_index + axis_count + annotation_count * 2 + if twobit.is_some() {1} else {0}
         };
         let top_x_area_size = if read_index { 0 } else { x_area_size };
         let mut chart = if no_margin {
@@ -789,6 +791,29 @@ where
                 prev_node_id = *node_id;
             });
             node_id_dict.insert(prev_node_id, (prev_pos, range.end()));
+        }
+
+        if let Some(twobit) = twobit {
+            let enable_softmask=false;
+            let tb_nosoft = TwoBitFile::open(twobit, enable_softmask).unwrap();
+            // let expected_seq = "NNNNNNNNNNNNNNNNNNNNNNNNNNACGTACGTACGTAGCTAGCTGATC"; // all upper case
+            // assert_eq!(tb_nosoft.sequence(range.path, range.).unwrap(), expected_seq);
+            if let Ok(seq) = tb_nosoft.sequence(&range.path, range.start as usize, range.end as usize) {
+                let mut pos = range.start;
+                let mut bars = vec![];
+                let mut texts = vec![];
+                for base in seq.chars() {
+                    let color = nt_color(base).unwrap_or(N_COL);
+                    let mut bar = Rectangle::new([(pos, y_spec_max -1), (pos+1, y_spec_max)], color.filled());
+                    bar.set_margin(2, 2, 0, 0);
+                    bars.push(bar);
+                    let text = Text::new(format!("{}", base), (pos, y_spec_max -1), ("sans-serif", y-2));
+                    texts.push(text);
+                    pos += 1;
+                }
+                chart.draw_series(bars)?;
+                chart.draw_series(texts)?;
+            }
         }
 
         // Draw annotation if there is bed-compatible annotation.

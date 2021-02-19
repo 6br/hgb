@@ -375,6 +375,7 @@ fn main() {
                 .arg(Arg::new("whole-chromosome").short('W').about("Pretend as if the prefetch range is the whole chromosome"))
                 .arg(Arg::new("rest").short('>').about("Serve the web server with accepting any parameter"))
                 .arg(Arg::new("production").short('$').about("Serve the web server on production mode (no cross-origin request is allowed)"))
+                .arg(Arg::new("ref-column").short('%').takes_value(true).about("Show the base colors of reference genome (input must be 2bit file)"))
                 .arg(Arg::new("dynamic-partition").short('D').about("Divide multiple genomic range with dynamic width"))
                 .arg(
                     Arg::new("format")
