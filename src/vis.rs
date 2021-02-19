@@ -794,10 +794,22 @@ where
         }
 
         if let Some(twobit) = twobit {
+
+            let left_top = chart.as_coord_spec().translate(&(range.start, index)); // range.start - 1 is better?
+            let right_bottom = chart.as_coord_spec().translate(&(range.end+1, index + 1));
+            eprintln!("{:?}, {:?}", left_top, right_bottom);
+            let opt_len = (right_bottom.0 - left_top.0) as usize;
+
+            let window = Range::<usize> {
+                start: range.start() as usize - 1usize,
+                end:   range.end() as usize + 1usize
+            };
+
+            let pixels_per_column = opt_len as f64 / window.len() as f64;
+
             let enable_softmask=false;
             let tb_nosoft = TwoBitFile::open(twobit, enable_softmask).unwrap();
-            // let expected_seq = "NNNNNNNNNNNNNNNNNNNNNNNNNNACGTACGTACGTAGCTAGCTGATC"; // all upper case
-            // assert_eq!(tb_nosoft.sequence(range.path, range.).unwrap(), expected_seq);
+
             if let Ok(seq) = tb_nosoft.sequence(&range.path, range.start as usize, range.end as usize) {
                 let mut pos = range.start;
                 let mut bars = vec![];
@@ -805,10 +817,12 @@ where
                 for base in seq.chars() {
                     let color = nt_color(base).unwrap_or(N_COL);
                     let mut bar = Rectangle::new([(pos, y_spec_max -1), (pos+1, y_spec_max)], color.filled());
-                    bar.set_margin(2, 2, 0, 0);
+                    bar.set_margin(0, 0, 0, 0);
                     bars.push(bar);
-                    let text = Text::new(format!("{}", base), (pos, y_spec_max), ("sans-serif", y/4*3));
-                    texts.push(text);
+                    if pixels_per_column as u32 >= y / 2 {
+                        let text = Text::new(format!("{}", base), (pos, y_spec_max), ("sans-serif", y/4*3));
+                        texts.push(text);
+                    }
                     pos += 1;
                 }
                 chart.draw_series(bars)?;
