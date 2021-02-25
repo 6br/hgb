@@ -397,12 +397,7 @@ pub async fn server(matches: ArgMatches, _range: StringRegion, prefetch_range: S
     };
     println!("REST Server is running on {}", bind);
     // Create some global state prior to building the server
-    //#[allow(clippy::mutex_atomic)] // it's intentional.
-    //let counter1 = web::Data::new(Mutex::new((matches.clone(), range, list, annotation, freq)));
-    // let counter = RwLock::new(Vis::new(range.clone(), args.clone(), list.clone(), annotation.clone(), freq.clone(), dzi.clone(), params.clone()));
-    //let counter = Arc::new(RwLock::new(Vis::new(range, args, annotation, freq, dzi, params)));
-    //#[allow(clippy::mutex_atomic)] 
-    // let vis = Vis::new(range, annotation, freq, compressed_list, index_list, prev_index, supplementary_list, 250000000);
+
     let counter = web::Data::new(RwLock::new(Item::new(view_range, args, cache_dir)));
     //let vis = web::Data::new(RwLock::new(vis));
     let buffer = web::Data::new(RwLock::new(buffer));
