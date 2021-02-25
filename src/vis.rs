@@ -73,11 +73,11 @@ impl RangeUtils for Range<usize> {
 
 fn nt_color(record_nt: char, preset_color: &ColorSet) -> Option<RGBColor> {
     match record_nt {
-        'A' => Some(preset_color.pick(VisColor::A_COL)), //RED,
-        'C' => Some(preset_color.pick(VisColor::C_COL)), // BLUE,
-        'G' => Some(preset_color.pick(VisColor::G_COL)),
-        'T' => Some(preset_color.pick(VisColor::T_COL)), //GREEN,
-        _ => Some(preset_color.pick(VisColor::N_COL)),
+        'A' => Some(preset_color.pick(VisColor::ACol)), //RED,
+        'C' => Some(preset_color.pick(VisColor::CCol)), // BLUE,
+        'G' => Some(preset_color.pick(VisColor::GCol)),
+        'T' => Some(preset_color.pick(VisColor::TCol)), //GREEN,
+        _ => Some(preset_color.pick(VisColor::NCol)),
     }
 }
 
@@ -753,7 +753,7 @@ where
                 let mut texts = vec![];
                 for base in seq.chars() {
                     let color =
-                        nt_color(base, &preset_color).unwrap_or(preset_color.pick(VisColor::N_COL));
+                        nt_color(base, &preset_color).unwrap_or(preset_color.pick(VisColor::NCol));
                     let mut bar = Rectangle::new(
                         [(pos, y_spec_max - 1), (pos + 1, y_spec_max)],
                         color.filled(),
@@ -800,10 +800,10 @@ where
                             let stroke = Palette99::pick(index as usize);
                             let outer_stroke = match record.strand() {
                                 Some(Strand::Forward) => {
-                                    preset_color.pick(VisColor::POS_COL).mix(0.8)
+                                    preset_color.pick(VisColor::PosCol).mix(0.8)
                                 }
                                 Some(Strand::Reverse) => {
-                                    preset_color.pick(VisColor::NEG_COL).mix(0.8)
+                                    preset_color.pick(VisColor::NegCol).mix(0.8)
                                 }
                                 _ => TRANSPARENT,
                             };
@@ -1049,25 +1049,25 @@ where
                         if let Some(colored_by_str) = colored_by_tag_vec {
                             if colored_by_str == "" {
                                 if bam.flag().is_reverse_strand() {
-                                    preset_color.pick(VisColor::NEG_COL).mix(0.8)
+                                    preset_color.pick(VisColor::NegCol).mix(0.8)
                                 } else {
-                                    preset_color.pick(VisColor::POS_COL).mix(0.8)
+                                    preset_color.pick(VisColor::PosCol).mix(0.8)
                                 }
                             } else {
                                 let tag: &[u8;2] = colored_by_str.as_bytes().try_into().expect("colored by tag with unexpected length: tag name must be two characters.");
                                 if let Some(TagValue::Int(tag_id,_)) = bam.tags().get(tag) {
                                     Palette9999::pick(tag_id as usize).mix(0.4)
                                 } else {
-                                    preset_color.pick(VisColor::DEF_COL).mix(0.8)
+                                    preset_color.pick(VisColor::DefCol).mix(0.8)
                                 }
                             }
                         } else {
-                            preset_color.pick(VisColor::DEF_COL).mix(0.8)
+                            preset_color.pick(VisColor::DefCol).mix(0.8)
                         }
                     } else if bam.flag().is_reverse_strand() {
-                        preset_color.pick(VisColor::NEG_COL).mix(0.8)
+                        preset_color.pick(VisColor::NegCol).mix(0.8)
                     } else {
-                        preset_color.pick(VisColor::POS_COL).mix(0.8)
+                        preset_color.pick(VisColor::PosCol).mix(0.8)
                     };
                     let _stroke = Palette99::pick(data.0 as usize); //.unwrap(); //if data.0 % 2 == 0 { CYAN } else { GREEN };
                     let start = if bam.start() as u64 > range.start() {
@@ -1178,7 +1178,7 @@ where
                                     .find(|t| t > &&current_left_clip)
                                     .is_some();
 
-                                let color = preset_color.pick(VisColor::SPL_COL);
+                                let color = preset_color.pick(VisColor::SplCol);
                                 if ((is_smaller && !bam.flag().is_reverse_strand())
                                     || (is_larger && bam.flag().is_reverse_strand()))
                                     && bam.start() as u64 > range.start()
@@ -1511,7 +1511,7 @@ where
                                                         (prev_pixel_ref as u64+1, index),
                                                         (prev_pixel_ref as u64+1, index + 1),
                                                     ],
-                                                    preset_color.pick(VisColor::INS_COL).stroke_width(2),
+                                                    preset_color.pick(VisColor::InsCol).stroke_width(2),
                                                 );
                                                 bar.set_margin(1, 1, 0, 0);
                                                 bars.push(bar);
@@ -1571,7 +1571,7 @@ where
                                             if prev_ref > range.start() as u64 && insertion {
                                                 let mut bar = Rectangle::new(
                                                     [(prev_ref, index), (prev_ref + 1, index + 1)],
-                                                    preset_color.pick(VisColor::INS_COL).stroke_width(1),
+                                                    preset_color.pick(VisColor::InsCol).stroke_width(1),
                                                 );
                                                 // eprintln!("{:?}", [(prev_ref, index), (prev_ref + 1, index + 1)]);
                                                 bar.set_margin(1, 1, 0, 5);
@@ -1681,7 +1681,7 @@ where
 
                     chart.draw_series(
                         Histogram::vertical(&chart)
-                            .style(preset_color.pick(VisColor::SPL_COL).filled())
+                            .style(preset_color.pick(VisColor::SplCol).filled())
                             .margin(2)
                             .data(
                                 split_frequency
