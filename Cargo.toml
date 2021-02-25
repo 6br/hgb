@@ -25,6 +25,8 @@ bam = { git = "https://github.com/6br/bam" }
 csv = "1.1.5"
 bitpacking = "0.8.2"
 byteorder = "1.3.4"
+enum-map = "0.6.4"
+enum-map-derive = "0.4.6"
 env_logger = "0.8.2"
 flate2 = "1.0.19"
 genomic_range = { git = "https://github.com/6br/genomic_range", rev = "cba2b1c" }
@@ -34,6 +36,7 @@ log = "0.4.11"
 multimap = "0.8.2"
 num-format = "0.4.0"
 numpress = "1.1.0"
+once_cell = "1.7.0"
 plotters = { version = "0.3.0", default-features = false, features = ["svg_backend", "line_series", "bitmap_encoder", "ttf", "histogram", "bitmap_backend"] }
 rand = "0.7.3"
 rayon = "1.4.0"

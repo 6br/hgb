@@ -300,6 +300,12 @@ fn main() {
                         .about("Preset (always overwrites other options) ['auto', 'base', 'gene', 'chrom', 'sv', 'qual']"),
                 )
                 .arg(
+                    Arg::new("color-scheme")
+                        .short('#')
+                        .possible_values(&["","hgb", "igv"])
+                        .about("Preset color scheme ['igv', 'hgb'] (default is hgb"),
+                )
+                .arg(
                     Arg::new("id")
                         .short('i')
                         .takes_value(true)
