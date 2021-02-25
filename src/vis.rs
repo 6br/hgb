@@ -1594,7 +1594,7 @@ where
             bars
         };
         chart.draw_series(series)?;
-        //let dump = {reads: [], annotaton: };
+        //let dump = {reads: [], annotation: };
         let end1 = start.elapsed();
         eprintln!(
             "{}.{:03} sec.",
