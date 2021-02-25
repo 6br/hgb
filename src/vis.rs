@@ -1,4 +1,4 @@
-use crate::{color::ColorSet, color::VisColor, color::COLOR_SET, VisOrig, VisPreset, VisRef};
+use crate::{color::ColorSet, color::VisColor, VisOrig, VisPreset, VisRef};
 use bam::record::{
     tags::{StringType, TagValue},
     Cigar,
@@ -6,7 +6,6 @@ use bam::record::{
 use bam::{Record, RecordReader};
 use bio_types::strand::Strand;
 use clap::ArgMatches;
-use enum_map::EnumMap;
 //use genomic_range::StringRegion;
 use itertools::Itertools;
 use log::{debug, info};
@@ -72,13 +71,13 @@ impl RangeUtils for Range<usize> {
     }
 }
 
-fn nt_color(record_nt: char, preset_color: EnumMap<VisColor, RGBColor>) -> Option<RGBColor> {
+fn nt_color(record_nt: char, preset_color: &ColorSet) -> Option<RGBColor> {
     match record_nt {
-        'A' => Some(preset_color[VisColor::A_COL]), //RED,
-        'C' => Some(preset_color[VisColor::C_COL]), // BLUE,
-        'G' => Some(preset_color[VisColor::G_COL]),
-        'T' => Some(preset_color[VisColor::T_COL]), //GREEN,
-        _ => Some(preset_color[VisColor::N_COL]),
+        'A' => Some(preset_color.pick(VisColor::A_COL)), //RED,
+        'C' => Some(preset_color.pick(VisColor::C_COL)), // BLUE,
+        'G' => Some(preset_color.pick(VisColor::G_COL)),
+        'T' => Some(preset_color.pick(VisColor::T_COL)), //GREEN,
+        _ => Some(preset_color.pick(VisColor::N_COL)),
     }
 }
 
@@ -364,8 +363,7 @@ where
 {
     let start = Instant::now();
     let preset: Option<VisPreset> = matches.value_of_t("preset").ok(); // .unwrap_or_else(|e| e.exit());
-    let preset_color: EnumMap<VisColor, RGBColor> =
-        COLOR_SET[matches.value_of_t("preset_color").ok().unwrap()];
+    let preset_color: ColorSet = matches.value_of_t("preset_color").ok().unwrap();
     eprintln!("Preset: {:?}", preset);
     let overlapping_annotation = matches.is_present("overlapping-annotation");
     let overlapping_reads = matches.is_present("overlapping-reads");
@@ -750,7 +748,7 @@ where
                 let mut texts = vec![];
                 for base in seq.chars() {
                     let color =
-                        nt_color(base, preset_color).unwrap_or(preset_color[VisColor::N_COL]);
+                        nt_color(base, &preset_color).unwrap_or(preset_color.pick(VisColor::N_COL));
                     let mut bar = Rectangle::new(
                         [(pos, y_spec_max - 1), (pos + 1, y_spec_max)],
                         color.filled(),
@@ -796,8 +794,12 @@ where
                             let end = if end < range.end() { end } else { range.end() };
                             let stroke = Palette99::pick(index as usize);
                             let outer_stroke = match record.strand() {
-                                Some(Strand::Forward) => preset_color[VisColor::POS_COL].mix(0.8),
-                                Some(Strand::Reverse) => preset_color[VisColor::NEG_COL].mix(0.8),
+                                Some(Strand::Forward) => {
+                                    preset_color.pick(VisColor::POS_COL).mix(0.8)
+                                }
+                                Some(Strand::Reverse) => {
+                                    preset_color.pick(VisColor::NEG_COL).mix(0.8)
+                                }
                                 _ => TRANSPARENT,
                             };
                             /*let mut bar2 = Rectangle::new(
@@ -1042,25 +1044,25 @@ where
                         if let Some(colored_by_str) = colored_by_tag_vec {
                             if colored_by_str == "" {
                                 if bam.flag().is_reverse_strand() {
-                                    preset_color[VisColor::NEG_COL].mix(0.8)
+                                    preset_color.pick(VisColor::NEG_COL).mix(0.8)
                                 } else {
-                                    preset_color[VisColor::POS_COL].mix(0.8)
+                                    preset_color.pick(VisColor::POS_COL).mix(0.8)
                                 }
                             } else {
                                 let tag: &[u8;2] = colored_by_str.as_bytes().try_into().expect("colored by tag with unexpected length: tag name must be two characters.");
                                 if let Some(TagValue::Int(tag_id,_)) = bam.tags().get(tag) {
                                     Palette9999::pick(tag_id as usize).mix(0.4)
                                 } else {
-                                    preset_color[VisColor::DEF_COL].mix(0.8)
+                                    preset_color.pick(VisColor::DEF_COL).mix(0.8)
                                 }
                             }
                         } else {
-                            preset_color[VisColor::DEF_COL].mix(0.8)
+                            preset_color.pick(VisColor::DEF_COL).mix(0.8)
                         }
                     } else if bam.flag().is_reverse_strand() {
-                        preset_color[VisColor::NEG_COL].mix(0.8)
+                        preset_color.pick(VisColor::NEG_COL).mix(0.8)
                     } else {
-                        preset_color[VisColor::POS_COL].mix(0.8)
+                        preset_color.pick(VisColor::POS_COL).mix(0.8)
                     };
                     let _stroke = Palette99::pick(data.0 as usize); //.unwrap(); //if data.0 % 2 == 0 { CYAN } else { GREEN };
                     let start = if bam.start() as u64 > range.start() {
@@ -1171,7 +1173,7 @@ where
                                     .find(|t| t > &&current_left_clip)
                                     .is_some();
 
-                                let color = preset_color[VisColor::SPL_COL];
+                                let color = preset_color.pick(VisColor::SPL_COL);
                                 if ((is_smaller && !bam.flag().is_reverse_strand())
                                     || (is_larger && bam.flag().is_reverse_strand()))
                                     && bam.start() as u64 > range.start()
@@ -1350,7 +1352,7 @@ where
                                                         //bar.set_margin(0, 0, 0, 3);
                                                         //bars.push(bar);
                                                         //prev_ref = 0;
-                                                        color = Some(preset_color[VisColor::INS_COL]);
+                                                        color = Some(preset_color.pick(VisColor::INS_COL));
                                                         stick_out = true;
                                                     }
                                                 } else if entry.is_deletion() {
@@ -1376,7 +1378,7 @@ where
                                                     {
                                                         let record_nt =
                                                             entry.record_pos_nt().unwrap().1;
-                                                        color = nt_color(record_nt as char, preset_color);
+                                                        color = nt_color(record_nt as char, &preset_color);
                                                     }
                                                 } else {
                                                     /* Mismatch */
@@ -1390,7 +1392,7 @@ where
                                                     {
                                                         let record_nt =
                                                             entry.record_pos_nt().unwrap().1;
-                                                        color = nt_color(record_nt as char, preset_color);
+                                                        color = nt_color(record_nt as char, &preset_color);
                                                         //eprintln!("Mismatch: {:?}", [(prev_pixel_ref, index), (prev_ref, index + 1)]);
                                                         //snp_frequency.push((data.0, (record_nt, start, approximate_one_pixel)));
 
@@ -1565,7 +1567,7 @@ where
                                             if prev_ref > range.start() as u64 && insertion {
                                                 let mut bar = Rectangle::new(
                                                     [(prev_ref, index), (prev_ref + 1, index + 1)],
-                                                    preset_color[VisColor::INS_COL].stroke_width(1),
+                                                    preset_color.pick(VisColor::INS_COL).stroke_width(1),
                                                 );
                                                 // eprintln!("{:?}", [(prev_ref, index), (prev_ref + 1, index + 1)]);
                                                 bar.set_margin(1, 1, 0, 5);
@@ -1653,7 +1655,7 @@ where
                         });
                     if let Some(_f) = snp_frequency {
                         for i in ['A', 'C', 'G', 'T'].iter() {
-                            let color = nt_color(*i, preset_color).unwrap();
+                            let color = nt_color(*i, &preset_color).unwrap();
                             chart.draw_series(
                                 Histogram::vertical(&chart)
                                     .style(color.filled())
@@ -1674,7 +1676,7 @@ where
 
                     chart.draw_series(
                         Histogram::vertical(&chart)
-                            .style(preset_color[VisColor::SPL_COL].filled())
+                            .style(preset_color.pick(VisColor::SPL_COL).filled())
                             .margin(2)
                             .data(
                                 split_frequency
