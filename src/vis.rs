@@ -1,4 +1,4 @@
-use crate::{VisOrig, VisPreset, VisRef};
+use crate::{color::ColorSet, color::VisColor, VisOrig, VisPreset, VisRef};
 use bam::record::{
     tags::{StringType, TagValue},
     Cigar,
@@ -71,86 +71,13 @@ impl RangeUtils for Range<usize> {
     }
 }
 
-macro_rules! predefined_color {
-    ($name:ident, $r:expr, $g:expr, $b:expr, $doc:expr) => {
-        #[doc = $doc]
-        pub const $name: RGBColor = RGBColor($r, $g, $b);
-    };
-/*
-    ($name:ident, $r:expr, $g:expr, $b:expr, $a: expr, $doc:expr) => {
-        #[doc = $doc]
-        let $name: RGBAColor = RGBColor($r, $g, $b).mix($a);
-    }*/
-}
-predefined_color!(DEF_COL, 150, 150, 150, /*0.75,*/ "The default color");
-
-/*
-predefined_color!(
-    NEG_COL,
-    150,
-    150,
-    230,
-    /*0.75,*/
-    "The predefined negative-str color"
-);
-predefined_color!(
-    POS_COL,
-    230,
-    150,
-    150,
-    /*0.75,*/
-    "The predefined positive-str color"
-);
-predefined_color!(INS_COL, 138, 94, 161, "The predefined insertion color");
-predefined_color!(SPL_COL, 120, 85, 43, "The predefined split-alignment color");
-predefined_color!(N_COL, 80, 80, 80, "The predefined N color");
-predefined_color!(A_COL, 0, 200, 0, "The predefined A color");
-predefined_color!(C_COL, 0, 0, 200, "The predefined C color");
-predefined_color!(T_COL, 255, 0, 40, "The predefined T color");
-predefined_color!(G_COL, 209, 113, 5, "The predefined G color");
-*/
-
-// Now I adapt nordtheme. https://www.nordtheme.com/
-predefined_color!(
-    NEG_COL,
-    0x81, //0x5e,
-    0xa1, //0x81,
-    0xc1, //0xac,
-    /*0.75,*/
-    "The predefined negative-str color"
-);
-predefined_color!(
-    POS_COL,
-    0xbf,
-    0x61,
-    0x6a,
-    /*0.75,*/
-    "The predefined positive-str color"
-);
-//predefined_color!(INS_COL, 0xb4, 0x8e, 0xad, "The predefined insertion color");
-predefined_color!(INS_COL, 153, 0, 153, "The predefined insertion color");
-predefined_color!(
-    SPL_COL,
-    0x8f,
-    0xbc,
-    0xbb,
-    "The predefined split-alignment color"
-);
-predefined_color!(N_COL, 80, 80, 80, "The predefined N color");
-predefined_color!(A_COL, 119, 217, 168, "The predefined A color"); //#00c800, GREEN
-predefined_color!(C_COL, 0, 90, 255, "The predefined C color"); // #0000c8
-predefined_color!(T_COL, 255, 75, 0, "The predefined T color"); // #ff0000
-predefined_color!(G_COL, 128, 64, 0, "The predefined G color"); // 209,113,5
-
-//RGBColor();
-
-fn nt_color(record_nt: char) -> Option<RGBColor> {
+fn nt_color(record_nt: char, preset_color: &ColorSet) -> Option<RGBColor> {
     match record_nt {
-        'A' => Some(A_COL), //RED,
-        'C' => Some(C_COL), // BLUE,
-        'G' => Some(G_COL),
-        'T' => Some(T_COL), //GREEN,
-        _ => Some(N_COL),
+        'A' => Some(preset_color.pick(VisColor::ACol)), //RED,
+        'C' => Some(preset_color.pick(VisColor::CCol)), // BLUE,
+        'G' => Some(preset_color.pick(VisColor::GCol)),
+        'T' => Some(preset_color.pick(VisColor::TCol)), //GREEN,
+        _ => Some(preset_color.pick(VisColor::NCol)),
     }
 }
 
@@ -436,6 +363,10 @@ where
 {
     let start = Instant::now();
     let preset: Option<VisPreset> = matches.value_of_t("preset").ok(); // .unwrap_or_else(|e| e.exit());
+    let preset_color: ColorSet = matches
+        .value_of_t("preset-color")
+        .ok()
+        .unwrap_or(ColorSet::new());
     eprintln!("Preset: {:?}", preset);
     let overlapping_annotation = matches.is_present("overlapping-annotation");
     let overlapping_reads = matches.is_present("overlapping-reads");
@@ -466,6 +397,7 @@ where
     let square = matches.is_present("square");
     let read_index = matches.is_present("read-index");
     let x_as_range = matches.is_present("x-as-range");
+    let dump_json = matches.is_present("dump-json");
     let dynamic_partition = matches.is_present("dynamic-partition");
     let colored_by_motif = matches.occurrences_of("colored-by-motif") != 0;
     let colored_by_motif_vec: Option<Vec<String>> = matches
@@ -474,6 +406,7 @@ where
     let colored_by_tag = matches.occurrences_of("colored-by-tag") != 0;
     let colored_by_tag_vec = matches.value_of("colored-by-tag");
     let twobit = matches.value_of("ref-column");
+    // let metadata = vec![];
 
     if hide_alignment {
         //Multi-ranged frequency vis has not yet been supported.
@@ -819,7 +752,8 @@ where
                 let mut bars = vec![];
                 let mut texts = vec![];
                 for base in seq.chars() {
-                    let color = nt_color(base).unwrap_or(N_COL);
+                    let color =
+                        nt_color(base, &preset_color).unwrap_or(preset_color.pick(VisColor::NCol));
                     let mut bar = Rectangle::new(
                         [(pos, y_spec_max - 1), (pos + 1, y_spec_max)],
                         color.filled(),
@@ -865,8 +799,12 @@ where
                             let end = if end < range.end() { end } else { range.end() };
                             let stroke = Palette99::pick(index as usize);
                             let outer_stroke = match record.strand() {
-                                Some(Strand::Forward) => POS_COL.mix(0.8),
-                                Some(Strand::Reverse) => NEG_COL.mix(0.8),
+                                Some(Strand::Forward) => {
+                                    preset_color.pick(VisColor::PosCol).mix(0.8)
+                                }
+                                Some(Strand::Reverse) => {
+                                    preset_color.pick(VisColor::NegCol).mix(0.8)
+                                }
                                 _ => TRANSPARENT,
                             };
                             /*let mut bar2 = Rectangle::new(
@@ -1111,25 +1049,25 @@ where
                         if let Some(colored_by_str) = colored_by_tag_vec {
                             if colored_by_str == "" {
                                 if bam.flag().is_reverse_strand() {
-                                    NEG_COL.mix(0.8)
+                                    preset_color.pick(VisColor::NegCol).mix(0.8)
                                 } else {
-                                    POS_COL.mix(0.8)
+                                    preset_color.pick(VisColor::PosCol).mix(0.8)
                                 }
                             } else {
                                 let tag: &[u8;2] = colored_by_str.as_bytes().try_into().expect("colored by tag with unexpected length: tag name must be two characters.");
                                 if let Some(TagValue::Int(tag_id,_)) = bam.tags().get(tag) {
                                     Palette9999::pick(tag_id as usize).mix(0.4)
                                 } else {
-                                    DEF_COL.mix(0.8)
+                                    preset_color.pick(VisColor::DefCol).mix(0.8)
                                 }
                             }
                         } else {
-                            DEF_COL.mix(0.8)
+                            preset_color.pick(VisColor::DefCol).mix(0.8)
                         }
                     } else if bam.flag().is_reverse_strand() {
-                        NEG_COL.mix(0.8)
+                        preset_color.pick(VisColor::NegCol).mix(0.8)
                     } else {
-                        POS_COL.mix(0.8)
+                        preset_color.pick(VisColor::PosCol).mix(0.8)
                     };
                     let _stroke = Palette99::pick(data.0 as usize); //.unwrap(); //if data.0 % 2 == 0 { CYAN } else { GREEN };
                     let start = if bam.start() as u64 > range.start() {
@@ -1240,7 +1178,7 @@ where
                                     .find(|t| t > &&current_left_clip)
                                     .is_some();
 
-                                let color = SPL_COL;
+                                let color = preset_color.pick(VisColor::SplCol);
                                 if ((is_smaller && !bam.flag().is_reverse_strand())
                                     || (is_larger && bam.flag().is_reverse_strand()))
                                     && bam.start() as u64 > range.start()
@@ -1419,7 +1357,7 @@ where
                                                         //bar.set_margin(0, 0, 0, 3);
                                                         //bars.push(bar);
                                                         //prev_ref = 0;
-                                                        color = Some(INS_COL);
+                                                        // color = Some(preset_color.pick(VisColor::INS_COL));
                                                         stick_out = true;
                                                     }
                                                 } else if entry.is_deletion() {
@@ -1445,7 +1383,7 @@ where
                                                     {
                                                         let record_nt =
                                                             entry.record_pos_nt().unwrap().1;
-                                                        color = nt_color(record_nt as char);
+                                                        color = nt_color(record_nt as char, &preset_color);
                                                     }
                                                 } else {
                                                     /* Mismatch */
@@ -1459,7 +1397,7 @@ where
                                                     {
                                                         let record_nt =
                                                             entry.record_pos_nt().unwrap().1;
-                                                        color = nt_color(record_nt as char);
+                                                        color = nt_color(record_nt as char, &preset_color);
                                                         //eprintln!("Mismatch: {:?}", [(prev_pixel_ref, index), (prev_ref, index + 1)]);
                                                         //snp_frequency.push((data.0, (record_nt, start, approximate_one_pixel)));
 
@@ -1549,18 +1487,6 @@ where
                                         }
                                         if prev_ref >= range.start() as u64 {
                                             if let Some(color) = color {
-                                                if stick_out {
-                                                    // If insertion
-                                                    let mut bar = Rectangle::new(
-                                                        [
-                                                            (prev_pixel_ref as u64+1, index),
-                                                            (prev_pixel_ref as u64+1, index + 1),
-                                                        ],
-                                                        color.stroke_width(2),
-                                                    );
-                                                    bar.set_margin(2, 2, 0, 0);
-                                                    bars.push(bar);
-                                                } else {
                                                     let mut bar = Rectangle::new(
                                                         [
                                                             (prev_pixel_ref as u64+1, index),
@@ -1570,14 +1496,25 @@ where
                                                     );
                                                     bar.set_margin(3, 3, 0, 0);
                                                     bars.push(bar);
-                                                }
+                                                
                                                 /*eprintln!(
                                                 "{:?}",
                                                 [
                                                     (prev_pixel_ref, index),
                                                     (prev_ref, index + 1)
                                                 ]);*/
-
+                                            }
+                                            if stick_out {
+                                                // If insertion
+                                                let mut bar = Rectangle::new(
+                                                    [
+                                                        (prev_pixel_ref as u64+1, index),
+                                                        (prev_pixel_ref as u64+1, index + 1),
+                                                    ],
+                                                    preset_color.pick(VisColor::InsCol).stroke_width(2),
+                                                );
+                                                bar.set_margin(1, 1, 0, 0);
+                                                bars.push(bar);
                                             }
                                             prev_pixel_ref = k.0;
                                         }
@@ -1634,7 +1571,7 @@ where
                                             if prev_ref > range.start() as u64 && insertion {
                                                 let mut bar = Rectangle::new(
                                                     [(prev_ref, index), (prev_ref + 1, index + 1)],
-                                                    INS_COL.stroke_width(1),
+                                                    preset_color.pick(VisColor::InsCol).stroke_width(1),
                                                 );
                                                 // eprintln!("{:?}", [(prev_ref, index), (prev_ref + 1, index + 1)]);
                                                 bar.set_margin(1, 1, 0, 5);
@@ -1657,6 +1594,7 @@ where
             bars
         };
         chart.draw_series(series)?;
+        //let dump = {reads: [], annotation: };
         let end1 = start.elapsed();
         eprintln!(
             "{}.{:03} sec.",
@@ -1722,7 +1660,7 @@ where
                         });
                     if let Some(_f) = snp_frequency {
                         for i in ['A', 'C', 'G', 'T'].iter() {
-                            let color = nt_color(*i).unwrap();
+                            let color = nt_color(*i, &preset_color).unwrap();
                             chart.draw_series(
                                 Histogram::vertical(&chart)
                                     .style(color.filled())
@@ -1743,7 +1681,7 @@ where
 
                     chart.draw_series(
                         Histogram::vertical(&chart)
-                            .style(SPL_COL.filled())
+                            .style(preset_color.pick(VisColor::SplCol).filled())
                             .margin(2)
                             .data(
                                 split_frequency
