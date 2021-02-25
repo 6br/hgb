@@ -17,8 +17,8 @@ use plotters::style::RGBColor;
 use std::convert::TryInto;
 use std::ops::Range;
 use std::{collections::BTreeMap, fs::File, time::Instant};
-use udon::{Udon, UdonPalette, UdonScaler, UdonUtils};
 use twobit::TwoBitFile;
+use udon::{Udon, UdonPalette, UdonScaler, UdonUtils};
 
 const PARBASE_THRESHOLD: u64 = 5;
 
@@ -710,7 +710,10 @@ where
         let y_spec_max = if read_index {
             1
         } else {
-            1 + prev_index + axis_count + annotation_count * 2 + if twobit.is_some() {2} else {0}
+            1 + prev_index
+                + axis_count
+                + annotation_count * 2
+                + if twobit.is_some() { 2 } else { 0 }
         };
         let top_x_area_size = if read_index { 0 } else { x_area_size };
         let mut chart = if no_margin {
@@ -794,33 +797,41 @@ where
         }
 
         if let Some(twobit) = twobit {
-
             let left_top = chart.as_coord_spec().translate(&(range.start, index)); // range.start - 1 is better?
-            let right_bottom = chart.as_coord_spec().translate(&(range.end+1, index + 1));
+            let right_bottom = chart.as_coord_spec().translate(&(range.end + 1, index + 1));
             eprintln!("{:?}, {:?}", left_top, right_bottom);
             let opt_len = (right_bottom.0 - left_top.0) as usize;
 
             let window = Range::<usize> {
                 start: range.start() as usize - 1usize,
-                end:   range.end() as usize + 1usize
+                end: range.end() as usize + 1usize,
             };
 
             let pixels_per_column = opt_len as f64 / window.len() as f64;
 
-            let enable_softmask=false;
+            let enable_softmask = false;
             let tb_nosoft = TwoBitFile::open(twobit, enable_softmask).unwrap();
 
-            if let Ok(seq) = tb_nosoft.sequence(&range.path, range.start as usize, range.end as usize) {
+            if let Ok(seq) =
+                tb_nosoft.sequence(&range.path, range.start as usize, range.end as usize)
+            {
                 let mut pos = range.start;
                 let mut bars = vec![];
                 let mut texts = vec![];
                 for base in seq.chars() {
                     let color = nt_color(base).unwrap_or(N_COL);
-                    let mut bar = Rectangle::new([(pos, y_spec_max -1), (pos+1, y_spec_max)], color.filled());
+                    let mut bar = Rectangle::new(
+                        [(pos, y_spec_max - 1), (pos + 1, y_spec_max)],
+                        color.filled(),
+                    );
                     bar.set_margin(0, 0, 0, 0);
                     bars.push(bar);
                     if pixels_per_column as u32 >= y / 2 {
-                        let text = Text::new(format!("{}", base), (pos, y_spec_max), ("sans-serif", y/4*3));
+                        let text = Text::new(
+                            format!("{}", base),
+                            (pos, y_spec_max),
+                            ("sans-serif", y / 4 * 3),
+                        );
                         texts.push(text);
                     }
                     pos += 1;
