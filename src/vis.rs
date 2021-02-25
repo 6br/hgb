@@ -363,7 +363,10 @@ where
 {
     let start = Instant::now();
     let preset: Option<VisPreset> = matches.value_of_t("preset").ok(); // .unwrap_or_else(|e| e.exit());
-    let preset_color: ColorSet = matches.value_of_t("preset_color").ok().unwrap();
+    let preset_color: ColorSet = matches
+        .value_of_t("preset-color")
+        .ok()
+        .unwrap_or(ColorSet::new());
     eprintln!("Preset: {:?}", preset);
     let overlapping_annotation = matches.is_present("overlapping-annotation");
     let overlapping_reads = matches.is_present("overlapping-reads");
@@ -394,6 +397,7 @@ where
     let square = matches.is_present("square");
     let read_index = matches.is_present("read-index");
     let x_as_range = matches.is_present("x-as-range");
+    let dump_json = matches.is_present("dump-json");
     let dynamic_partition = matches.is_present("dynamic-partition");
     let colored_by_motif = matches.occurrences_of("colored-by-motif") != 0;
     let colored_by_motif_vec: Option<Vec<String>> = matches
@@ -402,6 +406,7 @@ where
     let colored_by_tag = matches.occurrences_of("colored-by-tag") != 0;
     let colored_by_tag_vec = matches.value_of("colored-by-tag");
     let twobit = matches.value_of("ref-column");
+    // let metadata = vec![];
 
     if hide_alignment {
         //Multi-ranged frequency vis has not yet been supported.
@@ -1352,7 +1357,7 @@ where
                                                         //bar.set_margin(0, 0, 0, 3);
                                                         //bars.push(bar);
                                                         //prev_ref = 0;
-                                                        color = Some(preset_color.pick(VisColor::INS_COL));
+                                                        // color = Some(preset_color.pick(VisColor::INS_COL));
                                                         stick_out = true;
                                                     }
                                                 } else if entry.is_deletion() {
@@ -1482,18 +1487,6 @@ where
                                         }
                                         if prev_ref >= range.start() as u64 {
                                             if let Some(color) = color {
-                                                if stick_out {
-                                                    // If insertion
-                                                    let mut bar = Rectangle::new(
-                                                        [
-                                                            (prev_pixel_ref as u64+1, index),
-                                                            (prev_pixel_ref as u64+1, index + 1),
-                                                        ],
-                                                        color.stroke_width(2),
-                                                    );
-                                                    bar.set_margin(2, 2, 0, 0);
-                                                    bars.push(bar);
-                                                } else {
                                                     let mut bar = Rectangle::new(
                                                         [
                                                             (prev_pixel_ref as u64+1, index),
@@ -1503,14 +1496,25 @@ where
                                                     );
                                                     bar.set_margin(3, 3, 0, 0);
                                                     bars.push(bar);
-                                                }
+                                                
                                                 /*eprintln!(
                                                 "{:?}",
                                                 [
                                                     (prev_pixel_ref, index),
                                                     (prev_ref, index + 1)
                                                 ]);*/
-
+                                            }
+                                            if stick_out {
+                                                // If insertion
+                                                let mut bar = Rectangle::new(
+                                                    [
+                                                        (prev_pixel_ref as u64+1, index),
+                                                        (prev_pixel_ref as u64+1, index + 1),
+                                                    ],
+                                                    preset_color.pick(VisColor::INS_COL).stroke_width(2),
+                                                );
+                                                bar.set_margin(1, 1, 0, 0);
+                                                bars.push(bar);
                                             }
                                             prev_pixel_ref = k.0;
                                         }
@@ -1590,6 +1594,7 @@ where
             bars
         };
         chart.draw_series(series)?;
+        //let dump = {reads: [], annotaton: };
         let end1 = start.elapsed();
         eprintln!(
             "{}.{:03} sec.",

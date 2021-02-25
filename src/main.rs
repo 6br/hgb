@@ -300,9 +300,9 @@ fn main() {
                         .about("Preset (always overwrites other options) ['auto', 'base', 'gene', 'chrom', 'sv', 'qual']"),
                 )
                 .arg(
-                    Arg::new("color-scheme")
+                    Arg::new("preset-color")
                         .short('#')
-                        .possible_values(&["","hgb", "igv"])
+                        .possible_values(&["", "hgb", "igv"])
                         .about("Preset color scheme ['igv', 'hgb'] (default is hgb"),
                 )
                 .arg(
@@ -381,6 +381,7 @@ fn main() {
                 .arg(Arg::new("whole-chromosome").short('W').about("Pretend as if the prefetch range is the whole chromosome"))
                 .arg(Arg::new("rest").short('>').about("Serve the web server with accepting any parameter"))
                 .arg(Arg::new("production").short('$').about("Serve the web server on production mode (no cross-origin request is allowed)"))
+                .arg(Arg::new("dump-json").short('%').about("Dump JSON of read metadata"))
                 .arg(Arg::new("ref-column").short('!').takes_value(true).about("Show the base colors of reference genome (input must be )"))
                 .arg(Arg::new("dynamic-partition").short('D').about("Divide multiple genomic range with dynamic width"))
                 .arg(
