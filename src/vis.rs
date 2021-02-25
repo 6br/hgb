@@ -1,3 +1,4 @@
+use crate::dump::*;
 use crate::{color::ColorSet, color::VisColor, VisOrig, VisPreset, VisRef};
 use bam::record::{
     tags::{StringType, TagValue},
