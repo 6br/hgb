@@ -1332,7 +1332,7 @@ where
                                     //eprintln!("{:?} {:?}", i,k);
 
                                     let mut color = None;
-                                    let mut stick_out = false;
+                                    let mut insertion_flag = false;
                                     if let Some(k) = k {
                                         while k.0 > prev_ref
                                             && prev_ref != bam.calculate_end() as u64
@@ -1358,7 +1358,7 @@ where
                                                         //bars.push(bar);
                                                         //prev_ref = 0;
                                                         // color = Some(preset_color.pick(VisColor::INS_COL));
-                                                        stick_out = true;
+                                                        insertion_flag = true;
                                                     }
                                                 } else if entry.is_deletion() {
                                                     prev_ref = entry.ref_pos_nt().unwrap().0 as u64;
@@ -1504,7 +1504,7 @@ where
                                                     (prev_ref, index + 1)
                                                 ]);*/
                                             }
-                                            if stick_out {
+                                            if insertion_flag {
                                                 // If insertion
                                                 let mut bar = Rectangle::new(
                                                     [
