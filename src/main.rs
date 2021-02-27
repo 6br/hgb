@@ -383,7 +383,7 @@ fn main() {
                 .arg(Arg::new("production").short('$').about("Serve the web server on production mode (no cross-origin request is allowed)"))
                 .arg(Arg::new("dump-json").short('%').about("Dump JSON of read metadata"))
                 .arg(Arg::new("ref-column").short('!').takes_value(true).about("Show the base colors of reference genome (input must be )"))
-                .arg(Arg::new("insertion-string").short('&').about("Show the insertion sequence along with insertion callets"))
+                .arg(Arg::new("insertion-string").short('{').about("Show the insertion sequence along with insertion callets"))
                 .arg(Arg::new("dynamic-partition").short('D').about("Divide multiple genomic range with dynamic width"))
                 .arg(
                     Arg::new("format")
