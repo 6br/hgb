@@ -1,3 +1,4 @@
+use crate::dump::*;
 use crate::{color::ColorSet, color::VisColor, VisOrig, VisPreset, VisRef};
 use bam::record::{
     tags::{StringType, TagValue},
@@ -14,9 +15,9 @@ use plotters::coord::ReverseCoordTranslate;
 use plotters::prelude::Palette;
 use plotters::prelude::*;
 use plotters::style::RGBColor;
-use std::convert::TryInto;
 use std::ops::Range;
 use std::{collections::BTreeMap, fs::File, time::Instant};
+use std::{convert::TryInto, path::PathBuf};
 use twobit::TwoBitFile;
 use udon::{Udon, UdonPalette, UdonScaler, UdonUtils};
 
@@ -565,6 +566,7 @@ where
     let approximate_one_pixel = 1; //((range.end() - range.start()) / x as u64) as u32;
     root.fill(&WHITE)?;
     let root = root.margin(0, 0, 0, 0);
+    let mut json = vec![];
 
     let areas = if !dynamic_partition {
         root.split_evenly((1, vis.len()))
@@ -774,6 +776,7 @@ where
                 chart.draw_series(texts)?;
             }
         }
+        let mut annotations = vec![];
 
         // Draw annotation if there is bed-compatible annotation.
         annotation
@@ -839,7 +842,20 @@ where
                                     )
                                 });
                             if overlapping_annotation {
-                                println!("{}: {}", range, record.name().unwrap_or(&""))
+                                println!("{}: {}", range, record.name().unwrap_or(&""));
+                                let (lt, lb) = chart
+                                    .as_coord_spec()
+                                    .translate(&(start, prev_index + key * 2 + axis_count + 1)); // range.start - 1 is better?
+                                let (rt, rb) = chart
+                                    .as_coord_spec()
+                                    .translate(&(end + 1, prev_index + key * 2 + axis_count + 1));
+                                let annotation = Annotation {
+                                    rectangle: (lt, lb, rt, rb),
+                                    name: record.name().unwrap_or(&"").to_string(),
+                                    start: start,
+                                    end: end,
+                                };
+                                annotations.push(annotation)
                             }
                         }
                     })
@@ -1030,7 +1046,7 @@ where
         let mut split_frequency = vec![];
         //let mut snp_frequency = vec![];
         // For each alignment:
-
+        let mut reads = vec![];
         let series = {
             //list.into_iter().enumerate().map(|(index, data)| {
             let mut bars = vec![];
@@ -1080,6 +1096,7 @@ where
                     } else {
                         bam.calculate_end() as u64
                     };
+
                     /*chart
                     .draw_series(LineSeries::new(vec![(start, index), (end, index)], &color))?;*/
                     /*if let Some(val) = read_index {
@@ -1589,10 +1606,18 @@ where
                     
                     if overlapping_reads {
                         println!("{}", String::from_utf8_lossy(bam.name()));
+                        let (lt, lb) = chart.as_coord_spec().translate(&(range.start, index));
+                        let (rt, rb) = chart.as_coord_spec().translate(&(range.end+1, index + 1));
+                        let read = Read{rectangle: (lt, lb, rt ,rb), read_id: String::from_utf8_lossy(&bam.name()).to_string(), start: bam.start(), end: bam.calculate_end(), insertions: BTreeMap::new()}; //, tags: tags  }
+                        reads.push(read);
                     }
                 });
             bars
         };
+        json.push(Area {
+            pileups: reads,
+            annotations: annotations,
+        });
         chart.draw_series(series)?;
         //let dump = {reads: [], annotation: };
         let end1 = start.elapsed();
@@ -1731,5 +1756,10 @@ where
         );
     }
 
+    if dump_json {
+        let mut json_path = PathBuf::from(output);
+        json_path.set_extension("json");
+        serde_json::to_writer(&File::create(json_path)?, &json)?
+    }
     Ok(())
 }

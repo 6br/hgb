@@ -20,6 +20,7 @@ pub mod builder;
 pub mod checker_index;
 pub mod color;
 pub mod compression;
+pub mod dump;
 pub mod gff;
 pub mod header;
 pub mod index;
