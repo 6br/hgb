@@ -1538,9 +1538,9 @@ where
                                                 bars.push(bar);
                                                 if insertion_string {
                                                     let text = Text::new(
-                                                        format!("{}", insertion_str.iter().join(",")),
+                                                        format!("{}", insertion_str.iter().join("")),
                                                         (prev_pixel_ref + 1, index),
-                                                        ("sans-serif", y / 2),
+                                                        ("sans-serif", y / 4 * 3),
                                                     );
                                                     texts.push(text);
                                                 }
