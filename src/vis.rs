@@ -1379,7 +1379,7 @@ where
                                                         //prev_ref = 0;
                                                         // color = Some(preset_color.pick(VisColor::INS_COL));
                                                         insertion_flag = true;
-                                                        insertion_str.push(entry.record_nt().unwrap());
+                                                        insertion_str.push(entry.record_nt().unwrap() as char);
                                                     }
                                                 } else if entry.is_deletion() {
                                                     prev_ref = entry.ref_pos_nt().unwrap().0 as u64;
@@ -1539,7 +1539,7 @@ where
                                                 if insertion_string {
                                                     let text = Text::new(
                                                         format!("{}", insertion_str.iter().join(",")),
-                                                        (prev_pixel_ref, index),
+                                                        (prev_pixel_ref + 1, index),
                                                         ("sans-serif", y / 2),
                                                     );
                                                     texts.push(text);
