@@ -399,6 +399,7 @@ where
     let read_index = matches.is_present("read-index");
     let x_as_range = matches.is_present("x-as-range");
     let dump_json = matches.is_present("dump-json");
+    let insertion_string = matches.is_present("insertion-string");
     let dynamic_partition = matches.is_present("dynamic-partition");
     let colored_by_motif = matches.occurrences_of("colored-by-motif") != 0;
     let colored_by_motif_vec: Option<Vec<String>> = matches
@@ -1047,9 +1048,10 @@ where
         //let mut snp_frequency = vec![];
         // For each alignment:
         let mut reads = vec![];
-        let series = {
+        let (bars, texts) = {
             //list.into_iter().enumerate().map(|(index, data)| {
             let mut bars = vec![];
+            let mut texts = vec![];
             index_list
                 .iter()
                 .zip(list.iter())
@@ -1350,6 +1352,7 @@ where
 
                                     let mut color = None;
                                     let mut insertion_flag = false;
+                                    let mut insertion_str = vec![];
                                     if let Some(k) = k {
                                         while k.0 > prev_ref
                                             && prev_ref != bam.calculate_end() as u64
@@ -1376,6 +1379,7 @@ where
                                                         //prev_ref = 0;
                                                         // color = Some(preset_color.pick(VisColor::INS_COL));
                                                         insertion_flag = true;
+                                                        insertion_str.push(entry.record_nt().unwrap());
                                                     }
                                                 } else if entry.is_deletion() {
                                                     prev_ref = entry.ref_pos_nt().unwrap().0 as u64;
@@ -1532,6 +1536,14 @@ where
                                                 );
                                                 bar.set_margin(1, 1, 0, 0);
                                                 bars.push(bar);
+                                                if insertion_string {
+                                                    let text = Text::new(
+                                                        format!("{}", insertion_str.iter().join(",")),
+                                                        (prev_pixel_ref, index),
+                                                        ("sans-serif", y / 2),
+                                                    );
+                                                    texts.push(text);
+                                                }
                                             }
                                             prev_pixel_ref = k.0;
                                         }
@@ -1612,13 +1624,14 @@ where
                         reads.push(read);
                     }
                 });
-            bars
+            (bars, texts)
         };
         json.push(Area {
             pileups: reads,
             annotations: annotations,
         });
-        chart.draw_series(series)?;
+        chart.draw_series(bars)?;
+        chart.draw_series(texts)?;
         //let dump = {reads: [], annotation: };
         let end1 = start.elapsed();
         eprintln!(
