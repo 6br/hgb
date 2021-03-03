@@ -24,7 +24,7 @@ use ghi::{gff, reader::IndexedReader, simple_buffer::ChromosomeBuffer, IndexWrit
 use io::{BufReader, Error, ErrorKind, Write};
 use itertools::EitherOrBoth::{Both, Left};
 use itertools::Itertools;
-use log::{debug, info};
+use log::{debug, info, warn};
 use std::{
     collections::{BTreeMap, BTreeSet, HashMap},
     convert::TryInto,
@@ -194,10 +194,23 @@ pub fn bam_vis(
                     .header()
                     .reference_id(prefetch_range.path.as_ref())
                     .ok_or(Error::new(ErrorKind::Other, "Invalid reference id."))?;
+                let ref_len = reader2
+                    .header()
+                    .reference_len(ref_id)
+                    .ok_or(Error::new(ErrorKind::Other, "Invalid reference length."))?;
+                let end = if prefetch_range.end as u32 > ref_len {
+                    warn!(
+                        "Invalid reference length: end > reference length ({} > {})",
+                        prefetch_range.end as u32, ref_len
+                    );
+                    ref_len
+                } else {
+                    prefetch_range.end as u32
+                };
                 let viewer = reader2.fetch(&bam::bam_reader::Region::new(
                     ref_id,
                     prefetch_range.start as u32,
-                    prefetch_range.end as u32,
+                    end,
                 ))?;
                 for record in viewer {
                     let record = record?;
