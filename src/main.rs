@@ -392,9 +392,9 @@ fn main() {
                         .about("Output format (automatically detected; optionally used for server mode)"),
                 )
                 .arg(
-                    Arg::new("overlapping-annotation")
+                    Arg::new("show-read-id")
                         .short('H')
-                        .about("Output a list of annotation overlapping the range"),
+                        .about("Write a read id on the beginning of each read"),
                 )
                 .arg(
                     Arg::new("overlapping-reads")

@@ -14,6 +14,7 @@ use num_format::{Locale, ToFormattedString};
 use plotters::coord::ReverseCoordTranslate;
 use plotters::prelude::Palette;
 use plotters::prelude::*;
+use plotters::style::text_anchor::{HPos, Pos, VPos};
 use plotters::style::RGBColor;
 use std::ops::Range;
 use std::{collections::BTreeMap, fs::File, time::Instant};
@@ -369,7 +370,8 @@ where
         .ok()
         .unwrap_or(ColorSet::new());
     eprintln!("Preset: {:?}", preset);
-    let overlapping_annotation = matches.is_present("overlapping-annotation");
+    let show_read_id = matches.is_present("show-read-id");
+    let overlapping_annotation = matches.is_present("dump-json");
     let overlapping_reads = matches.is_present("overlapping-reads");
     let no_margin = matches.is_present("no-scale");
     let no_ruler = matches.is_present("no-ruler");
@@ -843,7 +845,7 @@ where
                                     )
                                 });
                             if overlapping_annotation {
-                                println!("{}: {}", range, record.name().unwrap_or(&""));
+                                // println!("{}: {}", range, record.name().unwrap_or(&""));
                                 let (lt, lb) = chart
                                     .as_coord_spec()
                                     .translate(&(start, prev_index + key * 2 + axis_count + 1)); // range.start - 1 is better?
@@ -1117,6 +1119,16 @@ where
 
                         bars.push(bar);
                     //}
+                    if show_read_id {
+                        let pos = Pos::new(HPos::Left, VPos::Bottom);
+                        let style = TextStyle::from(("sans-serif", y / 3 * 2).into_font()).pos(pos);
+                        let text = Text::new(
+                            format!("{}", String::from_utf8_lossy(bam.name())),
+                            (start, index),
+                            style,
+                        );
+                        texts.push(text);
+                    }
 
                     if colored_by_name {
                         let color = Palette99::pick(name_to_num(data.1.name())).mix(0.8);
