@@ -198,6 +198,12 @@ pub fn bam_vis(
                     .header()
                     .reference_len(ref_id)
                     .ok_or(Error::new(ErrorKind::Other, "Invalid reference length."))?;
+                let start = if prefetch_range.start == 0 {
+                    warn!("Invalid reference length: start == 0",);
+                    1
+                } else {
+                    prefetch_range.start as u32
+                };
                 let end = if prefetch_range.end as u32 > ref_len {
                     warn!(
                         "Invalid reference length: end > reference length ({} > {})",
@@ -207,11 +213,7 @@ pub fn bam_vis(
                 } else {
                     prefetch_range.end as u32
                 };
-                let viewer = reader2.fetch(&bam::bam_reader::Region::new(
-                    ref_id,
-                    prefetch_range.start as u32,
-                    end,
-                ))?;
+                let viewer = reader2.fetch(&bam::bam_reader::Region::new(ref_id, start, end))?;
                 for record in viewer {
                     let record = record?;
                     if !record.flag().is_secondary()
