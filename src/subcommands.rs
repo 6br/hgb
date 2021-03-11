@@ -1305,11 +1305,17 @@ where
                     if let Some(freq) = snp_frequency {
                         let mut seqs = Vec::with_capacity(column.entries().len()); //vec![];
                         for entry in column.entries().iter() {
-                            let seq: Vec<_> =
-                                entry.sequence().unwrap().map(|nt| nt as char).collect();
+                            let seq: Vec<_> = entry
+                                .sequence()
+                                .unwrap()
+                                .map(|nt| nt as char)
+                                .take(1)
+                                .collect();
                             //let qual: Vec<_> = entry.qualities().unwrap().iter()
                             //    .map(|q| (q + 33) as char).collect();
-                            //eprintln!("    {:?}: {:?}", entry.record(), seq);
+                            //if column.ref_pos() == 8879824 {
+                            //    eprintln!("    {:?}: {:?}", entry.record(), seq);
+                            //}
                             seqs.push(seq);
                         }
                         let unique_elements = seqs.iter().cloned().unique().collect_vec();

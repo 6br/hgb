@@ -1708,12 +1708,17 @@ where
                             )
                         });
                     if let Some(_f) = snp_frequency {
+                        /*eprintln!("{:?}", values.iter()
+                        .filter(|t| {
+                            t.0 >= range.start()
+                                && t.0 < range.end()
+                        }).collect::<Vec<_>>());*/
                         for i in ['A', 'C', 'G', 'T'].iter() {
                             let color = nt_color(*i, &preset_color).unwrap();
                             chart.draw_series(
                                 Histogram::vertical(&chart)
                                     .style(color.filled())
-                                    .margin(2)
+                                    .margin(1)
                                     .data(
                                         values
                                             .iter()

@@ -134,7 +134,7 @@ fn get_matches_from(args: Vec<String>) -> Result<ArgMatches, Error> {
     )
     .arg(
         Arg::new("snp-frequency")
-            .short('Z')
+            .short('V')
             .takes_value(true)
             .about("The portion of SNP frequency to display on each coverage track"),
     )

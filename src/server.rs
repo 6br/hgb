@@ -92,7 +92,7 @@ fn id_to_range<'a>(range: &StringRegion, args: &Vec<String>, zoom: u64, path: u6
             )
             .arg(
                 Arg::new("snp-frequency")
-                    .short('Z')
+                    .short('V')
                     .takes_value(true)
                     .about("The portion of SNP frequency to display on each coverage track"),
             )
