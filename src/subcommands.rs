@@ -1334,7 +1334,7 @@ where
                         // let second_minor = d - unique_frequency[1].0;
                         let (_, cdr) = unique_frequency.split_first().unwrap();
                         cdr.iter()
-                            .filter(|t| t.0 > threshold as usize)
+                            .filter(|t| t.0 >= threshold as usize)
                             .for_each(|t2| {
                                 if t2.1.len() > 0 {
                                     line.push((
