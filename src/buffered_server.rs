@@ -122,6 +122,7 @@ fn id_to_range<'a>(range: &StringRegion, args: &Vec<String>, zoom: u64, path: u6
             )
             .arg(Arg::new("split-alignment").short('s').about("Display split alignments in the same "))
             .arg(Arg::new("only-split-alignment").short('u').about("Display only split alignments or mate-paired reads on alignment track"))
+            .arg(Arg::new("adjust-y").short('&').about("Do not adjust y on server mode"))
             .arg(
                 Arg::new("sort-by-name")
                     .short('N')
@@ -194,15 +195,17 @@ fn id_to_range<'a>(range: &StringRegion, args: &Vec<String>, zoom: u64, path: u6
     let y = param.y as u64;
     let x = param.x;
     let scalex_default = param.x_scale as u64;
+    let adjusted_y = if param.y_adjust  {y} else {y >> (max_zoom-zoom)};
+    let adjusted_large_y = if param.y_adjust {freq_y} else { if (y >> (max_zoom - zoom)) <= 2 {max_y >> (max_zoom-zoom)} else {freq_y >> (max_zoom-zoom)} };
     // let path = path << (max_zoom - zoom);
     let b: Vec<String> = if (y >> (max_zoom-zoom)) <= 2 { // i.e. 2**22s
-        vec!["-A".to_string(), "-Y".to_string(), (max_y >> (max_zoom-zoom)).to_string(), "-y".to_string(), (y >> (max_zoom-zoom)).to_string(), "-c".to_string(), "-I".to_string(), "-o".to_string(), path_string, "-X".to_string(), ((max_y >> (max_zoom-zoom)) / 2).to_string(), "-x".to_string(), x.to_string(), "-l".to_string(), "-e".to_string()]
+        vec!["-A".to_string(), "-Y".to_string(), adjusted_large_y.to_string(), "-y".to_string(), adjusted_y.to_string(), "-c".to_string(), "-I".to_string(), "-o".to_string(), path_string, "-X".to_string(), (adjusted_large_y / 2).to_string(), "-x".to_string(), x.to_string(), "-l".to_string(), "-e".to_string()]
     } else if criteria << (max_zoom - zoom) <= 10000 && (y >> (max_zoom-zoom)) >= 8 { // Base-pair level with legend and insertion
-        vec!["-Y".to_string(), (freq_y >> (max_zoom-zoom)).to_string(), "-y".to_string(), (y >> (max_zoom-zoom)).to_string(), "-X".to_string(), (scalex_default >> (max_zoom-zoom)).to_string(), "-o".to_string(), path_string, "-x".to_string(), x.to_string(), "-e".to_string()]
+        vec!["-Y".to_string(), adjusted_large_y.to_string(), "-y".to_string(), adjusted_y.to_string(), "-X".to_string(), (scalex_default >> (max_zoom-zoom)).to_string(), "-o".to_string(), path_string, "-x".to_string(), x.to_string(), "-e".to_string()]
     } else if criteria << (max_zoom - zoom) <= 25000 && (y >> (max_zoom-zoom)) >= 8 { // Base-pair level
-        vec!["-Y".to_string(), (freq_y >> (max_zoom-zoom)).to_string(), "-y".to_string(), (y >> (max_zoom-zoom)).to_string(), "-X".to_string(), (scalex_default >> (max_zoom-zoom)).to_string(), "-I".to_string(), "-o".to_string(), path_string, "-x".to_string(), x.to_string(), "-l".to_string(), "-e".to_string()]
+        vec!["-Y".to_string(), adjusted_large_y.to_string(), "-y".to_string(), adjusted_y.to_string(), "-X".to_string(), (scalex_default >> (max_zoom-zoom)).to_string(), "-I".to_string(), "-o".to_string(), path_string, "-x".to_string(), x.to_string(), "-l".to_string(), "-e".to_string()]
     } else { // No alignment
-        vec!["-Y".to_string(), (freq_y >> (max_zoom-zoom)).to_string(), "-y".to_string(), (y >> (max_zoom-zoom)).to_string(), "-X".to_string(), (scalex_default >> (max_zoom-zoom)).to_string(), "-c".to_string(), "-I".to_string(), "-o".to_string(), path_string, "-x".to_string(), x.to_string(), "-l".to_string(), "-e".to_string()]
+        vec!["-Y".to_string(), adjusted_large_y.to_string(), "-y".to_string(), adjusted_y.to_string(), "-X".to_string(), (scalex_default >> (max_zoom-zoom)).to_string(), "-c".to_string(), "-I".to_string(), "-o".to_string(), path_string, "-x".to_string(), x.to_string(), "-l".to_string(), "-e".to_string()]
     };
     let mut args = args.clone();
     args.extend(b);
@@ -364,7 +367,8 @@ pub struct Param {
     y_freq: u32,
     x: u32,
     y: u32,
-    cache_dir: String
+    cache_dir: String,
+    y_adjust: bool,
 }
 
 
@@ -433,6 +437,7 @@ pub async fn server(matches: ArgMatches, range: StringRegion, prefetch_range: St
         .value_of("cache-dir")
         .and_then(|a| Some(a.to_string()))
         .unwrap_or(rng.gen::<u32>().to_string());
+    let y_adjust = matches.is_present("adjust-y");
     
     let x_width = all as u32 / diff as u32 * x;
     eprintln!("Total len: {}, partial len: {}, x_width: {}({}), x: {}", all,diff,x_width, x_width as i64, x);
@@ -443,7 +448,7 @@ pub async fn server(matches: ArgMatches, range: StringRegion, prefetch_range: St
         Err(e) => panic!("{}: {}", &cache_dir, e),
         Ok(_) => {},
     };
-    let params = Param{x_scale, max_y:x, prefetch_max: all, max_zoom, min_zoom, criteria:diff, y_freq: freq_size, x, y, cache_dir};
+    let params = Param{x_scale, max_y:x, prefetch_max: all, max_zoom, min_zoom, criteria:diff, y_freq: freq_size, x, y, cache_dir, y_adjust};
     eprintln!("{:?}, threads: {}, zoom: {}", params, threads, log_2(x_width as i64) + 1);
     println!("Buffered Server is running on {}", bind);
     // Create some global state prior to building the server
