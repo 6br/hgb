@@ -200,18 +200,20 @@ fn id_to_range<'a>(range: &StringRegion, args: &Vec<String>, zoom: u64, path: u6
     let freq_y = param.y_freq as u64;
     let y = param.y as u64;
     let x = param.x;
-    let scalex_default = param.x_scale as u64;
+    let scalex_default =  if param.y_adjust {param.x_scale as u64} else {param.x_scale as u64 >> (max_zoom-zoom)};
     let adjusted_y = if param.y_adjust  {y} else {y >> (max_zoom-zoom)};
-    let adjusted_large_y = if param.y_adjust {freq_y} else { if (y >> (max_zoom - zoom)) <= 2 {max_y >> (max_zoom-zoom)} else {freq_y >> (max_zoom-zoom)} };
+    let adjusted_large_y = if param.y_adjust { if (y >> (max_zoom - zoom)) <= 2 {max_y} else {freq_y}} else { if (y >> (max_zoom - zoom)) <= 2 {max_y >> (max_zoom-zoom)} else {freq_y >> (max_zoom-zoom)} };
+    let adjusted_scale_x =  if param.y_adjust {param.x_scale as u64} else {adjusted_large_y / 2};
+
     // let path = path << (max_zoom - zoom);
     let b: Vec<String> = if (y >> (max_zoom-zoom)) <= 2 { // i.e. 2**22s
-        vec!["-A".to_string(), "-Y".to_string(), adjusted_large_y.to_string(), "-y".to_string(), adjusted_y.to_string(), "-c".to_string(), "-I".to_string(), "-o".to_string(), path_string, "-X".to_string(), (adjusted_large_y / 2).to_string(), "-x".to_string(), x.to_string(), "-l".to_string(), "-e".to_string()]
+        vec!["-A".to_string(), "-Y".to_string(), adjusted_large_y.to_string(), "-y".to_string(), adjusted_y.to_string(), "-c".to_string(), "-I".to_string(), "-o".to_string(), path_string, "-X".to_string(), adjusted_scale_x.to_string(), "-x".to_string(), x.to_string(), "-l".to_string(), "-e".to_string()]
     } else if criteria << (max_zoom - zoom) <= 10000 { // Base-pair level with legend and insertion
-        vec!["-Y".to_string(), adjusted_large_y.to_string(), "-y".to_string(), adjusted_y.to_string(), "-X".to_string(), (scalex_default >> (max_zoom-zoom)).to_string(), "-o".to_string(), path_string, "-x".to_string(), x.to_string(), "-e".to_string()]
+        vec!["-Y".to_string(), adjusted_large_y.to_string(), "-y".to_string(), adjusted_y.to_string(), "-X".to_string(), scalex_default.to_string(), "-o".to_string(), path_string, "-x".to_string(), x.to_string(), "-e".to_string()]
     } else if criteria << (max_zoom - zoom) <= 25000 && (y >> (max_zoom-zoom)) >= 8 { // Base-pair level
-        vec!["-Y".to_string(), adjusted_large_y.to_string(), "-y".to_string(), adjusted_y.to_string(), "-X".to_string(), (scalex_default >> (max_zoom-zoom)).to_string(), "-I".to_string(), "-o".to_string(), path_string, "-x".to_string(), x.to_string(), "-l".to_string(), "-e".to_string()]
+        vec!["-Y".to_string(), adjusted_large_y.to_string(), "-y".to_string(), adjusted_y.to_string(), "-X".to_string(), scalex_default.to_string(), "-I".to_string(), "-o".to_string(), path_string, "-x".to_string(), x.to_string(), "-l".to_string(), "-e".to_string()]
     } else { // No alignment
-        vec!["-Y".to_string(), adjusted_large_y.to_string(), "-y".to_string(), adjusted_y.to_string(), "-X".to_string(), (scalex_default >> (max_zoom-zoom)).to_string(), "-c".to_string(), "-I".to_string(), "-o".to_string(), path_string, "-x".to_string(), x.to_string(), "-l".to_string(), "-e".to_string()]
+        vec!["-Y".to_string(), adjusted_large_y.to_string(), "-y".to_string(), adjusted_y.to_string(), "-X".to_string(), scalex_default.to_string(), "-c".to_string(), "-I".to_string(), "-o".to_string(), path_string, "-x".to_string(), x.to_string(), "-l".to_string(), "-e".to_string()]
     };
     let mut args = args.clone();
     args.extend(b);
