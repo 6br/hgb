@@ -435,13 +435,12 @@ supplementary_list: Vec<(Vec<u8>, usize, usize, i32, i32)>,threads: u16) -> std:
         .value_of("cache-dir")
         .and_then(|a| Some(a.to_string()))
         .unwrap_or(rng.gen::<u32>().to_string());
-        let y_adjust = matches.is_present("adjust-y");
+    let y_adjust = matches.is_present("adjust-y");
 
     let x_width = all as u32 / diff as u32 * x;
     // eprintln!("{} {} {}", all,diff,x);
-    let max_zoom = log_2(x_width as i32) + 1;
-    //let min_zoom_margin = 
-    let min_zoom = max_zoom - 8;// + (prev_index );
+    let max_zoom = if y_adjust {log_2(x_width as i32) + 5} else {log_2(x_width as i32) + 1} ;
+    let min_zoom = if y_adjust {max_zoom-15} else { max_zoom - 8};// + (prev_index );
 
     match fs::create_dir(&cache_dir) {
         Err(e) => panic!("{}: {}", &cache_dir, e),
