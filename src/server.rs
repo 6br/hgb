@@ -440,7 +440,7 @@ supplementary_list: Vec<(Vec<u8>, usize, usize, i32, i32)>,threads: u16) -> std:
     let x_width = all as u32 / diff as u32 * x;
     // eprintln!("{} {} {}", all,diff,x);
     let max_zoom = if y_adjust {log_2(x_width as i32) + 5} else {log_2(x_width as i32) + 1} ;
-    let min_zoom = if y_adjust {max_zoom-15} else { max_zoom - 8};// + (prev_index );
+    let min_zoom = if y_adjust {2} else { max_zoom - 8};// + (prev_index );
 
     match fs::create_dir(&cache_dir) {
         Err(e) => panic!("{}: {}", &cache_dir, e),
