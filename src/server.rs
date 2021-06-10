@@ -123,6 +123,7 @@ fn id_to_range<'a>(range: &StringRegion, args: &Vec<String>, zoom: u64, path: u6
             )
             .arg(Arg::new("split-alignment").short('s').about("Display split alignments in the same "))
             .arg(Arg::new("only-split-alignment").short('u').about("Display only split alignments or mate-paired reads on alignment track"))
+            .arg(Arg::new("udon").short('U').about("Colored by udon library"))
             .arg(
                 Arg::new("sort-by-name")
                     .short('N')
