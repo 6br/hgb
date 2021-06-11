@@ -203,7 +203,7 @@ fn id_to_range<'a>(range: &StringRegion, args: &Vec<String>, zoom: u64, path: u6
     let x = param.x;
     let scalex_default =  if param.y_adjust {param.x_scale as u64} else {param.x_scale as u64 >> (max_zoom-zoom)};
     let adjusted_y = if param.y_adjust {y} else {y >> (max_zoom - zoom)};
-    let adjusted_large_y = if param.y_adjust { if (y >> (max_zoom - zoom)) <= 2 {max_y} else {freq_y}} else { if (y >> (max_zoom - zoom)) <= 2 {max_y >> (max_zoom-zoom)} else {freq_y >> (max_zoom-zoom)} };
+    let adjusted_large_y = if param.y_adjust { freq_y } else { if (y >> (max_zoom - zoom)) <= 2 {max_y >> (max_zoom-zoom)} else {freq_y >> (max_zoom-zoom)} };
     let adjusted_scale_x = if param.y_adjust {param.x_scale as u64} else {adjusted_large_y / 2};
     let only_coverage_condition = if param.y_adjust { criteria << (max_zoom - zoom) >= 500000 } else { y >> (max_zoom - zoom ) <= 2};
 
