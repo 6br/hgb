@@ -207,7 +207,7 @@ fn id_to_range<'a>(range: &StringRegion, args: &Vec<String>, zoom: u64, path: u6
     let adjusted_scale_x = if param.y_adjust {param.x_scale as u64} else {adjusted_large_y / 2};
     let only_coverage_condition = if param.y_adjust { criteria << (max_zoom - zoom) >= 500000 } else { y >> (max_zoom - zoom ) <= 2};
 
-    let b: Vec<String> = if only_coverage_condition { // i.e. 2**22s, only coverage
+    let b: Vec<String> = if only_coverage_condition { // Only coverage
         vec!["-A".to_string(), "-Y".to_string(), adjusted_large_y.to_string(), "-y".to_string(), adjusted_y.to_string(), "-c".to_string(), "-I".to_string(), "-o".to_string(), path_string, "-X".to_string(), adjusted_scale_x.to_string(), "-x".to_string(), x.to_string(), "-l".to_string(), "-e".to_string()]
     } else if criteria << (max_zoom - zoom) <= 10000 { // Base-pair level with legend and insertion
         vec!["-Y".to_string(), adjusted_large_y.to_string(), "-y".to_string(), adjusted_y.to_string(), "-X".to_string(), scalex_default.to_string(), "-o".to_string(), path_string, "-x".to_string(), x.to_string(), "-e".to_string()]

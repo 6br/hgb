@@ -59,6 +59,7 @@ pub fn bam_vis(
     } else {
         1
     };
+    let labels: Option<Vec<&str>> = matches.values_of("labels").and_then(|t| Some(t.collect()));
 
     if let Some(bam_files) = matches.values_of("bam") {
         let bam_files: Vec<&str> = bam_files.collect();
@@ -349,7 +350,11 @@ pub fn bam_vis(
             //                    .get(idx / bam_interval)
             //                    .and_then(|t| Some(format!("{}_{}", *t, idx % bam_interval).as_str()))
             //            } else {
-            bam_files.get(idx / bam_interval).and_then(|t| Some(*t))
+            if let Some(labels) = &labels {
+                labels.get(idx / bam_interval).and_then(|t| Some(*t))
+            } else {
+                bam_files.get(idx / bam_interval).and_then(|t| Some(*t))
+            }
             //            }
         })?;
     }
