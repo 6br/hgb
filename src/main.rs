@@ -389,6 +389,7 @@ fn main() {
                     Arg::new("labels")
                         .short('}')
                         .takes_value(true)
+                        .multiple(true)
                         .about("Labels displayed on legend"),
                 )
                 .arg(Arg::new("dynamic-partition").short('D').about("Divide multiple genomic range with dynamic width"))
