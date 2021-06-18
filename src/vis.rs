@@ -1764,7 +1764,7 @@ where
                             .configure_series_labels()
                             .background_style(&WHITE.mix(0.8))
                             .border_style(&BLACK)
-                            .label_font(("sans-serif", 15))
+                            .label_font(("sans-serif", 20))
                             .draw()?;
                     }
                 }
