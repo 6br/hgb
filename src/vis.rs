@@ -394,6 +394,7 @@ where
     let only_translocation = matches.is_present("only-translocation");
     let end_split = matches.is_present("end-split-callets");
     let with_caption = matches.is_present("with-caption");
+    let with_caption_val = matches.value_of("with-caption").unwrap_or("");
     let output_translocation = matches.is_present("output-translocation");
     let _translocation_target = matches.value_of("translocation-target");
     let square = matches.is_present("square");
@@ -659,7 +660,7 @@ where
                     // Set the caption of the chart
                     // Set the size of the label region
                     .caption(
-                        format!("{}", range),
+                        if with_caption_val != "" {format!("{}", with_caption_val)} else {format!("{}", range)},
                         ("sans-serif", x_scale / 2).into_font(),
                     )
                     .y_label_area_size(y_area_size)
@@ -682,7 +683,7 @@ where
                 ChartBuilder::on(&alignment)
                     // Set the caption of the chart
                     .caption(
-                        format!("{}", range),
+                        if with_caption_val != "" {format!("{}", with_caption_val)} else {format!("{}", range)},
                         ("sans-serif", x_scale / 2).into_font(),
                     )
                     // Set the size of the label region

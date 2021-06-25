@@ -480,7 +480,8 @@ fn main() {
                         .about("Show pileup as coverage plot"),
                 )
                 .arg(Arg::new("only-translocation").short('T').about("Show callets on ends of read alignments if the read contains translocation split-alignment"))
-                .arg(Arg::new("with-caption").short('<').about("Show caption on the top of chart"))
+                .arg(Arg::new("with-caption").short('<').takes_value(true)
+                .default_value("").about("Show caption on the top of chart"))
                 .arg(Arg::new("end-split-callets").short('e').about("Show callets on ends of read alignments if the read contains split-alignment"))
                 .arg(Arg::new("output-translocation").short('5').about("Write a list of translocation split-alignment to stdout"))
                 .arg(Arg::new("translocation-target").short('6').takes_value(true).about("Set a translocation target chromosome"))
