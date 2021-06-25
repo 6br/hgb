@@ -843,6 +843,17 @@ where
                                         stroke.filled(),
                                     )
                                 });
+                            if show_read_id {
+                                let pos = Pos::new(HPos::Left, VPos::Bottom);
+                                let style = TextStyle::from(("sans-serif", y / 3 * 2).into_font()).pos(pos);
+                                let text = Text::new(
+                                    format!("{}", record.name().unwrap_or(&"")),
+                                    (start, prev_index + key * 2 + axis_count + 1),
+                                    style,
+                                );
+ //                               texts.push(text);
+                                chart.draw_series(vec![text])?;
+                            }
                             if overlapping_annotation {
                                 // println!("{}: {}", range, record.name().unwrap_or(&""));
                                 let (lt, lb) = chart
