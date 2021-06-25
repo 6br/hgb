@@ -852,7 +852,7 @@ where
                                     style,
                                 );
  //                               texts.push(text);
-                                chart.draw_series(vec![text])?;
+                                chart.draw_series(vec![text]);
                             }
                             if overlapping_annotation {
                                 // println!("{}: {}", range, record.name().unwrap_or(&""));
