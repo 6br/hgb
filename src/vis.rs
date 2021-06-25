@@ -660,7 +660,7 @@ where
                     // Set the caption of the chart
                     // Set the size of the label region
                     .caption(
-                        if with_caption_val != "" {format!("{}", with_caption_val)} else {format!("{}", range)},
+                        if with_caption_val != "" {format!("{} {}", with_caption_val, range)} else {format!("{}", range)},
                         ("sans-serif", x_scale / 2).into_font(),
                     )
                     .y_label_area_size(y_area_size)
@@ -683,7 +683,7 @@ where
                 ChartBuilder::on(&alignment)
                     // Set the caption of the chart
                     .caption(
-                        if with_caption_val != "" {format!("{}", with_caption_val)} else {format!("{}", range)},
+                        if with_caption_val != "" {format!("{} {}", with_caption_val, range)} else {format!("{}", range)},
                         ("sans-serif", x_scale / 2).into_font(),
                     )
                     // Set the size of the label region
