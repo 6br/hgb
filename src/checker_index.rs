@@ -197,9 +197,7 @@ pub struct Index {
 
 impl Index {
     pub fn new(references: Vec<Reference>) -> Index {
-        Index {
-            references,
-        }
+        Index { references }
     }
     /// Loads index from stream.
     pub fn from_stream<R: Read>(mut stream: R) -> Result<Index> {

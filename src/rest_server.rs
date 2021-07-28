@@ -455,10 +455,13 @@ pub async fn server(
 
     let mut rng = rand::thread_rng();
     let cache_dir = matches
-        .value_of("cache-dir").map(|a| a.to_string())
+        .value_of("cache-dir")
+        .map(|a| a.to_string())
         .unwrap_or(rng.gen::<u32>().to_string());
 
-    if let Err(e) = fs::create_dir(&cache_dir) { panic!("{}: {}", e, &cache_dir) }
+    if let Err(e) = fs::create_dir(&cache_dir) {
+        panic!("{}: {}", e, &cache_dir)
+    }
     println!("REST Server is running on {}", bind);
     // Create some global state prior to building the server
 
@@ -481,15 +484,13 @@ pub async fn server(
         //let buffer = buffer.clone();
         actix_web::App::new()
             .data(list)
-            .data(list_btree) 
+            .data(list_btree)
             .app_data(counter.clone())
             .data(vis) //.app_data(vis.clone())
             .app_data(buffer.clone())
             .route("/", web::post().to(index))
             .wrap(Logger::default())
-            .wrap(
-                cross_origin
-            )
+            .wrap(cross_origin)
     })
     .bind(bind)?
     .workers(threads as usize)

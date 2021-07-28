@@ -310,15 +310,12 @@ fn id_to_range(
     args.remove(0);
     args = args.into_iter().skip_while(|t| t != "vis").collect();
     let start = (criteria << (max_zoom - zoom)) * path + range.start;
-    let range = StringRegion::new(
-        &format!(
-            "{}:{}-{}",
-            range.path,
-            start,
-            start + (criteria << (max_zoom - zoom)) - 1
-        )
-        ,
-    )
+    let range = StringRegion::new(&format!(
+        "{}:{}-{}",
+        range.path,
+        start,
+        start + (criteria << (max_zoom - zoom)) - 1
+    ))
     .unwrap();
     eprintln!("{:?} {:?}", args.join(" "), range);
     let matches = app.get_matches_from(args);
@@ -338,7 +335,9 @@ async fn get_js(_data: web::Data<RwLock<Item>>) -> Result<NamedFile> {
 }
 
 async fn get_js_map(_data: web::Data<RwLock<Item>>) -> Result<NamedFile> {
-    return Ok(NamedFile::open("static/openseadragon.min.js.map".to_string())?);
+    return Ok(NamedFile::open(
+        "static/openseadragon.min.js.map".to_string(),
+    )?);
 }
 
 async fn index(
@@ -573,7 +572,8 @@ pub async fn server(
         .unwrap_or(20u32);
     let mut rng = rand::thread_rng();
     let cache_dir = matches
-        .value_of("cache-dir").map(|a| a.to_string())
+        .value_of("cache-dir")
+        .map(|a| a.to_string())
         .unwrap_or_else(|| rng.gen::<u32>().to_string());
     let y_adjust = matches.is_present("adjust-y");
 
@@ -639,9 +639,7 @@ pub async fn server(
             .route("/{zoom:.*}/{filename:.*}_0.png", web::get().to(index))
             .service(actix_files::Files::new("/images", "static/images").show_files_listing())
             .wrap(Logger::default())
-            .wrap(
-                cross_origin
-            )
+            .wrap(cross_origin)
     })
     .bind(bind)?
     .workers(threads as usize)

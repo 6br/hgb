@@ -463,7 +463,6 @@ mod tests {
                         count += 1;
                     }
                     // return rec.to_record(c)
-                    
                 }
                 _ => (),
             })

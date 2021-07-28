@@ -138,7 +138,8 @@ impl ChromosomeBuffer {
             let mut ann = vec![];
             let mut list = vec![];
             let sample_ids_opt: Option<Vec<u64>> = matches
-                .values_of("id").map(|a| a.map(|t| t.parse::<u64>().unwrap()).collect());
+                .values_of("id")
+                .map(|a| a.map(|t| t.parse::<u64>().unwrap()).collect());
             let sample_id_cond = sample_ids_opt.is_some();
             let sample_ids = sample_ids_opt.unwrap_or_default();
             let filter = matches.is_present("filter");
@@ -171,7 +172,10 @@ impl ChromosomeBuffer {
                                 for i in rec {
                                     if (!filter
                                         || (i.calculate_end() as u64 > range.start()
-                                            && range.end() > i.start() as u64)) && !i.flag().is_secondary() && i.query_len() > min_read_len {
+                                            && range.end() > i.start() as u64))
+                                        && !i.flag().is_secondary()
+                                        && i.query_len() > min_read_len
+                                    {
                                         list.push((sample_id, i));
                                     }
                                 }
@@ -276,7 +280,8 @@ impl ChromosomeBuffer {
         let viewer = self.reader.chunk(chunks).unwrap();
         let mut ann = vec![];
         let sample_ids_opt: Option<Vec<u64>> = matches
-            .values_of("id").map(|a| a.map(|t| t.parse::<u64>().unwrap()).collect());
+            .values_of("id")
+            .map(|a| a.map(|t| t.parse::<u64>().unwrap()).collect());
         let sample_id_cond = sample_ids_opt.is_some();
         let sample_ids = sample_ids_opt.unwrap_or_default();
         let filter = matches.is_present("filter");
@@ -308,7 +313,10 @@ impl ChromosomeBuffer {
                             for i in rec {
                                 if (!filter
                                     || (i.calculate_end() as u64 > range.start()
-                                        && range.end() > i.start() as u64)) && !i.flag().is_secondary() && i.query_len() > min_read_len {
+                                        && range.end() > i.start() as u64))
+                                    && !i.flag().is_secondary()
+                                    && i.query_len() > min_read_len
+                                {
                                     merged_list.push((sample_id, i));
                                 }
                             }
@@ -373,12 +381,8 @@ impl ChromosomeBuffer {
         .map(|t| t.0.clone())
         .flatten()
         .collect();*/
-        let mut ann: Vec<(u64, bed::Record)> = self
-            .bins
-            .values()
-            .into_iter().cloned()
-            .flatten()
-            .collect();
+        let mut ann: Vec<(u64, bed::Record)> =
+            self.bins.values().into_iter().cloned().flatten().collect();
         let matches = self.matches.clone();
         let _pileup = matches.is_present("pileup");
         let _split_only = matches.is_present("only-split-alignment");

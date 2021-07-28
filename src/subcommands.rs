@@ -99,7 +99,6 @@ pub fn bam_vis(
                             record.start() - neighbor,
                             record.end() + neighbor
                         )
-                        
                     })
                     .collect()
             } else {
@@ -112,7 +111,6 @@ pub fn bam_vis(
                             record.start() - neighbor,
                             record.end() + neighbor
                         )
-                        
                     })
                     .collect()
             };
@@ -127,7 +125,9 @@ pub fn bam_vis(
         .and_then(|t| Some(t.map(|t| t.to_string()).collect()))
         .unwrap_or(vec![]);*/
         let prefetch_ranges: Vec<&str> = matches
-            .values_of("prefetch-range").map(|t| t.collect()).unwrap_or_default();
+            .values_of("prefetch-range")
+            .map(|t| t.collect())
+            .unwrap_or_default();
         /*let ranged_zip = if let Some(prefetch_ranges) = prefetch_ranges {
             ranges.into_iter().zip(prefetch_ranges)
         } else {
@@ -272,11 +272,13 @@ pub fn bam_vis(
                                 record.start(),
                                 record
                                     .score()
-                                    .and_then(|t| t.parse::<f32>().ok()).map(|t| t as u32)
+                                    .and_then(|t| t.parse::<f32>().ok())
+                                    .map(|t| t as u32)
                                     .unwrap_or(
                                         record
                                             .name()
-                                            .and_then(|t| t.parse::<f32>().ok()).map(|t| t as u32)
+                                            .and_then(|t| t.parse::<f32>().ok())
+                                            .map(|t| t as u32)
                                             .unwrap_or(0),
                                     ),
                                 '*',
@@ -449,7 +451,8 @@ pub fn query(matches: &ArgMatches, threads: u16) {
                 let viewer = reader.fetch(&range).unwrap();
 
                 let sample_ids_opt: Option<Vec<u64>> = matches
-                    .values_of("id").map(|a| a.map(|t| t.parse::<u64>().unwrap()).collect());
+                    .values_of("id")
+                    .map(|a| a.map(|t| t.parse::<u64>().unwrap()).collect());
                 let sample_id_cond = sample_ids_opt.is_some();
                 let sample_ids = sample_ids_opt.unwrap_or_default();
                 let filter = matches.is_present("filter");
@@ -624,7 +627,7 @@ pub fn split(matches: &ArgMatches, threads: u16) {
 
         if header {
             bam_header.write_text(&mut output).unwrap();
-            return ;
+            return;
         } else if formatted_header {
             for (name, len) in bam_header
                 .reference_names()
@@ -633,7 +636,7 @@ pub fn split(matches: &ArgMatches, threads: u16) {
             {
                 writeln!(&mut output, "{}\t{}", name, len).unwrap();
             }
-            return ;
+            return;
         }
         let output_secondary_unmapped = matches.is_present("secondary-unmapped");
 
@@ -734,7 +737,8 @@ pub fn bam_query(matches: &ArgMatches, threads: u16) {
                     .and_then(|a| a.parse::<u8>().ok())
                     .unwrap_or(6u8);
                 let sample_ids_opt: Option<Vec<u64>> = matches
-                    .values_of("id").map(|a| a.map(|t| t.parse::<u64>().unwrap()).collect());
+                    .values_of("id")
+                    .map(|a| a.map(|t| t.parse::<u64>().unwrap()).collect());
                 let sample_id_cond = sample_ids_opt.is_some();
                 let sample_ids = sample_ids_opt.unwrap_or_default();
                 let filter = matches.is_present("filter");
@@ -807,7 +811,9 @@ pub fn bench_query(matches: &ArgMatches, _args: Vec<String>, threads: u16) {
         if let Some(ranges) = matches.values_of("range") {
             let ranges: Vec<&str> = ranges.collect();
             let prefetch_ranges: Vec<&str> = matches
-                .values_of("prefetch-range").map(|t| t.collect()).unwrap_or_default();
+                .values_of("prefetch-range")
+                .map(|t| t.collect())
+                .unwrap_or_default();
 
             /*let ranged_zip = if let Some(prefetch_ranges) = prefetch_ranges {
                 ranges.into_iter().zip(prefetch_ranges)
@@ -882,7 +888,6 @@ pub fn vis_query(
                         record.start() - neighbor,
                         record.end() + neighbor
                     )
-                    
                 })
                 .collect();
             ranges.extend(ranges_tmp);
@@ -893,7 +898,9 @@ pub fn vis_query(
         }
         let mut precursor = Vec::with_capacity(ranges.len());
         let prefetch_ranges: Vec<&str> = matches
-            .values_of("prefetch-range").map(|t| t.collect()).unwrap_or_default();
+            .values_of("prefetch-range")
+            .map(|t| t.collect())
+            .unwrap_or_default();
 
         /*let ranged_zip = if let Some(prefetch_ranges) = prefetch_ranges {
             ranges.into_iter().zip(prefetch_ranges)
@@ -942,7 +949,8 @@ pub fn vis_query(
             }
 
             let sample_ids_opt: Option<Vec<u64>> = matches
-                .values_of("id").map(|a| a.map(|t| t.parse::<u64>().unwrap()).collect());
+                .values_of("id")
+                .map(|a| a.map(|t| t.parse::<u64>().unwrap()).collect());
             let sample_id_cond = sample_ids_opt.is_some();
             let sample_ids = sample_ids_opt.unwrap_or_default();
             let filter = matches.is_present("filter");
@@ -994,7 +1002,10 @@ pub fn vis_query(
                                 for i in rec {
                                     if (!filter
                                         || (i.calculate_end() as u64 > range.start()
-                                            && range.end() > i.start() as u64)) && !i.flag().is_secondary() && i.query_len() > min_read_len {
+                                            && range.end() > i.start() as u64))
+                                        && !i.flag().is_secondary()
+                                        && i.query_len() > min_read_len
+                                    {
                                         list.push((sample_id, i));
                                     }
                                 }
@@ -1087,7 +1098,8 @@ pub fn bin(matches: &ArgMatches, threads: u16) {
         let viewer = reader.chunk(chunks).unwrap();
 
         let sample_ids_opt: Option<Vec<u64>> = matches
-            .values_of("id").map(|a| a.map(|t| t.parse::<u64>().unwrap()).collect());
+            .values_of("id")
+            .map(|a| a.map(|t| t.parse::<u64>().unwrap()).collect());
         let sample_id_cond = sample_ids_opt.is_some();
         let sample_ids = sample_ids_opt.unwrap_or_default();
 
@@ -1169,7 +1181,7 @@ impl VisPrecursor {
             index_list: Arc::new(Mutex::new(vec![])),
             //suppl_list: Mutex::new(vec![]),
         }
-    } 
+    }
 }
 
 pub fn bam_record_vis_pre_calculate<'a, F>(
@@ -1622,32 +1634,32 @@ where
                     let mut packing = vec![0u64];
                     prev_index += 1;
                     (t.1).for_each(|k| {
-                        let mut index = if let Some(index) =
-                            packing.iter_mut().enumerate().find(|(_, item)| {
+                        let mut index =
+                            if let Some(index) = packing.iter_mut().enumerate().find(|(_, item)| {
                                 **item < k.1.start() as u64 + ((k.2 as u64) << 32)
                             }) {
-                            //packing[index.0] = k.1.calculate_end() as u64;
-                            *index.1 = k.1.calculate_end() as u64 + ((k.2 as u64) << 32);
-                            index.0
-                        } else {
-                            packing.push(k.1.calculate_end() as u64 + ((k.2 as u64) << 32));
-                            prev_index += 1;
-                            packing.len() - 1
-                            //prev_index - 1
-                        }; /*
-                           let index: usize = if heap.peek() != None
-                               && -heap.peek().unwrap().0 < k.1.start() as i64
-                           {
-                               let hp = heap.pop().unwrap();
-                               // let index = hp.1;
-                               heap.push((-k.1.calculate_end() as i64, hp.1));
-                               hp.1
-                           } else {
-                               let index = prev_index;
-                               prev_index += 1;
-                               heap.push((-k.1.calculate_end() as i64, index));
-                               index
-                           };*/
+                                //packing[index.0] = k.1.calculate_end() as u64;
+                                *index.1 = k.1.calculate_end() as u64 + ((k.2 as u64) << 32);
+                                index.0
+                            } else {
+                                packing.push(k.1.calculate_end() as u64 + ((k.2 as u64) << 32));
+                                prev_index += 1;
+                                packing.len() - 1
+                                //prev_index - 1
+                            }; /*
+                               let index: usize = if heap.peek() != None
+                                   && -heap.peek().unwrap().0 < k.1.start() as i64
+                               {
+                                   let hp = heap.pop().unwrap();
+                                   // let index = hp.1;
+                                   heap.push((-k.1.calculate_end() as i64, hp.1));
+                                   hp.1
+                               } else {
+                                   let index = prev_index;
+                                   prev_index += 1;
+                                   heap.push((-k.1.calculate_end() as i64, index));
+                                   index
+                               };*/
                         //let index =
                         if let Some(max_cov) = max_coverage {
                             if index > max_cov as usize {

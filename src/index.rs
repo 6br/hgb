@@ -53,9 +53,7 @@ impl Region {
     {
         let re = Regex::new(r"^(.+):(\d*)-?(\d*)$").unwrap();
         let caps = re.captures(path).ok_or("Parse Error")?;
-        let path = caps
-            .get(1).map(|t| t.as_str())
-            .ok_or("Parse Path Error")?;
+        let path = caps.get(1).map(|t| t.as_str()).ok_or("Parse Path Error")?;
         let start = caps
             .get(2)
             .and_then(|t| t.as_str().parse::<u64>().ok())
@@ -201,7 +199,12 @@ pub struct Chunk {
 impl Chunk {
     /// Constructs a `Chunk` from two virtual offsets.
     pub fn new(sample_id: u64, file_id: u32, start: VirtualOffset, end: VirtualOffset) -> Self {
-        Chunk { start, end, sample_id, file_id }
+        Chunk {
+            start,
+            end,
+            sample_id,
+            file_id,
+        }
     }
 
     pub fn from_stream<R: Read>(stream: &mut R, check: bool) -> Result<Self> {
@@ -215,7 +218,12 @@ impl Chunk {
                 format!("GHI chunk end < start ({}  <  {})", end, start),
             ))
         } else {
-            Ok(Chunk { start, end, sample_id, file_id })
+            Ok(Chunk {
+                start,
+                end,
+                sample_id,
+                file_id,
+            })
         }
     }
 
@@ -278,10 +286,7 @@ pub struct Bin {
 
 impl Bin {
     pub fn new(bin_id: u32, chunks: Vec<Chunk>) -> Bin {
-        Bin {
-            bin_id,
-            chunks,
-        }
+        Bin { bin_id, chunks }
     }
     pub fn dummy() -> Bin {
         Bin {
@@ -436,9 +441,7 @@ pub struct Index {
 
 impl Index {
     pub fn new(references: Vec<Reference>) -> Index {
-        Index {
-            references,
-        }
+        Index { references }
     }
     /// Loads index from stream.
     pub fn from_stream<R: Read>(mut stream: R) -> Result<Index> {

@@ -405,7 +405,8 @@ where
     let dynamic_partition = matches.is_present("dynamic-partition");
     let colored_by_motif = matches.occurrences_of("colored-by-motif") != 0;
     let colored_by_motif_vec: Option<Vec<String>> = matches
-        .value_of("colored-by-motif").map(|t| t.split(':').map(|t| t.to_string()).collect());
+        .value_of("colored-by-motif")
+        .map(|t| t.split(':').map(|t| t.to_string()).collect());
     let colored_by_tag = matches.occurrences_of("colored-by-tag") != 0;
     let colored_by_tag_vec = matches.value_of("colored-by-tag");
     let twobit = matches.value_of("ref-column");
@@ -479,11 +480,7 @@ where
     let axis_count = axis.len();
 
     let end0 = start.elapsed();
-    eprintln!(
-        "{}.{:03} sec.",
-        end0.as_secs(),
-        end0.subsec_millis()
-    );
+    eprintln!("{}.{:03} sec.", end0.as_secs(), end0.subsec_millis());
 
     //let annotation_count = annotation.iter().unique_by(|s| s.0).count(); // annotation.len();
     let annotation_count = vis
@@ -1646,11 +1643,7 @@ where
         chart.draw_series(texts)?;
         //let dump = {reads: [], annotation: };
         let end1 = start.elapsed();
-        eprintln!(
-            "{}.{:03} sec.",
-            end1.as_secs(),
-            end1.subsec_millis()
-        );
+        eprintln!("{}.{:03} sec.", end1.as_secs(), end1.subsec_millis());
 
         if freq_len > 0 {
             let coverages = coverage.split_evenly((freq_len, 1));
@@ -1780,11 +1773,7 @@ where
                 .draw()?;
         }
         let end2 = start.elapsed();
-        eprintln!(
-            "{}.{:03} sec.",
-            end2.as_secs(),
-            end2.subsec_millis()
-        );
+        eprintln!("{}.{:03} sec.", end2.as_secs(), end2.subsec_millis());
     }
 
     if dump_json {
