@@ -1425,7 +1425,7 @@ where
                                                         //bars.push(bar);
                                                         color = Some(WHITE);
                                                     }
-        
+
                                                 } else if entry.is_seq_match() {
                                                     prev_ref = entry.ref_pos_nt().unwrap().0 as u64;
                                                     if prev_ref > range.end() as u64 {
@@ -1549,7 +1549,6 @@ where
                                                     );
                                                     bar.set_margin(3, 3, 0, 0);
                                                     bars.push(bar);
-                                                
                                                 /*eprintln!(
                                                 "{:?}",
                                                 [
@@ -1648,7 +1647,6 @@ where
                             }
                         }
                     }
-                    
                     if overlapping_reads {
                         println!("{}", String::from_utf8_lossy(bam.name()));
                         let (lt, lb) = chart.as_coord_spec().translate(&(range.start, index));

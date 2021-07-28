@@ -1,19 +1,25 @@
-
+use crate::server::{Image, Size, DZI};
+use actix_cors::Cors;
 use actix_files::NamedFile;
+use actix_web::http::header::{ContentDisposition, DispositionType};
+use actix_web::{error, middleware::Logger, web, HttpRequest, Responder, Result};
+use bam::Record;
+use clap::{App, AppSettings, Arg, ArgMatches};
+use genomic_range::StringRegion;
+use ghi::{simple_buffer::ChromosomeBuffer, vis::bam_record_vis, Vis, VisRef};
+use itertools::Itertools;
 use rand::Rng;
 use std::time::Instant;
-use actix_cors::Cors;
-use actix_web::http::header::{ContentDisposition, DispositionType};
-use actix_web::{HttpRequest, Result, web, Responder, error, middleware::Logger};
-use std::{sync::{RwLock},  collections::{BTreeSet}, fs};
-use clap::{App,  ArgMatches, Arg, AppSettings};
-use ghi::{vis::bam_record_vis, Vis, simple_buffer::ChromosomeBuffer, VisRef};
-use genomic_range::StringRegion;
-use bam::Record;
-use itertools::Itertools;
-use crate::server::{DZI, Size, Image};
+use std::{collections::BTreeSet, fs, sync::RwLock};
 
-fn id_to_range<'a>(range: &StringRegion, args: &Vec<String>, zoom: u64, path: u64, param: &Param, path_string: String) -> (ArgMatches, StringRegion) {
+fn id_to_range<'a>(
+    range: &StringRegion,
+    args: &Vec<String>,
+    zoom: u64,
+    path: u64,
+    param: &Param,
+    path_string: String,
+) -> (ArgMatches, StringRegion) {
     let app = App::new("vis")
             .setting(AppSettings::AllArgsOverrideSelf)
             .about("Visualize GHB and other genomic data")
@@ -188,32 +194,114 @@ fn id_to_range<'a>(range: &StringRegion, args: &Vec<String>, zoom: u64, path: u6
             );
     // let prefetch_max = 25000000; // prefetch_range.end() - prefetch_range.start();
     let criteria = param.criteria; // range.end() - range.start();
-    // let x_width = prefetch_max / criteria * (740); //max_x
-    // Here 2**17 < x_width < 2**18 so maxZoom should be 18+ 1;
+                                   // let x_width = prefetch_max / criteria * (740); //max_x
+                                   // Here 2**17 < x_width < 2**18 so maxZoom should be 18+ 1;
     let max_zoom = param.max_zoom as u64; // 18;
     let max_y = param.max_y as u64; // It is the same as x;
     let freq_y = param.y_freq as u64;
     let y = param.y as u64;
     let x = param.x;
     let scalex_default = param.x_scale as u64;
-    let adjusted_y = if param.y_adjust  {y} else {y >> (max_zoom-zoom)};
-    let adjusted_large_y = if param.y_adjust {freq_y} else { if (y >> (max_zoom - zoom)) <= 2 {max_y >> (max_zoom-zoom)} else {freq_y >> (max_zoom-zoom)} };
+    let adjusted_y = if param.y_adjust {
+        y
+    } else {
+        y >> (max_zoom - zoom)
+    };
+    let adjusted_large_y = if param.y_adjust {
+        freq_y
+    } else {
+        if (y >> (max_zoom - zoom)) <= 2 {
+            max_y >> (max_zoom - zoom)
+        } else {
+            freq_y >> (max_zoom - zoom)
+        }
+    };
     // let path = path << (max_zoom - zoom);
-    let b: Vec<String> = if (y >> (max_zoom-zoom)) <= 2 { // i.e. 2**22s
-        vec!["-A".to_string(), "-Y".to_string(), adjusted_large_y.to_string(), "-y".to_string(), adjusted_y.to_string(), "-c".to_string(), "-I".to_string(), "-o".to_string(), path_string, "-X".to_string(), (adjusted_large_y / 2).to_string(), "-x".to_string(), x.to_string(), "-l".to_string(), "-e".to_string()]
-    } else if criteria << (max_zoom - zoom) <= 10000 && (y >> (max_zoom-zoom)) >= 8 { // Base-pair level with legend and insertion
-        vec!["-Y".to_string(), adjusted_large_y.to_string(), "-y".to_string(), adjusted_y.to_string(), "-X".to_string(), (scalex_default >> (max_zoom-zoom)).to_string(), "-o".to_string(), path_string, "-x".to_string(), x.to_string(), "-e".to_string()]
-    } else if criteria << (max_zoom - zoom) <= 25000 && (y >> (max_zoom-zoom)) >= 8 { // Base-pair level
-        vec!["-Y".to_string(), adjusted_large_y.to_string(), "-y".to_string(), adjusted_y.to_string(), "-X".to_string(), (scalex_default >> (max_zoom-zoom)).to_string(), "-I".to_string(), "-o".to_string(), path_string, "-x".to_string(), x.to_string(), "-l".to_string(), "-e".to_string()]
-    } else { // No alignment
-        vec!["-Y".to_string(), adjusted_large_y.to_string(), "-y".to_string(), adjusted_y.to_string(), "-X".to_string(), (scalex_default >> (max_zoom-zoom)).to_string(), "-c".to_string(), "-I".to_string(), "-o".to_string(), path_string, "-x".to_string(), x.to_string(), "-l".to_string(), "-e".to_string()]
+    let b: Vec<String> = if (y >> (max_zoom - zoom)) <= 2 {
+        // i.e. 2**22s
+        vec![
+            "-A".to_string(),
+            "-Y".to_string(),
+            adjusted_large_y.to_string(),
+            "-y".to_string(),
+            adjusted_y.to_string(),
+            "-c".to_string(),
+            "-I".to_string(),
+            "-o".to_string(),
+            path_string,
+            "-X".to_string(),
+            (adjusted_large_y / 2).to_string(),
+            "-x".to_string(),
+            x.to_string(),
+            "-l".to_string(),
+            "-e".to_string(),
+        ]
+    } else if criteria << (max_zoom - zoom) <= 10000 && (y >> (max_zoom - zoom)) >= 8 {
+        // Base-pair level with legend and insertion
+        vec![
+            "-Y".to_string(),
+            adjusted_large_y.to_string(),
+            "-y".to_string(),
+            adjusted_y.to_string(),
+            "-X".to_string(),
+            (scalex_default >> (max_zoom - zoom)).to_string(),
+            "-o".to_string(),
+            path_string,
+            "-x".to_string(),
+            x.to_string(),
+            "-e".to_string(),
+        ]
+    } else if criteria << (max_zoom - zoom) <= 25000 && (y >> (max_zoom - zoom)) >= 8 {
+        // Base-pair level
+        vec![
+            "-Y".to_string(),
+            adjusted_large_y.to_string(),
+            "-y".to_string(),
+            adjusted_y.to_string(),
+            "-X".to_string(),
+            (scalex_default >> (max_zoom - zoom)).to_string(),
+            "-I".to_string(),
+            "-o".to_string(),
+            path_string,
+            "-x".to_string(),
+            x.to_string(),
+            "-l".to_string(),
+            "-e".to_string(),
+        ]
+    } else {
+        // No alignment
+        vec![
+            "-Y".to_string(),
+            adjusted_large_y.to_string(),
+            "-y".to_string(),
+            adjusted_y.to_string(),
+            "-X".to_string(),
+            (scalex_default >> (max_zoom - zoom)).to_string(),
+            "-c".to_string(),
+            "-I".to_string(),
+            "-o".to_string(),
+            path_string,
+            "-x".to_string(),
+            x.to_string(),
+            "-l".to_string(),
+            "-e".to_string(),
+        ]
     };
     let mut args = args.clone();
     args.extend(b);
     args.remove(0);
     args = args.into_iter().skip_while(|t| t != "vis").collect();
-    let start =  (criteria << (max_zoom - zoom)) * path + range.start;
-    let range = StringRegion::new(&format!("{}:{}-{}", range.path, start, start + (criteria << (max_zoom - zoom)) - 1).to_string()).unwrap();
+    let start = (criteria << (max_zoom - zoom)) * path + range.start;
+    let range = StringRegion::new(
+        &format!(
+            "{}:{}-{}",
+            range.path,
+            start,
+            start + (criteria << (max_zoom - zoom)) - 1
+        )
+        .to_string(),
+    )
+    .unwrap();
     eprintln!("{:?} {:?}", args.join(" "), range);
     let matches = app.get_matches_from(args);
     (matches, range)
@@ -236,10 +324,19 @@ async fn get_js_map(_data: web::Data<RwLock<Item>>) -> Result<NamedFile> {
 }
 
 async fn get_js_aux(_data: web::Data<RwLock<Item>>) -> Result<NamedFile> {
-    return Ok(NamedFile::open(format!("static/openseadragon-scalebar.js"))?);
+    return Ok(NamedFile::open(format!(
+        "static/openseadragon-scalebar.js"
+    ))?);
 }
 
-async fn index(item: web::Data<RwLock<Item>>, vis: web::Data<RwLock<Vis>>, list: web::Data<RwLock<Vec<(u64, Record)>>>, list_btree: web::Data<RwLock<BTreeSet<u64>>>, buffer: web::Data<RwLock<ChromosomeBuffer>>, req: HttpRequest) -> Result<NamedFile> {
+async fn index(
+    item: web::Data<RwLock<Item>>,
+    vis: web::Data<RwLock<Vis>>,
+    list: web::Data<RwLock<Vec<(u64, Record)>>>,
+    list_btree: web::Data<RwLock<BTreeSet<u64>>>,
+    buffer: web::Data<RwLock<ChromosomeBuffer>>,
+    req: HttpRequest,
+) -> Result<NamedFile> {
     let start = Instant::now();
     let zoom: u64 = req.match_info().query("zoom").parse().unwrap();
     let path: u64 = req.match_info().query("filename").parse().unwrap();
@@ -248,11 +345,10 @@ async fn index(item: web::Data<RwLock<Item>>, vis: web::Data<RwLock<Vis>>, list:
 
     let cache_dir = &data.params.cache_dir;
     match NamedFile::open(format!("{}/{}/{}_0.{}", cache_dir, zoom, path, format)) {
-        Ok(file) => Ok(file
-            .set_content_disposition(ContentDisposition {
-                disposition: DispositionType::Attachment,
-                parameters: vec![],
-            })),
+        Ok(file) => Ok(file.set_content_disposition(ContentDisposition {
+            disposition: DispositionType::Attachment,
+            parameters: vec![],
+        })),
         _ => {
             let end0 = start.elapsed();
             eprintln!(
@@ -263,18 +359,19 @@ async fn index(item: web::Data<RwLock<Item>>, vis: web::Data<RwLock<Vis>>, list:
             let params = &data.params;
             let args = &data.args;
 
-
-
             //let min_zoom = 13;
-            
+
             let path_string = format!("{}/{}/{}_0.{}", cache_dir, zoom, path, format);
             let max_zoom = params.max_zoom as u64;
             //let min_zoom = ((&data.params).criteria << (max_zoom - zoom)) >= 10000000;
             let min_zoom = params.min_zoom as u64;
             if zoom < min_zoom || zoom > max_zoom as u64 {
-                return Err(error::ErrorBadRequest(format!("zoom level {} should be between {} and {}", zoom, min_zoom, max_zoom)));
+                return Err(error::ErrorBadRequest(format!(
+                    "zoom level {} should be between {} and {}",
+                    zoom, min_zoom, max_zoom
+                )));
             }
-            fs::create_dir_all( format!("{}/{}", cache_dir, zoom))?; //error is permitted.
+            fs::create_dir_all(format!("{}/{}", cache_dir, zoom))?; //error is permitted.
             let end1 = start.elapsed();
             eprintln!(
                 "create dir: {}.{:03} sec.",
@@ -282,39 +379,54 @@ async fn index(item: web::Data<RwLock<Item>>, vis: web::Data<RwLock<Vis>>, list:
                 end1.subsec_nanos() / 1_000_000
             );
 
-            let (matches, string_range) = id_to_range(&data.range, args, zoom, path, params, path_string.clone());
+            let (matches, string_range) =
+                id_to_range(&data.range, args, zoom, path, params, path_string.clone());
             let end2 = start.elapsed();
             eprintln!(
                 "id_to_range: {}.{:03} sec.",
                 end2.as_secs(),
                 end2.subsec_nanos() / 1_000_000
             );
-            if !buffer.read().unwrap().included_string_local(&string_range, &list_btree.read().unwrap()) {
-                // TODO() This ignores 
+            if !buffer
+                .read()
+                .unwrap()
+                .included_string_local(&string_range, &list_btree.read().unwrap())
+            {
+                // TODO() This ignores
                 let endx = start.elapsed();
-                eprintln!("Fallback to reload: {}.{:03} sec.",
+                eprintln!(
+                    "Fallback to reload: {}.{:03} sec.",
                     endx.as_secs(),
                     endx.subsec_nanos() / 1_000_000
                 );
                 //let (mut list, mut list_btree) = &*;
                 {
-                    buffer.write().unwrap().retrieve(&string_range, &mut list.write().unwrap(), &mut list_btree.write().unwrap());
+                    buffer.write().unwrap().retrieve(
+                        &string_range,
+                        &mut list.write().unwrap(),
+                        &mut list_btree.write().unwrap(),
+                    );
                 }
-                let new_vis = buffer.read().unwrap().vis(&string_range, &mut list.write().unwrap(), &mut list_btree.write().unwrap());
+                let new_vis = buffer.read().unwrap().vis(
+                    &string_range,
+                    &mut list.write().unwrap(),
+                    &mut list_btree.write().unwrap(),
+                );
                 let endy = start.elapsed();
-                eprintln!("Fallback to reload2: {}.{:03} sec.",
+                eprintln!(
+                    "Fallback to reload2: {}.{:03} sec.",
                     endy.as_secs(),
                     endy.subsec_nanos() / 1_000_000
                 );
                 let mut old_vis = vis.write().unwrap();
                 *old_vis = new_vis.unwrap();
                 let endz = start.elapsed();
-                eprintln!("Fallback to reload3: {}.{:03} sec.",
+                eprintln!(
+                    "Fallback to reload3: {}.{:03} sec.",
                     endz.as_secs(),
                     endz.subsec_nanos() / 1_000_000
                 );
             }
-
 
             let data = vis.read().unwrap();
             let ann = &data.annotation;
@@ -326,7 +438,21 @@ async fn index(item: web::Data<RwLock<Item>>, vis: web::Data<RwLock<Vis>>, list:
 
             // If the end is exceeds the prefetch region, raise error.
             // let arg_vec = vec!["ghb", "vis", "-t", "1", "-r",  "parse"];
-            bam_record_vis(&matches, vec![VisRef::new(string_range, &list.read().unwrap(), ann, freq, compressed_list, index_list, prev_index, supplementary_list)],|_| None).unwrap();
+            bam_record_vis(
+                &matches,
+                vec![VisRef::new(
+                    string_range,
+                    &list.read().unwrap(),
+                    ann,
+                    freq,
+                    compressed_list,
+                    index_list,
+                    prev_index,
+                    supplementary_list,
+                )],
+                |_| None,
+            )
+            .unwrap();
             let end3 = start.elapsed();
             eprintln!(
                 "img_saved: {}.{:03} sec.",
@@ -334,11 +460,12 @@ async fn index(item: web::Data<RwLock<Item>>, vis: web::Data<RwLock<Vis>>, list:
                 end3.subsec_nanos() / 1_000_000
             );
             // bam_vis(matches, 1);
-            Ok(NamedFile::open(path_string)?
-                .set_content_disposition(ContentDisposition {
+            Ok(
+                NamedFile::open(path_string)?.set_content_disposition(ContentDisposition {
                     disposition: DispositionType::Attachment,
                     parameters: vec![],
-                }))
+                }),
+            )
         }
     }
 }
@@ -353,7 +480,12 @@ pub struct Item {
 
 impl Item {
     fn new(range: StringRegion, args: Vec<String>, params: Param, dzi: DZI) -> Self {
-        Item{range, args:args,params:params,dzi:dzi}
+        Item {
+            range,
+            args: args,
+            params: params,
+            dzi: dzi,
+        }
     }
 }
 
@@ -372,8 +504,9 @@ pub struct Param {
     y_adjust: bool,
 }
 
-
-const fn num_bits<T>() -> usize { std::mem::size_of::<T>() * 8 }
+const fn num_bits<T>() -> usize {
+    std::mem::size_of::<T>() * 8
+}
 
 fn log_2(x: i64) -> u32 {
     assert!(x > 0);
@@ -381,8 +514,14 @@ fn log_2(x: i64) -> u32 {
 }
 
 #[actix_rt::main]
-pub async fn server(matches: ArgMatches, range: StringRegion, prefetch_range: StringRegion, args: Vec<String>, mut buffer:  ChromosomeBuffer, threads: u16) -> std::io::Result<()> {
-
+pub async fn server(
+    matches: ArgMatches,
+    range: StringRegion,
+    prefetch_range: StringRegion,
+    args: Vec<String>,
+    mut buffer: ChromosomeBuffer,
+    threads: u16,
+) -> std::io::Result<()> {
     use actix_web::{web, HttpServer};
     // let list = buffer.add(&prefetch_range);
     let mut list = vec![];
@@ -390,7 +529,9 @@ pub async fn server(matches: ArgMatches, range: StringRegion, prefetch_range: St
     let bind = matches.value_of("web").unwrap_or(&"0.0.0.0:4000");
     let no_margin = matches.is_present("no-scale");
     buffer.retrieve(&prefetch_range, &mut list, &mut list_btree);
-    let vis = buffer.vis(&prefetch_range, &mut list, &mut list_btree).unwrap();
+    let vis = buffer
+        .vis(&prefetch_range, &mut list, &mut list_btree)
+        .unwrap();
     //eprintln!("{:#?}", vis);
     let annotation = &vis.annotation;
     let prev_index = vis.prev_index;
@@ -409,26 +550,51 @@ pub async fn server(matches: ArgMatches, range: StringRegion, prefetch_range: St
     let zoom_range = matches
         .value_of("zoom-range")
         .and_then(|a| a.parse::<u32>().ok())
-        .unwrap_or(if matches.is_present("whole-chromosome") {6u32} else{8u32});
+        .unwrap_or(if matches.is_present("whole-chromosome") {
+            6u32
+        } else {
+            8u32
+        });
     let square = matches.is_present("square");
     let x = if square {
         top_margin
-        + (prev_index as u32 + axis_count as u32 + annotation_count as u32 * 2) * y
-        + freq.len() as u32 * freq_size
-    } else {matches
-        .value_of("x")
-        .and_then(|a| a.parse::<u32>().ok())
-        .unwrap_or(1280u32)
+            + (prev_index as u32 + axis_count as u32 + annotation_count as u32 * 2) * y
+            + freq.len() as u32 * freq_size
+    } else {
+        matches
+            .value_of("x")
+            .and_then(|a| a.parse::<u32>().ok())
+            .unwrap_or(1280u32)
     };
-    let format = matches
-        .value_of("format")
-        .unwrap_or(&"png");
+    let format = matches.value_of("format").unwrap_or(&"png");
     let diff = range.end - range.start;
-    let all = if matches.is_present("whole-chromosome") {vis.prefetch_max} else {prefetch_range.end - prefetch_range.start};
-    let view_range = if matches.is_present("whole-chromosome") {StringRegion{path: prefetch_range.path, start: 1, end: vis.prefetch_max}} else {prefetch_range}; 
-    let size = Size{height: x.to_string(), width: ((all as u32 / diff as u32 + 1) * x).to_string()};
-    let image = Image{xmlns: "http://schemas.microsoft.com/deepzoom/2008".to_string(), url: format!("http://{}/", bind).to_string(), format: format.to_string(), overlap: "0".to_string(), tile_size: x.to_string(), size: size};
-    let dzi = DZI{image: image};
+    let all = if matches.is_present("whole-chromosome") {
+        vis.prefetch_max
+    } else {
+        prefetch_range.end - prefetch_range.start
+    };
+    let view_range = if matches.is_present("whole-chromosome") {
+        StringRegion {
+            path: prefetch_range.path,
+            start: 1,
+            end: vis.prefetch_max,
+        }
+    } else {
+        prefetch_range
+    };
+    let size = Size {
+        height: x.to_string(),
+        width: ((all as u32 / diff as u32 + 1) * x).to_string(),
+    };
+    let image = Image {
+        xmlns: "http://schemas.microsoft.com/deepzoom/2008".to_string(),
+        url: format!("http://{}/", bind).to_string(),
+        format: format.to_string(),
+        overlap: "0".to_string(),
+        tile_size: x.to_string(),
+        size: size,
+    };
+    let dzi = DZI { image: image };
     let x_scale = matches
         .value_of("x-scale")
         .and_then(|a| a.parse::<u32>().ok())
@@ -439,25 +605,45 @@ pub async fn server(matches: ArgMatches, range: StringRegion, prefetch_range: St
         .and_then(|a| Some(a.to_string()))
         .unwrap_or(rng.gen::<u32>().to_string());
     let y_adjust = matches.is_present("adjust-y");
-    
+
     let x_width = all as u32 / diff as u32 * x;
-    eprintln!("Total len: {}, partial len: {}, x_width: {}({}), x: {}", all,diff,x_width, x_width as i64, x);
+    eprintln!(
+        "Total len: {}, partial len: {}, x_width: {}({}), x: {}",
+        all, diff, x_width, x_width as i64, x
+    );
     let max_zoom = log_2(x_width as i64) + 1;
     let min_zoom = max_zoom - zoom_range;
 
     match fs::create_dir(&cache_dir) {
         Err(e) => panic!("{}: {}", &cache_dir, e),
-        Ok(_) => {},
+        Ok(_) => {}
     };
-    let params = Param{x_scale, max_y:x, prefetch_max: all, max_zoom, min_zoom, criteria:diff, y_freq: freq_size, x, y, cache_dir, y_adjust};
-    eprintln!("{:?}, threads: {}, zoom: {}", params, threads, log_2(x_width as i64) + 1);
+    let params = Param {
+        x_scale,
+        max_y: x,
+        prefetch_max: all,
+        max_zoom,
+        min_zoom,
+        criteria: diff,
+        y_freq: freq_size,
+        x,
+        y,
+        cache_dir,
+        y_adjust,
+    };
+    eprintln!(
+        "{:?}, threads: {}, zoom: {}",
+        params,
+        threads,
+        log_2(x_width as i64) + 1
+    );
     println!("Buffered Server is running on {}", bind);
     // Create some global state prior to building the server
     //#[allow(clippy::mutex_atomic)] // it's intentional.
     //let counter1 = web::Data::new(Mutex::new((matches.clone(), range, list, annotation, freq)));
     // let counter = RwLock::new(Vis::new(range.clone(), args.clone(), list.clone(), annotation.clone(), freq.clone(), dzi.clone(), params.clone()));
     //let counter = Arc::new(RwLock::new(Vis::new(range, args, annotation, freq, dzi, params)));
-    //#[allow(clippy::mutex_atomic)] 
+    //#[allow(clippy::mutex_atomic)]
     // let vis = Vis::new(range, annotation, freq, compressed_list, index_list, prev_index, supplementary_list, 250000000);
     let counter = web::Data::new(RwLock::new(Item::new(view_range, args, params, dzi)));
     //let vis = web::Data::new(RwLock::new(vis));
@@ -465,26 +651,40 @@ pub async fn server(matches: ArgMatches, range: StringRegion, prefetch_range: St
     let cross_origin_bool = matches.is_present("production");
 
     //https://github.com/actix/examples/blob/master/state/src/main.rs
-    HttpServer::new(move|| {
-        let cross_origin = if cross_origin_bool { Cors::default() } else { Cors::permissive() };
-    
+    HttpServer::new(move || {
+        let cross_origin = if cross_origin_bool {
+            Cors::default()
+        } else {
+            Cors::permissive()
+        };
+
         let list = RwLock::new(list.clone());
-        let list_btree = RwLock::new(list_btree.clone());//buffer =
-        let vis = RwLock::new(vis.clone()); 
+        let list_btree = RwLock::new(list_btree.clone()); //buffer =
+        let vis = RwLock::new(vis.clone());
         //let buffer = buffer.clone();
-        actix_web::App::new().data(list).data(list_btree)/*.app_data(web::Data::new(RwLock::new(list.clone()))).*/.app_data(counter.clone()).data(vis) //.app_data(vis.clone())
-        .app_data(buffer.clone()).route("/", web::get().to(get_index))
-        .route("openseadragon.min.js", web::get().to(get_js))
-        .route("openseadragon.min.js.map", web::get().to(get_js_map))
-        .route("openseadragon-scalebar.js", web::get().to(get_js_aux))
-        .route("genome.dzi", web::get().to(get_dzi))
-        .route("/{zoom:.*}/{filename:.*}_0.{format:.*}", web::get().to(index))
-        .service(actix_files::Files::new("/images", "static/images").show_files_listing()).wrap(Logger::default()).wrap(
-            cross_origin /*allowed_origin("*").allowed_methods(vec!["GET", "POST"])
-            .allowed_headers(vec![http::header::AUTHORIZATION, http::header::ACCEPT])
-            .allowed_header(http::header::CONTENT_TYPE)
-            .max_age(3600)*/
-        )
+        actix_web::App::new()
+            .data(list)
+            .data(list_btree) /*.app_data(web::Data::new(RwLock::new(list.clone()))).*/
+            .app_data(counter.clone())
+            .data(vis) //.app_data(vis.clone())
+            .app_data(buffer.clone())
+            .route("/", web::get().to(get_index))
+            .route("openseadragon.min.js", web::get().to(get_js))
+            .route("openseadragon.min.js.map", web::get().to(get_js_map))
+            .route("openseadragon-scalebar.js", web::get().to(get_js_aux))
+            .route("genome.dzi", web::get().to(get_dzi))
+            .route(
+                "/{zoom:.*}/{filename:.*}_0.{format:.*}",
+                web::get().to(index),
+            )
+            .service(actix_files::Files::new("/images", "static/images").show_files_listing())
+            .wrap(Logger::default())
+            .wrap(
+                cross_origin, /*allowed_origin("*").allowed_methods(vec!["GET", "POST"])
+                              .allowed_headers(vec![http::header::AUTHORIZATION, http::header::ACCEPT])
+                              .allowed_header(http::header::CONTENT_TYPE)
+                              .max_age(3600)*/
+            )
     })
     .bind(bind)?
     .workers(threads as usize)

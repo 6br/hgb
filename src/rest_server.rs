@@ -1,19 +1,20 @@
-
-
-use actix_files::NamedFile;
-use rand::Rng;
-use std::time::Instant;
 use actix_cors::Cors;
-use actix_web::{HttpResponse, http::header::{ContentDisposition, DispositionType}};
-use actix_web::{Result, web, middleware::Logger};
-use std::{sync::{RwLock},  collections::{BTreeSet}, fs};
-use clap::{App, AppSettings, Arg, ArgMatches, Error};
-use ghi::{vis::bam_record_vis, Vis, simple_buffer::ChromosomeBuffer, VisRef};
-use genomic_range::StringRegion;
+use actix_files::NamedFile;
+use actix_web::{
+    http::header::{ContentDisposition, DispositionType},
+    HttpResponse,
+};
+use actix_web::{middleware::Logger, web, Result};
 use bam::Record;
+use clap::{App, AppSettings, Arg, ArgMatches, Error};
+use genomic_range::StringRegion;
+use ghi::{simple_buffer::ChromosomeBuffer, vis::bam_record_vis, Vis, VisRef};
+use rand::Rng;
+use serde::Deserialize;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
-use serde::{Deserialize};
+use std::time::Instant;
+use std::{collections::BTreeSet, fs, sync::RwLock};
 
 use crate::subcommands::{bam_vis, vis_query};
 
@@ -21,12 +22,16 @@ struct Item {
     //vis: Vis,
     range: StringRegion,
     args: Vec<String>,
-    cache_dir: String
+    cache_dir: String,
 }
 
 impl Item {
-    fn new(range: StringRegion, args: Vec<String>,cache_dir: String) -> Self {
-        Item{range, args:args, cache_dir: cache_dir}
+    fn new(range: StringRegion, args: Vec<String>, cache_dir: String) -> Self {
+        Item {
+            range,
+            args: args,
+            cache_dir: cache_dir,
+        }
     }
 }
 
@@ -34,12 +39,12 @@ impl Item {
 pub struct RequestBody {
     params: String,
     format: String,
-    prefetch: bool
+    prefetch: bool,
 }
 
 #[derive(Serialize)]
 pub struct ResponseBody {
-    message:String
+    message: String,
 }
 
 fn calculate_hash<T: Hash>(t: &T) -> u64 {
@@ -226,7 +231,12 @@ fn get_matches_from(args: Vec<String>) -> Result<ArgMatches, Error> {
     app.try_get_matches_from(args)
 }
 
-fn id_to_range(_range: &StringRegion, args: &Vec<String>, params: String, path_string: String) -> Result<(ArgMatches, StringRegion), Error> {
+fn id_to_range(
+    _range: &StringRegion,
+    args: &Vec<String>,
+    params: String,
+    path_string: String,
+) -> Result<(ArgMatches, StringRegion), Error> {
     let a: Vec<String> = params.split(" ").map(|t| t.to_string()).collect();
     let b: Vec<String> = vec!["-o".to_string(), path_string];
     let mut args = args.clone();
@@ -239,13 +249,16 @@ fn id_to_range(_range: &StringRegion, args: &Vec<String>, params: String, path_s
     let ranges_str = matches.values_of("range").unwrap();
     let range = {
         let ranges_tmp: Vec<String> = ranges_str.into_iter().map(|t| t.to_string()).collect();
-        StringRegion::new(&ranges_tmp[ranges_tmp.len()-1]).unwrap()
+        StringRegion::new(&ranges_tmp[ranges_tmp.len() - 1]).unwrap()
     };
     eprintln!("{:?}", range);
     Ok((matches, range))
 }
 
-fn id_to_range_ab_initio(params: String, path_string: String) -> Result<(ArgMatches, Vec<String>), Error> {
+fn id_to_range_ab_initio(
+    params: String,
+    path_string: String,
+) -> Result<(ArgMatches, Vec<String>), Error> {
     let a: Vec<String> = params.split(" ").map(|t| t.to_string()).collect();
     let b: Vec<String> = vec!["-o".to_string(), path_string];
     let mut args = vec!["vis".to_string()];
@@ -253,11 +266,18 @@ fn id_to_range_ab_initio(params: String, path_string: String) -> Result<(ArgMatc
     args.extend(b);
     eprintln!("{:?}", args);
     let matches = get_matches_from(args.clone())?;
-    eprintln!("{:?}",  matches.value_of("INPUT") );
+    eprintln!("{:?}", matches.value_of("INPUT"));
     Ok((matches, args))
 }
 
-async fn index(item: web::Data<RwLock<Item>>, vis: web::Data<RwLock<Vis>>, list: web::Data<RwLock<Vec<(u64, Record)>>>, list_btree: web::Data<RwLock<BTreeSet<u64>>>, buffer: web::Data<RwLock<ChromosomeBuffer>>, request_body: web::Json<RequestBody>) -> Result<NamedFile> {
+async fn index(
+    item: web::Data<RwLock<Item>>,
+    vis: web::Data<RwLock<Vis>>,
+    list: web::Data<RwLock<Vec<(u64, Record)>>>,
+    list_btree: web::Data<RwLock<BTreeSet<u64>>>,
+    buffer: web::Data<RwLock<ChromosomeBuffer>>,
+    request_body: web::Json<RequestBody>,
+) -> Result<NamedFile> {
     let start = Instant::now();
     let format = &request_body.format.clone();
     let params = &request_body.params.clone();
@@ -270,11 +290,10 @@ async fn index(item: web::Data<RwLock<Item>>, vis: web::Data<RwLock<Vis>>, list:
     eprintln!("{} {} {:?}", format, params, path_string);
 
     match NamedFile::open(path_string.clone()) {
-        Ok(file) => Ok(file
-            .set_content_disposition(ContentDisposition {
-                disposition: DispositionType::Attachment,
-                parameters: vec![],
-            })),
+        Ok(file) => Ok(file.set_content_disposition(ContentDisposition {
+            disposition: DispositionType::Attachment,
+            parameters: vec![],
+        })),
         _ => {
             if *prefetch {
                 let end0 = start.elapsed();
@@ -291,36 +310,55 @@ async fn index(item: web::Data<RwLock<Item>>, vis: web::Data<RwLock<Vis>>, list:
                     end1.subsec_nanos() / 1_000_000
                 );
 
-                let (matches, string_range) = id_to_range(&data.range, args, params.to_string(), path_string.clone()).map_err(|t| HttpResponse::BadRequest().json(ResponseBody {
-                    message: format!("parameter error: {}", t)//String::from("parameter error: " + t.description()),
-                }))?;
+                let (matches, string_range) =
+                    id_to_range(&data.range, args, params.to_string(), path_string.clone())
+                        .map_err(|t| {
+                            HttpResponse::BadRequest().json(ResponseBody {
+                                message: format!("parameter error: {}", t), //String::from("parameter error: " + t.description()),
+                            })
+                        })?;
                 let end2 = start.elapsed();
                 eprintln!(
                     "id_to_range: {}.{:03} sec.",
                     end2.as_secs(),
                     end2.subsec_nanos() / 1_000_000
                 );
-                if !buffer.read().unwrap().included_string_local(&string_range, &list_btree.read().unwrap()) {
-                    // TODO() This ignores 
+                if !buffer
+                    .read()
+                    .unwrap()
+                    .included_string_local(&string_range, &list_btree.read().unwrap())
+                {
+                    // TODO() This ignores
                     let endx = start.elapsed();
-                    eprintln!("Fallback to reload: {}.{:03} sec.",
+                    eprintln!(
+                        "Fallback to reload: {}.{:03} sec.",
                         endx.as_secs(),
                         endx.subsec_nanos() / 1_000_000
                     );
                     //let (mut list, mut list_btree) = &*;
                     {
-                        buffer.write().unwrap().retrieve(&string_range, &mut list.write().unwrap(), &mut list_btree.write().unwrap());
+                        buffer.write().unwrap().retrieve(
+                            &string_range,
+                            &mut list.write().unwrap(),
+                            &mut list_btree.write().unwrap(),
+                        );
                     }
-                    let new_vis = buffer.read().unwrap().vis(&string_range, &mut list.write().unwrap(), &mut list_btree.write().unwrap());
+                    let new_vis = buffer.read().unwrap().vis(
+                        &string_range,
+                        &mut list.write().unwrap(),
+                        &mut list_btree.write().unwrap(),
+                    );
                     let endy = start.elapsed();
-                    eprintln!("Fallback to reload2: {}.{:03} sec.",
+                    eprintln!(
+                        "Fallback to reload2: {}.{:03} sec.",
                         endy.as_secs(),
                         endy.subsec_nanos() / 1_000_000
                     );
                     let mut old_vis = vis.write().unwrap();
                     *old_vis = new_vis.unwrap();
                     let endz = start.elapsed();
-                    eprintln!("Fallback to reload3: {}.{:03} sec.",
+                    eprintln!(
+                        "Fallback to reload3: {}.{:03} sec.",
                         endz.as_secs(),
                         endz.subsec_nanos() / 1_000_000
                     );
@@ -336,7 +374,21 @@ async fn index(item: web::Data<RwLock<Item>>, vis: web::Data<RwLock<Vis>>, list:
 
                 // If the end is exceeds the prefetch region, raise error.
                 // let arg_vec = vec!["ghb", "vis", "-t", "1", "-r",  "parse"];
-                bam_record_vis(&matches, vec![VisRef::new(string_range, &list.read().unwrap(), ann, freq, compressed_list, index_list, prev_index, supplementary_list)],|_| None).unwrap();
+                bam_record_vis(
+                    &matches,
+                    vec![VisRef::new(
+                        string_range,
+                        &list.read().unwrap(),
+                        ann,
+                        freq,
+                        compressed_list,
+                        index_list,
+                        prev_index,
+                        supplementary_list,
+                    )],
+                    |_| None,
+                )
+                .unwrap();
                 let end3 = start.elapsed();
                 eprintln!(
                     "img_saved: {}.{:03} sec.",
@@ -345,10 +397,15 @@ async fn index(item: web::Data<RwLock<Item>>, vis: web::Data<RwLock<Vis>>, list:
                 );
                 // bam_vis(matches, 1);
             } else {
-                //Visualization for unprefetch data. 
-                let (matches, args) = id_to_range_ab_initio(params.to_string(), path_string.clone()).map_err(|t| HttpResponse::BadRequest().json(ResponseBody {
-                    message: format!("parameter error: {}", t)//String::from("parameter error: " + t.description()),
-                }))?;
+                //Visualization for unprefetch data.
+                let (matches, args) =
+                    id_to_range_ab_initio(params.to_string(), path_string.clone()).map_err(
+                        |t| {
+                            HttpResponse::BadRequest().json(ResponseBody {
+                                message: format!("parameter error: {}", t), //String::from("parameter error: " + t.description()),
+                            })
+                        },
+                    )?;
                 let threads = matches
                     .value_of("threads")
                     .and_then(|t| t.parse::<u16>().ok())
@@ -358,25 +415,43 @@ async fn index(item: web::Data<RwLock<Item>>, vis: web::Data<RwLock<Vis>>, list:
                     false => bam_vis(&matches, args, threads).unwrap(),
                 }
             }
-            Ok(NamedFile::open(path_string)?
-            .set_content_disposition(ContentDisposition {
-                disposition: DispositionType::Attachment,
-                parameters: vec![],
-            }))
+            Ok(
+                NamedFile::open(path_string)?.set_content_disposition(ContentDisposition {
+                    disposition: DispositionType::Attachment,
+                    parameters: vec![],
+                }),
+            )
         }
     }
 }
 
 #[actix_rt::main]
-pub async fn server(matches: ArgMatches, _range: StringRegion, prefetch_range: StringRegion, args: Vec<String>, mut buffer:  ChromosomeBuffer, threads: u16) -> std::io::Result<()> {
+pub async fn server(
+    matches: ArgMatches,
+    _range: StringRegion,
+    prefetch_range: StringRegion,
+    args: Vec<String>,
+    mut buffer: ChromosomeBuffer,
+    threads: u16,
+) -> std::io::Result<()> {
     use actix_web::{web, HttpServer};
     // let list = buffer.add(&prefetch_range);
     let mut list = vec![];
     let mut list_btree = BTreeSet::new();
     let bind = matches.value_of("web").unwrap_or(&"0.0.0.0:4000");
     buffer.retrieve(&prefetch_range, &mut list, &mut list_btree);
-    let vis = buffer.vis(&prefetch_range, &mut list, &mut list_btree).unwrap();
-    let view_range = if matches.is_present("whole-chromosome") {StringRegion{path: prefetch_range.path, start: 1, end: vis.prefetch_max}} else {prefetch_range}; 
+    let vis = buffer
+        .vis(&prefetch_range, &mut list, &mut list_btree)
+        .unwrap();
+    let view_range = if matches.is_present("whole-chromosome") {
+        StringRegion {
+            path: prefetch_range.path,
+            start: 1,
+            end: vis.prefetch_max,
+        }
+    } else {
+        prefetch_range
+    };
     //eprintln!("{:#?}", vis);
     /*let annotation = &vis.annotation;
     let prev_index = vis.prev_index;
@@ -393,7 +468,7 @@ pub async fn server(matches: ArgMatches, _range: StringRegion, prefetch_range: S
 
     match fs::create_dir(&cache_dir) {
         Err(e) => panic!("{}: {}", e, &cache_dir),
-        Ok(_) => {},
+        Ok(_) => {}
     };
     println!("REST Server is running on {}", bind);
     // Create some global state prior to building the server
@@ -405,22 +480,31 @@ pub async fn server(matches: ArgMatches, _range: StringRegion, prefetch_range: S
     let cross_origin_bool = matches.is_present("production");
 
     //https://github.com/actix/examples/blob/master/state/src/main.rs
-    HttpServer::new(move|| {
-        let cross_origin = if cross_origin_bool { Cors::default() } else { Cors::permissive() };
-    
+    HttpServer::new(move || {
+        let cross_origin = if cross_origin_bool {
+            Cors::default()
+        } else {
+            Cors::permissive()
+        };
+
         let list = RwLock::new(list.clone());
-        let list_btree = RwLock::new(list_btree.clone());//buffer =
-        let vis = RwLock::new(vis.clone()); 
+        let list_btree = RwLock::new(list_btree.clone()); //buffer =
+        let vis = RwLock::new(vis.clone());
         //let buffer = buffer.clone();
-        actix_web::App::new().data(list).data(list_btree)/*.app_data(web::Data::new(RwLock::new(list.clone()))).*/.app_data(counter.clone()).data(vis) //.app_data(vis.clone())
-        .app_data(buffer.clone())
-        .route("/", web::post().to(index))
-        .wrap(Logger::default()).wrap(
-            cross_origin /*allowed_origin("*").allowed_methods(vec!["GET", "POST"])
-            .allowed_headers(vec![http::header::AUTHORIZATION, http::header::ACCEPT])
-            .allowed_header(http::header::CONTENT_TYPE)
-            .max_age(3600)*/
-        )
+        actix_web::App::new()
+            .data(list)
+            .data(list_btree) /*.app_data(web::Data::new(RwLock::new(list.clone()))).*/
+            .app_data(counter.clone())
+            .data(vis) //.app_data(vis.clone())
+            .app_data(buffer.clone())
+            .route("/", web::post().to(index))
+            .wrap(Logger::default())
+            .wrap(
+                cross_origin, /*allowed_origin("*").allowed_methods(vec!["GET", "POST"])
+                              .allowed_headers(vec![http::header::AUTHORIZATION, http::header::ACCEPT])
+                              .allowed_header(http::header::CONTENT_TYPE)
+                              .max_age(3600)*/
+            )
     })
     .bind(bind)?
     .workers(threads as usize)

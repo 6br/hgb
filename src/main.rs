@@ -1,21 +1,21 @@
 extern crate log;
 #[macro_use]
 extern crate serde_derive;
-pub mod subcommands;
-#[cfg(feature = "web")]
-pub mod server;
 #[cfg(feature = "web")]
 pub mod buffered_server;
 #[cfg(feature = "web")]
 pub mod rest_server;
+#[cfg(feature = "web")]
+pub mod server;
+pub mod subcommands;
 
 use clap::{App, AppSettings, Arg, ArgSettings};
 use env_logger;
-use subcommands::*;
 use std::env;
+use subcommands::*;
 
 fn main() {
-//    env::set_var("RUST_LOG", "actix_web=info");
+    //    env::set_var("RUST_LOG", "actix_web=info");
     env_logger::init();
     let app = App::new("A hybrid genomic data visualization tool")
         // .setting(AppSettings::ArgsNegateSubcommands)
