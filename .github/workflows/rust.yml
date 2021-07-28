@@ -11,7 +11,7 @@ jobs:
     name: Rust ${{ matrix.os }} ${{ matrix.rust }}
     runs-on: ${{ matrix.os }}
 
-  strategy:
+    strategy:
       matrix:
         rust:
           - stable
