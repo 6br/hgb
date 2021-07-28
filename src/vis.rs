@@ -42,7 +42,7 @@ impl RangeUtils for Range<usize> {
         if self.start > query.end {
             return false;
         }
-        return true;
+        true
     }
 
     fn clip(&self, query: &Range<usize>) -> Option<Range<usize>> {
@@ -233,7 +233,7 @@ where
             .iter()
             .map(|t| (t.range.interval() * x_len as u64 / x_axis_sum) as u32)
             .scan(0, |acc, x| {
-                *acc = *acc + x;
+                *acc += x;
                 Some(*acc)
             })
             .collect::<Vec<u32>>();
@@ -270,7 +270,7 @@ where
                 let x_label_formatter = {
                     &|x: &u64| {
                         if *x == range.start() || range.end() - range.start() > PARBASE_THRESHOLD {
-                            format!("{}", x.to_formatted_string(&Locale::en))
+                            x.to_formatted_string(&Locale::en)
                         } else {
                             format!("")
                         }
@@ -315,7 +315,7 @@ where
                                         .map(|t| (t.0, t.1)),
                                 ),
                         )?
-                        .label(format!("{}", lambda(idx).unwrap_or(&idx.to_string())))
+                        .label(lambda(idx).unwrap_or(&idx.to_string()).to_string())
                         .legend(move |(x, y)| {
                             Rectangle::new(
                                 [(x - 5, y - 5), (x + 5, y + 5)],
@@ -405,8 +405,7 @@ where
     let dynamic_partition = matches.is_present("dynamic-partition");
     let colored_by_motif = matches.occurrences_of("colored-by-motif") != 0;
     let colored_by_motif_vec: Option<Vec<String>> = matches
-        .value_of("colored-by-motif")
-        .and_then(|t| Some(t.split(":").map(|t| t.to_string()).collect()));
+        .value_of("colored-by-motif").map(|t| t.split(':').map(|t| t.to_string()).collect());
     let colored_by_tag = matches.occurrences_of("colored-by-tag") != 0;
     let colored_by_tag_vec = matches.value_of("colored-by-tag");
     let twobit = matches.value_of("ref-column");
@@ -483,7 +482,7 @@ where
     eprintln!(
         "{}.{:03} sec.",
         end0.as_secs(),
-        end0.subsec_nanos() / 1_000_000
+        end0.subsec_millis()
     );
 
     //let annotation_count = annotation.iter().unique_by(|s| s.0).count(); // annotation.len();
@@ -551,7 +550,7 @@ where
     if let Some(val) = vis_index {
         vis = vec![vis[val].clone()];
         if dynamic_partition {
-            n_x_labels = vec![n_x_labels[val].clone()];
+            n_x_labels = vec![n_x_labels[val]];
         }
     }
     let y_len = top_margin
@@ -579,7 +578,7 @@ where
             .iter()
             .map(|t| (t.range.interval() * x_len as u64 / x_axis_sum) as u32)
             .scan(0, |acc, x| {
-                *acc = *acc + x;
+                *acc += x;
                 Some(*acc)
             })
             .collect::<Vec<u32>>();
@@ -639,7 +638,7 @@ where
                 if (*x == range.start() || range.end() - range.start() > PARBASE_THRESHOLD)
                     && !no_ruler
                 {
-                    format!("{}", x.to_formatted_string(&Locale::en))
+                    x.to_formatted_string(&Locale::en)
                 } else {
                     format!("")
                 }
@@ -660,7 +659,7 @@ where
                     // Set the caption of the chart
                     // Set the size of the label region
                     .caption(
-                        if with_caption_val != "" {
+                        if !with_caption_val.is_empty() {
                             format!("{} {}", with_caption_val, range)
                         } else {
                             format!("{}", range)
@@ -682,33 +681,31 @@ where
                     // Finally attach a coordinate on the drawing area and make a chart context
                     .build_cartesian_2d(x_spec.clone(), 0..y_spec_max)?
             }
+        } else if with_caption {
+            ChartBuilder::on(&alignment)
+                // Set the caption of the chart
+                .caption(
+                    if !with_caption_val.is_empty() {
+                        format!("{} {}", with_caption_val, range)
+                    } else {
+                        format!("{}", range)
+                    },
+                    ("sans-serif", x_scale / 2).into_font(),
+                )
+                // Set the size of the label region
+                .top_x_label_area_size(x_area_size)
+                .x_label_area_size(top_x_area_size)
+                .y_label_area_size(y_area_size)
+                // Finally attach a coordinate on the drawing area and make a chart context
+                .build_cartesian_2d((range.start() - 1)..(range.end() + 1), 0..y_spec_max)?
         } else {
-            if with_caption {
-                ChartBuilder::on(&alignment)
-                    // Set the caption of the chart
-                    .caption(
-                        if with_caption_val != "" {
-                            format!("{} {}", with_caption_val, range)
-                        } else {
-                            format!("{}", range)
-                        },
-                        ("sans-serif", x_scale / 2).into_font(),
-                    )
-                    // Set the size of the label region
-                    .top_x_label_area_size(x_area_size)
-                    .x_label_area_size(top_x_area_size)
-                    .y_label_area_size(y_area_size)
-                    // Finally attach a coordinate on the drawing area and make a chart context
-                    .build_cartesian_2d((range.start() - 1)..(range.end() + 1), 0..y_spec_max)?
-            } else {
-                ChartBuilder::on(&alignment)
-                    // Set the size of the label region
-                    .top_x_label_area_size(x_area_size)
-                    .x_label_area_size(top_x_area_size)
-                    .y_label_area_size(y_area_size)
-                    // Finally attach a coordinate on the drawing area and make a chart context
-                    .build_cartesian_2d((range.start() - 1)..(range.end() + 1), 0..y_spec_max)?
-            }
+            ChartBuilder::on(&alignment)
+                // Set the size of the label region
+                .top_x_label_area_size(x_area_size)
+                .x_label_area_size(top_x_area_size)
+                .y_label_area_size(y_area_size)
+                // Finally attach a coordinate on the drawing area and make a chart context
+                .build_cartesian_2d((range.start() - 1)..(range.end() + 1), 0..y_spec_max)?
         };
         let x_labels = n_x_labels.get(index).unwrap_or(&10); //if dynamic_partition {} else {10};
                                                              // Then we can draw a mesh
@@ -845,7 +842,7 @@ where
                                     stroke.stroke_width(y / 2),
                                 ))
                                 .unwrap()
-                                .label(format!("{}", record.name().unwrap_or(&"")))
+                                .label(record.name().unwrap_or(&"").to_string())
                                 .legend(move |(x, y)| {
                                     Rectangle::new(
                                         [(x - 5, y - 5), (x + 5, y + 5)],
@@ -857,7 +854,7 @@ where
                                 let style =
                                     TextStyle::from(("sans-serif", y / 3 * 2).into_font()).pos(pos);
                                 let text = Text::new(
-                                    format!("{}", record.name().unwrap_or(&"")),
+                                    record.name().unwrap_or(&"").to_string(),
                                     (start, prev_index + key * 2 + axis_count + 1),
                                     style,
                                 );
@@ -875,8 +872,8 @@ where
                                 let annotation = Annotation {
                                     rectangle: (lt, lb, rt, rb),
                                     name: record.name().unwrap_or(&"").to_string(),
-                                    start: start,
-                                    end: end,
+                                    start,
+                                    end,
                                 };
                                 annotations.push(annotation)
                             }
@@ -891,7 +888,7 @@ where
             .enumerate()
             .for_each(|(key, value)| {
                 let path_name = value.0.clone();
-                value.1.into_iter().for_each(|(node_id, _pos)| {
+                value.1.iter().for_each(|(node_id, _pos)| {
                     let points = node_id_dict.get(&node_id); // [&node_id];
                     if let Some(points) = points {
                         if points.1 > range.start() && points.0 < range.end() {
@@ -984,7 +981,7 @@ where
                         ))?;
                         if !no_margin {
                             chart
-                                .label(format!("{}", lambda(idx).unwrap_or(&idx.to_string())))
+                                .label(lambda(idx).unwrap_or(&idx.to_string()).to_string())
                                 .legend(move |(x, y)| {
                                     Rectangle::new(
                                         [(x - 5, y - 5), (x + 5, y + 5)],
@@ -1016,7 +1013,7 @@ where
                                 None
                             }
                         })
-                        .filter_map(|t| t),
+                        .flatten(),
                 )?;
             }
         }
@@ -1087,7 +1084,7 @@ where
                     let bam = &data.1;
                     let color = if colored_by_tag {
                         if let Some(colored_by_str) = colored_by_tag_vec {
-                            if colored_by_str == "" {
+                            if colored_by_str.is_empty() {
                                 if bam.flag().is_reverse_strand() {
                                     preset_color.pick(VisColor::NegCol).mix(0.8)
                                 } else {
@@ -1218,16 +1215,14 @@ where
                                             Some(cigar.soft_clipping(strand == "+"))
                                         }
                                     })
-                                    .filter_map(|t| t)
+                                    .flatten()
                                     .collect();
                                 let is_smaller = sa_left_clip
                                     .iter()
-                                    .find(|t| t < &&current_left_clip)
-                                    .is_some();
+                                    .any(|t| t < &&current_left_clip);
                                 let is_larger = sa_left_clip
                                     .iter()
-                                    .find(|t| t > &&current_left_clip)
-                                    .is_some();
+                                    .any(|t| t > &&current_left_clip);
 
                                 let color = preset_color.pick(VisColor::SplCol);
                                 if ((is_smaller && !bam.flag().is_reverse_strand())
@@ -1309,7 +1304,7 @@ where
                         if let Some(TagValue::String(s, _)) = record.tags().get(b"MD") { s } else {
                                 panic!("Each BAM record must have MD string. Inspect `samtools calmd` for restoring missing MD strings.")
                         }
-                    ).expect(format!("Failed to decode udon ribbon. Would be a bug. Read id: {}, start: {}", String::from_utf8_lossy(record.name()), record.start()).as_str());
+                    ).unwrap_or_else(|| panic!("Failed to decode udon ribbon. Would be a bug. Read id: {}, start: {}", String::from_utf8_lossy(record.name()), record.start()));
 
                     /* compose span, skip if out of the window */
                     let range = Range::<usize> {
@@ -1331,14 +1326,14 @@ where
                             &udon_range,
                             offset_in_pixels,
                             &scaler
-                    ).expect(format!("Failed to decode udon ribbon. Would be a bug. Read id: {}, start: {}", String::from_utf8_lossy(record.name()), record.start()).as_str());
+                    ).unwrap_or_else(|| panic!("Failed to decode udon ribbon. Would be a bug. Read id: {}, start: {}", String::from_utf8_lossy(record.name()), record.start()));
                     ribbon.append_on_basecolor(&base_color[record.flag().is_reverse_strand() as usize]).correct_gamma();
                     let horizontal_offset = window_range.start;
                     let left_blank  = horizontal_offset;
                     let right_blank = opt_len.saturating_sub(ribbon.len() + horizontal_offset);
                     let ribbon_len  = opt_len - (left_blank + right_blank);
 
-                    for (i, &x) in ribbon[.. ribbon_len].into_iter().enumerate() {
+                    for (i, &x) in ribbon[.. ribbon_len].iter().enumerate() {
                         let cv = &x[0][.. 3];
                         let color = RGBColor(cv[0], cv[1], cv[2]);
                         let prev_pixel_ref = if i == 0 {
@@ -1470,13 +1465,11 @@ where
                                                         let record_nt =
                                                             entry.record_pos_nt().unwrap().1;
                                                         let ref_nt = entry
-                                                            .ref_nt()
-                                                            .and_then(|t| Some(t as char))
+                                                            .ref_nt().map(|t| t as char)
                                                             .unwrap_or(' ');
                                                         let next_ref_nt = a.clone()
                                                             .next()
-                                                            .and_then(|t| t.ref_nt())
-                                                            .and_then(|t| Some(t as char))
+                                                            .and_then(|t| t.ref_nt()).map(|t| t as char)
                                                             .unwrap_or(' ');
                                                         let string = format!(
                                                             "{}{}",
@@ -1497,16 +1490,10 @@ where
                                                                 "REV: {} {} {} {}",
                                                                 string, revcomp_string, colored_by_motif_vec[2], record_nt as char
                                                             );
-                                                            if colored_by_motif_vec[0]
-                                                                .chars()
-                                                                .nth(0)
-                                                                == Some(switch_base(record_nt as char))
+                                                            if colored_by_motif_vec[0].starts_with(switch_base(record_nt as char))
                                                             {
                                                                 color = Some(RED);
-                                                            } else if colored_by_motif_vec[1]
-                                                                .chars()
-                                                                .nth(0)
-                                                                == Some(switch_base(record_nt as char))
+                                                            } else if colored_by_motif_vec[1].starts_with(switch_base(record_nt as char))
                                                             {
                                                                 color = Some(BLUE);
                                                             }
@@ -1515,16 +1502,10 @@ where
                                                                 "FWD: {} {} {}",
                                                                 string, colored_by_motif_vec[2], record_nt as char
                                                             );
-                                                            if colored_by_motif_vec[0]
-                                                                .chars()
-                                                                .nth(0)
-                                                                == Some(record_nt as char)
+                                                            if colored_by_motif_vec[0].starts_with(record_nt as char)
                                                             {
                                                                 color = Some(RED);
-                                                            } else if colored_by_motif_vec[1]
-                                                                .chars()
-                                                                .nth(0)
-                                                                == Some(record_nt as char)
+                                                            } else if colored_by_motif_vec[1].starts_with(record_nt as char)
                                                             {
                                                                 color = Some(BLUE);
                                                             }
@@ -1569,7 +1550,7 @@ where
                                                 bars.push(bar);
                                                 if insertion_string {
                                                     let text = Text::new(
-                                                        format!("{}", insertion_str.iter().join("")),
+                                                        insertion_str.iter().join("").to_string(),
                                                         (prev_pixel_ref + 1, index),
                                                         ("sans-serif", y / 4 * 3),
                                                     );
@@ -1659,7 +1640,7 @@ where
         };
         json.push(Area {
             pileups: reads,
-            annotations: annotations,
+            annotations,
         });
         chart.draw_series(bars)?;
         chart.draw_series(texts)?;
@@ -1668,7 +1649,7 @@ where
         eprintln!(
             "{}.{:03} sec.",
             end1.as_secs(),
-            end1.subsec_nanos() / 1_000_000
+            end1.subsec_millis()
         );
 
         if freq_len > 0 {
@@ -1704,7 +1685,7 @@ where
                     // .x_label_formatter(&|x| format!("{:.3}", x))
                     .draw()?;
                 if let Some(values) = frequency.get(sample_sequential_id) {
-                    let color = if let Some(_) = snp_frequency {
+                    let color = if snp_frequency.is_some() {
                         Palette99::pick(idx).stroke_width(2)
                     } else {
                         Palette99::pick(idx).filled()
@@ -1720,7 +1701,7 @@ where
                                     .map(|t| (t.0, t.1)),
                             ),
                         )?
-                        .label(format!("{}", lambda(idx).unwrap_or(&idx.to_string())))
+                        .label(lambda(idx).unwrap_or(&idx.to_string()).to_string())
                         .legend(move |(x, y)| {
                             Rectangle::new(
                                 [(x - 5, y - 5), (x + 5, y + 5)],
@@ -1802,7 +1783,7 @@ where
         eprintln!(
             "{}.{:03} sec.",
             end2.as_secs(),
-            end2.subsec_nanos() / 1_000_000
+            end2.subsec_millis()
         );
     }
 

@@ -250,7 +250,7 @@ impl<'a> VisOrig<'a> {
             frequency: &self.frequency,
             compressed_list: &self.compressed_list,
             index_list: &self.index_list,
-            prev_index: self.prev_index.clone(),
+            prev_index: self.prev_index,
             supplementary_list: &self.supplementary_list,
         }
     }
@@ -312,7 +312,7 @@ mod tests {
         //let set = InvertedRecordBuilderSet::new(reader, 0 as u64);
         let mut header_2 = Header::new();
         let set: Set<InvertedRecordBuilder, File> =
-            Set::<InvertedRecordBuilder, File>::new(reader, 1 as u64, &mut header_2).unwrap();
+            Set::<InvertedRecordBuilder, File>::new(reader, 1_u64, &mut header_2).unwrap();
 
         //        let set_vec = vec![set];
         // println!("{:?}", set);
@@ -354,7 +354,7 @@ mod tests {
                 t.map(|f| {
                     if let Format::Range(rec) = f.data() {
                         // println!("debug {:#?}", rec.to_record(chrom));
-                        return rec.to_record("null");
+                        rec.to_record("null")
                     } else {
                         return vec![];
                     }
@@ -373,7 +373,7 @@ mod tests {
         // let set = InvertedRecordBuilderSet::new(reader, 0 as u64);
         let mut header2 = Header::new();
         let set: Set<InvertedRecordBuilder, File> =
-            Set::<InvertedRecordBuilder, File>::new(reader, 1 as u64, &mut header2).unwrap();
+            Set::<InvertedRecordBuilder, File>::new(reader, 1_u64, &mut header2).unwrap();
         // println!("{:?}", set);
 
         let set_vec = vec![set];
@@ -416,7 +416,7 @@ mod tests {
                 t.map(|f| {
                     if let Format::Range(rec) = f.data() {
                         // println!("debug {:#?}", rec);
-                        return rec.to_record(chrom);
+                        rec.to_record(chrom)
                     } else {
                         return vec![];
                     }

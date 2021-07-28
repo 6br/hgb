@@ -145,10 +145,9 @@ impl ChromosomeBuffer {
             let mut ann = vec![];
             let mut list = vec![];
             let sample_ids_opt: Option<Vec<u64>> = matches
-                .values_of("id")
-                .and_then(|a| Some(a.map(|t| t.parse::<u64>().unwrap()).collect()));
+                .values_of("id").map(|a| a.map(|t| t.parse::<u64>().unwrap()).collect());
             let sample_id_cond = sample_ids_opt.is_some();
-            let sample_ids = sample_ids_opt.unwrap_or(vec![]);
+            let sample_ids = sample_ids_opt.unwrap_or_default();
             let filter = matches.is_present("filter");
 
             let format_type_opt = matches.value_of_t::<Format>("type");
@@ -178,14 +177,10 @@ impl ChromosomeBuffer {
                             }
                             Format::Alignment(Alignment::Object(rec)) => {
                                 for i in rec {
-                                    if !filter
+                                    if (!filter
                                         || (i.calculate_end() as u64 > range.start()
-                                            && range.end() > i.start() as u64)
-                                    {
-                                        if !i.flag().is_secondary() && i.query_len() > min_read_len
-                                        {
-                                            list.push((sample_id, i));
-                                        }
+                                            && range.end() > i.start() as u64)) && !i.flag().is_secondary() && i.query_len() > min_read_len {
+                                        list.push((sample_id, i));
                                     }
                                 }
                             }
@@ -217,7 +212,7 @@ impl ChromosomeBuffer {
         let closure = |x: &str| self.reader.reference_id(x);
         let _reference_name = &string_range.path;
         let range = Region::convert(string_range, closure).unwrap();
-        self.included(range.clone())
+        self.included(range)
     }
 
     // This range is completely included or not?
@@ -243,7 +238,7 @@ impl ChromosomeBuffer {
         let closure = |x: &str| self.reader.reference_id(x);
         let _reference_name = &string_range.path;
         let range = Region::convert(string_range, closure).unwrap();
-        self.included_local(range.clone(), bins)
+        self.included_local(range, bins)
     }
 
     pub fn add_local(
@@ -295,11 +290,9 @@ impl ChromosomeBuffer {
         let mut ann = vec![];
         //let mut list = vec![];
         let sample_ids_opt: Option<Vec<u64>> = matches
-            .values_of("id")
-            //.unwrap()
-            .and_then(|a| Some(a.map(|t| t.parse::<u64>().unwrap()).collect()));
+            .values_of("id").map(|a| a.map(|t| t.parse::<u64>().unwrap()).collect());
         let sample_id_cond = sample_ids_opt.is_some();
-        let sample_ids = sample_ids_opt.unwrap_or(vec![]);
+        let sample_ids = sample_ids_opt.unwrap_or_default();
         let filter = matches.is_present("filter");
 
         let format_type_opt = matches.value_of_t::<Format>("type");
@@ -331,13 +324,10 @@ impl ChromosomeBuffer {
                         }
                         Format::Alignment(Alignment::Object(rec)) => {
                             for i in rec {
-                                if !filter
+                                if (!filter
                                     || (i.calculate_end() as u64 > range.start()
-                                        && range.end() > i.start() as u64)
-                                {
-                                    if !i.flag().is_secondary() && i.query_len() > min_read_len {
-                                        merged_list.push((sample_id, i));
-                                    }
+                                        && range.end() > i.start() as u64)) && !i.flag().is_secondary() && i.query_len() > min_read_len {
+                                    merged_list.push((sample_id, i));
                                 }
                             }
                         }
@@ -376,7 +366,7 @@ impl ChromosomeBuffer {
             //ann.extend(new_ann);
         }
 
-        if !self.included_local(range.clone(), list_btree) {
+        if !self.included_local(range, list_btree) {
             let (reset_flag, new_list) = self.add_local(string_range, list_btree);
             if reset_flag {
                 // std::mem::replace(list, new_list);
@@ -408,8 +398,7 @@ impl ChromosomeBuffer {
         let mut ann: Vec<(u64, bed::Record)> = self
             .bins
             .values()
-            .into_iter()
-            .map(|t| t.clone())
+            .into_iter().cloned()
             .flatten()
             .collect();
         let matches = self.matches.clone();
@@ -461,7 +450,7 @@ impl ChromosomeBuffer {
                 .group_by(|elt| elt.0)
                 .into_iter()
                 .for_each(|t| {
-                    let sample_id = t.0.clone();
+                    let sample_id = t.0;
                     t.1.group_by(|elt| elt.1.name()).into_iter().for_each(|s| {
                         let items: Vec<&(u64, Record)> = s.1.into_iter().collect();
                         if items.len() > 1 {
@@ -582,82 +571,80 @@ impl ChromosomeBuffer {
                 compressed_list.push((t.0, prev_index));
                 last_prev_index = prev_index;
             });
-        } else {
-            if packing {
-                list.iter().group_by(|elt| elt.0).into_iter().for_each(|t| {
-                    // let mut heap = BinaryHeap::<(i64, usize)>::new();
-                    let mut packing = vec![0u64];
-                    prev_index += 1;
-                    (t.1).for_each(|k| {
-                        let mut index =
-                            if let Some(TagValue::Int(array_view, _)) = k.1.tags().get(b"YY") {
-                                array_view as usize
-                            } else if let Some(index) = packing
-                                .iter_mut()
-                                .enumerate()
-                                .find(|(_, item)| **item < k.1.start() as u64)
-                            {
-                                //packing[index.0] = k.1.calculate_end() as u64;
-                                *index.1 = k.1.calculate_end() as u64;
-                                index.0
-                            } else {
-                                packing.push(k.1.calculate_end() as u64);
-                                prev_index += 1;
-                                packing.len() - 1
-                                //prev_index - 1
-                            }; /*
-                               let index: usize = if heap.peek() != None
-                                   && -heap.peek().unwrap().0 < k.1.start() as i64
-                               {
-                                   let hp = heap.pop().unwrap();
-                                   // let index = hp.1;
-                                   heap.push((-k.1.calculate_end() as i64, hp.1));
-                                   hp.1
-                               } else {
-                                   let index = prev_index;
-                                   prev_index += 1;
-                                   heap.push((-k.1.calculate_end() as i64, index));
-                                   index
-                               };*/
-                        //let index =
-                        if let Some(max_cov) = max_coverage {
-                            if index > max_cov as usize {
-                                index = max_cov as usize;
-                                prev_index = max_cov as usize + last_prev_index;
-                            }
-                        }
-                        index_list.push(index + last_prev_index);
-                        // eprintln!("{:?}", packing);
-                        //(index, (k.0, k.1))
-                    }); //.collect::<Vec<(usize, (u64, Record))>>()
-                        // compressed_list.push(prev_index);
-                        //compressed_list.insert(t.0, prev_index);
-                        //prev_index += 1;
+        } else if packing {
+            list.iter().group_by(|elt| elt.0).into_iter().for_each(|t| {
+                // let mut heap = BinaryHeap::<(i64, usize)>::new();
+                let mut packing = vec![0u64];
+                prev_index += 1;
+                (t.1).for_each(|k| {
+                    let mut index =
+                        if let Some(TagValue::Int(array_view, _)) = k.1.tags().get(b"YY") {
+                            array_view as usize
+                        } else if let Some(index) = packing
+                            .iter_mut()
+                            .enumerate()
+                            .find(|(_, item)| **item < k.1.start() as u64)
+                        {
+                            //packing[index.0] = k.1.calculate_end() as u64;
+                            *index.1 = k.1.calculate_end() as u64;
+                            index.0
+                        } else {
+                            packing.push(k.1.calculate_end() as u64);
+                            prev_index += 1;
+                            packing.len() - 1
+                            //prev_index - 1
+                        }; /*
+                           let index: usize = if heap.peek() != None
+                               && -heap.peek().unwrap().0 < k.1.start() as i64
+                           {
+                               let hp = heap.pop().unwrap();
+                               // let index = hp.1;
+                               heap.push((-k.1.calculate_end() as i64, hp.1));
+                               hp.1
+                           } else {
+                               let index = prev_index;
+                               prev_index += 1;
+                               heap.push((-k.1.calculate_end() as i64, index));
+                               index
+                           };*/
+                    //let index =
                     if let Some(max_cov) = max_coverage {
-                        prev_index = max_cov as usize + last_prev_index;
+                        if index > max_cov as usize {
+                            index = max_cov as usize;
+                            prev_index = max_cov as usize + last_prev_index;
+                        }
                     }
-                    compressed_list.push((t.0, prev_index));
-                    //eprintln!("{:?} {:?} {:?}", compressed_list, packing, index_list);
-                    last_prev_index = prev_index;
-                    //(t.0, ((t.1).0, (t.1).1))
-                    // .collect::<&(u64, Record)>(). // collect::<Vec<(usize, (u64, Record))>>
-                });
-            } else {
-                // Now does not specify the maximal length by max_coverage.
-                index_list = (0..list.len()).collect();
+                    index_list.push(index + last_prev_index);
+                    // eprintln!("{:?}", packing);
+                    //(index, (k.0, k.1))
+                }); //.collect::<Vec<(usize, (u64, Record))>>()
+                    // compressed_list.push(prev_index);
+                    //compressed_list.insert(t.0, prev_index);
+                    //prev_index += 1;
+                if let Some(max_cov) = max_coverage {
+                    prev_index = max_cov as usize + last_prev_index;
+                }
+                compressed_list.push((t.0, prev_index));
+                //eprintln!("{:?} {:?} {:?}", compressed_list, packing, index_list);
+                last_prev_index = prev_index;
+                //(t.0, ((t.1).0, (t.1).1))
+                // .collect::<&(u64, Record)>(). // collect::<Vec<(usize, (u64, Record))>>
+            });
+        } else {
+            // Now does not specify the maximal length by max_coverage.
+            index_list = (0..list.len()).collect();
 
-                // list.sort_by(|a, b| a.0.cmp(&b.0));
-                // eprintln!("{}", list.len());
-                list.iter().group_by(|elt| elt.0).into_iter().for_each(
-                    |(sample_sequential_id, sample)| {
-                        let count = sample.count();
-                        prev_index += count;
-                        // compressed_list.push(prev_index);
-                        // compressed_list.insert(sample_sequential_id, prev_index);
-                        compressed_list.push((sample_sequential_id, prev_index));
-                    },
-                )
-            }
+            // list.sort_by(|a, b| a.0.cmp(&b.0));
+            // eprintln!("{}", list.len());
+            list.iter().group_by(|elt| elt.0).into_iter().for_each(
+                |(sample_sequential_id, sample)| {
+                    let count = sample.count();
+                    prev_index += count;
+                    // compressed_list.push(prev_index);
+                    // compressed_list.insert(sample_sequential_id, prev_index);
+                    compressed_list.push((sample_sequential_id, prev_index));
+                },
+            )
         }
 
         return Some(Vis {
@@ -665,9 +652,9 @@ impl ChromosomeBuffer {
             //list: list,
             annotation: ann,
             freq: self.freq.clone(),
-            compressed_list: compressed_list,
-            index_list: index_list,
-            prev_index: prev_index,
+            compressed_list,
+            index_list,
+            prev_index,
             supplementary_list,
             prefetch_max: self.reader.header().reference_len(0).unwrap(), // The max should be the same as the longest ?
         });

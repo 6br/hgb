@@ -89,11 +89,11 @@ impl Record {
     }
     /// Returns 0-based sample id.
     pub fn sample_id(&self) -> u64 {
-        return self.sample_id;
+        self.sample_id
     }
     /// Returns 0-based sample file id.
     pub fn sample_file_id(&self) -> u32 {
-        return self.sample_file_id;
+        self.sample_file_id
     }
 
     /// Writes a record in binary format.
@@ -143,12 +143,12 @@ impl Record {
             }
             _ => panic!("Panic!"),
         };
-        return Ok(Record {
+        Ok(Record {
             sample_id,
             sample_file_id,
             format,
             data,
-        });
+        })
     }
 
     /// Fills the record from a `stream` of uncompressed BAM contents.
@@ -182,7 +182,7 @@ impl Record {
             _ => return Err(Error::new(InvalidData, "Invalid format record")),
         };
         self.data = data;
-        return Ok(true);
+        Ok(true)
     }
 }
 
@@ -231,7 +231,7 @@ impl<R: Read + Seek> InvertedRecordEntire<R> {
         self.sample_file_id_max += 1;
         for (id, chromosome) in sample_file.chrom {
             for (bin_id, bin) in chromosome.bins {
-                if let None = self.chrom.get(id as usize) {
+                if self.chrom.get(id as usize).is_none() {
                     self.chrom.resize(
                         (id + 1) as usize,
                         InvertedRecordChromosome {
@@ -249,7 +249,7 @@ impl<R: Read + Seek> InvertedRecordEntire<R> {
                     sample_id: sample_file.sample_id,
                     sample_file_id: sample_file_id as u32,
                     format: Format::id(&data),
-                    data: data,
+                    data,
                 })
             }
         }
@@ -258,7 +258,7 @@ impl<R: Read + Seek> InvertedRecordEntire<R> {
             sample_id: sample_file.sample_id,
             sample_file_id: sample_file_id as u32,
             format: Format::id(&data),
-            data: data,
+            data,
         };
         self.unmapped.push(unmapped);
         if let Some(bam_reader) = sample_file.bam_reader {
@@ -296,10 +296,10 @@ impl<R: Read + Seek> InvertedRecordEntire<R> {
                         sample_id: set.sample_id,
                         sample_file_id: sample_file_id as u32,
                         format: Format::id(&data),
-                        data: data,
+                        data,
                     })
                 }
-                if let None = inverted_record.get(_name as usize) {
+                if inverted_record.get(_name as usize).is_none() {
                     inverted_record.resize(
                         (_name + 1) as usize,
                         InvertedRecordChromosome {
@@ -315,7 +315,7 @@ impl<R: Read + Seek> InvertedRecordEntire<R> {
                 sample_id: set.sample_id,
                 sample_file_id: sample_file_id as u32,
                 format: Format::id(&data),
-                data: data,
+                data,
             };
             unmapped_list.push(unmapped);
         }
@@ -374,11 +374,11 @@ impl ColumnarSet for Default {
         _threads: u16,
         _bam_reader: Option<&mut IndexedReader<R>>,
     ) -> Result<()> {
-        Err(Error::new(InvalidData, format!("No data.")))
+        Err(Error::new(InvalidData, "No data.".to_string()))
     }
 
     fn from_stream<U: Read>(&mut self, _stream: &mut U, _threads: u16) -> Result<u64> {
-        Err(Error::new(InvalidData, format!("No data.")))
+        Err(Error::new(InvalidData, "No data.".to_string()))
     }
 }
 
@@ -397,10 +397,10 @@ impl ColumnarSet for InvertedRecord {
         let name = vec![];
         let aux = vec![];
         InvertedRecord {
-            start: start,
-            end: end,
-            name: name,
-            aux: aux,
+            start,
+            end,
+            name,
+            aux,
         }
     }
 
@@ -441,10 +441,10 @@ impl ColumnarSet for InvertedRecord {
         _bam_reader: Option<&mut IndexedReader<R>>,
     ) -> Result<()> {
         stream.write_u64::<LittleEndian>(self.start.len() as u64)?; //n_item
-        stream.write_u64::<LittleEndian>(3 as u64)?; // n_header
-        stream.write_u16::<LittleEndian>(1 as u16)?; // u64
-        stream.write_u16::<LittleEndian>(1 as u16)?; // u64
-        stream.write_u16::<LittleEndian>(0 as u16)?; // String
+        stream.write_u64::<LittleEndian>(3_u64)?; // n_header
+        stream.write_u16::<LittleEndian>(1_u16)?; // u64
+        stream.write_u16::<LittleEndian>(1_u16)?; // u64
+        stream.write_u16::<LittleEndian>(0_u16)?; // String
 
         stream.write_u64::<LittleEndian>(self.start.len() as u64)?;
         for i in &self.start {
@@ -477,14 +477,14 @@ impl InvertedRecord {
             .clone()
             .into_inner()
             .into_iter()
-            .map(|t| t.join("\t").to_owned())
+            .map(|t| t.join("\t"))
             .collect();
         let aux = string_encode(&aux_raw);
         InvertedRecord {
-            start: start,
-            end: end,
-            name: name,
-            aux: aux,
+            start,
+            end,
+            name,
+            aux,
         }
     }
     /*
@@ -510,7 +510,7 @@ impl InvertedRecord {
             rec.set_start(start[i]);
             rec.set_end(end[i]);
             rec.set_name(&name[i]);
-            for aux in aux[i].split("\t") {
+            for aux in aux[i].split('\t') {
                 rec.push_aux(aux);
             }
             records.push(rec)

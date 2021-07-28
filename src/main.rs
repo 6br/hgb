@@ -10,7 +10,7 @@ pub mod server;
 pub mod subcommands;
 
 use clap::{App, AppSettings, Arg, ArgSettings};
-use env_logger;
+
 use std::env;
 use subcommands::*;
 

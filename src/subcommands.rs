@@ -59,7 +59,7 @@ pub fn bam_vis(
     } else {
         1
     };
-    let labels: Option<Vec<&str>> = matches.values_of("labels").and_then(|t| Some(t.collect()));
+    let labels: Option<Vec<&str>> = matches.values_of("labels").map(|t| t.collect());
 
     if let Some(bam_files) = matches.values_of("bam") {
         let bam_files: Vec<&str> = bam_files.collect();
@@ -99,7 +99,7 @@ pub fn bam_vis(
                             record.start() - neighbor,
                             record.end() + neighbor
                         )
-                        .to_string()
+                        
                     })
                     .collect()
             } else {
@@ -112,7 +112,7 @@ pub fn bam_vis(
                             record.start() - neighbor,
                             record.end() + neighbor
                         )
-                        .to_string()
+                        
                     })
                     .collect()
             };
@@ -127,9 +127,7 @@ pub fn bam_vis(
         .and_then(|t| Some(t.map(|t| t.to_string()).collect()))
         .unwrap_or(vec![]);*/
         let prefetch_ranges: Vec<&str> = matches
-            .values_of("prefetch-range")
-            .and_then(|t| Some(t.collect()))
-            .unwrap_or(vec![]);
+            .values_of("prefetch-range").map(|t| t.collect()).unwrap_or_default();
         /*let ranged_zip = if let Some(prefetch_ranges) = prefetch_ranges {
             ranges.into_iter().zip(prefetch_ranges)
         } else {
@@ -171,7 +169,7 @@ pub fn bam_vis(
                     |_| -> std::result::Result<
                         genomic_range::StringRegion,
                         Box<dyn std::error::Error>,
-                    > { return lambda(range) },
+                    > { lambda(range) },
                 )
                 .unwrap();
             let prefetch_range = StringRegion::new(&prefetch_str)
@@ -179,7 +177,7 @@ pub fn bam_vis(
                     |_| -> std::result::Result<
                         genomic_range::StringRegion,
                         Box<dyn std::error::Error>,
-                    > { return lambda(prefetch_str) },
+                    > { lambda(prefetch_str) },
                 )
                 .unwrap();
             for (index, reader2) in &mut bam_readers.iter_mut().enumerate() {
@@ -225,7 +223,7 @@ pub fn bam_vis(
                     {
                         let idx = if separated_by_tag {
                             if let Some(colored_by_str) = separated_by_tag_vec {
-                                if colored_by_str == "" {
+                                if colored_by_str.is_empty() {
                                     let track = if record.flag().is_reverse_strand() {
                                         1
                                     } else {
@@ -274,13 +272,11 @@ pub fn bam_vis(
                                 record.start(),
                                 record
                                     .score()
-                                    .and_then(|t| t.parse::<f32>().ok())
-                                    .and_then(|t| Some(t as u32))
+                                    .and_then(|t| t.parse::<f32>().ok()).map(|t| t as u32)
                                     .unwrap_or(
                                         record
                                             .name()
-                                            .and_then(|t| t.parse::<f32>().ok())
-                                            .and_then(|t| Some(t as u32))
+                                            .and_then(|t| t.parse::<f32>().ok()).map(|t| t as u32)
                                             .unwrap_or(0),
                                     ),
                                 '*',
@@ -351,9 +347,9 @@ pub fn bam_vis(
             //                    .and_then(|t| Some(format!("{}_{}", *t, idx % bam_interval).as_str()))
             //            } else {
             if let Some(labels) = &labels {
-                labels.get(idx / bam_interval).and_then(|t| Some(*t))
+                labels.get(idx / bam_interval).copied()
             } else {
-                bam_files.get(idx / bam_interval).and_then(|t| Some(*t))
+                bam_files.get(idx / bam_interval).copied()
             }
             //            }
         })?;
@@ -361,7 +357,7 @@ pub fn bam_vis(
     Ok(())
 }
 
-pub fn build(matches: &ArgMatches, threads: u16) -> () {
+pub fn build(matches: &ArgMatches, threads: u16) {
     let mut header = Header::new();
     let mut alignment_transfer = false;
     let output_path = matches.value_of("OUTPUT").unwrap();
@@ -437,7 +433,7 @@ pub fn build(matches: &ArgMatches, threads: u16) -> () {
     let _result = index_writer.flush();
 }
 
-pub fn query(matches: &ArgMatches, threads: u16) -> () {
+pub fn query(matches: &ArgMatches, threads: u16) {
     if let Some(o) = matches.value_of("INPUT") {
         let mut reader: IndexedReader<BufReader<File>> =
             IndexedReader::from_path_with_additional_threads(o, threads - 1).unwrap();
@@ -453,11 +449,9 @@ pub fn query(matches: &ArgMatches, threads: u16) -> () {
                 let viewer = reader.fetch(&range).unwrap();
 
                 let sample_ids_opt: Option<Vec<u64>> = matches
-                    .values_of("id")
-                    //.unwrap()
-                    .and_then(|a| Some(a.map(|t| t.parse::<u64>().unwrap()).collect()));
+                    .values_of("id").map(|a| a.map(|t| t.parse::<u64>().unwrap()).collect());
                 let sample_id_cond = sample_ids_opt.is_some();
-                let sample_ids = sample_ids_opt.unwrap_or(vec![]);
+                let sample_ids = sample_ids_opt.unwrap_or_default();
                 let filter = matches.is_present("filter");
 
                 let format_type_opt = matches.value_of_t::<Format>("type");
@@ -521,7 +515,7 @@ pub fn query(matches: &ArgMatches, threads: u16) -> () {
     }
 }
 
-pub fn decompose(matches: &ArgMatches, _threads: u16) -> () {
+pub fn decompose(matches: &ArgMatches, _threads: u16) {
     if let Some(i) = matches.value_of("INPUT") {
         //if let Some(o) = matches.value_of("OUTPUT") {
         let header = matches.is_present("header");
@@ -606,7 +600,7 @@ pub fn decompose(matches: &ArgMatches, _threads: u16) -> () {
     //}
 }
 
-pub fn split(matches: &ArgMatches, threads: u16) -> () {
+pub fn split(matches: &ArgMatches, threads: u16) {
     if let Some(bam_path) = matches.value_of("INPUT") {
         //todo!("Implement a web server using actix-web.");
         let mut reader2 = bam::IndexedReader::build()
@@ -630,7 +624,7 @@ pub fn split(matches: &ArgMatches, threads: u16) -> () {
 
         if header {
             bam_header.write_text(&mut output).unwrap();
-            return ();
+            return ;
         } else if formatted_header {
             for (name, len) in bam_header
                 .reference_names()
@@ -639,7 +633,7 @@ pub fn split(matches: &ArgMatches, threads: u16) -> () {
             {
                 writeln!(&mut output, "{}\t{}", name, len).unwrap();
             }
-            return ();
+            return ;
         }
         let output_secondary_unmapped = matches.is_present("secondary-unmapped");
 
@@ -669,10 +663,8 @@ pub fn split(matches: &ArgMatches, threads: u16) -> () {
                 let record = record.unwrap();
                 if !record.flag().is_secondary() {
                     list.push((0, record));
-                } else {
-                    if output_secondary_unmapped {
-                        writer.write(&record).unwrap();
-                    }
+                } else if output_secondary_unmapped {
+                    writer.write(&record).unwrap();
                 }
             }
 
@@ -723,7 +715,7 @@ pub fn split(matches: &ArgMatches, threads: u16) -> () {
     }
 }
 
-pub fn bam_query(matches: &ArgMatches, threads: u16) -> () {
+pub fn bam_query(matches: &ArgMatches, threads: u16) {
     if let Some(o) = matches.value_of("INPUT") {
         let mut reader: IndexedReader<BufReader<File>> =
             IndexedReader::from_path_with_additional_threads(o, threads - 1).unwrap();
@@ -742,11 +734,9 @@ pub fn bam_query(matches: &ArgMatches, threads: u16) -> () {
                     .and_then(|a| a.parse::<u8>().ok())
                     .unwrap_or(6u8);
                 let sample_ids_opt: Option<Vec<u64>> = matches
-                    .values_of("id")
-                    //.unwrap()
-                    .and_then(|a| Some(a.map(|t| t.parse::<u64>().unwrap()).collect()));
+                    .values_of("id").map(|a| a.map(|t| t.parse::<u64>().unwrap()).collect());
                 let sample_id_cond = sample_ids_opt.is_some();
-                let sample_ids = sample_ids_opt.unwrap_or(vec![]);
+                let sample_ids = sample_ids_opt.unwrap_or_default();
                 let filter = matches.is_present("filter");
 
                 let format_type_opt = matches.value_of_t::<Format>("type");
@@ -817,9 +807,7 @@ pub fn bench_query(matches: &ArgMatches, _args: Vec<String>, threads: u16) {
         if let Some(ranges) = matches.values_of("range") {
             let ranges: Vec<&str> = ranges.collect();
             let prefetch_ranges: Vec<&str> = matches
-                .values_of("prefetch-range")
-                .and_then(|t| Some(t.collect()))
-                .unwrap_or(vec![]);
+                .values_of("prefetch-range").map(|t| t.collect()).unwrap_or_default();
 
             /*let ranged_zip = if let Some(prefetch_ranges) = prefetch_ranges {
                 ranges.into_iter().zip(prefetch_ranges)
@@ -894,7 +882,7 @@ pub fn vis_query(
                         record.start() - neighbor,
                         record.end() + neighbor
                     )
-                    .to_string()
+                    
                 })
                 .collect();
             ranges.extend(ranges_tmp);
@@ -905,9 +893,7 @@ pub fn vis_query(
         }
         let mut precursor = Vec::with_capacity(ranges.len());
         let prefetch_ranges: Vec<&str> = matches
-            .values_of("prefetch-range")
-            .and_then(|t| Some(t.collect()))
-            .unwrap_or(vec![]);
+            .values_of("prefetch-range").map(|t| t.collect()).unwrap_or_default();
 
         /*let ranged_zip = if let Some(prefetch_ranges) = prefetch_ranges {
             ranges.into_iter().zip(prefetch_ranges)
@@ -956,11 +942,9 @@ pub fn vis_query(
             }
 
             let sample_ids_opt: Option<Vec<u64>> = matches
-                .values_of("id")
-                //.unwrap()
-                .and_then(|a| Some(a.map(|t| t.parse::<u64>().unwrap()).collect()));
+                .values_of("id").map(|a| a.map(|t| t.parse::<u64>().unwrap()).collect());
             let sample_id_cond = sample_ids_opt.is_some();
-            let sample_ids = sample_ids_opt.unwrap_or(vec![]);
+            let sample_ids = sample_ids_opt.unwrap_or_default();
             let filter = matches.is_present("filter");
 
             let format_type_opt = matches.value_of_t::<Format>("type");
@@ -1008,14 +992,10 @@ pub fn vis_query(
                             }
                             Format::Alignment(Alignment::Object(rec)) => {
                                 for i in rec {
-                                    if !filter
+                                    if (!filter
                                         || (i.calculate_end() as u64 > range.start()
-                                            && range.end() > i.start() as u64)
-                                    {
-                                        if !i.flag().is_secondary() && i.query_len() > min_read_len
-                                        {
-                                            list.push((sample_id, i));
-                                        }
+                                            && range.end() > i.start() as u64)) && !i.flag().is_secondary() && i.query_len() > min_read_len {
+                                        list.push((sample_id, i));
                                     }
                                 }
                             }
@@ -1033,13 +1013,13 @@ pub fn vis_query(
             ));
         }
         bam_record_vis_pre_calculate(matches, &args, precursor, threads, |idx| {
-            reader.header().get_name(idx).and_then(|t| Some(t.as_str()))
+            reader.header().get_name(idx).map(|t| t.as_str())
         })?;
     }
     Ok(())
 }
 
-pub fn bin(matches: &ArgMatches, threads: u16) -> () {
+pub fn bin(matches: &ArgMatches, threads: u16) {
     if let Some(o) = matches.value_of("INPUT") {
         let mut reader: IndexedReader<BufReader<File>> =
             IndexedReader::from_path_with_additional_threads(o, threads - 1).unwrap();
@@ -1076,43 +1056,40 @@ pub fn bin(matches: &ArgMatches, threads: u16) -> () {
                 }
                 // chunks = vec![chunks[index]];
             }
+        } else if let Some(bin_id) = matches.value_of("range") {
+            let _ref_id = matches
+                .value_of("ref_id")
+                .and_then(|t| t.parse::<usize>().ok())
+                .unwrap();
+            let _bin_id = bin_id.parse::<usize>().unwrap();
+        /*let chunk = reader.index().references()[ref_id].bins()[bin_id].chunks();
+        let mut res = Vec::new();
+        for i in chunks {
+            res.push(i);
+        }
+        chunks.extend(res);*/
         } else {
-            if let Some(bin_id) = matches.value_of("range") {
-                let _ref_id = matches
-                    .value_of("ref_id")
-                    .and_then(|t| t.parse::<usize>().ok())
-                    .unwrap();
-                let _bin_id = bin_id.parse::<usize>().unwrap();
-            /*let chunk = reader.index().references()[ref_id].bins()[bin_id].chunks();
-            let mut res = Vec::new();
-            for i in chunks {
-                res.push(i);
-            }
-            chunks.extend(res);*/
-            } else {
-                let start = matches
-                    .value_of("bin")
-                    .and_then(|t| t.parse::<u64>().ok())
-                    .unwrap();
-                let end = matches
-                    .value_of("end")
-                    .and_then(|t| t.parse::<u64>().ok())
-                    .unwrap();
-                chunks = vec![Chunk::new(
-                    0,
-                    0,
-                    VirtualOffset::from_raw(start),
-                    VirtualOffset::from_raw(end),
-                )];
-            }
+            let start = matches
+                .value_of("bin")
+                .and_then(|t| t.parse::<u64>().ok())
+                .unwrap();
+            let end = matches
+                .value_of("end")
+                .and_then(|t| t.parse::<u64>().ok())
+                .unwrap();
+            chunks = vec![Chunk::new(
+                0,
+                0,
+                VirtualOffset::from_raw(start),
+                VirtualOffset::from_raw(end),
+            )];
         }
         let viewer = reader.chunk(chunks).unwrap();
 
         let sample_ids_opt: Option<Vec<u64>> = matches
-            .values_of("id")
-            .and_then(|a| Some(a.map(|t| t.parse::<u64>().unwrap()).collect()));
+            .values_of("id").map(|a| a.map(|t| t.parse::<u64>().unwrap()).collect());
         let sample_id_cond = sample_ids_opt.is_some();
-        let sample_ids = sample_ids_opt.unwrap_or(vec![]);
+        let sample_ids = sample_ids_opt.unwrap_or_default();
 
         let format_type_opt = matches.value_of_t::<Format>("type");
         let format_type_cond = format_type_opt.is_ok();
@@ -1341,7 +1318,7 @@ where
                         cdr.iter()
                             .filter(|t| t.0 >= threshold as usize)
                             .for_each(|t2| {
-                                if t2.1.len() > 0 {
+                                if !t2.1.is_empty() {
                                     line.push((
                                         column.ref_pos() as u64,
                                         t2.0 as u32,
@@ -1434,7 +1411,7 @@ where
                 .group_by(|elt| elt.0)
                 .into_iter()
                 .for_each(|t| {
-                    let sample_id = t.0.clone();
+                    let sample_id = t.0;
                     t.1.group_by(|elt| elt.1.name()).into_iter().for_each(|s| {
                         let mut items: Vec<&(u64, Record, usize)> = s.1.into_iter().collect();
                         if items.len() > 1 {
@@ -1670,111 +1647,109 @@ where
                     compressed_list.push((t.0, prev_index));
                     last_prev_index = prev_index;
                 });
-        } else {
-            if packing {
-                new_list
-                    .iter()
-                    .group_by(|elt| elt.0)
-                    .into_iter()
-                    .for_each(|t| {
-                        // let mut heap = BinaryHeap::<(i64, usize)>::new();
-                        let mut packing = vec![0u64];
-                        prev_index += 1;
-                        (t.1).for_each(|k| {
-                            let mut index = if let Some(index) =
-                                packing.iter_mut().enumerate().find(|(_, item)| {
-                                    **item < k.1.start() as u64 + ((k.2 as u64) << 32)
-                                }) {
-                                //packing[index.0] = k.1.calculate_end() as u64;
-                                *index.1 = k.1.calculate_end() as u64 + ((k.2 as u64) << 32);
-                                index.0
-                            } else {
-                                packing.push(k.1.calculate_end() as u64 + ((k.2 as u64) << 32));
-                                prev_index += 1;
-                                packing.len() - 1
-                                //prev_index - 1
-                            }; /*
-                               let index: usize = if heap.peek() != None
-                                   && -heap.peek().unwrap().0 < k.1.start() as i64
-                               {
-                                   let hp = heap.pop().unwrap();
-                                   // let index = hp.1;
-                                   heap.push((-k.1.calculate_end() as i64, hp.1));
-                                   hp.1
-                               } else {
-                                   let index = prev_index;
-                                   prev_index += 1;
-                                   heap.push((-k.1.calculate_end() as i64, index));
-                                   index
-                               };*/
-                            //let index =
-                            if let Some(max_cov) = max_coverage {
-                                if index > max_cov as usize {
-                                    index = max_cov as usize;
-                                    prev_index = max_cov as usize + last_prev_index;
-                                }
+        } else if packing {
+            new_list
+                .iter()
+                .group_by(|elt| elt.0)
+                .into_iter()
+                .for_each(|t| {
+                    // let mut heap = BinaryHeap::<(i64, usize)>::new();
+                    let mut packing = vec![0u64];
+                    prev_index += 1;
+                    (t.1).for_each(|k| {
+                        let mut index = if let Some(index) =
+                            packing.iter_mut().enumerate().find(|(_, item)| {
+                                **item < k.1.start() as u64 + ((k.2 as u64) << 32)
+                            }) {
+                            //packing[index.0] = k.1.calculate_end() as u64;
+                            *index.1 = k.1.calculate_end() as u64 + ((k.2 as u64) << 32);
+                            index.0
+                        } else {
+                            packing.push(k.1.calculate_end() as u64 + ((k.2 as u64) << 32));
+                            prev_index += 1;
+                            packing.len() - 1
+                            //prev_index - 1
+                        }; /*
+                           let index: usize = if heap.peek() != None
+                               && -heap.peek().unwrap().0 < k.1.start() as i64
+                           {
+                               let hp = heap.pop().unwrap();
+                               // let index = hp.1;
+                               heap.push((-k.1.calculate_end() as i64, hp.1));
+                               hp.1
+                           } else {
+                               let index = prev_index;
+                               prev_index += 1;
+                               heap.push((-k.1.calculate_end() as i64, index));
+                               index
+                           };*/
+                        //let index =
+                        if let Some(max_cov) = max_coverage {
+                            if index > max_cov as usize {
+                                index = max_cov as usize;
+                                prev_index = max_cov as usize + last_prev_index;
                             }
-                            vis[k.2]
-                                .index_list
-                                .lock()
-                                .unwrap()
-                                .push(index + last_prev_index);
-                            // eprintln!("{:?}", packing);
-                            //(index, (k.0, k.1))
-                        }); //.collect::<Vec<(usize, (u64, Record))>>()
-                            // compressed_list.push(prev_index);
-                            //compressed_list.insert(t.0, prev_index);
-                            //prev_index += 1;
-                        if let Some(max_cov) = max_coverage {
-                            prev_index = max_cov as usize + last_prev_index;
                         }
-                        //compressed_list.push((t.0, prev_index));
-                        //eprintln!("{:?} {:?} {:?}", compressed_list, packing, index_list);
-                        last_prev_index = prev_index;
-                        //(t.0, ((t.1).0, (t.1).1))
-                        // .collect::<&(u64, Record)>(). // collect::<Vec<(usize, (u64, Record))>>
-                    });
-                let mut tmp_interval = 0;
-                new_list.iter().group_by(|elt| elt.0).into_iter().for_each(
-                    |(sample_sequential_id, sample)| {
-                        let mut count = sample.count();
-                        if let Some(max_cov) = max_coverage {
-                            count = max_cov as usize;
-                        }
-                        tmp_interval += count;
-                        //prev_index += count;
+                        vis[k.2]
+                            .index_list
+                            .lock()
+                            .unwrap()
+                            .push(index + last_prev_index);
+                        // eprintln!("{:?}", packing);
+                        //(index, (k.0, k.1))
+                    }); //.collect::<Vec<(usize, (u64, Record))>>()
                         // compressed_list.push(prev_index);
-                        // compressed_list.insert(sample_sequential_id, prev_index);
-                        compressed_list.push((sample_sequential_id, tmp_interval));
-                    },
-                )
-            } else {
-                eprintln!("Not packing, not split; multi samples are not supported.");
-                // Now does not specify the maximal length by max_coverage.
-                // index_list = (0..list.len()).collect();
-                //let mut prev_index = 0;
-                for i in vis.iter() {
-                    let mut index_list = i.index_list.lock().unwrap(); // = (0..new_list.len()).collect();
-                                                                       //let temp_index_list = (prev_index..prev_index + i.list.lock().unwrap().len()).collect();
-                                                                       //prev_index += i.list.lock().unwrap().len();
-                    let temp_index_list = (0..new_list.len()).collect();
-                    //mem::replace(&mut *index_list, temp_index_list);
-                    *index_list = temp_index_list;
-                }
-
-                // list.sort_by(|a, b| a.0.cmp(&b.0));
-                // eprintln!("{}", list.len());
-                //new_list.sort_by_key(|elt| elt.0);
-                new_list.iter().group_by(|elt| elt.0).into_iter().for_each(
-                    |(_sample_sequential_id, sample)| {
-                        let count = sample.count();
-                        prev_index += count;
-                        // compressed_list.push(prev_index);
-                        // compressed_list.insert(sample_sequential_id, prev_index);
-                        //compressed_list.push((sample_sequential_id, count));
-                    },
-                )
+                        //compressed_list.insert(t.0, prev_index);
+                        //prev_index += 1;
+                    if let Some(max_cov) = max_coverage {
+                        prev_index = max_cov as usize + last_prev_index;
+                    }
+                    //compressed_list.push((t.0, prev_index));
+                    //eprintln!("{:?} {:?} {:?}", compressed_list, packing, index_list);
+                    last_prev_index = prev_index;
+                    //(t.0, ((t.1).0, (t.1).1))
+                    // .collect::<&(u64, Record)>(). // collect::<Vec<(usize, (u64, Record))>>
+                });
+            let mut tmp_interval = 0;
+            new_list.iter().group_by(|elt| elt.0).into_iter().for_each(
+                |(sample_sequential_id, sample)| {
+                    let mut count = sample.count();
+                    if let Some(max_cov) = max_coverage {
+                        count = max_cov as usize;
+                    }
+                    tmp_interval += count;
+                    //prev_index += count;
+                    // compressed_list.push(prev_index);
+                    // compressed_list.insert(sample_sequential_id, prev_index);
+                    compressed_list.push((sample_sequential_id, tmp_interval));
+                },
+            )
+        } else {
+            eprintln!("Not packing, not split; multi samples are not supported.");
+            // Now does not specify the maximal length by max_coverage.
+            // index_list = (0..list.len()).collect();
+            //let mut prev_index = 0;
+            for i in vis.iter() {
+                let mut index_list = i.index_list.lock().unwrap(); // = (0..new_list.len()).collect();
+                                                                   //let temp_index_list = (prev_index..prev_index + i.list.lock().unwrap().len()).collect();
+                                                                   //prev_index += i.list.lock().unwrap().len();
+                let temp_index_list = (0..new_list.len()).collect();
+                //mem::replace(&mut *index_list, temp_index_list);
+                *index_list = temp_index_list;
             }
+
+            // list.sort_by(|a, b| a.0.cmp(&b.0));
+            // eprintln!("{}", list.len());
+            //new_list.sort_by_key(|elt| elt.0);
+            new_list.iter().group_by(|elt| elt.0).into_iter().for_each(
+                |(_sample_sequential_id, sample)| {
+                    let count = sample.count();
+                    prev_index += count;
+                    // compressed_list.push(prev_index);
+                    // compressed_list.insert(sample_sequential_id, prev_index);
+                    //compressed_list.push((sample_sequential_id, count));
+                },
+            )
         }
         for i in vis.iter() {
             if let Some(index) = read_index {
@@ -1801,7 +1776,7 @@ where
     }
     eprintln!("{:?}", compressed_list);
 
-    Ok(if matches.is_present("web") {
+    if matches.is_present("web") {
         let list = &*vis[0].list.lock().unwrap();
         let ann = &*vis[0].annotation.lock().unwrap();
         let freq = &*vis[0].frequency.lock().unwrap();
@@ -1882,7 +1857,8 @@ where
             .collect::<Vec<_>>(),*/
             lambda,
         )?;
-    })
+    };
+    Ok(())
 }
 
 #[cfg(not(feature = "web"))]

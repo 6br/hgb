@@ -29,8 +29,8 @@ impl Item {
     fn new(range: StringRegion, args: Vec<String>, cache_dir: String) -> Self {
         Item {
             range,
-            args: args,
-            cache_dir: cache_dir,
+            args,
+            cache_dir,
         }
     }
 }
@@ -237,7 +237,7 @@ fn id_to_range(
     params: String,
     path_string: String,
 ) -> Result<(ArgMatches, StringRegion), Error> {
-    let a: Vec<String> = params.split(" ").map(|t| t.to_string()).collect();
+    let a: Vec<String> = params.split(' ').map(|t| t.to_string()).collect();
     let b: Vec<String> = vec!["-o".to_string(), path_string];
     let mut args = args.clone();
     args.extend(b);
@@ -259,7 +259,7 @@ fn id_to_range_ab_initio(
     params: String,
     path_string: String,
 ) -> Result<(ArgMatches, Vec<String>), Error> {
-    let a: Vec<String> = params.split(" ").map(|t| t.to_string()).collect();
+    let a: Vec<String> = params.split(' ').map(|t| t.to_string()).collect();
     let b: Vec<String> = vec!["-o".to_string(), path_string];
     let mut args = vec!["vis".to_string()];
     args.extend(a);
@@ -300,14 +300,14 @@ async fn index(
                 eprintln!(
                     "match named file: {}.{:03} sec.",
                     end0.as_secs(),
-                    end0.subsec_nanos() / 1_000_000
+                    end0.subsec_millis()
                 );
 
                 let end1 = start.elapsed();
                 eprintln!(
                     "create dir: {}.{:03} sec.",
                     end1.as_secs(),
-                    end1.subsec_nanos() / 1_000_000
+                    end1.subsec_millis()
                 );
 
                 let (matches, string_range) =
@@ -321,7 +321,7 @@ async fn index(
                 eprintln!(
                     "id_to_range: {}.{:03} sec.",
                     end2.as_secs(),
-                    end2.subsec_nanos() / 1_000_000
+                    end2.subsec_millis()
                 );
                 if !buffer
                     .read()
@@ -333,7 +333,7 @@ async fn index(
                     eprintln!(
                         "Fallback to reload: {}.{:03} sec.",
                         endx.as_secs(),
-                        endx.subsec_nanos() / 1_000_000
+                        endx.subsec_millis()
                     );
                     //let (mut list, mut list_btree) = &*;
                     {
@@ -352,7 +352,7 @@ async fn index(
                     eprintln!(
                         "Fallback to reload2: {}.{:03} sec.",
                         endy.as_secs(),
-                        endy.subsec_nanos() / 1_000_000
+                        endy.subsec_millis()
                     );
                     let mut old_vis = vis.write().unwrap();
                     *old_vis = new_vis.unwrap();
@@ -360,7 +360,7 @@ async fn index(
                     eprintln!(
                         "Fallback to reload3: {}.{:03} sec.",
                         endz.as_secs(),
-                        endz.subsec_nanos() / 1_000_000
+                        endz.subsec_millis()
                     );
                 }
 
@@ -393,7 +393,7 @@ async fn index(
                 eprintln!(
                     "img_saved: {}.{:03} sec.",
                     end3.as_secs(),
-                    end3.subsec_nanos() / 1_000_000
+                    end3.subsec_millis()
                 );
                 // bam_vis(matches, 1);
             } else {
@@ -462,8 +462,7 @@ pub async fn server(
         .unwrap_or(&"png");*/
     let mut rng = rand::thread_rng();
     let cache_dir = matches
-        .value_of("cache-dir")
-        .and_then(|a| Some(a.to_string()))
+        .value_of("cache-dir").map(|a| a.to_string())
         .unwrap_or(rng.gen::<u32>().to_string());
 
     match fs::create_dir(&cache_dir) {

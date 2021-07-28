@@ -219,12 +219,10 @@ fn id_to_range<'a>(
     };
     let adjusted_large_y = if param.y_adjust {
         freq_y
+    } else if (y >> (max_zoom - zoom)) <= 2 {
+        max_y >> (max_zoom - zoom)
     } else {
-        if (y >> (max_zoom - zoom)) <= 2 {
-            max_y >> (max_zoom - zoom)
-        } else {
-            freq_y >> (max_zoom - zoom)
-        }
+        freq_y >> (max_zoom - zoom)
     };
     let adjusted_scale_x = if param.y_adjust {
         param.x_scale as u64
@@ -319,7 +317,7 @@ fn id_to_range<'a>(
             start,
             start + (criteria << (max_zoom - zoom)) - 1
         )
-        .to_string(),
+        ,
     )
     .unwrap();
     eprintln!("{:?} {:?}", args.join(" "), range);
@@ -332,15 +330,15 @@ async fn get_dzi(data: web::Data<RwLock<Item>>) -> impl Responder {
 }
 
 async fn get_index(_data: web::Data<RwLock<Item>>) -> Result<NamedFile> {
-    return Ok(NamedFile::open(format!("static/index.html"))?);
+    return Ok(NamedFile::open("static/index.html".to_string())?);
 }
 
 async fn get_js(_data: web::Data<RwLock<Item>>) -> Result<NamedFile> {
-    return Ok(NamedFile::open(format!("static/openseadragon.min.js"))?);
+    return Ok(NamedFile::open("static/openseadragon.min.js".to_string())?);
 }
 
 async fn get_js_map(_data: web::Data<RwLock<Item>>) -> Result<NamedFile> {
-    return Ok(NamedFile::open(format!("static/openseadragon.min.js.map"))?);
+    return Ok(NamedFile::open("static/openseadragon.min.js.map".to_string())?);
 }
 
 async fn index(
@@ -364,7 +362,7 @@ async fn index(
             eprintln!(
                 "match named file: {}.{:03} sec.",
                 end0.as_secs(),
-                end0.subsec_nanos() / 1_000_000
+                end0.subsec_millis()
             );
             let params = &data.params;
             let args = &data.args;
@@ -393,7 +391,7 @@ async fn index(
             eprintln!(
                 "create dir: {}.{:03} sec.",
                 end1.as_secs(),
-                end1.subsec_nanos() / 1_000_000
+                end1.subsec_millis()
             );
             let (matches, string_range) =
                 id_to_range(&data.range, args, zoom, path, params, path_string.clone());
@@ -401,7 +399,7 @@ async fn index(
             eprintln!(
                 "id_to_range: {}.{:03} sec.",
                 end2.as_secs(),
-                end2.subsec_nanos() / 1_000_000
+                end2.subsec_millis()
             );
             // If the end is exceeds the prefetch region, raise error.
             // let arg_vec = vec!["ghb", "vis", "-t", "1", "-r",  "parse"];
@@ -425,7 +423,7 @@ async fn index(
             eprintln!(
                 "img_saved: {}.{:03} sec.",
                 end3.as_secs(),
-                end3.subsec_nanos() / 1_000_000
+                end3.subsec_millis()
             );
             // bam_vis(matches, 1);
             Ok(
@@ -448,10 +446,10 @@ pub struct Item {
 impl Item {
     fn new(vis: Vis, args: Vec<String>, params: Param, dzi: DZI) -> Self {
         Item {
-            vis: vis,
-            args: args,
-            params: params,
-            dzi: dzi,
+            vis,
+            args,
+            params,
+            dzi,
         }
     }
 }
@@ -571,21 +569,20 @@ pub async fn server(
     };
     let image = Image {
         xmlns: "http://schemas.microsoft.com/deepzoom/2008".to_string(),
-        url: format!("http://{}/", bind).to_string(),
+        url: format!("http://{}/", bind),
         format: "png".to_string(),
         overlap: "0".to_string(),
         tile_size: x.to_string(),
-        size: size,
+        size,
     };
-    let dzi = DZI { image: image };
+    let dzi = DZI { image };
     let x_scale = matches
         .value_of("x-scale")
         .and_then(|a| a.parse::<u32>().ok())
         .unwrap_or(20u32);
     let mut rng = rand::thread_rng();
     let cache_dir = matches
-        .value_of("cache-dir")
-        .and_then(|a| Some(a.to_string()))
+        .value_of("cache-dir").map(|a| a.to_string())
         .unwrap_or(rng.gen::<u32>().to_string());
     let y_adjust = matches.is_present("adjust-y");
 

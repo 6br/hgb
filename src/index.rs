@@ -54,8 +54,7 @@ impl Region {
         let re = Regex::new(r"^(.+):(\d*)-?(\d*)$").unwrap();
         let caps = re.captures(path).ok_or("Parse Error")?;
         let path = caps
-            .get(1)
-            .and_then(|t| Some(t.as_str()))
+            .get(1).map(|t| t.as_str())
             .ok_or("Parse Path Error")?;
         let start = caps
             .get(2)
@@ -66,11 +65,11 @@ impl Region {
             .and_then(|t| t.as_str().parse::<u64>().ok())
             .ok_or("Error: the reference end is not recognized.")?;
 
-        return Ok(Region {
+        Ok(Region {
             ref_id: to_id(path).ok_or("Error: the reference id is not recognized.")?,
-            start: start,
+            start,
             end: stop,
-        });
+        })
     }
 
     pub fn ref_id(&self) -> u64 {
@@ -202,12 +201,7 @@ pub struct Chunk {
 impl Chunk {
     /// Constructs a `Chunk` from two virtual offsets.
     pub fn new(sample_id: u64, file_id: u32, start: VirtualOffset, end: VirtualOffset) -> Self {
-        Chunk {
-            sample_id,
-            file_id,
-            start,
-            end,
-        }
+        Chunk { start, end, sample_id, file_id }
     }
 
     pub fn from_stream<R: Read>(stream: &mut R, check: bool) -> Result<Self> {
@@ -221,12 +215,7 @@ impl Chunk {
                 format!("GHI chunk end < start ({}  <  {})", end, start),
             ))
         } else {
-            Ok(Chunk {
-                sample_id,
-                file_id,
-                start,
-                end,
-            })
+            Ok(Chunk { start, end, sample_id, file_id })
         }
     }
 
@@ -290,8 +279,8 @@ pub struct Bin {
 impl Bin {
     pub fn new(bin_id: u32, chunks: Vec<Chunk>) -> Bin {
         Bin {
-            bin_id: bin_id,
-            chunks: chunks,
+            bin_id,
+            chunks,
         }
     }
     pub fn dummy() -> Bin {
@@ -395,7 +384,7 @@ pub struct Reference {
 
 impl Reference {
     pub fn new(bins: BTreeMap<u32, Bin>) -> Reference {
-        return Reference { bins: bins };
+        Reference { bins }
     }
 
     fn from_stream<R: Read>(stream: &mut R) -> Result<Self> {
@@ -448,7 +437,7 @@ pub struct Index {
 impl Index {
     pub fn new(references: Vec<Reference>) -> Index {
         Index {
-            references: references,
+            references,
         }
     }
     /// Loads index from stream.
@@ -556,15 +545,15 @@ pub fn region_to_bin_3(beg: u64, end: u64) -> u32 {
     let mut res = 0_i32;
 
     if beg >> 14 == end >> 14 {
-        return (((1 << 29 - 14) - 1) / 7 + ((beg >> 14) << 1)) as u32;
+        return (((1 << (29 - 14)) - 1) / 7 + ((beg >> 14) << 1)) as u32;
     }
     if (beg + (1 << 13)) >> 14 == (end + (1 << 13)) >> 14 {
-        return (((1 << 29 - 14) - 1) / 7 + ((beg >> 14) << 1) + 1) as u32;
+        return (((1 << (29 - 14)) - 1) / 7 + ((beg >> 14) << 1) + 1) as u32;
     }
 
     for i in (17..27).step_by(3) {
         if beg >> i == end >> i {
-            res = ((1 << 29 - i) - 1) / 7 + (beg >> i) as i32;
+            res = ((1 << (29 - i)) - 1) / 7 + (beg >> i) as i32;
             break;
         }
     }
@@ -597,7 +586,7 @@ pub struct BinsIter {
 
 impl BinsIter {
     fn new(i: i32, t: i32, start: u64, end: u64, curr_bin: u32, bins_end: u32) -> BinsIter {
-        return {
+        {
             let start = start as i32;
             let end = end as i32;
             BinsIter {
@@ -608,7 +597,7 @@ impl BinsIter {
                 curr_bin,
                 bins_end,
             }
-        };
+        }
     }
 }
 
@@ -624,14 +613,14 @@ impl Iterator for BinsIter {
             self.t += 1 << (self.i * 3);
             if self.i == 4 {
                 // when the last line
-                self.curr_bin = (self.t + (self.start >> 26 - 3 * self.i - 1)) as u32 - 2;
+                self.curr_bin = (self.t + (self.start >> (26 - 3 * self.i - 1))) as u32 - 2;
                 if self.curr_bin < 4680 {
                     self.curr_bin = 4680;
                 }
-                self.bins_end = (self.t + (self.end >> 26 - 3 * self.i - 1)) as u32;
+                self.bins_end = (self.t + (self.end >> (26 - 3 * self.i - 1))) as u32;
             } else {
-                self.curr_bin = (self.t + (self.start >> 26 - 3 * self.i)) as u32 - 1;
-                self.bins_end = (self.t + (self.end >> 26 - 3 * self.i)) as u32;
+                self.curr_bin = (self.t + (self.start >> (26 - 3 * self.i))) as u32 - 1;
+                self.bins_end = (self.t + (self.end >> (26 - 3 * self.i))) as u32;
             }
             if self.i == 0 {
                 return Some(0);
@@ -654,24 +643,24 @@ pub fn bin_to_region(bin: u32) -> (i32, i32) {
     }
     let mut left = 1;
     for i in 1..5 {
-        let right = left + (1 << 3 * i);
+        let right = left + (1 << (3 * i));
         if bin >= left && bin < right {
             let beg = (bin - left) as i32;
-            return (beg << 29 - 3 * i, beg + 1 << 29 - 3 * i);
+            return (beg << (29 - 3 * i), (beg + 1) << (29 - 3 * i));
         }
         left = right;
     }
     let i = 5;
-    let right = left + (1 << 3 * i);
+    let right = left + (1 << (3 * i));
     if bin >= left && bin < right {
         let beg = ((bin - left) / 2u32) as i32;
         if bin % 2 == 0 {
             return (
-                (1 << 13) + (beg << 29 - 3 * i),
-                (1 << 13) + (beg + 1 << 29 - 3 * i),
+                (1 << 13) + (beg << (29 - 3 * i)),
+                (1 << 13) + ((beg + 1) << (29 - 3 * i)),
             );
         } else {
-            return (beg << 29 - 3 * i, beg + 1 << 29 - 3 * i);
+            return (beg << (29 - 3 * i), (beg + 1) << (29 - 3 * i));
         }
     }
     panic!(

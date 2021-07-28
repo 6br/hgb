@@ -31,7 +31,7 @@ pub enum StringEncode {
 pub fn integer_encode(input: &Vec<u64>, sorted: bool) -> Result<IntegerEncode> {
     let mut vec = Vec::with_capacity(input.len());
 
-    if input.len() == 0 {
+    if input.is_empty() {
         if sorted {
             return Ok(IntegerEncode::DeltaVByte(vec));
         } else {
