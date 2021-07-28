@@ -29,6 +29,13 @@ jobs:
         override: true
     - name: Build
       run: cargo build --verbose
+    - uses: actions-rs/cargo@v1
+      with:
+        command: fmt
+        args: --all -- --check
+    - uses: actions-rs/cargo@v1
+      with:
+        command: clippy
     - name: Run tests
       run:  |
         curl https://github.com/plotly/react-genome-viewer/raw/master/demo/data/index_test.bam -o ${GITHUB_WORKSPACE}/test/index_test.bam
