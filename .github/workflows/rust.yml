@@ -1,0 +1,40 @@
+name: Rust
+
+on: [push, pull_request]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+
+    name: Rust ${{ matrix.os }} ${{ matrix.rust }}
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        rust:
+          - stable
+          - beta
+          - nightly
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Before script
+      run: 
+        - curl https://github.com/plotly/react-genome-viewer/raw/master/demo/data/index_test.bam -o $GITHUB_WORKSPACE/test/index_test.bam
+        - curl https://github.com/plotly/react-genome-viewer/raw/master/demo/data/index_test.bam.bai -o $GITHUB_WORKSPACE/test/index_test.bam.bai
+        - curl https://github.com/ingolia/SamTools/raw/master/samtools/test/test-in.bam -o $GITHUB_WORKSPACE/test/test-in.bam
+        - curl https://github.com/ingolia/SamTools/raw/master/samtools/test/test-in.bam.bai -o $GITHUB_WORKSPACE/test/test-in.bam.bai
+    - name: Setup Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        profile: minimal
+        toolchain: ${{ matrix.rust }}
+        override: true
+    - name: Build
+      run: cargo build --verbose
+    - name: Run tests
+      run: cargo test --verbose
+      continue-on-error: ${{ matrix.rust == 'nightly' }}
