@@ -38,4 +38,4 @@ jobs:
         ls test/
         echo `pwd`
         cargo test --verbose
-      continue-on-error: ${{ matrix.rust == 'nightly' }}
+      continue-on-error: true
