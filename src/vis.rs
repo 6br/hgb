@@ -660,7 +660,11 @@ where
                     // Set the caption of the chart
                     // Set the size of the label region
                     .caption(
-                        if with_caption_val != "" {format!("{} {}", with_caption_val, range)} else {format!("{}", range)},
+                        if with_caption_val != "" {
+                            format!("{} {}", with_caption_val, range)
+                        } else {
+                            format!("{}", range)
+                        },
                         ("sans-serif", x_scale / 2).into_font(),
                     )
                     .y_label_area_size(y_area_size)
@@ -683,7 +687,11 @@ where
                 ChartBuilder::on(&alignment)
                     // Set the caption of the chart
                     .caption(
-                        if with_caption_val != "" {format!("{} {}", with_caption_val, range)} else {format!("{}", range)},
+                        if with_caption_val != "" {
+                            format!("{} {}", with_caption_val, range)
+                        } else {
+                            format!("{}", range)
+                        },
                         ("sans-serif", x_scale / 2).into_font(),
                     )
                     // Set the size of the label region
@@ -846,13 +854,14 @@ where
                                 });
                             if show_read_id {
                                 let pos = Pos::new(HPos::Left, VPos::Bottom);
-                                let style = TextStyle::from(("sans-serif", y / 3 * 2).into_font()).pos(pos);
+                                let style =
+                                    TextStyle::from(("sans-serif", y / 3 * 2).into_font()).pos(pos);
                                 let text = Text::new(
                                     format!("{}", record.name().unwrap_or(&"")),
                                     (start, prev_index + key * 2 + axis_count + 1),
                                     style,
                                 );
- //                               texts.push(text);
+                                //                               texts.push(text);
                                 chart.draw_series(vec![text]);
                             }
                             if overlapping_annotation {
