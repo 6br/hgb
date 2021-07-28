@@ -452,33 +452,22 @@ pub async fn server(
     } else {
         prefetch_range
     };
-    //eprintln!("{:#?}", vis);
-    /*let annotation = &vis.annotation;
-    let prev_index = vis.prev_index;
-    let freq = &vis.freq;
-    let annotation_count = annotation.iter().unique_by(|s| s.0).count(); // annotation.len();
-    let format = matches
-        .value_of("format")
-        .unwrap_or(&"png");*/
+
     let mut rng = rand::thread_rng();
     let cache_dir = matches
         .value_of("cache-dir").map(|a| a.to_string())
         .unwrap_or(rng.gen::<u32>().to_string());
 
-    match fs::create_dir(&cache_dir) {
-        Err(e) => panic!("{}: {}", e, &cache_dir),
-        Ok(_) => {}
-    };
+    if let Err(e) = fs::create_dir(&cache_dir) { panic!("{}: {}", e, &cache_dir) }
     println!("REST Server is running on {}", bind);
     // Create some global state prior to building the server
 
     let counter = web::Data::new(RwLock::new(Item::new(view_range, args, cache_dir)));
-    //let vis = web::Data::new(RwLock::new(vis));
     let buffer = web::Data::new(RwLock::new(buffer));
 
     let cross_origin_bool = matches.is_present("production");
 
-    //https://github.com/actix/examples/blob/master/state/src/main.rs
+    // https://github.com/actix/examples/blob/master/state/src/main.rs
     HttpServer::new(move || {
         let cross_origin = if cross_origin_bool {
             Cors::default()
@@ -492,17 +481,14 @@ pub async fn server(
         //let buffer = buffer.clone();
         actix_web::App::new()
             .data(list)
-            .data(list_btree) /*.app_data(web::Data::new(RwLock::new(list.clone()))).*/
+            .data(list_btree) 
             .app_data(counter.clone())
             .data(vis) //.app_data(vis.clone())
             .app_data(buffer.clone())
             .route("/", web::post().to(index))
             .wrap(Logger::default())
             .wrap(
-                cross_origin, /*allowed_origin("*").allowed_methods(vec!["GET", "POST"])
-                              .allowed_headers(vec![http::header::AUTHORIZATION, http::header::ACCEPT])
-                              .allowed_header(http::header::CONTENT_TYPE)
-                              .max_age(3600)*/
+                cross_origin
             )
     })
     .bind(bind)?

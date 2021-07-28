@@ -17,7 +17,6 @@ use std::{
 pub struct ChromosomeBuffer {
     ref_id: u64,
     matches: ArgMatches,
-    //bins: BTreeMap<usize, (Vec<(u64, bam::Record)>, Vec<(u64, bed::Record)>)>,
     bins: BTreeMap<usize, Vec<(u64, bed::Record)>>,
     freq: BTreeMap<u64, Vec<(u64, u32, char)>>,
     reader: IndexedReader<BufReader<File>>,
@@ -103,14 +102,9 @@ impl ChromosomeBuffer {
         let closure = |x: &str| self.reader.reference_id(x);
         let reference_name = &range.path;
         let range = Region::convert(&range, closure).unwrap();
-        //eprintln!("1");
         let mut reload_flag = false;
         // Check if overlap, and drop them if the chrom_id is different.
-        if range.ref_id() != self.ref_id {
-            self.drop();
-            self.set_ref_id(range.ref_id());
-            reload_flag = true;
-        } else if self.size_limit() {
+        if range.ref_id() != self.ref_id || self.size_limit() {
             self.drop();
             self.set_ref_id(range.ref_id());
             reload_flag = true;
@@ -120,14 +114,14 @@ impl ChromosomeBuffer {
             .value_of("min-read-length")
             .and_then(|a| a.parse::<u32>().ok())
             .unwrap_or(0u32);
-        //eprintln!("2");
+
         let mut chunks = BTreeMap::new();
         let mut bin_ids = BTreeSet::new();
 
         for i in
             self.reader.index().references()[range.ref_id() as usize].region_to_bins(range.clone())
         {
-            for bins in i.slice {
+            if let Some(bins) = i.slice {
                 for bin in bins {
                     if !self.bins.contains_key(&(bin.bin_id() as usize)) {
                         chunks.insert(bin.bin_id(), bin.clone().chunks_mut());
@@ -136,7 +130,6 @@ impl ChromosomeBuffer {
                 }
             }
         }
-        //eprintln!("3");
 
         let mut merged_list = vec![];
 
@@ -155,7 +148,6 @@ impl ChromosomeBuffer {
             let format_type = format_type_opt.unwrap_or(Format::Default(Default {}));
 
             let _ = viewer.into_iter().for_each(|t| {
-                //eprintln!("{:?}", t.clone().unwrap());
                 let f = t.unwrap();
                 if !sample_id_cond || sample_ids.iter().any(|&i| i == f.sample_id()) {
                     let sample_id = f.sample_id();
@@ -194,7 +186,7 @@ impl ChromosomeBuffer {
             list.iter().group_by(|elt| elt.0).into_iter().for_each(|t| {
                 /*let mut line =
                 Vec::with_capacity((prefetch_range.end - prefetch_range.start + 1) as usize);*/
-                let line = self.freq.entry(t.0).or_insert(vec![]);
+                let line = self.freq.entry(t.0).or_insert_with(Vec::new);
                 for column in bam::Pileup::with_filter(&mut RecordIter::new(t.1), |record| {
                     record.flag().no_bits(1796)
                 }) {
@@ -262,19 +254,15 @@ impl ChromosomeBuffer {
             .value_of("min-read-length")
             .and_then(|a| a.parse::<u32>().ok())
             .unwrap_or(0u32);
-        //eprintln!("2");
         //let mut chunks = BTreeMap::new();
         let mut chunks = vec![];
-
-        //let bins_iter =.clone();
 
         for i in
             self.reader.index().references()[range.ref_id() as usize].region_to_bins(range.clone())
         {
-            for bins in i.slice {
+            if let Some(bins) = i.slice {
                 for bin in bins {
                     if !local_bins.contains(&(bin.bin_id() as u64)) && !reload_flag {
-                        //chunks.insert(bin.bin_id(), bin.clone().chunks_mut());
                         chunks.extend(bin.clone().chunks_mut());
                         local_bins.insert(bin.bin_id() as u64);
                     }
@@ -285,10 +273,8 @@ impl ChromosomeBuffer {
 
         let mut merged_list = vec![];
 
-        //for (_, chunks) in chunks {
         let viewer = self.reader.chunk(chunks).unwrap();
         let mut ann = vec![];
-        //let mut list = vec![];
         let sample_ids_opt: Option<Vec<u64>> = matches
             .values_of("id").map(|a| a.map(|t| t.parse::<u64>().unwrap()).collect());
         let sample_id_cond = sample_ids_opt.is_some();
@@ -299,14 +285,10 @@ impl ChromosomeBuffer {
         let format_type_cond = format_type_opt.is_ok();
         let format_type = format_type_opt.unwrap_or(Format::Default(Default {}));
 
-        //let mut list2 = vec![];
-        //let mut samples = BTreeMap::new();
         let _ = viewer.into_iter().for_each(|t| {
-            //eprintln!("{:?}", t.clone().unwrap());
             let f = t.unwrap();
             if !sample_id_cond || sample_ids.iter().any(|&i| i == f.sample_id()) {
                 let sample_id = f.sample_id();
-                // eprintln!("{:?}", sample_id);
                 let data = f.data();
                 if !format_type_cond
                     || std::mem::discriminant(&format_type) == std::mem::discriminant(&data)
@@ -356,20 +338,16 @@ impl ChromosomeBuffer {
             if reset_flag {
                 *list = new_list;
                 *list_btree = bins;
-            // std::mem::replace(list, new_list);
-            // std::mem::replace(list_btree, bins);
             } else {
                 list.extend(new_list);
                 list_btree.extend(bins)
             }
             debug!("After load list len: {}", list.len());
-            //ann.extend(new_ann);
         }
 
         if !self.included_local(range, list_btree) {
             let (reset_flag, new_list) = self.add_local(string_range, list_btree);
             if reset_flag {
-                // std::mem::replace(list, new_list);
                 *list = new_list
             } else {
                 list.extend(new_list);
@@ -505,14 +483,14 @@ impl ChromosomeBuffer {
                 list.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.start().cmp(&b.1.start())));
             }
             /*
-                        if split_only {
-                            list = list
-                                .into_iter()
-                                .filter(|(sample_id, record)| {
-                                    end_map.contains_key(&(*sample_id, record.name()))
-                                })
-                                .collect();
-                        }
+            if split_only {
+                list = list
+                    .into_iter()
+                    .filter(|(sample_id, record)| {
+                        end_map.contains_key(&(*sample_id, record.name()))
+                    })
+                    .collect();
+            }
             */
             list.iter().group_by(|elt| elt.0).into_iter().for_each(|t| {
                 // let mut heap = BinaryHeap::<(i64, usize)>::new();
@@ -617,31 +595,23 @@ impl ChromosomeBuffer {
                     index_list.push(index + last_prev_index);
                     // eprintln!("{:?}", packing);
                     //(index, (k.0, k.1))
-                }); //.collect::<Vec<(usize, (u64, Record))>>()
-                    // compressed_list.push(prev_index);
-                    //compressed_list.insert(t.0, prev_index);
-                    //prev_index += 1;
+                });
                 if let Some(max_cov) = max_coverage {
                     prev_index = max_cov as usize + last_prev_index;
                 }
                 compressed_list.push((t.0, prev_index));
                 //eprintln!("{:?} {:?} {:?}", compressed_list, packing, index_list);
                 last_prev_index = prev_index;
-                //(t.0, ((t.1).0, (t.1).1))
-                // .collect::<&(u64, Record)>(). // collect::<Vec<(usize, (u64, Record))>>
             });
         } else {
             // Now does not specify the maximal length by max_coverage.
             index_list = (0..list.len()).collect();
 
-            // list.sort_by(|a, b| a.0.cmp(&b.0));
             // eprintln!("{}", list.len());
             list.iter().group_by(|elt| elt.0).into_iter().for_each(
                 |(sample_sequential_id, sample)| {
                     let count = sample.count();
                     prev_index += count;
-                    // compressed_list.push(prev_index);
-                    // compressed_list.insert(sample_sequential_id, prev_index);
                     compressed_list.push((sample_sequential_id, prev_index));
                 },
             )

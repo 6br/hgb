@@ -11,7 +11,7 @@ use rand::Rng;
 use std::time::Instant;
 use std::{collections::BTreeMap, fs, sync::RwLock};
 
-fn id_to_range<'a>(
+fn id_to_range(
     range: &StringRegion,
     args: &Vec<String>,
     zoom: u64,
@@ -454,15 +454,6 @@ impl Item {
     }
 }
 
-/*
-impl Vis {
-    fn new(range: StringRegion, args: Vec<String>, annotation: Vec<(u64, bed::Record)>, freq: BTreeMap<u64, Vec<(u64, u32, char)>>, compressed_list: Vec<(u64, usize)>,
-    index_list: Vec<usize>,
-    prev_index: usize,
-    supplementary_list: Vec<(Vec<u8>, usize, usize, i32, i32)>) -> Vis {
-        Vis{range, args, annotation, freq, compressed_list, index_list, prev_index, supplementary_list}
-    }
-}*/
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct DZI {
     #[serde(rename = "Image")]
@@ -583,11 +574,10 @@ pub async fn server(
     let mut rng = rand::thread_rng();
     let cache_dir = matches
         .value_of("cache-dir").map(|a| a.to_string())
-        .unwrap_or(rng.gen::<u32>().to_string());
+        .unwrap_or_else(|| rng.gen::<u32>().to_string());
     let y_adjust = matches.is_present("adjust-y");
 
     let x_width = all as u32 / diff as u32 * x;
-    // eprintln!("{} {} {}", all,diff,x);
     let max_zoom = log_2(x_width as i32) + 1;
     let min_zoom = if y_adjust { 2 } else { max_zoom - 8 }; // + (prev_index );
 
@@ -616,11 +606,6 @@ pub async fn server(
     );
     println!("Server is running on {}", bind);
     // Create some global state prior to building the server
-    //#[allow(clippy::mutex_atomic)] // it's intentional.
-    //let counter1 = web::Data::new(Mutex::new((matches.clone(), range, list, annotation, freq)));
-    // let counter = RwLock::new(Vis::new(range.clone(), args.clone(), list.clone(), annotation.clone(), freq.clone(), dzi.clone(), params.clone()));
-    //let counter = Arc::new(RwLock::new(Vis::new(range, args, annotation, freq, dzi, params)));
-    //#[allow(clippy::mutex_atomic)]
     let vis = Vis::new(
         range,
         annotation,
@@ -655,10 +640,7 @@ pub async fn server(
             .service(actix_files::Files::new("/images", "static/images").show_files_listing())
             .wrap(Logger::default())
             .wrap(
-                cross_origin, /*allowed_origin("*").allowed_methods(vec!["GET", "POST"])
-                              .allowed_headers(vec![http::header::AUTHORIZATION, http::header::ACCEPT])
-                              .allowed_header(http::header::CONTENT_TYPE)
-                              .max_age(3600)*/
+                cross_origin
             )
     })
     .bind(bind)?

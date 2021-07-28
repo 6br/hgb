@@ -1169,48 +1169,13 @@ impl VisPrecursor {
             index_list: Arc::new(Mutex::new(vec![])),
             //suppl_list: Mutex::new(vec![]),
         }
-    } /*
-      fn vis_ref(
-          self,
-          prev_index: usize,
-          compressed_list: Vec<(u64, usize)>,
-          supplementary_list: std::vec::Vec<(std::vec::Vec<u8>, usize, usize, i32, i32)>,
-      ) -> VisRef<'static> {
-          VisRef {
-              range: self.range,
-              list: &self.list.into_inner().unwrap(),
-              annotation: &self.annotation.into_inner().unwrap(),
-              frequency: &self.frequency.into_inner().unwrap(),
-              compressed_list: &compressed_list,
-              index_list: &self.index_list.into_inner().unwrap(),
-              prev_index,
-              supplementary_list: &supplementary_list,
-          }
-      }*/
-    /*
-    fn split_only(&mut self, end_map: &HashMap<(u64, &[u8]), (i32, i32, i32, usize)>) {
-        let list = &*self.list.lock().unwrap();
-        /*self.list = Cell::new(
-            list.into_iter()
-                .filter(|(sample_id, record)| end_map.contains_key(&(*sample_id, record.name())))
-                .collect(),
-        );*/
-        *self.list.lock().unwrap() = list
-            .into_iter()
-            .filter(|(sample_id, record)| end_map.contains_key(&(*sample_id, record.name())))
-            .collect();
-    }*/
+    } 
 }
 
 pub fn bam_record_vis_pre_calculate<'a, F>(
     matches: &ArgMatches,
     args: &Vec<String>,
     vis: Vec<VisPrecursor>,
-    /*range: StringRegion,
-    prefetch_range: StringRegion,
-    mut list: Vec<(u64, Record)>,
-    mut ann: Vec<(u64, bed::Record)>,
-    mut freq: BTreeMap<u64, Vec<(u64, u32, char)>>,*/
     threads: u16,
     lambda: F,
 ) -> Result<(), Box<dyn std::error::Error>>
@@ -1458,14 +1423,14 @@ where
                                     // Add head
                                     suppl_map
                                         .entry((sample_id, s.0))
-                                        .or_insert(vec![])
+                                        .or_insert_with(Vec::new)
                                         .push(item.1.start());
                                 }
                                 if idx < items.len() - 1 {
                                     // Add tail
                                     suppl_map
                                         .entry((sample_id, s.0))
-                                        .or_insert(vec![])
+                                        .or_insert_with(Vec::new)
                                         .push(item.1.calculate_end());
                                 }
                             }
