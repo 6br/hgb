@@ -1,6 +1,6 @@
 # hgb
 
-[![Build Status](https://travis-ci.com/6br/hgb.svg?branch=master)](https://travis-ci.com/6br/hgb)
+[![Rust](https://github.com/6br/hgb/actions/workflows/rust.yml/badge.svg)](https://github.com/6br/hgb/actions/workflows/rust.yml)
 
 A hybrid genome browser for zooming out long-read alignments
 
