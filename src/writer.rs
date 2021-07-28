@@ -10,16 +10,16 @@ use crate::header::Header;
 /// Builder of the [GhiWriter](struct.GhiWriter.html).
 pub struct GhiWriterBuilder {
     write_header: bool,
-    //level: u8,
-    //additional_threads: u16,
+    // level: u8,
+    // additional_threads: u16,
 }
 
 impl GhiWriterBuilder {
     pub fn new() -> Self {
         Self {
             write_header: true,
-            //level: 6,
-            //additional_threads: 0,
+            // level: 6,
+            // additional_threads: 0,
         }
     }
 
@@ -42,7 +42,7 @@ impl GhiWriterBuilder {
     /// If `additional_threads` is 0 (default), the main thread
     /// will compress blocks itself.
     pub fn additional_threads(&mut self, _additional_threads: u16) -> &mut Self {
-        //self.additional_threads = additional_threads;
+        // self.additional_threads = additional_threads;
         self
     }
 

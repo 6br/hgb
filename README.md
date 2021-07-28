@@ -1,5 +1,7 @@
 # hgb
 
+[![Rust](https://github.com/6br/hgb/actions/workflows/rust.yml/badge.svg)](https://github.com/6br/hgb/actions/workflows/rust.yml)
+
 A hybrid genome browser for zooming out long-read alignments
 
 Screenshots in seconds.
@@ -36,63 +38,81 @@ cargo run --release -- vis --help
 The input BAM file **must** be indexed using `samtools index`. The input BAM file *needed to* be calculated MD tag using `samtools calmd` if mismatches are to be visualized.
 
 ```bash
-samtools calmd -b aln.bam ref.fasta > input.bam
-samtools index input.bam
+samtools calmd -b aln.bam ref.fasta > input1.bam
+samtools index input1.bam
 ```
 
 * A simple example:
 
 ```bash
-cargo run --release -- vis -a input.bam -o output.png -r chr1:91234-92334
+cargo run --release -- vis -a test/input1.bam -o fig/output1.png -r chr1:93234-94334
 ```
+
+![output1](fig/output1.png)
 
 * A simple example with [Udon](https://github.com/ocxtal/udon) mode:
 
 ```bash
-cargo run --release -- vis -a input.bam -o output.png -l -U -r chr1:91234-92334
+cargo run --release -- vis -a test/input1.bam -o fig/output2.png -l -U -r chr1:93234-94334
 ```
 
-* A simple examples with two bam files:
+![output2](fig/output2.png)
+
+* A simple example with two bam files:
 
 ```bash
-cargo run --release -- vis -a input1.bam input2.bam -o output.png -r chr1:91234-92334
+cargo run --release -- vis -a test/input1.bam test/input2.bam -o fig/output3.png -r chr1:93234-94334
 ```
 
-* A simple examples with two bam files of split alignments:
+![output3](fig/output3.png)
+
+* A simple example with two bam files of split alignments:
 
 ```bash
-cargo run --release -- vis -a input1.bam input2.bam -o output.png -r chr1:91234-92334 -s
+cargo run --release -- vis -a test/input1.bam test/input2.bam -o fig/output4.png -r chr1:93234-94334 -s
 ```
 
-* A simple examples with two bam files of only split alignments:
+![output4](fig/output4.png)
+
+* A simple example with two bam files with base colors:
 
 ```bash
-cargo run --release -- vis -a input1.bam input2.bam -o output.png -r chr1:91234-92334 -s -u
+cargo run --release -- vis -a test/input1.bam test/input2.bam -o fig/output5.png -r chr1:93234-93334 -B
 ```
 
-* A simple examples with two bam files with read quality:
+![output5](fig/output5.png)
+
+* A simple example with two bam files with read quality:
 
 ```bash
-cargo run --release -- vis -a input1.bam input2.bam -o output.png -r chr1:91234-92334 -q
+cargo run --release -- vis -a test/input1.bam test/input2.bam -o fig/output6.png -r chr1:93234-94334 -q
 ```
 
-* A simple examples with two bam files with hidden legends:
+![output6](fig/output6.png)
+
+* A simple example with two bam files with hidden legends:
 
 ```bash
-cargo run --release -- vis -a input1.bam input2.bam -o output.png -r chr1:91234-92334 -l
+cargo run --release -- vis -a test/input1.bam test/input2.bam -o fig/output7.png -r chr1:93234-94334 -l
 ```
 
-* A simple examples with two bam files within 30x coverages at most:
+![output7](fig/output7.png)
+
+* A simple example with two bam files within 10x coverages at most:
 
 ```bash
-cargo run --release -- vis -a input1.bam input2.bam -o output.png -r chr1:91234-92334 -m 30
+cargo run --release -- vis -a test/input1.bam test/input2.bam -o fig/output8.png -r chr1:93234-94334 -m 10
 ```
+
+![output8](fig/output8.png)
 
 * A simple examples with two bam files without insertion cigars:
 
 ```bash
-cargo run --release -- vis -a input1.bam input2.bam -o output.png -r chr1:91234-92334 -I
+cargo run --release -- vis -a test/input1.bam test/input2.bam -o fig/output9.png -r chr1:93234-94334 -I
 ```
+
+![output9](fig/output9.png)
 
 ## Gallery
 

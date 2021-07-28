@@ -1582,13 +1582,14 @@ where
                                                 if let Some(qual) =
                                                     bam.qualities().raw().get(_record as usize)
                                                 {
-                                                    //                                            eprintln!("{:?}", RGBColor(*qual*5, *qual*5, *qual*5));
+                                                    let qual_color = if *qual < 51 {*qual * 5 } else { 255 };
+
                                                     let mut bar = Rectangle::new(
                                                         [
                                                             (reference as u64, index),
                                                             (reference as u64 + 1, index + 1),
                                                         ],
-                                                        RGBColor(*qual * 5, *qual * 5, *qual * 5)
+                                                        RGBColor(qual_color, qual_color, qual_color)
                                                             .filled(),
                                                     );
                                                     bar.set_margin(3, 3, 0, 0);
