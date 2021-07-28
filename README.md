@@ -84,10 +84,10 @@ cargo run --release -- vis -a test/input1.bam test/input2.bam -o fig/output6.png
 cargo run --release -- vis -a test/input1.bam test/input2.bam -o fig/output7.png -r chr1:16000229-16001329 -l
 ```
 
-* A simple examples with two bam files within 30x coverages at most:
+* A simple examples with two bam files within 10x coverages at most:
 
 ```bash
-cargo run --release -- vis -a test/input1.bam test/input2.bam -o fig/output8.png -r chr1:16000229-16001329 -m 30
+cargo run --release -- vis -a test/input1.bam test/input2.bam -o fig/output8.png -r chr1:16000229-16001329 -m 10
 ```
 
 * A simple examples with two bam files without insertion cigars:
