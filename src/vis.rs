@@ -73,12 +73,11 @@ macro_rules! predefined_color {
     ($name:ident, $r:expr, $g:expr, $b:expr, $doc:expr) => {
         #[doc = $doc]
         pub const $name: RGBColor = RGBColor($r, $g, $b);
-    };
-/*
-    ($name:ident, $r:expr, $g:expr, $b:expr, $a: expr, $doc:expr) => {
-        #[doc = $doc]
-        let $name: RGBAColor = RGBColor($r, $g, $b).mix($a);
-    }*/
+    }; /*
+       ($name:ident, $r:expr, $g:expr, $b:expr, $a: expr, $doc:expr) => {
+           #[doc = $doc]
+           let $name: RGBAColor = RGBColor($r, $g, $b).mix($a);
+       }*/
 }
 
 /*
