@@ -199,6 +199,30 @@ cargo run --release -- vis -a test/input1.bam -o fig/output19.png -r chr1:93234-
 
 ![output19](fig/output19.png)
 
+* A simple example with insertion sequences:
+
+```bash
+cargo run --release -- vis -a test/input1.bam -o fig/output20.png -r chr1:93234-94334 '-{'
+```
+
+![output20](fig/output20.png)
+
+* A simple example with a frequency bed file:
+
+```bash
+cargo run --release -- vis -a test/input1.bam -o fig/output21.png -r chr1:93234-94334 -F test/input.bed -P
+```
+
+![output21](fig/output21.png)
+
+* A simple example with a range bed file:
+
+```bash
+cargo run --release -- vis -a test/input1.bam -o fig/output22.png -r chr1:93234-94334 -J test/input.bed -F test/input.bed -P -S
+```
+
+![output22](fig/output22.png)
+
 ## Gallery
 
 ![large](fig/large.png)

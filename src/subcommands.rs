@@ -62,7 +62,7 @@ pub fn bam_vis(
     let labels: Option<Vec<&str>> = matches.values_of("labels").map(|t| t.collect());
 
     if let Some(bam_files) = matches.values_of("bam") {
-        let bam_files: Vec<&str> = bam_files.collect();
+        let mut bam_files: Vec<&str> = bam_files.collect();
         let mut bam_readers = bam_files
             .iter()
             .map(|bam_path| {
@@ -257,7 +257,7 @@ pub fn bam_vis(
             if let Some(freq_files) = matches.values_of("frequency") {
                 // let bed_files: Vec<_> = matches.values_of("bed").unwrap().collect();
                 // frequency bed file needs to be (start, score).
-                let freq_files: Vec<&str> = freq_files.collect();
+                let mut freq_files: Vec<&str> = freq_files.collect();
                 for (_idx, bed_path) in freq_files.iter().enumerate() {
                     info!("Loading {}", bed_path);
                     let mut reader = bed::Reader::from_file(bed_path)?;
@@ -288,6 +288,7 @@ pub fn bam_vis(
                     freq.insert(idx as u64, values);
                     idx += 1;
                 }
+                bam_files.append(&mut freq_files);
             }
             //eprintln!("{:?}", freq);
 
@@ -307,6 +308,7 @@ pub fn bam_vis(
                     }
                     idx += 1;
                 }
+                // bam_files.append(&mut bed_files);
             }
             if let Some(gff_files) = matches.values_of("gff3") {
                 let gff_files: Vec<&str> = gff_files.collect();
@@ -333,6 +335,7 @@ pub fn bam_vis(
                     }
                     idx += 1;
                 }
+                // bam_files.append(&mut gff_files);
             }
             precursor.push(VisPrecursor::new(
                 string_range,
@@ -342,6 +345,7 @@ pub fn bam_vis(
                 freq,
             ));
         }
+
         bam_record_vis_pre_calculate(matches, &args, precursor, threads, |idx| {
             //            if separated_by_tag {
             //                bam_files
