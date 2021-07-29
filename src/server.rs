@@ -13,7 +13,7 @@ use std::{collections::BTreeMap, fs, sync::RwLock};
 
 fn id_to_range(
     range: &StringRegion,
-    args: &Vec<String>,
+    args: &[String],
     zoom: u64,
     path: u64,
     param: &Param,
@@ -305,7 +305,7 @@ fn id_to_range(
             "-e".to_string(),
         ]
     };
-    let mut args = args.clone();
+    let mut args = args.to_owned();
     args.extend(b);
     args.remove(0);
     args = args.into_iter().skip_while(|t| t != "vis").collect();
@@ -581,10 +581,7 @@ pub async fn server(
     let max_zoom = log_2(x_width as i32) + 1;
     let min_zoom = if y_adjust { 2 } else { max_zoom - 8 }; // + (prev_index );
 
-    match fs::create_dir(&cache_dir) {
-        Err(e) => panic!("{}: {}", &cache_dir, e),
-        Ok(_) => {}
-    };
+    if let Err(e) = fs::create_dir(&cache_dir) { panic!("{}: {}", &cache_dir, e) }
     let params = Param {
         x_scale,
         max_y: x,

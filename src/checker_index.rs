@@ -101,8 +101,8 @@ impl Reference {
         }
         let mut array: [u8; LEN] = unsafe { std::mem::transmute::<_, [u8; LEN]>(array) };
 
-        for i in 0..64 {
-            array[i] = stream.read_u8()?;
+        for index in 0..64 {
+            array[index] = stream.read_u8()?;
         }
 
         // Just copy and paste from old Bins

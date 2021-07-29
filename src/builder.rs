@@ -87,11 +87,11 @@ impl<U: Read + Seek> Set<InvertedRecordBuilder, U> {
                 reference.region_to_bin(Region::new(chrom_id.unwrap(), rec.start(), rec.end()));
             let chrom = inverted_record_set
                 .entry(chrom_id.unwrap())
-                .or_insert(Bins::<InvertedRecordBuilder>::new_from_reference(reference));
+                .or_insert_with(|| Bins::<InvertedRecordBuilder>::new_from_reference(reference));
             let stat = chrom
                 .bins
                 .entry(bin as u32)
-                .or_insert(InvertedRecordBuilder::new());
+                .or_insert_with(InvertedRecordBuilder::new);
 
             let mut aux = vec![];
             let mut n = 4; // Ignore name field

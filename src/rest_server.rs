@@ -233,13 +233,13 @@ fn get_matches_from(args: Vec<String>) -> Result<ArgMatches, Error> {
 
 fn id_to_range(
     _range: &StringRegion,
-    args: &Vec<String>,
+    args: &[String],
     params: String,
     path_string: String,
 ) -> Result<(ArgMatches, StringRegion), Error> {
     let a: Vec<String> = params.split(' ').map(|t| t.to_string()).collect();
     let b: Vec<String> = vec!["-o".to_string(), path_string];
-    let mut args = args.clone();
+    let mut args = args.to_owned();
     args.extend(b);
     args.extend(a);
     args.remove(0);
@@ -457,7 +457,7 @@ pub async fn server(
     let cache_dir = matches
         .value_of("cache-dir")
         .map(|a| a.to_string())
-        .unwrap_or(rng.gen::<u32>().to_string());
+        .unwrap_or_else(|| rng.gen::<u32>().to_string());
 
     if let Err(e) = fs::create_dir(&cache_dir) {
         panic!("{}: {}", e, &cache_dir)

@@ -47,6 +47,8 @@ use std::{
     str::FromStr,
 };
 
+pub type Frequency = BTreeMap<u64, Vec<(u64, u32, char)>>;
+
 /// A trait for writing records.
 pub trait ChunkWriter<R: Read + Seek> {
     /// Writes a single record.

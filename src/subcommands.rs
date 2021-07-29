@@ -20,7 +20,9 @@ use ghi::range::{Format, InvertedRecordEntire, Set};
 use ghi::twopass_alignment::{Alignment, AlignmentBuilder};
 use ghi::vis::{bam_record_vis_orig, RecordIter};
 use ghi::writer::GhiWriter;
-use ghi::{gff, reader::IndexedReader, simple_buffer::ChromosomeBuffer, IndexWriter, VisOrig};
+use ghi::{
+    gff, reader::IndexedReader, simple_buffer::ChromosomeBuffer, Frequency, IndexWriter, VisOrig,
+};
 use io::{BufReader, Error, ErrorKind, Write};
 use itertools::EitherOrBoth::{Both, Left};
 use itertools::Itertools;
@@ -153,11 +155,11 @@ pub fn bam_vis(
                 let ref_id = reader2
                     .header()
                     .reference_id(&range)
-                    .ok_or(Error::new(ErrorKind::Other, "Invalid reference id."))?;
+                    .ok_or_else(|| Error::new(ErrorKind::Other, "Invalid reference id."))?;
                 let end = reader2
                     .header()
                     .reference_len(ref_id)
-                    .ok_or(Error::new(ErrorKind::Other, "Invalid reference id."))?;
+                    .ok_or_else(|| Error::new(ErrorKind::Other, "Invalid reference id."))?;
                 Ok(StringRegion {
                     path: range,
                     start: 1,
@@ -192,11 +194,11 @@ pub fn bam_vis(
                 let ref_id = reader2
                     .header()
                     .reference_id(prefetch_range.path.as_ref())
-                    .ok_or(Error::new(ErrorKind::Other, "Invalid reference id."))?;
+                    .ok_or_else(|| Error::new(ErrorKind::Other, "Invalid reference id."))?;
                 let ref_len = reader2
                     .header()
                     .reference_len(ref_id)
-                    .ok_or(Error::new(ErrorKind::Other, "Invalid reference length."))?;
+                    .ok_or_else(|| Error::new(ErrorKind::Other, "Invalid reference length."))?;
                 let start = if prefetch_range.start == 0 {
                     warn!("Invalid reference length: start == 0",);
                     1
@@ -274,13 +276,13 @@ pub fn bam_vis(
                                     .score()
                                     .and_then(|t| t.parse::<f32>().ok())
                                     .map(|t| t as u32)
-                                    .unwrap_or(
+                                    .unwrap_or_else(|| {
                                         record
                                             .name()
                                             .and_then(|t| t.parse::<f32>().ok())
                                             .map(|t| t as u32)
-                                            .unwrap_or(0),
-                                    ),
+                                            .unwrap_or(0)
+                                    }),
                                 '*',
                             ));
                         }
@@ -1161,7 +1163,7 @@ pub struct VisPrecursor {
     prefetch_range: StringRegion,
     list: Arc<Mutex<Vec<(u64, Record)>>>,
     annotation: Arc<Mutex<Vec<(u64, bed::Record)>>>,
-    frequency: Arc<Mutex<BTreeMap<u64, Vec<(u64, u32, char)>>>>,
+    frequency: Arc<Mutex<Frequency>>,
     //list: Cell<Vec<(u64, Record)>>,
     //annotation: Cell<Vec<(u64, bed::Record)>>,
     //frequency: Cell<BTreeMap<u64, Vec<(u64, u32, char)>>>,
@@ -1175,7 +1177,7 @@ impl VisPrecursor {
         prefetch_range: StringRegion,
         list: Vec<(u64, Record)>,
         annotation: Vec<(u64, bed::Record)>,
-        frequency: BTreeMap<u64, Vec<(u64, u32, char)>>,
+        frequency: Frequency,
     ) -> Self {
         VisPrecursor {
             range,
@@ -1191,7 +1193,7 @@ impl VisPrecursor {
 
 pub fn bam_record_vis_pre_calculate<'a, F>(
     matches: &ArgMatches,
-    args: &Vec<String>,
+    args: &[String],
     vis: Vec<VisPrecursor>,
     threads: u16,
     lambda: F,
@@ -1769,7 +1771,7 @@ where
             matches.clone(),
             range.clone(),
             prefetch_range.clone(),
-            args.clone(),
+            args.to_owned(),
             list.to_vec(),
             ann.to_vec(),
             freq.clone(),

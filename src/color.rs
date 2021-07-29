@@ -18,8 +18,8 @@ pub enum VisColor {
     SplCol,
 }
 
-fn f(foo: &VisColor) -> usize {
-    *foo as usize
+fn f(color: &VisColor) -> usize {
+    *color as usize
 }
 
 pub enum ColorSet {
@@ -54,6 +54,11 @@ impl ColorSet {
     }
 }
 
+impl Default for ColorSet {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 pub trait Palette2: Palette {
     // const COLORS: &'static [(u8, u8, u8)];
     fn p(idx: VisColor) -> PaletteColor<Self>

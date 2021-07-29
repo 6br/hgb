@@ -86,6 +86,10 @@ impl Region {
         self.end - self.start
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.end == self.start
+    }
+
     pub fn set_ref_id(&mut self, ref_id: u64) {
         self.ref_id = ref_id;
     }

@@ -14,7 +14,7 @@ use std::{collections::BTreeSet, fs, sync::RwLock};
 
 fn id_to_range(
     range: &StringRegion,
-    args: &Vec<String>,
+    args: &[String],
     zoom: u64,
     path: u64,
     param: &Param,
@@ -285,7 +285,7 @@ fn id_to_range(
             "-e".to_string(),
         ]
     };
-    let mut args = args.clone();
+    let mut args = args.to_owned();
     args.extend(b);
     args.remove(0);
     args = args.into_iter().skip_while(|t| t != "vis").collect();

@@ -1357,11 +1357,11 @@ where
                     let mut prev_pixel_ref = start-1;
                     let left_top = chart.as_coord_spec().translate(&(start, index));
                     let right_bottom = chart.as_coord_spec().translate(&(end, index + 1));
-                    let offset = if range.end() - range.start() == 1 {
+                    let offset = 1; /* if range.end() - range.start() == 1 {
                         1 // 0
                     } else {
                         1
-                    };
+                    };*/
 
                         //if let Ok(mut a) = bam.alignment_entries() {
                         match (quality, bam.alignment_entries()) {

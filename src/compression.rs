@@ -28,7 +28,7 @@ pub enum StringEncode {
 }
 
 /// Returns an encoded array of u64.
-pub fn integer_encode(input: &Vec<u64>, sorted: bool) -> Result<IntegerEncode> {
+pub fn integer_encode(input: &[u64], sorted: bool) -> Result<IntegerEncode> {
     let mut vec = Vec::with_capacity(input.len());
 
     if input.is_empty() {
