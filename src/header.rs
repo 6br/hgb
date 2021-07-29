@@ -16,9 +16,9 @@ impl HeaderType {
     /// Save to stream.
     pub fn to_stream<W: Write>(&self, stream: &mut W) -> Result<()> {
         match self {
-            HeaderType::None => stream.write_i32::<LittleEndian>(0 as i32),
+            HeaderType::None => stream.write_i32::<LittleEndian>(0_i32),
             HeaderType::BAM(header) => {
-                stream.write_i32::<LittleEndian>(1 as i32)?;
+                stream.write_i32::<LittleEndian>(1_i32)?;
                 header.write_bam(stream)
             }
         }
@@ -26,8 +26,24 @@ impl HeaderType {
     /// Save to stream.
     pub fn to_text<W: Write>(&self, stream: &mut W) -> Result<()> {
         match self {
-            HeaderType::None => stream.write_i32::<LittleEndian>(0 as i32),
+            HeaderType::None => stream.write_i32::<LittleEndian>(0_i32),
             HeaderType::BAM(header) => header.write_text(stream),
+        }
+    }
+    /// Save tsv to stream.
+    pub fn to_tsv<W: Write>(&self, stream: &mut W) -> Result<()> {
+        match self {
+            HeaderType::None => stream.write_i32::<LittleEndian>(0_i32),
+            HeaderType::BAM(header) => {
+                for (name, len) in header
+                    .reference_names()
+                    .iter()
+                    .zip(header.reference_lengths())
+                {
+                    writeln!(stream, "{}\t{}", name, len)?;
+                }
+                Ok(())
+            }
         }
     }
     /// Load from stream.
@@ -99,6 +115,18 @@ impl Header {
     pub fn reference_names(&self) -> &[String] {
         &self.global_header.reference_names()
     }
+    ///
+    pub fn to_tsv<W: Write>(&self, stream: &mut W) -> Result<()> {
+        for (name, len) in self
+            .global_header
+            .reference_names()
+            .iter()
+            .zip(self.global_header.reference_lengths())
+        {
+            writeln!(stream, "{}\t{}", name, len)?;
+        }
+        Ok(())
+    }
     /// Pushes a new header entry.
     ///
     /// Returns an error if the same reference appears twice or @SQ line has an incorrect format.
@@ -109,11 +137,11 @@ impl Header {
         self.global_header.push_entry(header_entry)
     }
     /// Keep a bam Header  on the local header
-    pub fn set_local_header(&mut self, header: &bam::Header, name: &str, index: usize) -> () {
-        if let None = self.headers.get(index) {
+    pub fn set_local_header(&mut self, header: &bam::Header, name: &str, index: usize) {
+        if self.headers.get(index).is_none() {
             self.headers.resize(index + 1, HeaderType::None);
         }
-        if let None = self.names.get(index) {
+        if self.names.get(index).is_none() {
             self.names.resize(index + 1, "".to_string());
         }
         self.headers[index] = HeaderType::BAM(header.clone());
@@ -134,6 +162,9 @@ impl Header {
         }
         Ok(())
     }
+    pub fn get_global_header(&self) -> &bam::Header {
+        &self.global_header
+    }
     pub fn get_local_header(&self, index: usize) -> Option<&HeaderType> {
         self.headers.get(index)
     }
@@ -148,7 +179,7 @@ impl Header {
     }
     /// Transfer the reference into global header.
     /// If it intends to override existing line, the new line would be ignored.
-    pub fn transfer(&mut self, header: &bam::Header) -> () {
+    pub fn transfer(&mut self, header: &bam::Header) {
         for i in header.lines() {
             match i {
                 HeaderLine::Entry(a) => {

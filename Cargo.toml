@@ -1,6 +1,6 @@
 [package]
 name = "hgb"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["6br <tfdvrt@gmail.com>"]
 edition = "2018"
 
@@ -15,37 +15,48 @@ name = "hgb"
 path = "src/main.rs"
 
 [dependencies]
+actix-web = { version = "3.3.2", optional = true }
+actix-rt = { version = "1.1.1", optional = true }
+actix-files = { version = "0.4.1", optional = true }
+actix-cors = { version = "0.5.3", optional = true }
 bio-types = { git = "https://github.com/6br/rust-bio-types", branch= "alignment_fix" }
 bam = { git = "https://github.com/6br/bam" }
-#bio = { git = "https://github.com/rust-bio/rust-bio" }
-csv = "1.1.3"
+csv = "1.1.5"
 bitpacking = "0.8.2"
 byteorder = "1.3.4"
-env_logger = "0.7.1"
-flate2 = "1.0.14"
-genomic_range = { git = "https://github.com/6br/genomic_range" }
-itertools = "*"
+enum-map = "1.1.1"
+enum-map-derive = "0.6.0"
+env_logger = "0.9.0"
+flate2 = "1.0.19"
+genomic_range = { git = "https://github.com/6br/genomic_range", rev = "cba2b1c" }
+itertools = "0.10.1"
 libflate = "1.0.0"
-log = "0.4.8"
-multimap = "*"
+log = "0.4.11"
+multimap = "0.8.2"
+num-format = "0.4.0"
 numpress = "1.1.0"
-plotters = { version = "0.2.15", default-features = false, features = ["svg", "line_series","image_encoder", "ttf", "histogram"] }
-rayon = "*"
+plotters = { version = "0.3.0", default-features = false, features = ["svg_backend", "line_series", "bitmap_encoder", "ttf", "histogram", "bitmap_backend"] }
+rand = "0.8.4"
+rayon = "1.4.0"
 regex = "1.3.7"
 serde = "1.0.110"
-serde_json = "1.0.53"
-serde_yaml = "0.8.12"
-udon = { git = "https://github.com/ocxtal/udon", rev = "b60ea78" }
+serde_json = "1.0.60"
+serde_derive = { version = "1.0.117", optional = true }
+serde_yaml = "0.8.14"
+twobit = "0.1.1"
+udon = { git = "https://github.com/ocxtal/udon", rev = "eeb5ad8" }
 vbyte = { git = "https://github.com/6br/vbyte" }
 
 [dependencies.clap]
-git = "https://github.com/clap-rs/clap"
-#version = "3.0.0-beta.1"
-rev = "d67c3bb7d3e4d7137419ae40f05fbf233e6ec581"
+version = "3.0.0-beta.2"
 default-features = false
 
 # Cherry-pick the features you'd like to use
 features = [ "suggestions", "color", "std" ]
+
+[features]
+default = ["web"]
+web = ["actix-web", "actix-rt", "actix-cors", "actix-files", "serde_derive"]
 
 [profile.release]
 codegen-units = 1

@@ -1,0 +1,16 @@
+require 'json'
+READ_MAX=40
+cmd = ARGV.size > 0 ? ARGV.join(" ") : "-a result_b1_md.bam -s -S -p -r chr1:8869816-8899900 -l -U -y 20"
+bin = File.exist?("./target/debug/hgb") ? "./target/debug/hgb" : "./target/release/hgb"
+
+File.open("./dnd/reads.json", 'w') do |file|
+  JSON.dump({"read_max"=>READ_MAX} , file)
+end
+# Ruler
+spawn "#{bin} -t12 vis -_ 10000 #{cmd} -o dnd/0.png"
+# Each read
+for i in 0..READ_MAX
+    spawn "#{bin} -t12 vis -_ #{i} -o dnd/#{i+1}.png #{cmd} -*"
+end
+# Coverage
+spawn "#{bin} -t12 vis #{cmd} -P -A -o dnd/#{READ_MAX+2}.png"

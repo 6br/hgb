@@ -31,7 +31,7 @@ pub enum StringEncode {
 pub fn integer_encode(input: &Vec<u64>, sorted: bool) -> Result<IntegerEncode> {
     let mut vec = Vec::with_capacity(input.len());
 
-    if input.len() == 0 {
+    if input.is_empty() {
         if sorted {
             return Ok(IntegerEncode::DeltaVByte(vec));
         } else {
@@ -102,9 +102,7 @@ pub fn string_encode(input: &Vec<String>) -> Vec<u8> {
     // println!("str: {}", concatenate_string);
     let mut encoder = Encoder::new(Vec::new());
     io::copy(&mut concatenate_string.as_bytes(), &mut encoder).unwrap();
-    let encoded_data = encoder.finish().into_result().unwrap();
-    //StringEncode::Deflate(
-    encoded_data
+    encoder.finish().into_result().unwrap()
 }
 
 pub fn string_decode(input: &StringEncode) -> Vec<String> {

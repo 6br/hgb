@@ -46,17 +46,17 @@ impl Reference {
         if len > 2_u64.pow(32) {
             panic!("Unsupported reference size");
         } else {
-            return Reference::new_with_bai_half_overlapping();
+            Reference::new_with_bai_half_overlapping()
         }
     }
 
     pub fn new_from_reference(reference: &HeaderEntry) -> Reference {
         if let Some(len) = reference.get(b"LN") {
-            if let Some(len) = len.parse::<u64>().ok() {
+            if let Ok(len) = len.parse::<u64>() {
                 return Reference::new_from_len(len);
             }
         }
-        return Reference::new_with_bai_half_overlapping();
+        Reference::new_with_bai_half_overlapping()
     }
 
     /// The reference length is at most 512Mbp.
@@ -76,7 +76,7 @@ impl Reference {
     }
 
     pub fn bins(&mut self) -> &Vec<Bin> {
-        return &self.bins;
+        &self.bins
     }
 
     // Update the item of bin list by given Bin.
@@ -197,9 +197,7 @@ pub struct Index {
 
 impl Index {
     pub fn new(references: Vec<Reference>) -> Index {
-        Index {
-            references: references,
-        }
+        Index { references }
     }
     /// Loads index from stream.
     pub fn from_stream<R: Read>(mut stream: R) -> Result<Index> {
@@ -288,6 +286,12 @@ pub struct Slice<'a> {
     //bin_disp_start: usize, // For debugging and
     bin_disp_range: Range<usize>,
     range: Region, // The entire range the slice covers.
+}
+
+impl<'a> Slice<'a> {
+    pub fn bin_disp_range(&self) -> Range<usize> {
+        self.bin_disp_range.clone()
+    }
 }
 
 impl<'a> Iterator for BinsIter<'a> {

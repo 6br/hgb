@@ -42,6 +42,8 @@ samtools calmd -b aln.bam ref.fasta > input1.bam
 samtools index input1.bam
 ```
 
+### Examples
+
 * A simple example:
 
 ```bash
@@ -106,13 +108,120 @@ cargo run --release -- vis -a test/input1.bam test/input2.bam -o fig/output8.png
 
 ![output8](fig/output8.png)
 
-* A simple examples with two bam files without insertion cigars:
+* A simple example with two bam files without insertion cigars:
 
 ```bash
 cargo run --release -- vis -a test/input1.bam test/input2.bam -o fig/output9.png -r chr1:93234-94334 -I
 ```
 
 ![output9](fig/output9.png)
+
+### Advanced Examples
+
+* A simple example with two distant ranges:
+
+```bash
+cargo run --release -- vis -a test/input1.bam test/input2.bam -o fig/output10.png -r chr1:91234-92334 chr1:93234-94334 
+```
+
+![output10](fig/output10.png)
+
+* A simple example with a custom caption:
+
+```bash
+cargo run --release -- vis -a test/input1.bam -o fig/output11.png -r chr1:93234-94334 '-<' "Caption"
+```
+
+![output11](fig/output11.png)
+
+* A simple example with bases of a reference genome:
+
+```bash
+cargo run --release -- vis -a test/input1.bam -! test/hg38.2bit -o fig/output12.png -r chr1:93234-93334
+```
+
+![output12](fig/output12.png)
+
+* A simple example with different preset color:
+
+```bash
+cargo run --release -- vis -a test/input1.bam -o fig/output13.png -r chr1:93234-94334 -# hgb
+```
+
+![output13](fig/output13.png)
+
+* A simple example with colored by CpG motif:
+
+```bash
+cargo run --release -- vis -a test/input1.bam -o fig/output14.png -r chr1:93234-94334 -E
+```
+
+![output14](fig/output14.png)
+
+* A simple example with different labels on tracks:
+
+```bash
+cargo run --release -- vis -a test/input1.bam test/input2.bam -o fig/output15.png -r chr1:93234-94334 '-}' "SampleA" "SampleB"
+```
+
+![output15](fig/output15.png)
+
+* A simple example with alignment coverage tracks:
+
+```bash
+cargo run --release -- vis -a test/input1.bam test/input2.bam -o fig/output16.png -r chr1:93234-94334 -P
+```
+
+![output16](fig/output16.png)
+
+* A simple example with different read colors:
+
+```bash
+cargo run --release -- vis -a test/input1.bam -o fig/output17.png -r chr1:93234-94334 -n
+
+```
+
+![output17](fig/output17.png)
+
+* A simple example without rulers:
+
+```bash
+cargo run --release -- vis -a test/input1.bam -o fig/output18.png -r chr1:93234-94334 -S
+```
+
+![output18](fig/output18.png)
+
+* A simple example with read ids:
+
+```bash
+cargo run --release -- vis -a test/input1.bam -o fig/output19.png -r chr1:93234-94334 -H
+```
+
+![output19](fig/output19.png)
+
+* A simple example with insertion sequences:
+
+```bash
+cargo run --release -- vis -a test/input1.bam -o fig/output20.png -r chr1:93234-94334 '-{'
+```
+
+![output20](fig/output20.png)
+
+* A simple example with a frequency bed file:
+
+```bash
+cargo run --release -- vis -a test/input1.bam -o fig/output21.png -r chr1:93234-94334 -F test/input.bed -P
+```
+
+![output21](fig/output21.png)
+
+* A simple example with a range bed file:
+
+```bash
+cargo run --release -- vis -a test/input1.bam -o fig/output22.png -r chr1:93234-94334 -J test/input.bed -F test/input.bed -P -S
+```
+
+![output22](fig/output22.png)
 
 ## Gallery
 

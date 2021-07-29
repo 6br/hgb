@@ -80,7 +80,7 @@ impl Set<AlignmentBuilder> {
                 let reference = Reference::new_from_len(chrom_len);
                 let bin = chrom
                     .entry(rec.ref_id() as u64)
-                    .or_insert(Bins::<AlignmentBuilder>::new_from_reference(reference));
+                    .or_insert_with(|| Bins::<AlignmentBuilder>::new_from_reference(reference));
                 if rec.start() > 0 && rec.calculate_end() > 0 {
                     let bin_id = bin.reference.region_to_bin(Region::new(
                         rec.ref_id() as u64,
@@ -90,7 +90,7 @@ impl Set<AlignmentBuilder> {
                     let stat = bin
                         .bins
                         .entry(bin_id as u32)
-                        .or_insert(AlignmentBuilder::new());
+                        .or_insert_with(AlignmentBuilder::new);
                     stat.add(rec);
                 }
             } else if rec.ref_id() == -1 {

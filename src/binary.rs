@@ -139,12 +139,12 @@ impl<W: Write + Seek, R: Read + Seek> ChunkWriter<R> for GhbWriter<W> {
         let start = self
             .stream
             .seek(SeekFrom::Current(0))
-            .map(|a| VirtualOffset::from_raw(a))?;
+            .map(VirtualOffset::from_raw)?;
         record.to_stream(&mut self.stream, self.additional_threads, bam_reader)?;
         let stop = self
             .stream
             .seek(SeekFrom::Current(0))
-            .map(|a| VirtualOffset::from_raw(a))?;
+            .map(VirtualOffset::from_raw)?;
         Ok(Chunk::new(record.sample_id(), 0, start, stop))
     }
 
@@ -228,7 +228,7 @@ impl<R: Read + Seek> GhbReader<R> {
             stream,
             header,
             chunks,
-            index: 0 as usize,
+            index: 0_usize,
             started: false,
             offset,
             additional_threads,

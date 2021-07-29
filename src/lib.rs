@@ -7,22 +7,31 @@ extern crate log;
 extern crate bam;
 extern crate bitpacking;
 extern crate byteorder;
+extern crate enum_map;
 extern crate regex;
 extern crate serde_json;
+extern crate twobit;
 
 //pub mod alignment;
 pub mod bed;
 pub mod binary;
+//pub mod buffer;
 pub mod builder;
 pub mod checker_index;
+pub mod color;
 pub mod compression;
+pub mod dump;
 pub mod gff;
 pub mod header;
 pub mod index;
+//pub mod server;
 pub mod range;
 pub mod reader;
+pub mod simple_buffer;
+
 pub mod twopass_alignment;
 pub mod vis;
+//pub mod vis_orig;
 pub mod writer;
 
 use bam::IndexedReader;
@@ -33,6 +42,7 @@ use range::InvertedRecord;
 use range::{Format, Record};
 use std::io;
 use std::{
+    collections::BTreeMap,
     io::{Read, Result, Write},
     str::FromStr,
 };
@@ -158,6 +168,129 @@ impl FromStr for VisPreset {
         }
     }
 }
+#[derive(Debug, Clone)]
+pub struct Vis {
+    pub range: StringRegion,
+    //list: Vec<(u64, bam::Record)>,
+    pub annotation: Vec<(u64, bed::Record)>,
+    pub freq: BTreeMap<u64, Vec<(u64, u32, char)>>,
+    pub compressed_list: Vec<(u64, usize)>,
+    pub index_list: Vec<usize>,
+    pub prev_index: usize,
+    pub supplementary_list: Vec<(Vec<u8>, usize, usize, i32, i32)>,
+    pub prefetch_max: u64,
+}
+
+impl Vis {
+    pub fn new(
+        range: StringRegion,
+        //list: Vec<(u64, bam::Record)>
+        annotation: Vec<(u64, bed::Record)>,
+        freq: BTreeMap<u64, Vec<(u64, u32, char)>>,
+        compressed_list: Vec<(u64, usize)>,
+        index_list: Vec<usize>,
+        prev_index: usize,
+        supplementary_list: Vec<(Vec<u8>, usize, usize, i32, i32)>,
+        prefetch_max: u64,
+    ) -> Vis {
+        Vis {
+            range,
+            //list,
+            annotation,
+            freq,
+            compressed_list,
+            index_list,
+            prev_index,
+            supplementary_list,
+            prefetch_max,
+        }
+    }
+}
+
+#[derive(Clone)]
+pub struct VisOrig<'a> {
+    range: StringRegion,
+    list: Vec<(u64, bam::Record)>,
+    annotation: Vec<(u64, bed::Record)>,
+    frequency: BTreeMap<u64, Vec<(u64, u32, char)>>,
+    compressed_list: &'a Vec<(u64, usize)>,
+    index_list: Vec<usize>,
+    prev_index: usize,
+    supplementary_list: &'a Vec<(Vec<u8>, usize, usize, i32, i32)>,
+}
+
+impl<'a> VisOrig<'a> {
+    pub fn new(
+        range: StringRegion,
+        list: Vec<(u64, bam::Record)>,
+        annotation: Vec<(u64, bed::Record)>,
+        frequency: BTreeMap<u64, Vec<(u64, u32, char)>>,
+        compressed_list: &'a Vec<(u64, usize)>,
+        index_list: Vec<usize>,
+        prev_index: usize,
+        supplementary_list: &'a Vec<(Vec<u8>, usize, usize, i32, i32)>,
+    ) -> Self {
+        VisOrig {
+            range,
+            list,
+            annotation,
+            frequency,
+            compressed_list,
+            index_list,
+            prev_index,
+            supplementary_list,
+        }
+    }
+
+    pub fn convert(&self) -> VisRef {
+        VisRef {
+            range: self.range.clone(),
+            list: &self.list,
+            annotation: &self.annotation,
+            frequency: &self.frequency,
+            compressed_list: &self.compressed_list,
+            index_list: &self.index_list,
+            prev_index: self.prev_index,
+            supplementary_list: &self.supplementary_list,
+        }
+    }
+}
+
+#[derive(Clone)]
+pub struct VisRef<'a> {
+    range: StringRegion,
+    list: &'a Vec<(u64, bam::Record)>,
+    annotation: &'a Vec<(u64, bed::Record)>,
+    frequency: &'a BTreeMap<u64, Vec<(u64, u32, char)>>,
+    compressed_list: &'a Vec<(u64, usize)>,
+    index_list: &'a Vec<usize>,
+    prev_index: usize,
+    supplementary_list: &'a Vec<(Vec<u8>, usize, usize, i32, i32)>,
+}
+
+impl<'a> VisRef<'a> {
+    pub fn new(
+        range: StringRegion,
+        list: &'a Vec<(u64, bam::Record)>,
+        annotation: &'a Vec<(u64, bed::Record)>,
+        frequency: &'a BTreeMap<u64, Vec<(u64, u32, char)>>,
+        compressed_list: &'a Vec<(u64, usize)>,
+        index_list: &'a std::vec::Vec<usize>,
+        prev_index: usize,
+        supplementary_list: &'a std::vec::Vec<(std::vec::Vec<u8>, usize, usize, i32, i32)>,
+    ) -> Self {
+        VisRef {
+            range,
+            list,
+            annotation,
+            frequency,
+            compressed_list,
+            index_list,
+            prev_index,
+            supplementary_list,
+        }
+    }
+}
 
 #[cfg(test)]
 mod tests {
@@ -179,7 +312,7 @@ mod tests {
         //let set = InvertedRecordBuilderSet::new(reader, 0 as u64);
         let mut header_2 = Header::new();
         let set: Set<InvertedRecordBuilder, File> =
-            Set::<InvertedRecordBuilder, File>::new(reader, 1 as u64, &mut header_2).unwrap();
+            Set::<InvertedRecordBuilder, File>::new(reader, 1_u64, &mut header_2).unwrap();
 
         //        let set_vec = vec![set];
         // println!("{:?}", set);
@@ -210,18 +343,14 @@ mod tests {
         println!("{}", reader2.index());
 
         let viewer = reader2.full();
-        /*let records = viewer.into_iter().scan((), |_,x| x.ok()).collect::<Vec<Record>>();
-        println!("Records: {:?}", records);
 
-        assert_eq!(records.len(), 10); // The number of the
-        */
         let bed_records = viewer
             .into_iter()
             .flat_map(|t| {
                 t.map(|f| {
                     if let Format::Range(rec) = f.data() {
                         // println!("debug {:#?}", rec.to_record(chrom));
-                        return rec.to_record("null");
+                        rec.to_record("null")
                     } else {
                         return vec![];
                     }
@@ -237,11 +366,9 @@ mod tests {
         // let _example = b"1\t5\t5000\tname1\t0.5\n1\t5\t5000\tname1\t0.5";
         let path = "./test/test.bed";
         let reader = bed::Reader::from_file(path).unwrap();
-        // let set = InvertedRecordBuilderSet::new(reader, 0 as u64);
         let mut header2 = Header::new();
         let set: Set<InvertedRecordBuilder, File> =
-            Set::<InvertedRecordBuilder, File>::new(reader, 1 as u64, &mut header2).unwrap();
-        // println!("{:?}", set);
+            Set::<InvertedRecordBuilder, File>::new(reader, 1_u64, &mut header2).unwrap();
 
         let set_vec = vec![set];
         let mut entire: InvertedRecordEntire<File> = InvertedRecordEntire::new_from_set(set_vec);
@@ -283,7 +410,7 @@ mod tests {
                 t.map(|f| {
                     if let Format::Range(rec) = f.data() {
                         // println!("debug {:#?}", rec);
-                        return rec.to_record(chrom);
+                        rec.to_record(chrom)
                     } else {
                         return vec![];
                     }

@@ -75,7 +75,7 @@ impl<U: Read + Seek> Set<InvertedRecordBuilder, U> {
         for record in reader.records() {
             let rec = record.ok().expect("Error reading record.");
             let mut chrom_id = header.reference_id(rec.chrom());
-            if let None = chrom_id {
+            if chrom_id.is_none() {
                 let chrom_item =
                     HeaderEntry::ref_sequence(rec.chrom().to_string(), i32::max_value() as u32);
                 header.push_entry(chrom_item)?;
@@ -107,7 +107,7 @@ impl<U: Read + Seek> Set<InvertedRecordBuilder, U> {
             )
         }
         Ok(Set::<InvertedRecordBuilder, U> {
-            sample_id: sample_id,
+            sample_id,
             chrom: inverted_record_set,
             unmapped: InvertedRecordBuilder::new(),
             bam_reader: None,

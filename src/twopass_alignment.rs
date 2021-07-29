@@ -107,7 +107,7 @@ impl<R: Read + Seek> Set<AlignmentBuilder, R> {
                 let reference = Reference::new_from_len(chrom_len);
                 let bin = chrom
                     .entry(rec.ref_id() as u64)
-                    .or_insert(Bins::<AlignmentBuilder>::new_from_reference(reference));
+                    .or_insert_with(|| Bins::<AlignmentBuilder>::new_from_reference(reference));
                 if rec.start() > 0 && rec.calculate_end() > 0 {
                     let bin_id = bin.reference.region_to_bin(Region::new(
                         rec.ref_id() as u64,
@@ -117,7 +117,7 @@ impl<R: Read + Seek> Set<AlignmentBuilder, R> {
                     let stat = bin
                         .bins
                         .entry(bin_id as u32)
-                        .or_insert(AlignmentBuilder::new());
+                        .or_insert_with(AlignmentBuilder::new);
                     let end_offset: u64 = viewer
                         .parent
                         .reader
@@ -306,11 +306,11 @@ mod tests {
         header.transfer(bam_header);
         header.set_local_header(bam_header, bam_path, 0);
         {
-            let set = Set::<AlignmentBuilder, BufReader<File>>::new(reader2, 0 as u64, &mut header);
+            let set = Set::<AlignmentBuilder, BufReader<File>>::new(reader2, 0_u64, &mut header);
             let bam_path2 = "./test/test-in.bam";
             let reader = bam::IndexedReader::from_path(bam_path2).unwrap();
             let set2: Set<AlignmentBuilder, BufReader<File>> =
-                Set::<AlignmentBuilder, BufReader<File>>::new(reader, 1 as u64, &mut header);
+                Set::<AlignmentBuilder, BufReader<File>>::new(reader, 1_u64, &mut header);
 
             assert_eq!(None, header.reference_id("1"));
             assert_eq!(Some(1), header.reference_id("chr1"));
@@ -352,13 +352,13 @@ mod tests {
         header.transfer(bam_header);
         header.set_local_header(bam_header, bam_path, 0);
         {
-            let set = Set::<AlignmentBuilder, BufReader<File>>::new(reader2, 0 as u64, &mut header);
+            let set = Set::<AlignmentBuilder, BufReader<File>>::new(reader2, 0_u64, &mut header);
 
             let example =
                 b"chr2\t16382\t16385\tbin4682\t20\t-\nchr2\t16388\t31768\tbin4683\t20\t-\n";
             let reader = bed::Reader::new(&example[..]);
             let set2: Set<InvertedRecordBuilder, BufReader<File>> =
-                Set::<InvertedRecordBuilder, BufReader<File>>::new(reader, 1 as u64, &mut header)
+                Set::<InvertedRecordBuilder, BufReader<File>>::new(reader, 1_u64, &mut header)
                     .unwrap();
 
             assert_eq!(None, header.reference_id("1"));
@@ -410,7 +410,7 @@ mod tests {
             .flat_map(|t| {
                 t.map(|f| {
                     if let Format::Range(rec) = f.data() {
-                        return rec.to_record(chrom);
+                        rec.to_record(chrom)
                     } else {
                         return vec![];
                     }
@@ -438,7 +438,7 @@ mod tests {
                 t.map(|f|
             // println!("debug {:#?}", t.to_record(chrom));
             if let Format::Alignment(Alignment::Object(rec)) = f.data() {
-                return rec
+                rec
             } else {
                 return vec![]
             }
@@ -448,9 +448,9 @@ mod tests {
         assert_eq!(records.len(), 2);
 
         /* Check if bam can reconstruct, except for unmapped reads */
-        let sam_output = format!("./test/index_output.sam");
+        let sam_output = "./test/index_output.sam".to_string();
         let mut count = 0;
-        let output1 = format!("./test/index_test.sam");
+        let output1 = "./test/index_test.sam".to_string();
         let header = reader2.header().get_local_bam_header(0).unwrap().clone();
         // let mut writer = bam::BamWriter::from_path(bam_output, header).unwrap();
         let mut writer = bam::SamWriter::from_path(&sam_output, header).unwrap();
@@ -463,7 +463,6 @@ mod tests {
                         count += 1;
                     }
                     // return rec.to_record(c)
-                    ()
                 }
                 _ => (),
             })
