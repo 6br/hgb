@@ -581,7 +581,9 @@ pub async fn server(
     let max_zoom = log_2(x_width as i32) + 1;
     let min_zoom = if y_adjust { 2 } else { max_zoom - 8 }; // + (prev_index );
 
-    if let Err(e) = fs::create_dir(&cache_dir) { panic!("{}: {}", &cache_dir, e) }
+    if let Err(e) = fs::create_dir(&cache_dir) {
+        panic!("{}: {}", &cache_dir, e)
+    }
     let params = Param {
         x_scale,
         max_y: x,
