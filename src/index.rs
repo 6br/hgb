@@ -414,7 +414,7 @@ impl Reference {
         let n_ref = self.bins.len() as i32;
         stream.write_i32::<LittleEndian>(n_ref)?;
 
-        for (_id, bin) in &self.bins {
+        for bin in self.bins.values() {
             bin.to_stream(stream)?;
         }
         Ok(())

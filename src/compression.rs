@@ -102,9 +102,7 @@ pub fn string_encode(input: &Vec<String>) -> Vec<u8> {
     // println!("str: {}", concatenate_string);
     let mut encoder = Encoder::new(Vec::new());
     io::copy(&mut concatenate_string.as_bytes(), &mut encoder).unwrap();
-    let encoded_data = encoder.finish().into_result().unwrap();
-    //StringEncode::Deflate(
-    encoded_data
+    encoder.finish().into_result().unwrap()
 }
 
 pub fn string_decode(input: &StringEncode) -> Vec<String> {

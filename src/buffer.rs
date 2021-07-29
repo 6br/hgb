@@ -173,7 +173,7 @@ impl<'a> ChromosomeBuffer<'a> {
             list.iter().group_by(|elt| elt.0).into_iter().for_each(|t| {
                 /*let mut line =
                 Vec::with_capacity((prefetch_range.end - prefetch_range.start + 1) as usize);*/
-                let line = self.freq.entry(bin_id as u64).or_insert(vec![]);
+                let line = self.freq.entry(bin_id as u64).or_insert_with(Vec::new);
                 for column in bam::Pileup::with_filter(&mut RecordIter::new(t.1), |record| {
                     record.flag().no_bits(1796)
                 }) {

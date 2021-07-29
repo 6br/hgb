@@ -343,11 +343,7 @@ mod tests {
         println!("{}", reader2.index());
 
         let viewer = reader2.full();
-        /*let records = viewer.into_iter().scan((), |_,x| x.ok()).collect::<Vec<Record>>();
-        println!("Records: {:?}", records);
 
-        assert_eq!(records.len(), 10); // The number of the
-        */
         let bed_records = viewer
             .into_iter()
             .flat_map(|t| {
@@ -370,11 +366,9 @@ mod tests {
         // let _example = b"1\t5\t5000\tname1\t0.5\n1\t5\t5000\tname1\t0.5";
         let path = "./test/test.bed";
         let reader = bed::Reader::from_file(path).unwrap();
-        // let set = InvertedRecordBuilderSet::new(reader, 0 as u64);
         let mut header2 = Header::new();
         let set: Set<InvertedRecordBuilder, File> =
             Set::<InvertedRecordBuilder, File>::new(reader, 1_u64, &mut header2).unwrap();
-        // println!("{:?}", set);
 
         let set_vec = vec![set];
         let mut entire: InvertedRecordEntire<File> = InvertedRecordEntire::new_from_set(set_vec);

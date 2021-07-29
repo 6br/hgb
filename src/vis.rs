@@ -367,7 +367,7 @@ where
     let preset_color: ColorSet = matches
         .value_of_t("preset-color")
         .ok()
-        .unwrap_or(ColorSet::new());
+        .unwrap_or_else(ColorSet::new);
     eprintln!("Preset: {:?}", preset);
     let show_read_id = matches.is_present("show-read-id");
     let overlapping_annotation = matches.is_present("dump-json");
@@ -469,7 +469,7 @@ where
             let k = i?;
             //btree.insert(k[0].to_string(), (k[1].parse::<u64>()?, k[2].parse::<u64>()?));
             //eprintln!("{:?}", k);
-            let item = btree.entry(k[0].to_string()).or_insert(vec![]);
+            let item = btree.entry(k[0].to_string()).or_insert_with(Vec::new);
             item.push((k[1].parse::<u64>()?, k[2].parse::<u64>()?));
         }
         btree
@@ -1192,20 +1192,7 @@ where
                                         //let cigar = Cigar::from_raw(t[3]).soft_clipping(strand == "+");
                                         let mut cigar = Cigar::new();
                                         cigar.extend_from_text(t[3].bytes()).ok()?;
-                                        /*
-                                        eprintln!(
-                                            "{} {:?} {:?}",
-                                            String::from_utf8_lossy(bam.name()),
-                                            current_left_clip,
-                                            cigar.soft_clipping(strand == "+"),
-                                        );*/
-                                        /*eprintln!(
-                                            "{} {} {} {}",
-                                            only_translocation,
-                                            t[0],
-                                            range.path,
-                                            t[0] == range.path
-                                        );*/
+
                                         if only_translocation && t[0] == range.path {
                                             None
                                         } else {
@@ -1315,7 +1302,6 @@ where
                     let window_range = window.clip(&range).unwrap();
                     //if 3 * window_range.len() < window.len() { break; }
                     let (window_range, offset_in_pixels) = window_range.scale(pixels_per_column);
-                    //eprintln!("{:?}, {:?}, {:?} {:?}", range, udon_range, offset_in_pixels, window_range);
 
                     /* slice ribbon scaled */
                     eprintln!("{:?} {:?} {:?} {:?} {:?}", window.len(), opt_len, offset_in_pixels, udon_range, record);
