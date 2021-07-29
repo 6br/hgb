@@ -288,6 +288,7 @@ pub fn bam_vis(
                     freq.insert(idx as u64, values);
                     idx += 1;
                 }
+                // Need to change immutable
                 bam_files.append(&mut freq_files);
             }
             //eprintln!("{:?}", freq);
