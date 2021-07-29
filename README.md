@@ -136,8 +136,8 @@ cargo run --release -- vis -a test/input1.bam -o fig/output11.png -r chr1:93234-
 
 * A simple example with bases of a reference genome:
 
-```
-cargo run --release --vis -a test/input1.bam -! test/hg38.2bit -o fig/output12.png -r chr1:93234-93334
+```bash
+cargo run --release -- vis -a test/input1.bam -! test/hg38.2bit -o fig/output12.png -r chr1:93234-93334
 ```
 
 ![output12](fig/output12.png)
@@ -145,7 +145,7 @@ cargo run --release --vis -a test/input1.bam -! test/hg38.2bit -o fig/output12.p
 * A simple example with different preset color:
 
 ```bash
-cargo run --release -- vis -a test/input1.bam -o fig/output13.png -r chr1:93234-94334 -# igv
+cargo run --release -- vis -a test/input1.bam -o fig/output13.png -r chr1:93234-94334 -# hgb
 ```
 
 ![output13](fig/output13.png)
@@ -153,7 +153,7 @@ cargo run --release -- vis -a test/input1.bam -o fig/output13.png -r chr1:93234-
 * A simple example with colored by CpG motif:
 
 ```bash
-cargo run --release --vis -a test/input1.bam -o fig/output14.png -r chr1:93234-93334 -E
+cargo run --release -- vis -a test/input1.bam -o fig/output14.png -r chr1:93234-94334 -E
 ```
 
 ![output14](fig/output14.png)
@@ -161,24 +161,24 @@ cargo run --release --vis -a test/input1.bam -o fig/output14.png -r chr1:93234-9
 * A simple example with different labels on tracks:
 
 ```bash
-cargo run --release -- vis -a test/input1.bam test/input2.bam -o fig/output15.png -r chr1:93234-94334 '-{' "SampleA" "SampleB"
+cargo run --release -- vis -a test/input1.bam test/input2.bam -o fig/output15.png -r chr1:93234-94334 '-}' "SampleA" "SampleB"
 ```
 
 ![output15](fig/output15.png)
 
-
-* A simple example with an alignment coverage:
+* A simple example with alignment coverage tracks:
 
 ```bash
-cargo run --release -- vis -a test/input1.bam -o fig/output16.png -r chr1:93234-94334 -P
+cargo run --release -- vis -a test/input1.bam test/input2.bam -o fig/output16.png -r chr1:93234-94334 -P
 ```
 
 ![output16](fig/output16.png)
 
-* A simple example with an alignment coverage:
+* A simple example with different read colors:
 
 ```bash
-cargo run --release -- vis -a test/input1.bam -o fig/output17.png -r chr1:93234-94334 -P -V 0.3
+cargo run --release -- vis -a test/input1.bam -o fig/output17.png -r chr1:93234-94334 -n
+
 ```
 
 ![output17](fig/output17.png)
@@ -198,7 +198,6 @@ cargo run --release -- vis -a test/input1.bam -o fig/output19.png -r chr1:93234-
 ```
 
 ![output19](fig/output19.png)
-
 
 ## Gallery
 

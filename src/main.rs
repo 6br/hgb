@@ -269,6 +269,7 @@ fn main() {
                 .arg(
                     Arg::new("range")
                         .short('r')
+                        .long("range")
                         .takes_value(true)
                         .multiple(true)
                         .required(true)
@@ -276,6 +277,7 @@ fn main() {
                 )
                 .arg(
                     Arg::new("prefetch-range")
+                        .long("prefetch-range")
                         .short('R')
                         .takes_value(true)
                         .multiple(true)
@@ -283,6 +285,7 @@ fn main() {
                 )
                 .arg(
                     Arg::new("type")
+                        .long("ghb-type")
                         .short('t')
                         .takes_value(true)
                         // .default_value("default")
@@ -292,6 +295,7 @@ fn main() {
                 .arg(
                     Arg::new("preset")
                         .short('z')
+                        .long("preset")
                         //.takes_value(true)
                         // .empty_values(true)
                         // .default_value("auto")
@@ -302,6 +306,7 @@ fn main() {
                 .arg(
                     Arg::new("preset-color")
                         .short('#')
+                        .long("preset-color")
                         .possible_values(&["", "hgb", "igv"])
                         .about("Preset color scheme ['igv', 'hgb'] (default is hgb"),
                 )
@@ -413,7 +418,7 @@ fn main() {
                     Arg::new("snp-frequency")
                         .short('V')
                         .takes_value(true)
-                        .about("The portion of allele frequency to display on each coverage track"),
+                        .about("The portion of heterozygous allele frequency to display on each coverage track"),
                 )
                 .arg(
                     Arg::new("zoom-range")

@@ -75,19 +75,18 @@ impl RangeUtils for Range<usize> {
 
 fn nt_color(record_nt: char, preset_color: &ColorSet) -> Option<RGBColor> {
     match record_nt {
-        'A' => Some(preset_color.pick(VisColor::ACol)), //RED,
+        'A' => Some(preset_color.pick(VisColor::ACol)), // RED,
         'C' => Some(preset_color.pick(VisColor::CCol)), // BLUE,
         'G' => Some(preset_color.pick(VisColor::GCol)),
-        'T' => Some(preset_color.pick(VisColor::TCol)), //GREEN,
+        'T' => Some(preset_color.pick(VisColor::TCol)), // GREEN,
         _ => Some(preset_color.pick(VisColor::NCol)),
     }
 }
 
 fn name_to_num(name: &[u8]) -> usize {
     let mut uuid = 0usize;
-    //name.iter().sum()
-    let right_most = if name.len() > 8 { 8 } else { name.len() };
-    for &i in name[0..right_most].iter() {
+    // let right_most = if name.len() > 8 { 8 } else { name.len() };
+    for &i in name.iter() {
         uuid += i as usize
     }
     uuid
@@ -706,18 +705,32 @@ where
         };
         let x_labels = n_x_labels.get(index).unwrap_or(&10); //if dynamic_partition {} else {10};
                                                              // Then we can draw a mesh
-        chart
-            .configure_mesh()
-            // We can customize the maximum number of labels allowed for each axis
-            .x_labels(*x_labels) // Default value is 10
-            .disable_x_axis()
-            //.x_labels(1)
-            .x_label_offset(x_offset as u32)
-            .y_labels(1)
-            .x_label_style(("sans-serif", x_scale / 4).into_font())
-            // We can also change the format of the label text
-            .x_label_formatter(x_label_formatter)
-            .draw()?;
+        if no_margin {
+            chart
+                .configure_mesh()
+                // We can customize the maximum number of labels allowed for each axis
+                .x_labels(*x_labels) // Default value is 10
+                .disable_x_axis()
+                //.x_labels(1)
+                .x_label_offset(x_offset as u32)
+                .y_labels(1)
+                .x_label_style(("sans-serif", x_scale / 4).into_font())
+                // We can also change the format of the label text
+                .x_label_formatter(x_label_formatter)
+                .draw()?;
+        } else {
+            chart
+                .configure_mesh()
+                // We can customize the maximum number of labels allowed for each axis
+                .x_labels(*x_labels) // Default value is 10
+                //.x_labels(1)
+                .x_label_offset(x_offset as u32)
+                .y_labels(1)
+                .x_label_style(("sans-serif", x_scale / 4).into_font())
+                // We can also change the format of the label text
+                .x_label_formatter(x_label_formatter)
+                .draw()?;
+        }
 
         let mut node_id_dict: BTreeMap<u64, (u64, u64)> = BTreeMap::new();
         let mut prev_pos = std::u64::MAX;
@@ -855,8 +868,7 @@ where
                                     (start, prev_index + key * 2 + axis_count + 1),
                                     style,
                                 );
-                                //                               texts.push(text);
-                                chart.draw_series(vec![text]);
+                                chart.draw_series(vec![text]).unwrap();
                             }
                             if overlapping_annotation {
                                 // println!("{}: {}", range, record.name().unwrap_or(&""));
@@ -1266,9 +1278,9 @@ where
                   };*/
                 if !no_cigar && udon {
                     let record = bam;
-                    let left_top = chart.as_coord_spec().translate(&(range.start, index)); // range.start - 1 is better?
+                    let left_top = chart.as_coord_spec().translate(&(range.start-1, index)); // range.start - 1 is better?
                     let right_bottom = chart.as_coord_spec().translate(&(range.end+1, index + 1));
-                    eprintln!("{:?}, {:?}", left_top, right_bottom);
+             
                     let opt_len = (right_bottom.0 - left_top.0) as usize;
 
                     let window = Range::<usize> {
@@ -1304,7 +1316,6 @@ where
                     let (window_range, offset_in_pixels) = window_range.scale(pixels_per_column);
 
                     /* slice ribbon scaled */
-                    eprintln!("{:?} {:?} {:?} {:?} {:?}", window.len(), opt_len, offset_in_pixels, udon_range, record);
                     let mut ribbon = udon.decode_scaled(
                             &udon_range,
                             offset_in_pixels,
