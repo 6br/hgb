@@ -243,7 +243,7 @@ impl<R: Read + Seek> InvertedRecordEntire<R> {
                 let chunks = self.chrom[id as usize]
                     .bins
                     .entry(bin_id)
-                    .or_insert(Vec::new());
+                    .or_insert_with(Vec::new);
                 let data = bin.to_format();
                 chunks.push(Record {
                     sample_id: sample_file.sample_id,
@@ -289,7 +289,7 @@ impl<R: Read + Seek> InvertedRecordEntire<R> {
                 };
 
                 for (bin_id, bin) in chromosome.bins {
-                    let chunks = chrom.bins.entry(bin_id).or_insert(Vec::new());
+                    let chunks = chrom.bins.entry(bin_id).or_insert_with(Vec::new);
                     let data = bin.to_format();
                     debug!("{:?} {:?} {:?}", bin_id, set.sample_id, sample_file_id);
                     chunks.push(Record {

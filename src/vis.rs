@@ -772,8 +772,8 @@ where
                 let mut bars = vec![];
                 let mut texts = vec![];
                 for base in seq.chars() {
-                    let color =
-                        nt_color(base, &preset_color).unwrap_or(preset_color.pick(VisColor::NCol));
+                    let color = nt_color(base, &preset_color)
+                        .unwrap_or_else(|| preset_color.pick(VisColor::NCol));
                     let mut bar = Rectangle::new(
                         [(pos, y_spec_max - 1), (pos + 1, y_spec_max)],
                         color.filled(),
@@ -1280,7 +1280,7 @@ where
                     let record = bam;
                     let left_top = chart.as_coord_spec().translate(&(range.start-1, index)); // range.start - 1 is better?
                     let right_bottom = chart.as_coord_spec().translate(&(range.end+1, index + 1));
-             
+
                     let opt_len = (right_bottom.0 - left_top.0) as usize;
 
                     let window = Range::<usize> {
