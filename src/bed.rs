@@ -176,7 +176,7 @@ impl Record {
         }
     }
 
-    /// Access auxilliary fields after the strand field by index
+    /// Access auxillary fields after the strand field by index
     /// (counting first field (chromosome) as 0).
     pub fn aux(&self, i: usize) -> Option<&str> {
         let j = i - 3;
