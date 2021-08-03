@@ -316,7 +316,8 @@ async fn index(
                             HttpResponse::BadRequest().json(ResponseBody {
                                 message: format!("parameter error: {}", t), //String::from("parameter error: " + t.description()),
                             })
-                        }).unwrap();
+                        })
+                        .unwrap();
                 let end2 = start.elapsed();
                 eprintln!(
                     "id_to_range: {}.{:03} sec.",
@@ -399,13 +400,13 @@ async fn index(
             } else {
                 //Visualization for unprefetch data.
                 let (matches, args) =
-                    id_to_range_ab_initio(params.to_string(), path_string.clone()).map_err(
-                        |t| {
+                    id_to_range_ab_initio(params.to_string(), path_string.clone())
+                        .map_err(|t| {
                             HttpResponse::BadRequest().json(ResponseBody {
                                 message: format!("parameter error: {}", t), //String::from("parameter error: " + t.description()),
                             })
-                        },
-                    ).unwrap();
+                        })
+                        .unwrap();
                 let threads = matches
                     .value_of("threads")
                     .and_then(|t| t.parse::<u16>().ok())
