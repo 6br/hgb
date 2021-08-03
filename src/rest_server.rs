@@ -316,7 +316,7 @@ async fn index(
                             HttpResponse::BadRequest().json(ResponseBody {
                                 message: format!("parameter error: {}", t), //String::from("parameter error: " + t.description()),
                             })
-                        })?;
+                        }).unwrap();
                 let end2 = start.elapsed();
                 eprintln!(
                     "id_to_range: {}.{:03} sec.",
@@ -405,7 +405,7 @@ async fn index(
                                 message: format!("parameter error: {}", t), //String::from("parameter error: " + t.description()),
                             })
                         },
-                    )?;
+                    ).unwrap();
                 let threads = matches
                     .value_of("threads")
                     .and_then(|t| t.parse::<u16>().ok())
@@ -483,14 +483,14 @@ pub async fn server(
         let vis = RwLock::new(vis.clone());
         //let buffer = buffer.clone();
         actix_web::App::new()
-            .data(list)
-            .data(list_btree)
+            .app_data(list)
+            .app_data(list_btree)
             .app_data(counter.clone())
-            .data(vis) //.app_data(vis.clone())
+            .app_data(vis) //.app_data(vis.clone())
             .app_data(buffer.clone())
             .route("/", web::post().to(index))
-            .wrap(Logger::default())
             .wrap(cross_origin)
+            .wrap(Logger::default())
     })
     .bind(bind)?
     .workers(threads as usize)

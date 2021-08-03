@@ -628,7 +628,6 @@ pub async fn server(
         };
 
         actix_web::App::new()
-            .data(())
             .app_data(web::Data::new(RwLock::new(list.clone())))
             .app_data(counter.clone())
             .route("/", web::get().to(get_index))
@@ -637,8 +636,8 @@ pub async fn server(
             .route("genome.dzi", web::get().to(get_dzi))
             .route("/{zoom:.*}/{filename:.*}_0.png", web::get().to(index))
             .service(actix_files::Files::new("/images", "static/images").show_files_listing())
-            .wrap(Logger::default())
             .wrap(cross_origin)
+            .wrap(Logger::default())
     })
     .bind(bind)?
     .workers(threads as usize)
