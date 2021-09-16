@@ -7,6 +7,10 @@ pub mod buffered_server;
 pub mod rest_server;
 #[cfg(feature = "web")]
 pub mod server;
+
+#[cfg(feature = "web")]
+pub mod bam_server;
+
 pub mod subcommands;
 
 use clap::{App, AppSettings, Arg, ArgSettings};

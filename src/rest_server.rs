@@ -4,6 +4,8 @@ use actix_web::{
     http::header::{ContentDisposition, DispositionType},
     HttpResponse,
 };
+use qstring::QString;
+use actix_web::HttpRequest;
 use actix_web::{middleware::Logger, web, Result};
 use bam::Record;
 use clap::{App, AppSettings, Arg, ArgMatches, Error};
@@ -272,18 +274,20 @@ fn id_to_range_ab_initio(
 
 //     
 async fn get_index(
+    req: HttpRequest,
     item: web::Data<RwLock<Item>>,
     vis: web::Data<RwLock<Vis>>,
     list: web::Data<RwLock<Vec<(u64, Record)>>>,
     list_btree: web::Data<RwLock<BTreeSet<u64>>>,
     buffer: web::Data<RwLock<ChromosomeBuffer>>,
-    query: web::Query<RequestBody>
+    //query: web::Query<RequestBody>
 ) -> Result<NamedFile> {
-    let format = &query.format.clone();
-    let params = &query.params.clone();
-    let prefetch = &query.prefetch.clone();
-    let hash: u64 = calculate_hash(&query.into_inner());
-    return index2(item, vis, list, list_btree, buffer, format.to_string(), params.to_string(), *prefetch, hash);
+    let qs = QString::from(req.query_string());
+    let format = qs.get("format").unwrap().clone(); // &query.format.clone();
+    let params = qs.get("params").unwrap().clone();
+    let prefetch = qs.get("params").is_some();
+    let hash: u64 = calculate_hash(&RequestBody{format: format.to_string(), params: params.to_string(), prefetch});
+    return index2(item, vis, list, list_btree, buffer, format.to_string(), params.to_string(), prefetch, hash);
 }
 
 async fn index(
