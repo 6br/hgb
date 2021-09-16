@@ -8,8 +8,8 @@ pub mod rest_server;
 #[cfg(feature = "web")]
 pub mod server;
 
-#[cfg(feature = "web")]
-pub mod bam_server;
+//#[cfg(feature = "web")]
+//pub mod bam_server;
 
 pub mod subcommands;
 
