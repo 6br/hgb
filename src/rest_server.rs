@@ -270,6 +270,22 @@ fn id_to_range_ab_initio(
     Ok((matches, args))
 }
 
+//     
+async fn get_index(
+    item: web::Data<RwLock<Item>>,
+    vis: web::Data<RwLock<Vis>>,
+    list: web::Data<RwLock<Vec<(u64, Record)>>>,
+    list_btree: web::Data<RwLock<BTreeSet<u64>>>,
+    buffer: web::Data<RwLock<ChromosomeBuffer>>,
+    query: web::Query<RequestBody>
+) -> Result<NamedFile> {
+    let format = &query.format.clone();
+    let params = &query.params.clone();
+    let prefetch = &query.prefetch.clone();
+    let hash: u64 = calculate_hash(&query.into_inner());
+    return index2(item, vis, list, list_btree, buffer, format.to_string(), params.to_string(), *prefetch, hash);
+}
+
 async fn index(
     item: web::Data<RwLock<Item>>,
     vis: web::Data<RwLock<Vis>>,
@@ -278,14 +294,28 @@ async fn index(
     buffer: web::Data<RwLock<ChromosomeBuffer>>,
     request_body: web::Json<RequestBody>,
 ) -> Result<NamedFile> {
-    let start = Instant::now();
     let format = &request_body.format.clone();
     let params = &request_body.params.clone();
     let prefetch = &request_body.prefetch.clone();
+    let hash: u64 = calculate_hash(&request_body.into_inner());
+    return index2(item, vis, list, list_btree, buffer, format.to_string(), params.to_string(), *prefetch, hash);
+}
+
+fn index2(
+        item: web::Data<RwLock<Item>>,
+        vis: web::Data<RwLock<Vis>>,
+        list: web::Data<RwLock<Vec<(u64, Record)>>>,
+        list_btree: web::Data<RwLock<BTreeSet<u64>>>,
+        buffer: web::Data<RwLock<ChromosomeBuffer>>,
+        format: String,
+        params: String,
+        prefetch: bool,
+        hash: u64
+    ) -> Result<NamedFile> {   
     let data = item.read().unwrap();
     let cache_dir = &data.cache_dir;
-    let hash: u64 = calculate_hash(&request_body.into_inner());
     let args = &data.args;
+    let start = Instant::now();
     let path_string = format!("{}/{}.{}", cache_dir, hash, format);
     eprintln!("{} {} {:?}", format, params, path_string);
 
@@ -295,7 +325,7 @@ async fn index(
             parameters: vec![],
         })),
         _ => {
-            if *prefetch {
+            if prefetch {
                 let end0 = start.elapsed();
                 eprintln!(
                     "match named file: {}.{:03} sec.",
@@ -489,6 +519,7 @@ pub async fn server(
             .data(vis) //.app_data(vis.clone())
             .app_data(buffer.clone())
             .route("/", web::post().to(index))
+            .route("/", web::get().to(get_index))
             .wrap(Logger::default())
             .wrap(cross_origin)
     })
