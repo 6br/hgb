@@ -1,16 +1,16 @@
 use actix_cors::Cors;
 use actix_files::NamedFile;
+use actix_web::HttpRequest;
 use actix_web::{
     http::header::{ContentDisposition, DispositionType},
     HttpResponse,
 };
-use qstring::QString;
-use actix_web::HttpRequest;
 use actix_web::{middleware::Logger, web, Result};
 use bam::Record;
 use clap::{App, AppSettings, Arg, ArgMatches, Error};
 use genomic_range::StringRegion;
 use ghi::{simple_buffer::ChromosomeBuffer, vis::bam_record_vis, Vis, VisRef};
+use qstring::QString;
 use rand::Rng;
 use serde::Deserialize;
 use std::collections::hash_map::DefaultHasher;
@@ -272,7 +272,7 @@ fn id_to_range_ab_initio(
     Ok((matches, args))
 }
 
-//     
+//
 async fn get_index(
     req: HttpRequest,
     item: web::Data<RwLock<Item>>,
@@ -286,8 +286,22 @@ async fn get_index(
     let format = qs.get("format").unwrap().clone(); // &query.format.clone();
     let params = qs.get("params").unwrap().clone();
     let prefetch = qs.get("params").is_some();
-    let hash: u64 = calculate_hash(&RequestBody{format: format.to_string(), params: params.to_string(), prefetch});
-    return index2(item, vis, list, list_btree, buffer, format.to_string(), params.to_string(), prefetch, hash);
+    let hash: u64 = calculate_hash(&RequestBody {
+        format: format.to_string(),
+        params: params.to_string(),
+        prefetch,
+    });
+    return index2(
+        item,
+        vis,
+        list,
+        list_btree,
+        buffer,
+        format.to_string(),
+        params.to_string(),
+        prefetch,
+        hash,
+    );
 }
 
 async fn index(
@@ -302,20 +316,30 @@ async fn index(
     let params = &request_body.params.clone();
     let prefetch = &request_body.prefetch.clone();
     let hash: u64 = calculate_hash(&request_body.into_inner());
-    return index2(item, vis, list, list_btree, buffer, format.to_string(), params.to_string(), *prefetch, hash);
+    return index2(
+        item,
+        vis,
+        list,
+        list_btree,
+        buffer,
+        format.to_string(),
+        params.to_string(),
+        *prefetch,
+        hash,
+    );
 }
 
 fn index2(
-        item: web::Data<RwLock<Item>>,
-        vis: web::Data<RwLock<Vis>>,
-        list: web::Data<RwLock<Vec<(u64, Record)>>>,
-        list_btree: web::Data<RwLock<BTreeSet<u64>>>,
-        buffer: web::Data<RwLock<ChromosomeBuffer>>,
-        format: String,
-        params: String,
-        prefetch: bool,
-        hash: u64
-    ) -> Result<NamedFile> {   
+    item: web::Data<RwLock<Item>>,
+    vis: web::Data<RwLock<Vis>>,
+    list: web::Data<RwLock<Vec<(u64, Record)>>>,
+    list_btree: web::Data<RwLock<BTreeSet<u64>>>,
+    buffer: web::Data<RwLock<ChromosomeBuffer>>,
+    format: String,
+    params: String,
+    prefetch: bool,
+    hash: u64,
+) -> Result<NamedFile> {
     let data = item.read().unwrap();
     let cache_dir = &data.cache_dir;
     let args = &data.args;
