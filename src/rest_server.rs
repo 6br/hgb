@@ -92,6 +92,13 @@ fn get_matches_from(args: Vec<String>) -> Result<ArgMatches, Error> {
             .about("Preset (always overwrites other options) ['auto', 'base', 'gene', 'chrom', 'sv', 'qual']"),
     )
     .arg(
+        Arg::new("preset-color")
+            .short('#')
+            .long("preset-color")
+            .possible_values(&["", "hgb", "igv", "jbrowse"])
+            .about("Preset color scheme ['igv', 'hgb', 'jbrowse'] (default is hgb"),
+    )
+    .arg(
         Arg::new("id")
             .short('i')
             .takes_value(true)
