@@ -8,8 +8,8 @@ pub mod rest_server;
 #[cfg(feature = "web")]
 pub mod server;
 
-//#[cfg(feature = "web")]
-//pub mod bam_server;
+##[cfg(feature = "web")]
+#pub mod bam_server;
 
 pub mod subcommands;
 
@@ -311,8 +311,8 @@ fn main() {
                     Arg::new("preset-color")
                         .short('#')
                         .long("preset-color")
-                        .possible_values(&["", "hgb", "igv"])
-                        .about("Preset color scheme ['igv', 'hgb'] (default is hgb"),
+                        .possible_values(&["", "hgb", "igv", "jbrowse"])
+                        .about("Preset color scheme ['igv', 'hgb', 'jbrowse'] (default is hgb"),
                 )
                 .arg(
                     Arg::new("id")
@@ -509,7 +509,7 @@ fn main() {
                     Arg::new("pileup")
                         .short('P')
                         .long("coverage-plot")
-                        .about("Show pileup as coverage plot"),
+                        .about("Show pileup and coverage plot"),
                 )
                 .arg(Arg::new("only-translocation").short('T').long("show-translocation-callets").about("Show callets on ends of read alignments if the read contains translocation split-alignment"))
                 .arg(Arg::new("with-caption").short('<').long("caption").takes_value(true).setting(ArgSettings::AllowEmptyValues)

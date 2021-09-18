@@ -25,6 +25,7 @@ fn f(color: &VisColor) -> usize {
 pub enum ColorSet {
     HgbColor(HgbColor),
     IgvColor(IgvColor),
+    JBrowseColor(JBrowseColor),
     //    UCSC_COLOR,
 }
 
@@ -35,6 +36,7 @@ impl FromStr for ColorSet {
         match s {
             "hgb" => Ok(ColorSet::HgbColor(HgbColor)),
             "igv" => Ok(ColorSet::IgvColor(IgvColor)),
+            "jbrowse" => Ok(ColorSet::JBrowseColor(JBrowseColor)),
             "" => Ok(ColorSet::HgbColor(HgbColor)),
             _ => Ok(ColorSet::HgbColor(HgbColor)),
         }
@@ -49,6 +51,7 @@ impl ColorSet {
         let (r, g, b) = match self {
             ColorSet::HgbColor(HgbColor) => HgbColor::p(idx).rgb(),
             ColorSet::IgvColor(IgvColor) => IgvColor::p(idx).rgb(),
+            ColorSet::JBrowseColor(_) => JBrowseColor::p(idx).rgb(),
         };
         RGBColor(r, g, b)
     }
@@ -71,6 +74,7 @@ pub trait Palette2: Palette {
 
 pub struct HgbColor;
 pub struct IgvColor;
+pub struct JBrowseColor;
 
 // Inspired by nordtheme. https://www.nordtheme.com
 impl Palette for HgbColor {
@@ -108,3 +112,33 @@ impl Palette for IgvColor {
 }
 
 impl Palette2 for IgvColor {}
+
+impl Palette for JBrowseColor {
+    const COLORS: &'static [(u8, u8, u8)] = &[
+        (76, 175, 80), //#4caf50
+        (33, 150, 243), //#2196f3
+        (255, 193, 7), //#ffc107
+        (238, 34, 34), //#ee2222
+        (170, 170, 170), //#aaaaaa
+        (153, 153, 153), //#999999
+        (153, 0, 153), //#in
+        (120, 85, 43), //#del
+        (236, 139, 139), //#EC8B8B 
+        (143, 143, 216), //#8F8FD8
+        (120, 85, 43), //#Spl
+    ];
+}
+
+impl Palette2 for JBrowseColor {}
+
+//    ACol,
+//CCol,
+//GCol,
+//TCol,
+//NCol,
+//DefCol,
+//InsCol,
+//DelCol,
+//PosCol,
+//NegCol,
+//SplCol,
