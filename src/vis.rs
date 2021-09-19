@@ -1126,6 +1126,7 @@ where
                     } else {
                         bam.calculate_end() as u64
                     };
+                    let mut insertions = vec![];
 
                     /*chart
                     .draw_series(LineSeries::new(vec![(start, index), (end, index)], &color))?;*/
@@ -1276,6 +1277,7 @@ where
                       //vec![bar,bar2]
                       bars.push(bar2);
                   };*/
+                
                 if !no_cigar && udon {
                     let record = bam;
                     let left_top = chart.as_coord_spec().translate(&(range.start-1, index)); // range.start - 1 is better?
@@ -1326,6 +1328,7 @@ where
                     let left_blank  = horizontal_offset;
                     let right_blank = opt_len.saturating_sub(ribbon.len() + horizontal_offset);
                     let ribbon_len  = opt_len - (left_blank + right_blank);
+                    
 
                     for (i, &x) in ribbon[.. ribbon_len].iter().enumerate() {
                         let cv = &x[0][.. 3];
@@ -1400,7 +1403,7 @@ where
                                                         //prev_ref = 0;
                                                         // color = Some(preset_color.pick(VisColor::INS_COL));
                                                         insertion_flag = true;
-                                                        insertion_str.push(entry.record_nt().unwrap() as char);
+                                                        insertion_str.push((prev_ref, entry.record_nt().unwrap() as char));        
                                                     }
                                                 } else if entry.is_deletion() {
                                                     prev_ref = entry.ref_pos_nt().unwrap().0 as u64;
@@ -1543,12 +1546,22 @@ where
                                                 bar.set_margin(1, 1, 0, 0);
                                                 bars.push(bar);
                                                 if insertion_string {
+                                                    //Note that 
                                                     let text = Text::new(
-                                                        insertion_str.iter().join("").to_string(),
+                                                        insertion_str.iter().map(|t| t.1).join("").to_string(),
                                                         (prev_pixel_ref + 1, index),
                                                         ("sans-serif", y / 4 * 3),
                                                     );
                                                     texts.push(text);
+                                                    if dump_json {
+                                                        insertion_str.iter().group_by(|elt| elt.0).into_iter().for_each(|(ge0, group)| {
+                                                            let (lt, _) = chart.as_coord_spec().translate(&(ge0, index));
+                                                            insertions.push((lt, ge0, group.map(|t| t.1).join("").to_string()));
+                                                        }
+                                                        );
+                                                        
+                                                        // push(lt, prev_ref, ins);
+                                                    }
                                                 }
                                             }
                                             prev_pixel_ref = k.0;
@@ -1626,16 +1639,18 @@ where
                         println!("{}", String::from_utf8_lossy(bam.name()));
                         let (lt, lb) = chart.as_coord_spec().translate(&(range.start, index));
                         let (rt, rb) = chart.as_coord_spec().translate(&(range.end+1, index + 1));
-                        let read = Read{rectangle: (lt, lb, rt ,rb), read_id: String::from_utf8_lossy(&bam.name()).to_string(), start: bam.start(), end: bam.calculate_end(), insertions: BTreeMap::new()}; //, tags: tags  }
+                        let read = Read{rectangle: (lt, lb, rt ,rb), read_id: String::from_utf8_lossy(&bam.name()).to_string(), start: bam.start(), end: bam.calculate_end(), insertions: insertions}; //, tags: tags  }
                         reads.push(read);
                     }
                 });
             (bars, texts)
         };
-        json.push(Area {
-            pileups: reads,
-            annotations,
-        });
+        if dump_json {
+            json.push(Area {
+                pileups: reads,
+                annotations,
+            });
+        }
         chart.draw_series(bars)?;
         chart.draw_series(texts)?;
         //let dump = {reads: [], annotation: };

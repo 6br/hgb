@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use std::collections::BTreeMap;
+// use std::collections::BTreeMap;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Area {
@@ -18,7 +18,7 @@ pub struct Read {
     pub read_id: String,
     pub start: i32,
     pub end: i32,
-    pub insertions: BTreeMap<u64, String>,
+    pub insertions: Vec<(i32, u64, String)>, // Pixel, Real_pos, Ins_seq
     // pub tags
 }
 #[derive(Debug, Serialize, Deserialize, Clone)]

@@ -1,6 +1,7 @@
 use actix_cors::Cors;
 use actix_files::NamedFile;
 use actix_web::HttpRequest;
+use actix_web::error::ErrorNotFound;
 use actix_web::{
     http::header::{ContentDisposition, DispositionType},
     HttpResponse,
@@ -279,6 +280,32 @@ fn id_to_range_ab_initio(
     Ok((matches, args))
 }
 
+async fn get_json(
+    req: HttpRequest,
+    item: web::Data<RwLock<Item>>,
+    //query: web::Query<RequestBody>
+) -> Result<NamedFile> {
+    let qs = QString::from(req.query_string());
+    let format = qs.get("format").unwrap().clone(); // &query.format.clone();
+    let params = qs.get("params").unwrap().clone();
+    let prefetch = qs.get("params").is_some();
+    let hash: u64 = calculate_hash(&RequestBody {
+        format: format.to_string(),
+        params: params.to_string(),
+        prefetch,
+    });
+    let data = item.read().unwrap();
+    let cache_dir = &data.cache_dir;
+    let path_string = format!("{}/{}.json", cache_dir, hash);
+    match NamedFile::open(path_string.clone()) {
+        Ok(file) => Ok(file.set_content_disposition(ContentDisposition {
+            disposition: DispositionType::Attachment,
+            parameters: vec![],
+        })),
+        _ => Err(ErrorNotFound(format!("No JSON File Available")))
+    }
+}
+
 //
 async fn get_index(
     req: HttpRequest,
@@ -555,6 +582,7 @@ pub async fn server(
             .app_data(buffer.clone())
             .route("/", web::post().to(index))
             .route("/", web::get().to(get_index))
+            .route("/json", web::get().to(get_json))
             .wrap(Logger::default())
             .wrap(cross_origin)
     })
