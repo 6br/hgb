@@ -309,15 +309,20 @@ async fn get_json(
     }
 }
 
-async fn get_read(
-    req: HttpRequest,
-    item: web::Data<RwLock<Item>>,
-) -> Result<HttpResponse> {
+async fn get_read(req: HttpRequest, item: web::Data<RwLock<Item>>) -> Result<HttpResponse> {
     let qs = QString::from(req.query_string());
     let format = qs.get("format").unwrap().clone(); // &query.format.clone();
     let params = qs.get("params").unwrap().clone();
-    let x = qs.get("x").and_then(|t| t.parse::<i32>().ok()).unwrap().clone();
-    let y = qs.get("y").and_then(|t| t.parse::<i32>().ok()).unwrap().clone();
+    let x = qs
+        .get("x")
+        .and_then(|t| t.parse::<i32>().ok())
+        .unwrap()
+        .clone();
+    let y = qs
+        .get("y")
+        .and_then(|t| t.parse::<i32>().ok())
+        .unwrap()
+        .clone();
     let prefetch = qs.get("params").is_some();
     let hash: u64 = calculate_hash(&RequestBody {
         format: format.to_string(),
@@ -334,13 +339,12 @@ async fn get_read(
             let area: Area = serde_json::from_reader(reader).unwrap();
             let read_tree = ReadTree::new(area);
             let read = read_tree.find(x, y);
-        
+
             Ok(HttpResponse::Ok().json(read))
-        },
+        }
         _ => Err(ErrorNotFound(format!("No JSON File Available"))),
     }
 }
-
 
 //
 async fn get_index(
