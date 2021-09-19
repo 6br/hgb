@@ -1216,10 +1216,10 @@ where
                                     .collect();
                                 let is_smaller = sa_left_clip
                                     .iter()
-                                    .any(|t| t < &&current_left_clip);
+                                    .any(|t| t < &current_left_clip);
                                 let is_larger = sa_left_clip
                                     .iter()
-                                    .any(|t| t > &&current_left_clip);
+                                    .any(|t| t > &current_left_clip);
 
                                 let color = preset_color.pick(VisColor::SplCol);
                                 if ((is_smaller && !bam.flag().is_reverse_strand())

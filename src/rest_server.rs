@@ -10,12 +10,15 @@ use actix_web::{middleware::Logger, web, Result};
 use bam::Record;
 use clap::{App, AppSettings, Arg, ArgMatches, Error};
 use genomic_range::StringRegion;
+use ghi::dump::{Area, ReadTree};
 use ghi::{simple_buffer::ChromosomeBuffer, vis::bam_record_vis, Vis, VisRef};
 use qstring::QString;
 use rand::Rng;
 use serde::Deserialize;
 use std::collections::hash_map::DefaultHasher;
+use std::fs::File;
 use std::hash::{Hash, Hasher};
+use std::io::BufReader;
 use std::time::Instant;
 use std::{collections::BTreeSet, fs, sync::RwLock};
 
@@ -306,6 +309,39 @@ async fn get_json(
     }
 }
 
+async fn get_read(
+    req: HttpRequest,
+    item: web::Data<RwLock<Item>>,
+) -> Result<HttpResponse> {
+    let qs = QString::from(req.query_string());
+    let format = qs.get("format").unwrap().clone(); // &query.format.clone();
+    let params = qs.get("params").unwrap().clone();
+    let x = qs.get("x").and_then(|t| t.parse::<i32>().ok()).unwrap().clone();
+    let y = qs.get("y").and_then(|t| t.parse::<i32>().ok()).unwrap().clone();
+    let prefetch = qs.get("params").is_some();
+    let hash: u64 = calculate_hash(&RequestBody {
+        format: format.to_string(),
+        params: params.to_string(),
+        prefetch,
+    });
+    let data = item.read().unwrap();
+    let cache_dir = &data.cache_dir;
+    let path_string = format!("{}/{}.json", cache_dir, hash);
+    match File::open(path_string.clone()) {
+        Ok(file) => {
+            let reader = BufReader::new(file);
+
+            let area: Area = serde_json::from_reader(reader).unwrap();
+            let read_tree = ReadTree::new(area);
+            let read = read_tree.find(x, y);
+        
+            Ok(HttpResponse::Ok().json(read))
+        },
+        _ => Err(ErrorNotFound(format!("No JSON File Available"))),
+    }
+}
+
+
 //
 async fn get_index(
     req: HttpRequest,
@@ -583,6 +619,7 @@ pub async fn server(
             .route("/", web::post().to(index))
             .route("/", web::get().to(get_index))
             .route("/json", web::get().to(get_json))
+            .route("/read", web::get().to(get_read))
             .wrap(Logger::default())
             .wrap(cross_origin)
     })
