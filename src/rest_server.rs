@@ -1,7 +1,7 @@
 use actix_cors::Cors;
 use actix_files::NamedFile;
-use actix_web::HttpRequest;
 use actix_web::error::ErrorNotFound;
+use actix_web::HttpRequest;
 use actix_web::{
     http::header::{ContentDisposition, DispositionType},
     HttpResponse,
@@ -302,7 +302,7 @@ async fn get_json(
             disposition: DispositionType::Attachment,
             parameters: vec![],
         })),
-        _ => Err(ErrorNotFound(format!("No JSON File Available")))
+        _ => Err(ErrorNotFound(format!("No JSON File Available"))),
     }
 }
 

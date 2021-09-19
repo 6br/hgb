@@ -19,7 +19,7 @@ pub struct Read {
     pub start: i32,
     pub end: i32,
     pub insertions: Vec<(i32, u64, String)>, // Pixel, Real_pos, Ins_seq
-    // pub tags
+                                             // pub tags
 }
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Annotation {
