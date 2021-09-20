@@ -139,6 +139,18 @@ fn get_matches_from(args: Vec<String>) -> Result<ArgMatches, Error> {
     )
     .arg(Arg::new("meaningless").short('Q').about("Set square width (overwritten)"))
     .arg(Arg::new("meaningless2").short('>').about("Serve the web server with accepting any parameter"))
+    .arg(Arg::new("dump-json").short('%').long("write-json").about("Dump JSON of read metadata"))
+    .arg(Arg::new("adjust-y").short('&').long("not-adjust-y").about("Do not adjust y on server mode"))
+    .arg(Arg::new("ref-column").short('!').long("2bit").takes_value(true).about("Show the base colors of reference genome (input must be 2bit format)"))
+    .arg(Arg::new("insertion-string").short('{').long("show-insertion-sequence").about("Show the insertion sequence along with insertion callets"))
+    .arg(
+        Arg::new("labels")
+            .short('}')
+            .long("labels")
+            .takes_value(true)
+            .multiple(true)
+            .about("Labels displayed on legend"),
+    )
     .arg(Arg::new("quality").short('q').about("Display reads by quality value"))
     .arg(Arg::new("x").short('x').takes_value(true).about("The width of image"))
     .arg(Arg::new("y").short('y').takes_value(true).about("The height of each read alignment"))

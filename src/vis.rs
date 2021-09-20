@@ -491,7 +491,11 @@ where
         .unique_by(|s| s.0)
         .count(); // annotation.len();
     let prev_index = vis.iter().map(|a| a.prev_index).max().unwrap();
-    let freq_len = if pileup {vis.iter().map(|a| a.frequency.len()).max().unwrap()} else {0};
+    let freq_len = if pileup {
+        vis.iter().map(|a| a.frequency.len()).max().unwrap()
+    } else {
+        0
+    };
     let freq_len_ids = vis
         .iter()
         .map(|a| (a.frequency.len(), a.frequency.keys()))
@@ -1277,7 +1281,7 @@ where
                       //vec![bar,bar2]
                       bars.push(bar2);
                   };*/
-                
+
                 if !no_cigar && udon {
                     let record = bam;
                     let left_top = chart.as_coord_spec().translate(&(range.start-1, index)); // range.start - 1 is better?
@@ -1328,7 +1332,6 @@ where
                     let left_blank  = horizontal_offset;
                     let right_blank = opt_len.saturating_sub(ribbon.len() + horizontal_offset);
                     let ribbon_len  = opt_len - (left_blank + right_blank);
-                    
 
                     for (i, &x) in ribbon[.. ribbon_len].iter().enumerate() {
                         let cv = &x[0][.. 3];
@@ -1403,7 +1406,7 @@ where
                                                         //prev_ref = 0;
                                                         // color = Some(preset_color.pick(VisColor::INS_COL));
                                                         insertion_flag = true;
-                                                        insertion_str.push((prev_ref, entry.record_nt().unwrap() as char));        
+                                                        insertion_str.push((prev_ref, entry.record_nt().unwrap() as char));
                                                     }
                                                 } else if entry.is_deletion() {
                                                     prev_ref = entry.ref_pos_nt().unwrap().0 as u64;
@@ -1559,7 +1562,6 @@ where
                                                             insertions.push((lt, ge0, group.map(|t| t.1).join("").to_string()));
                                                         }
                                                         );
-                                                        
                                                         // push(lt, prev_ref, ins);
                                                     }
                                                 }
