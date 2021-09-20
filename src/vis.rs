@@ -1556,7 +1556,7 @@ where
                                                         ("sans-serif", y / 4 * 3),
                                                     );
                                                     texts.push(text);
-                                                    if dump_json {
+                                                    if overlapping_reads {
                                                         insertion_str.iter().group_by(|elt| elt.0).into_iter().for_each(|(ge0, group)| {
                                                             let (lt, _) = chart.as_coord_spec().translate(&(ge0, index));
                                                             insertions.push((lt, ge0, group.map(|t| t.1).join("").to_string()));
@@ -1634,7 +1634,7 @@ where
                                                     //Note that 
                                                     let text = Text::new(
                                                         (bam.sequence().at(record as usize) as char).to_string(),
-                                                        (prev_ref , index),
+                                                        (prev_ref, index),
                                                         ("sans-serif", y / 4 * 3),
                                                     );
                                                     texts.push(text);
@@ -1646,7 +1646,7 @@ where
                                         _ => {}
                                     }
                                 }
-                                if dump_json {
+                                if overlapping_reads {
                                     insertion_str.iter().group_by(|elt| elt.0).into_iter().for_each(|(ge0, group)| {
                                         let (lt, _) = chart.as_coord_spec().translate(&(ge0, index));
                                         insertions.push((lt, ge0, group.map(|t| t.1).join("").to_string()));
@@ -1658,7 +1658,7 @@ where
                         }
                     }
                     if overlapping_reads {
-                        println!("{}", String::from_utf8_lossy(bam.name()));
+                        //println!("{}", String::from_utf8_lossy(bam.name()));
                         let (lt, lb) = chart.as_coord_spec().translate(&(range.start, index));
                         let (rt, rb) = chart.as_coord_spec().translate(&(range.end+1, index + 1));
                         let read = Read{rectangle: (lt, lb, rt ,rb), read_id: String::from_utf8_lossy(&bam.name()).to_string(), start: bam.start(), end: bam.calculate_end(), insertions: insertions, strand: bam.flag().is_reverse_strand(), flag: bam.flag().0, track:data.0, mapq: bam.mapq(), query_len: bam.query_len()}; //, tags: tags  }

@@ -97,10 +97,16 @@ impl ReadTree {
         let read = self.0.locate_at_point(&[x, y]);
         match read {
             Some(read) => {
-                let insertion = read.insertions.binary_search_by_key(&y, |(a, _, _)| *a);
+                let insertion = read.insertions.binary_search_by_key(&x, |(a, _, _)| *a);
                 let insertions_str = match insertion {
                     Ok(index) => (read.insertions[index].1, read.insertions[index].2.clone()),
-                    Err(_) => (0, "".to_string()),
+                    Err(index) => {
+                        if (read.insertions[index].0 - x).abs() <= 2 {
+                            (read.insertions[index].1, read.insertions[index].2.clone())
+                        } else {
+                            (0, "".to_string())
+                        }
+                    }
                 };
                 Some((read.clone(), insertions_str))
             }
