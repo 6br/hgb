@@ -163,6 +163,18 @@ fn get_matches_from(args: Vec<String>) -> Result<ArgMatches, Error> {
             .about("The height of each coverage track"),
     )
     .arg(
+        Arg::new("show-read-id")
+            .short('H')
+            .long("show-read-ids")
+            .about("Write a read id on the beginning of each read"),
+    )
+    .arg(
+        Arg::new("overlapping-reads")
+            .short('7')
+            .long("write-read-ids")
+            .about("Output a list of read id overlapping the range"),
+    )
+    .arg(
         Arg::new("snp-frequency")
             .short('V')
             .takes_value(true)
