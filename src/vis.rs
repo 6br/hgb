@@ -1632,12 +1632,12 @@ where
                                                 //insertion_str.push((prev_ref, entry.record_nt().unwrap() as char));
                                                 if insertion_string {
                                                     //Note that 
-                                                    //let text = Text::new(
-                                                    //    record_pos_nt.iter().map(|t| t.1).join("").to_string(),
-                                                    //    (prev_pixel_ref + 1, index),
-                                                    //    ("sans-serif", y / 4 * 3),
-                                                    //);
-                                                    //texts.push(text);
+                                                    let text = Text::new(
+                                                        (bam.sequence().at(record as usize) as char).to_string(),
+                                                        (prev_ref , index),
+                                                        ("sans-serif", y / 4 * 3),
+                                                    );
+                                                    texts.push(text);
                                                     insertion_str.push((prev_ref, bam.sequence().at(record as usize) as char));
                                                 }
                                             }
