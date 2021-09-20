@@ -335,6 +335,11 @@ async fn get_read(req: HttpRequest, item: web::Data<RwLock<Item>>) -> Result<Htt
         .and_then(|t| t.parse::<i32>().ok())
         .unwrap()
         .clone();
+    let index = qs
+        .get("y")
+        .and_then(|t| t.parse::<usize>().ok())
+        .unwrap_or(0)
+        .clone();
     let prefetch = qs.get("params").is_some();
     let hash: u64 = calculate_hash(&RequestBody {
         format: format.to_string(),
@@ -348,8 +353,8 @@ async fn get_read(req: HttpRequest, item: web::Data<RwLock<Item>>) -> Result<Htt
         Ok(file) => {
             let reader = BufReader::new(file);
 
-            let area: Area = serde_json::from_reader(reader).unwrap();
-            let read_tree = ReadTree::new(area);
+            let areas: Vec<Area> = serde_json::from_reader(reader).unwrap();
+            let read_tree = ReadTree::new(areas[index].clone());
             let read = read_tree.find(x, y);
 
             Ok(HttpResponse::Ok().json(read))
