@@ -387,7 +387,7 @@ where
     let _sort_by_name = matches.is_present("sort-by-name");
     let sort_by_cigar = matches.is_present("sort-by-cigar");
     let colored_by_name = matches.is_present("colored-by-name");
-    // let pileup = matches.is_present("pileup");
+    let pileup = matches.is_present("pileup");
     let all_bases = matches.is_present("all-bases");
     let hide_alignment = matches.is_present("hide-alignment");
     let only_translocation = matches.is_present("only-translocation");
@@ -491,7 +491,7 @@ where
         .unique_by(|s| s.0)
         .count(); // annotation.len();
     let prev_index = vis.iter().map(|a| a.prev_index).max().unwrap();
-    let freq_len = vis.iter().map(|a| a.frequency.len()).max().unwrap();
+    let freq_len = if pileup {vis.iter().map(|a| a.frequency.len()).max().unwrap()} else {0};
     let freq_len_ids = vis
         .iter()
         .map(|a| (a.frequency.len(), a.frequency.keys()))
