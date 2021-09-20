@@ -14,11 +14,15 @@ pub struct Pileup {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Read {
     pub rectangle: (i32, i32, i32, i32),
+    pub track: u64,
     pub read_id: String,
     pub start: i32,
     pub end: i32,
+    pub query_len: u32,
+    pub strand: bool,
+    pub flag: u16,
+    pub mapq: u8,
     pub insertions: Vec<(i32, u64, String)>, // Pixel, Real_pos, Ins_seq
-                                             // pub tags
 }
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Annotation {

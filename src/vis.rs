@@ -1572,6 +1572,7 @@ where
                                 }
                             }
                             _ => {
+                                let mut insertion_str = vec![];
                                 for entry in bam.aligned_pairs() {
                                     match entry {
                                         // (Seq_idx, ref_idx)
@@ -1617,7 +1618,7 @@ where
                                                 break;
                                             }
                                         }
-                                        (Some(_record), None) => {
+                                        (Some(record), None) => {
                                             //Insertion
                                             if prev_ref > range.start() as u64 && insertion {
                                                 let mut bar = Rectangle::new(
@@ -1628,11 +1629,30 @@ where
                                                 bar.set_margin(1, 1, 0, 5);
                                                 bars.push(bar);
                                                 prev_ref = 0;
+                                                //insertion_str.push((prev_ref, entry.record_nt().unwrap() as char));
+                                                if insertion_string {
+                                                    //Note that 
+                                                    //let text = Text::new(
+                                                    //    record_pos_nt.iter().map(|t| t.1).join("").to_string(),
+                                                    //    (prev_pixel_ref + 1, index),
+                                                    //    ("sans-serif", y / 4 * 3),
+                                                    //);
+                                                    //texts.push(text);
+                                                    insertion_str.push((prev_ref, bam.sequence().at(record as usize) as char));
+                                                }
                                             }
                                             // eprintln!("{}", prev_ref)
                                         }
                                         _ => {}
                                     }
+                                }
+                                if dump_json {
+                                    insertion_str.iter().group_by(|elt| elt.0).into_iter().for_each(|(ge0, group)| {
+                                        let (lt, _) = chart.as_coord_spec().translate(&(ge0, index));
+                                        insertions.push((lt, ge0, group.map(|t| t.1).join("").to_string()));
+                                    }
+                                    );
+                                    // push(lt, prev_ref, ins);
                                 }
                             }
                         }
@@ -1641,7 +1661,7 @@ where
                         println!("{}", String::from_utf8_lossy(bam.name()));
                         let (lt, lb) = chart.as_coord_spec().translate(&(range.start, index));
                         let (rt, rb) = chart.as_coord_spec().translate(&(range.end+1, index + 1));
-                        let read = Read{rectangle: (lt, lb, rt ,rb), read_id: String::from_utf8_lossy(&bam.name()).to_string(), start: bam.start(), end: bam.calculate_end(), insertions: insertions}; //, tags: tags  }
+                        let read = Read{rectangle: (lt, lb, rt ,rb), read_id: String::from_utf8_lossy(&bam.name()).to_string(), start: bam.start(), end: bam.calculate_end(), insertions: insertions, strand: bam.flag().is_reverse_strand(), flag: bam.flag().0, track:data.0, mapq: bam.mapq(), query_len: bam.query_len()}; //, tags: tags  }
                         reads.push(read);
                     }
                 });
