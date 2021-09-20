@@ -336,7 +336,7 @@ async fn get_read(req: HttpRequest, item: web::Data<RwLock<Item>>) -> Result<Htt
         .unwrap()
         .clone();
     let index = qs
-        .get("y")
+        .get("index")
         .and_then(|t| t.parse::<usize>().ok())
         .unwrap_or(0)
         .clone();
