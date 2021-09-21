@@ -100,8 +100,11 @@ impl ReadTree {
                 let insertions_str = match insertion {
                     Ok(index) => (read.insertions[index].1, read.insertions[index].2.clone()),
                     Err(index) => {
-                        if index > 0 && (read.insertions[index-1].0 - x).abs() <= 5 {
-                            (read.insertions[index-1].1, read.insertions[index-1].2.clone())
+                        if index > 0 && (read.insertions[index - 1].0 - x).abs() <= 5 {
+                            (
+                                read.insertions[index - 1].1,
+                                read.insertions[index - 1].2.clone(),
+                            )
                         } else {
                             (0, "".to_string())
                         }
