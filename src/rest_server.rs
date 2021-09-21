@@ -8,7 +8,7 @@ use actix_web::{
 };
 use actix_web::{middleware::Logger, web, Result};
 use bam::Record;
-use clap::{App, AppSettings, Arg, ArgMatches, Error};
+use clap::{App, AppSettings, Arg, ArgMatches, ArgSettings, Error};
 use genomic_range::StringRegion;
 use ghi::dump::{Area, ReadTree};
 use ghi::{simple_buffer::ChromosomeBuffer, vis::bam_record_vis, Vis, VisRef};
@@ -152,6 +152,58 @@ fn get_matches_from(args: Vec<String>) -> Result<ArgMatches, Error> {
             .about("Labels displayed on legend"),
     )
     .arg(Arg::new("quality").short('q').about("Display reads by quality value"))
+    .arg(Arg::new("colored-by-name").short('n').long("colored-by-name").about("Set read colors by read name"))
+    .arg(Arg::new("read-per-line").short('1').long("read-per-line").about("Show one line one read on split-alignment mode"))
+    .arg(Arg::new("read-per-two-range").short('2').long("read-per-line-two-ranges").about("Show one read per one line across two range on split-alignment mode"))
+    .arg(Arg::new("x-as-range").short('9').long("x-as-input-range").about("Set X as the interval of the input range"))
+    .arg(
+        Arg::new("range-index")
+            .short('8')
+            .long("range-index")
+            .takes_value(true)
+            .about("Choose a range index to visualize when multiple ranges are specified."),
+    )
+    .arg(
+        Arg::new("read-index")
+            .short('_')
+            .long("read-index")
+            .takes_value(true)
+            .about("Choose a read index to visualize of a single input file."),
+    )
+    .arg(
+        Arg::new("colored-by-motif")
+            .short('E')
+            .long("colored-by-motif")
+            .takes_value(true)
+            .default_value("C:T:CG")
+            .about("Colored by specified motif (for bisulfite sequencing)"),
+    )
+    .arg(
+        Arg::new("colored-by-tag")
+            .short('0')
+            .long("colored-by-tag")
+            .takes_value(true)
+            .default_value("")
+            .setting(ArgSettings::AllowEmptyValues)
+            .about("Colored by specified tags on read alignments"),
+    )
+    .arg(
+        Arg::new("separated-by-tag")
+            .short('j')
+            .long("separated-by-tag")
+            .takes_value(true)
+            .default_value("")
+            .setting(ArgSettings::AllowEmptyValues)
+            .about("Separated tracks by specified tags on read alignments"),
+    )
+    .arg(
+        Arg::new("separated-by-tag-offset")
+            .short('k')
+            .long("separated-by-tag-offset")
+            .takes_value(true)
+            .default_value("3")
+            .about("The maximal number of tracks by specified tags on read alignments"),
+    )
     .arg(Arg::new("x").short('x').takes_value(true).about("The width of image"))
     .arg(Arg::new("y").short('y').takes_value(true).about("The height of each read alignment"))
     .arg(Arg::new("web").short('w').takes_value(true).about("Serve the web server"))
