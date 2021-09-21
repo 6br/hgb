@@ -370,7 +370,7 @@ where
     eprintln!("Preset: {:?}", preset);
     let show_read_id = matches.is_present("show-read-id");
     let overlapping_annotation = matches.is_present("dump-json");
-    let no_bold_line = matches.is_present("overlapping-reads");
+    let no_bold_line = matches.is_present("no-bold-line");
     let no_margin = matches.is_present("no-scale");
     let no_ruler = matches.is_present("no-ruler");
     let _prefetch_range = matches.is_present("prefetch-range");
