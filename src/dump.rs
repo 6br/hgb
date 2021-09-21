@@ -93,7 +93,6 @@ impl ReadTree {
         return ReadTree(RTree::bulk_load(reads.pileups));
     }
     pub fn find(self, x: i32, y: i32) -> Option<(Read, (u64, String))> {
-        // let pos = AABB::from_point([x, y]);
         let read = self.0.locate_at_point(&[x, y]);
         match read {
             Some(read) => {
@@ -101,8 +100,8 @@ impl ReadTree {
                 let insertions_str = match insertion {
                     Ok(index) => (read.insertions[index].1, read.insertions[index].2.clone()),
                     Err(index) => {
-                        if (read.insertions[index].0 - x).abs() <= 2 {
-                            (read.insertions[index].1, read.insertions[index].2.clone())
+                        if index > 0 && (read.insertions[index-1].0 - x).abs() <= 5 {
+                            (read.insertions[index-1].1, read.insertions[index-1].2.clone())
                         } else {
                             (0, "".to_string())
                         }
