@@ -169,10 +169,10 @@ fn get_matches_from(args: Vec<String>) -> Result<ArgMatches, Error> {
             .about("Write a read id on the beginning of each read"),
     )
     .arg(
-        Arg::new("overlapping-reads")
+        Arg::new("no-bold-line")
             .short('7')
-            .long("write-read-ids")
-            .about("Output a list of read id overlapping the range"),
+            .long("no-bold-line")
+            .about("Plot without bold line"),
     )
     .arg(
         Arg::new("snp-frequency")
