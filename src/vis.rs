@@ -370,7 +370,7 @@ where
     eprintln!("Preset: {:?}", preset);
     let show_read_id = matches.is_present("show-read-id");
     let overlapping_annotation = matches.is_present("dump-json");
-    let overlapping_reads = matches.is_present("overlapping-reads");
+    let no_bold_line = matches.is_present("overlapping-reads");
     let no_margin = matches.is_present("no-scale");
     let no_ruler = matches.is_present("no-ruler");
     let _prefetch_range = matches.is_present("prefetch-range");
@@ -722,6 +722,20 @@ where
                 // We can also change the format of the label text
                 .x_label_formatter(x_label_formatter)
                 .draw()?;
+        } else if no_bold_line {
+            chart
+                .configure_mesh()
+                // We can customize the maximum number of labels allowed for each axis
+                .x_labels(*x_labels) // Default value is 10
+                .bold_line_style(RGBColor(0, 0, 0).mix(0.1))
+                .disable_x_axis()
+                //.x_labels(1)
+                .x_label_offset(x_offset as u32)
+                .y_labels(1)
+                .x_label_style(("sans-serif", x_scale / 4).into_font())
+                // We can also change the format of the label text
+                .x_label_formatter(x_label_formatter)
+                .draw()?
         } else {
             chart
                 .configure_mesh()
@@ -1556,7 +1570,7 @@ where
                                                         ("sans-serif", y / 4 * 3),
                                                     );
                                                     texts.push(text);
-                                                    if overlapping_reads {
+                                                    if dump_json {
                                                         insertion_str.iter().group_by(|elt| elt.0).into_iter().for_each(|(ge0, group)| {
                                                             let (lt, _) = chart.as_coord_spec().translate(&(ge0+1, index));
                                                             insertions.push((lt, ge0, group.map(|t| t.1).join("").to_string()));
@@ -1646,7 +1660,7 @@ where
                                         _ => {}
                                     }
                                 }
-                                if overlapping_reads {
+                                if dump_json {
                                     insertion_str.iter().group_by(|elt| elt.0).into_iter().for_each(|(ge0, group)| {
                                         let (lt, _) = chart.as_coord_spec().translate(&(ge0, index));
                                         insertions.push((lt, ge0, group.map(|t| t.1).join("").to_string()));
@@ -1657,7 +1671,7 @@ where
                             }
                         }
                     }
-                    if overlapping_reads {
+                    if dump_json {
                         //println!("{}", String::from_utf8_lossy(bam.name()));
                         let (lt, lb) = chart.as_coord_spec().translate(&(range.start, index));
                         let (rt, rb) = chart.as_coord_spec().translate(&(range.end+1, index + 1));
