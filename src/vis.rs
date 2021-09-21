@@ -1558,7 +1558,7 @@ where
                                                     texts.push(text);
                                                     if overlapping_reads {
                                                         insertion_str.iter().group_by(|elt| elt.0).into_iter().for_each(|(ge0, group)| {
-                                                            let (lt, _) = chart.as_coord_spec().translate(&(ge0, index));
+                                                            let (lt, _) = chart.as_coord_spec().translate(&(ge0+1, index));
                                                             insertions.push((lt, ge0, group.map(|t| t.1).join("").to_string()));
                                                         }
                                                         );
