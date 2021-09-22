@@ -501,7 +501,7 @@ fn main() {
                 .arg(
                     Arg::new("hide-alignment")
                         .short('A')
-                        .long("only-overage-plot")
+                        .long("only-coverage-plot")
                         .about("Hide read alignments (display only coverage; for chromosome scale view)"),
                 )
                 .arg(Arg::new("all-bases").short('B').long("all-bases").about("Show all nucleotides by color"))
