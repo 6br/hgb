@@ -709,20 +709,7 @@ where
         };
         let x_labels = n_x_labels.get(index).unwrap_or(&10); //if dynamic_partition {} else {10};
                                                              // Then we can draw a mesh
-        if no_margin {
-            chart
-                .configure_mesh()
-                // We can customize the maximum number of labels allowed for each axis
-                .x_labels(*x_labels) // Default value is 10
-                .disable_x_axis()
-                //.x_labels(1)
-                .x_label_offset(x_offset as u32)
-                .y_labels(1)
-                .x_label_style(("sans-serif", x_scale / 4).into_font())
-                // We can also change the format of the label text
-                .x_label_formatter(x_label_formatter)
-                .draw()?;
-        } else if no_bold_line {
+        if no_bold_line {
             chart
                 .configure_mesh()
                 // We can customize the maximum number of labels allowed for each axis
@@ -736,6 +723,19 @@ where
                 // We can also change the format of the label text
                 .x_label_formatter(x_label_formatter)
                 .draw()?
+        } else if no_margin {
+            chart
+                .configure_mesh()
+                // We can customize the maximum number of labels allowed for each axis
+                .x_labels(*x_labels) // Default value is 10
+                .disable_x_axis()
+                //.x_labels(1)
+                .x_label_offset(x_offset as u32)
+                .y_labels(1)
+                .x_label_style(("sans-serif", x_scale / 4).into_font())
+                // We can also change the format of the label text
+                .x_label_formatter(x_label_formatter)
+                .draw()?;
         } else {
             chart
                 .configure_mesh()
