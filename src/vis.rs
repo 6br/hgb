@@ -19,6 +19,7 @@ use plotters::style::RGBColor;
 use std::ops::Range;
 use std::{collections::BTreeMap, fs::File, time::Instant};
 use std::{convert::TryInto, path::PathBuf};
+use std::cmp::min;
 use twobit::TwoBitFile;
 use udon::{Udon, UdonPalette, UdonScaler, UdonUtils};
 
@@ -490,7 +491,17 @@ where
         .flatten()
         .unique_by(|s| s.0)
         .count(); // annotation.len();
-    let prev_index = vis.iter().map(|a| a.prev_index).max().unwrap();
+    let prev_index = vis
+        .iter()
+        .map(|a| {
+            if let Some(max_coverage) = max_coverage {
+                min(max_coverage as usize , a.prev_index)
+            } else {
+                a.prev_index
+            }
+        })
+        .max()
+        .unwrap();
     let freq_len = if pileup {
         vis.iter().map(|a| a.frequency.len()).max().unwrap()
     } else {
