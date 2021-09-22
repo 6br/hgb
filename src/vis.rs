@@ -7,7 +7,6 @@ use bam::record::{
 use bam::{Record, RecordReader};
 use bio_types::strand::Strand;
 use clap::ArgMatches;
-//use genomic_range::StringRegion;
 use itertools::Itertools;
 use log::{debug, info};
 use num_format::{Locale, ToFormattedString};
@@ -16,7 +15,7 @@ use plotters::prelude::Palette;
 use plotters::prelude::*;
 use plotters::style::text_anchor::{HPos, Pos, VPos};
 use plotters::style::RGBColor;
-use std::cmp::min;
+// use std::cmp::min;
 use std::ops::Range;
 use std::{collections::BTreeMap, fs::File, time::Instant};
 use std::{convert::TryInto, path::PathBuf};
@@ -604,9 +603,10 @@ where
 
         // After this point, we should be able to draw construct a chart context
         // let areas = root.split_by_breakpoints([], compressed_list);
-        let (alignment, coverage) = area.split_vertically(
-            y_len - freq_len as u32 * freq_size, //top_margin + (prev_index as u32 + axis_count as u32 + annotation_count as u32 * 2) * y,
-        );
+        //let (alignment, coverage) = area.split_vertically(
+        //    y_len - freq_len as u32 * freq_size, //top_margin + (prev_index as u32 + axis_count as u32 + annotation_count as u32 * 2) * y,
+        //);
+        let (coverage, alignment) = area.split_vertically(freq_len as u32 * freq_size);
         info!(
             "{:?} {:?} {:?} <{:?}>",
             prev_index,
@@ -653,6 +653,7 @@ where
                 + annotation_count * 2
                 + if twobit.is_some() { 2 } else { 0 }
         };
+        let y_spec = 0..y_spec_max;
         let top_x_area_size = if read_index { 0 } else { x_area_size };
         let mut chart = if no_margin {
             if with_caption {
@@ -671,7 +672,7 @@ where
                     .top_x_label_area_size(x_area_size)
                     .x_label_area_size(top_x_area_size)
                     // Finally attach a coordinate on the drawing area and make a chart context
-                    .build_cartesian_2d(x_spec.clone(), 0..y_spec_max)?
+                    .build_cartesian_2d(x_spec.clone(), y_spec)?
             } else {
                 ChartBuilder::on(&alignment)
                     // Set the caption of the chart
@@ -680,7 +681,7 @@ where
                     .top_x_label_area_size(x_area_size)
                     .x_label_area_size(top_x_area_size)
                     // Finally attach a coordinate on the drawing area and make a chart context
-                    .build_cartesian_2d(x_spec.clone(), 0..y_spec_max)?
+                    .build_cartesian_2d(x_spec.clone(), y_spec)?
             }
         } else if with_caption {
             ChartBuilder::on(&alignment)
@@ -698,7 +699,7 @@ where
                 .x_label_area_size(top_x_area_size)
                 .y_label_area_size(y_area_size)
                 // Finally attach a coordinate on the drawing area and make a chart context
-                .build_cartesian_2d((range.start() - 1)..(range.end() + 1), 0..y_spec_max)?
+                .build_cartesian_2d((range.start() - 1)..(range.end() + 1), y_spec)?
         } else {
             ChartBuilder::on(&alignment)
                 // Set the size of the label region
@@ -706,7 +707,7 @@ where
                 .x_label_area_size(top_x_area_size)
                 .y_label_area_size(y_area_size)
                 // Finally attach a coordinate on the drawing area and make a chart context
-                .build_cartesian_2d((range.start() - 1)..(range.end() + 1), 0..y_spec_max)?
+                .build_cartesian_2d((range.start() - 1)..(range.end() + 1), y_spec)?
         };
         let x_labels = n_x_labels.get(index).unwrap_or(&10); //if dynamic_partition {} else {10};
                                                              // Then we can draw a mesh
