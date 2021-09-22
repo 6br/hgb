@@ -332,7 +332,11 @@ fn id_to_range(
     args.extend(b);
     args.extend(a);
     args.remove(0);
-    args = args.into_iter().skip_while(|t| t != "vis").collect();
+    args = args
+        .into_iter()
+        .skip_while(|t| t != "vis")
+        .filter(|t| t != "-P")
+        .collect();
     eprintln!("{:?}", args.join(" "));
     let matches = get_matches_from(args)?;
     let ranges_str = matches.values_of("range").unwrap();
