@@ -717,6 +717,7 @@ where
                 // We can customize the maximum number of labels allowed for each axis
                 .x_labels(*x_labels) // Default value is 10
                 .bold_line_style(RGBColor(0, 0, 0).mix(0.1))
+                .light_line_style(RGBColor(0, 0, 0).mix(0.1))
                 .disable_x_axis()
                 //.x_labels(1)
                 .x_label_offset(x_offset as u32)
