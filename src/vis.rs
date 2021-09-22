@@ -16,10 +16,10 @@ use plotters::prelude::Palette;
 use plotters::prelude::*;
 use plotters::style::text_anchor::{HPos, Pos, VPos};
 use plotters::style::RGBColor;
+use std::cmp::min;
 use std::ops::Range;
 use std::{collections::BTreeMap, fs::File, time::Instant};
 use std::{convert::TryInto, path::PathBuf};
-use std::cmp::min;
 use twobit::TwoBitFile;
 use udon::{Udon, UdonPalette, UdonScaler, UdonUtils};
 
@@ -495,7 +495,7 @@ where
         .iter()
         .map(|a| {
             if let Some(max_coverage) = max_coverage {
-                min(max_coverage as usize , a.prev_index)
+                min(max_coverage as usize, a.prev_index)
             } else {
                 a.prev_index
             }
