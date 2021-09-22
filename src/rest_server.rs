@@ -328,15 +328,15 @@ fn id_to_range(
 ) -> Result<(ArgMatches, StringRegion), Error> {
     let a: Vec<String> = params.split(' ').map(|t| t.to_string()).collect();
     let b: Vec<String> = vec!["-o".to_string(), path_string];
-    let mut args = args.to_owned();
+    let mut args = args
+        .to_owned()
+        .into_iter()
+        .filter(|t| t != "-P")
+        .collect::<Vec<String>>();
     args.extend(b);
     args.extend(a);
     args.remove(0);
-    args = args
-        .into_iter()
-        .skip_while(|t| t != "vis")
-        .filter(|t| t != "-P")
-        .collect();
+    args = args.into_iter().skip_while(|t| t != "vis").collect();
     eprintln!("{:?}", args.join(" "));
     let matches = get_matches_from(args)?;
     let ranges_str = matches.values_of("range").unwrap();
