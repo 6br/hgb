@@ -23,6 +23,7 @@ pub struct Read {
     pub flag: u16,
     pub mapq: u8,
     pub insertions: Vec<(i32, u64, String)>, // Pixel, Real_pos, Ins_seq
+    pub sa: String,
 }
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Annotation {
