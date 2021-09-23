@@ -653,7 +653,7 @@ where
                 + annotation_count * 2
                 + if twobit.is_some() { 2 } else { 0 }
         };
-        let y_spec = 0..y_spec_max;
+        let y_spec = y_spec_max..0;
         let top_x_area_size = if read_index { 0 } else { x_area_size };
         let mut chart = if no_margin {
             if with_caption {

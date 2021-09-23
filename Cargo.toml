@@ -35,7 +35,7 @@ log = "0.4.11"
 multimap = "0.8.2"
 num-format = "0.4.0"
 numpress = "1.1.0"
-plotters = { version = "0.3.0", default-features = false, features = ["svg_backend", "line_series", "bitmap_encoder", "ttf", "histogram", "bitmap_backend"] }
+plotters = { version = "0.3.1", default-features = false, features = ["svg_backend", "line_series", "bitmap_encoder", "ttf", "histogram", "bitmap_backend"] }
 qstring = "0.7.2"
 rand = "0.8.4"
 rayon = "1.4.0"
