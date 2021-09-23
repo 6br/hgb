@@ -649,7 +649,7 @@ pub async fn server(
     prefetch_range: StringRegion,
     args: Vec<String>,
     mut buffer: ChromosomeBuffer,
-    threads: u16,
+    _threads: u16,
 ) -> std::io::Result<()> {
     use actix_web::{web, HttpServer};
     // let list = buffer.add(&prefetch_range);
@@ -713,7 +713,7 @@ pub async fn server(
             .wrap(cross_origin)
     })
     .bind(bind)?
-    .workers(threads as usize)
+    .workers(1 as usize)
     .run()
     .await
 }
