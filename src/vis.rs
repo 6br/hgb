@@ -1573,14 +1573,14 @@ where
                                                         ("sans-serif", y / 4 * 3),
                                                     );
                                                     texts.push(text);
-                                                    if dump_json {
-                                                        insertion_str.iter().group_by(|elt| elt.0).into_iter().for_each(|(ge0, group)| {
-                                                            let (lt, _) = chart.as_coord_spec().translate(&(ge0+1, index));
-                                                            insertions.push((lt, ge0, group.map(|t| t.1).join("").to_string()));
-                                                        }
-                                                        );
-                                                        // push(lt, prev_ref, ins);
+                                                }
+                                                if dump_json {
+                                                    insertion_str.iter().group_by(|elt| elt.0).into_iter().for_each(|(ge0, group)| {
+                                                        let (lt, _) = chart.as_coord_spec().translate(&(ge0+1, index));
+                                                        insertions.push((lt, ge0, group.map(|t| t.1).join("").to_string()));
                                                     }
+                                                    );
+                                                    // push(lt, prev_ref, ins);
                                                 }
                                             }
                                             prev_pixel_ref = k.0;
