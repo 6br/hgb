@@ -379,8 +379,8 @@ impl ChromosomeBuffer {
                                 if (!filter
                                     || (i.calculate_end() as u64 > range.start()
                                         && range.end() > i.start() as u64))
-                                    && i.flag().no_bits(no_bits)
-                                    && i.query_len() > min_read_len
+                                //&& i.flag().no_bits(no_bits)
+                                //&& i.query_len() > min_read_len
                                 {
                                     merged_list.push((sample_id, i));
                                 }
@@ -449,6 +449,14 @@ impl ChromosomeBuffer {
         let max_coverage = matches
             .value_of("max-coverage")
             .and_then(|a| a.parse::<u32>().ok());
+        let min_read_len = matches
+            .value_of("min-read-length")
+            .and_then(|a| a.parse::<u32>().ok())
+            .unwrap_or(0u32);
+        let no_bits = matches
+            .value_of("no-bits")
+            .and_then(|t| t.parse::<u16>().ok())
+            .unwrap_or(1796u16);
         // Calculate coverage; it won't work on sort_by_name
         // let mut frequency = BTreeMap::new(); // Vec::with_capacity();
 
@@ -553,117 +561,125 @@ impl ChromosomeBuffer {
                     .collect();
             }
             */
-            list.iter().group_by(|elt| elt.0).into_iter().for_each(|t| {
-                // let mut heap = BinaryHeap::<(i64, usize)>::new();
-                let mut packing_vec = vec![0u64];
-                let mut name_index = HashMap::new();
-                prev_index += 1;
-                let sample_id = t.0;
-                (t.1).enumerate().for_each(|(e, k)| {
-                    let end = if !packing {
-                        range.end() as i32
-                    } else if let Some(end) = end_map.get(&(sample_id, k.1.name())) {
-                        end.2
-                    } else {
-                        k.1.calculate_end()
-                    };
+            list.iter()
+                .filter(|(_, i)| i.flag().no_bits(no_bits) && i.query_len() > min_read_len)
+                .group_by(|elt| elt.0)
+                .into_iter()
+                .for_each(|t| {
+                    // let mut heap = BinaryHeap::<(i64, usize)>::new();
+                    let mut packing_vec = vec![0u64];
+                    let mut name_index = HashMap::new();
+                    prev_index += 1;
+                    let sample_id = t.0;
+                    (t.1).enumerate().for_each(|(e, k)| {
+                        let end = if !packing {
+                            range.end() as i32
+                        } else if let Some(end) = end_map.get(&(sample_id, k.1.name())) {
+                            end.2
+                        } else {
+                            k.1.calculate_end()
+                        };
 
-                    let mut index = if sort_by_name {
-                        prev_index += 1;
-                        e
-                    } else if let Some(index) = name_index.get(k.1.name()) {
-                        *index
-                    } else if let Some(index) = packing_vec
-                        .iter_mut()
-                        .enumerate()
-                        .find(|(_, item)| **item < k.1.start() as u64)
-                    {
-                        *index.1 = end as u64;
-                        index.0
-                    } else {
-                        packing_vec.push(end as u64);
-                        prev_index += 1;
-                        packing_vec.len() - 1
-                    };
-                    if let Some(end) = end_map.get(&(sample_id, k.1.name())) {
-                        if None == name_index.get(k.1.name()) {
-                            supplementary_list.push((
-                                k.1.name().to_vec(),
-                                index + last_prev_index,
-                                index + last_prev_index + end.3,
-                                end.0,
-                                end.1,
-                            ));
-                        }
-                    }
-                    if let Some(max_cov) = max_coverage {
-                        if index > max_cov as usize {
-                            index = max_cov as usize;
-                        }
-                    }
-                    index_list.push(index + last_prev_index);
-                    name_index.insert(k.1.name(), index);
-                });
-                if let Some(max_cov) = max_coverage {
-                    prev_index = max_cov as usize + last_prev_index;
-                }
-                compressed_list.push((t.0, prev_index));
-                last_prev_index = prev_index;
-            });
-        } else if packing {
-            list.iter().group_by(|elt| elt.0).into_iter().for_each(|t| {
-                // let mut heap = BinaryHeap::<(i64, usize)>::new();
-                let mut packing = vec![0u64];
-                prev_index += 1;
-                (t.1).for_each(|k| {
-                    let mut index =
-                        if let Some(TagValue::Int(array_view, _)) = k.1.tags().get(b"YY") {
-                            array_view as usize
-                        } else if let Some(index) = packing
+                        let mut index = if sort_by_name {
+                            prev_index += 1;
+                            e
+                        } else if let Some(index) = name_index.get(k.1.name()) {
+                            *index
+                        } else if let Some(index) = packing_vec
                             .iter_mut()
                             .enumerate()
                             .find(|(_, item)| **item < k.1.start() as u64)
                         {
-                            //packing[index.0] = k.1.calculate_end() as u64;
-                            *index.1 = k.1.calculate_end() as u64;
+                            *index.1 = end as u64;
                             index.0
                         } else {
-                            packing.push(k.1.calculate_end() as u64);
+                            packing_vec.push(end as u64);
                             prev_index += 1;
-                            packing.len() - 1
-                            //prev_index - 1
-                        }; /*
-                           let index: usize = if heap.peek() != None
-                               && -heap.peek().unwrap().0 < k.1.start() as i64
-                           {
-                               let hp = heap.pop().unwrap();
-                               // let index = hp.1;
-                               heap.push((-k.1.calculate_end() as i64, hp.1));
-                               hp.1
-                           } else {
-                               let index = prev_index;
-                               prev_index += 1;
-                               heap.push((-k.1.calculate_end() as i64, index));
-                               index
-                           };*/
-                    //let index =
-                    if let Some(max_cov) = max_coverage {
-                        if index > max_cov as usize {
-                            index = max_cov as usize;
-                            prev_index = max_cov as usize + last_prev_index;
+                            packing_vec.len() - 1
+                        };
+                        if let Some(end) = end_map.get(&(sample_id, k.1.name())) {
+                            if None == name_index.get(k.1.name()) {
+                                supplementary_list.push((
+                                    k.1.name().to_vec(),
+                                    index + last_prev_index,
+                                    index + last_prev_index + end.3,
+                                    end.0,
+                                    end.1,
+                                ));
+                            }
                         }
+                        if let Some(max_cov) = max_coverage {
+                            if index > max_cov as usize {
+                                index = max_cov as usize;
+                            }
+                        }
+                        index_list.push(index + last_prev_index);
+                        name_index.insert(k.1.name(), index);
+                    });
+                    if let Some(max_cov) = max_coverage {
+                        prev_index = max_cov as usize + last_prev_index;
                     }
-                    index_list.push(index + last_prev_index);
-                    // eprintln!("{:?}", packing);
-                    //(index, (k.0, k.1))
+                    compressed_list.push((t.0, prev_index));
+                    last_prev_index = prev_index;
                 });
-                if let Some(max_cov) = max_coverage {
-                    prev_index = max_cov as usize + last_prev_index;
-                }
-                compressed_list.push((t.0, prev_index));
-                //eprintln!("{:?} {:?} {:?}", compressed_list, packing, index_list);
-                last_prev_index = prev_index;
-            });
+        } else if packing {
+            list.iter()
+                .filter(|(_, i)| i.flag().no_bits(no_bits) && i.query_len() > min_read_len)
+                .group_by(|elt| elt.0)
+                .into_iter()
+                .for_each(|t| {
+                    // let mut heap = BinaryHeap::<(i64, usize)>::new();
+                    let mut packing = vec![0u64];
+                    prev_index += 1;
+                    (t.1).for_each(|k| {
+                        let mut index =
+                            if let Some(TagValue::Int(array_view, _)) = k.1.tags().get(b"YY") {
+                                array_view as usize
+                            } else if let Some(index) = packing
+                                .iter_mut()
+                                .enumerate()
+                                .find(|(_, item)| **item < k.1.start() as u64)
+                            {
+                                //packing[index.0] = k.1.calculate_end() as u64;
+                                *index.1 = k.1.calculate_end() as u64;
+                                index.0
+                            } else {
+                                packing.push(k.1.calculate_end() as u64);
+                                prev_index += 1;
+                                packing.len() - 1
+                                //prev_index - 1
+                            }; /*
+                               let index: usize = if heap.peek() != None
+                                   && -heap.peek().unwrap().0 < k.1.start() as i64
+                               {
+                                   let hp = heap.pop().unwrap();
+                                   // let index = hp.1;
+                                   heap.push((-k.1.calculate_end() as i64, hp.1));
+                                   hp.1
+                               } else {
+                                   let index = prev_index;
+                                   prev_index += 1;
+                                   heap.push((-k.1.calculate_end() as i64, index));
+                                   index
+                               };*/
+                        //let index =
+                        if let Some(max_cov) = max_coverage {
+                            if index > max_cov as usize {
+                                index = max_cov as usize;
+                                prev_index = max_cov as usize + last_prev_index;
+                            }
+                        }
+                        index_list.push(index + last_prev_index);
+                        // eprintln!("{:?}", packing);
+                        //(index, (k.0, k.1))
+                    });
+                    if let Some(max_cov) = max_coverage {
+                        prev_index = max_cov as usize + last_prev_index;
+                    }
+                    compressed_list.push((t.0, prev_index));
+                    //eprintln!("{:?} {:?} {:?}", compressed_list, packing, index_list);
+                    last_prev_index = prev_index;
+                });
         } else {
             // Now does not specify the maximal length by max_coverage.
             index_list = (0..list.len()).collect();

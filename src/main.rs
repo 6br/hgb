@@ -529,7 +529,7 @@ fn main() {
                         .short('(')
                         .long("flag-exclude")
                         .takes_value(true)
-                        .default_value("1649")
+                        .default_value("1796")
                         .about("Read must have NONE of these flags"),
                 )
                 .arg(

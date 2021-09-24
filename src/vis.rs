@@ -1780,7 +1780,7 @@ where
                             chart.draw_series(
                                 Histogram::vertical(&chart)
                                     .style(color.filled())
-                                    .margin(1)
+                                    .margin(2)
                                     .data(
                                         values
                                             .iter()

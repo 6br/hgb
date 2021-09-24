@@ -1312,6 +1312,7 @@ where
                         }
                         unique_frequency.sort_by_key(|t| t.0);
                         unique_frequency.reverse();
+                        //eprintln!("{:?} {}", unique_frequency, column.entries().len() as u32);
                         let d: usize = unique_frequency.iter().map(|t| t.0).sum();
                         let threshold = d as f64 * freq;
                         // let minor = d - seqs[0].0;
