@@ -1731,6 +1731,7 @@ where
                     //.caption(format!("{}", range), ("sans-serif", 20).into_font())
                     // Set the size of the label region
                     .x_label_area_size(0)
+                    .top_x_label_area_size(5)
                     .y_label_area_size(y_area_size)
                     // Finally attach a coordinate on the drawing area and make a chart context
                     .build_cartesian_2d(x_spec.clone(), 0..y_max)?;
