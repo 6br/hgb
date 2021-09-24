@@ -1688,7 +1688,13 @@ where
                         //println!("{}", String::from_utf8_lossy(bam.name()));
                         let (lt, lb) = chart.as_coord_spec().translate(&(range.start, index));
                         let (rt, rb) = chart.as_coord_spec().translate(&(range.end+1, index + 1));
-                        let read = Read{rectangle: (lt, lb, rt ,rb), read_id: String::from_utf8_lossy(&bam.name()).to_string(), start: bam.start(), end: bam.calculate_end(), insertions: insertions, strand: bam.flag().is_reverse_strand(), flag: bam.flag().0, track: data.0, mapq: bam.mapq(), query_len: bam.query_len(), sa: "".to_string()};//bam.tags().get(b"SA").}; //, tags: tags  }
+                        let sastr = match bam.tags().get(b"SA") {
+                            Some(TagValue::String(array_view, StringType::String)) => {
+                                 String::from_utf8_lossy(array_view).to_string()
+                            }
+                        _ => "".to_string()
+                        };
+                        let read = Read{rectangle: (lt, lb, rt ,rb), read_id: String::from_utf8_lossy(&bam.name()).to_string(), start: bam.start(), end: bam.calculate_end(), insertions: insertions, strand: bam.flag().is_reverse_strand(), flag: bam.flag().0, track: data.0, mapq: bam.mapq(), query_len: bam.query_len(), sa: sastr};//bam.tags().get(b"SA").}; //, tags: tags  }
                         reads.push(read);
                     }
                 });
