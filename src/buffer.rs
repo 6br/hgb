@@ -156,7 +156,7 @@ impl<'a> ChromosomeBuffer<'a> {
                                         || (i.calculate_end() as u64 > range.start()
                                             && range.end() > i.start() as u64)
                                     {
-                                        if !i.flag().no_bits(1796) && i.query_len() > min_read_len
+                                        if i.flag().no_bits(1796) && i.query_len() > min_read_len
                                         {
                                             list.push((sample_id, i));
                                         }
