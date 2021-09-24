@@ -197,9 +197,10 @@ impl ChromosomeBuffer {
             list.iter().group_by(|elt| elt.0).into_iter().for_each(|t| {
                 /*let mut line =
                 Vec::with_capacity((prefetch_range.end - prefetch_range.start + 1) as usize);*/
+
                 let line = self.freq.entry(t.0).or_insert_with(Vec::new);
-                for column in bam::Pileup::with_filter(&mut RecordIter::new(t.1), move |record| {
-                    record.flag().no_bits(no_bits.clone()) //&& record.query_len() > min_read_len
+                for column in bam::Pileup::with_filter(&mut RecordIter::new(t.1), |record| {
+                    record.flag().no_bits(1796) //&& record.query_len() > min_read_len
                 }) {
                     let column = column.unwrap();
                     if let Some(freq) = snp_frequency {

@@ -1275,9 +1275,8 @@ where
                 //let no_bits = matches.value_of("no-bits").and_then(|t| t.parse::<u16>().ok()).unwrap_or(1796u16);
                 let mut line =
                     Vec::with_capacity((prefetch_range.end - prefetch_range.start + 1) as usize);
-                for column in bam::Pileup::with_filter(&mut RecordIter::new(t.1), move |record| {
-                    record.flag().no_bits(no_bits.clone())
-                        && record.query_len() > min_read_len.clone()
+                for column in bam::Pileup::with_filter(&mut RecordIter::new(t.1), |record| {
+                    record.flag().no_bits(1796)
                 }) {
                     let column = column.unwrap();
                     /*eprintln!(
