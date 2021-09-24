@@ -204,15 +204,15 @@ impl ChromosomeBuffer {
                 }) {
                     let column = column.unwrap();
                     if let Some(freq) = snp_frequency {
-                        let mut seqs = Vec::with_capacity(column.entries().len()); //vec![];
+                        let mut seqs: Vec<String> = Vec::with_capacity(column.entries().len()); //vec![];
                         for entry in column.entries().iter() {
                             let seq: Option<_> = entry.sequence();
                             match seq {
                                 Some(a) => {
                                     let seq: Vec<_> = a.map(|nt| nt as char).take(1).collect();
-                                    seqs.push(seq);
+                                    seqs.push(seq.into_iter().collect());
                                 }
-                                _ => seqs.push(vec![]),
+                                _ => seqs.push(String::new()),
                             }
                         }
                         let unique_elements = seqs.iter().cloned().unique().collect_vec();
@@ -245,7 +245,7 @@ impl ChromosomeBuffer {
                             line.push((
                                 column.ref_pos() as u64,
                                 car.0 as u32,
-                                car.1[0].to_ascii_uppercase(),
+                                (car.1.as_bytes()[0] as char).to_ascii_uppercase(),
                             ));
                         } else if car.1.is_empty() {
                             line.push((column.ref_pos() as u64, car.0 as u32, 'N'));
