@@ -853,7 +853,7 @@ pub fn bench_query(matches: &ArgMatches, _args: Vec<String>, threads: u16) {
                 let mut list = vec![];
                 let mut list_btree = BTreeSet::new();
                 buffer.retrieve(&string_range, &mut list, &mut list_btree);
-                let new_vis = buffer.vis(&string_range, &mut list, &mut list_btree);
+                let new_vis = buffer.vis(&matches, &string_range, &mut list, &mut list_btree);
                 println!("{}", new_vis.unwrap().prefetch_max);
                 break;
             }

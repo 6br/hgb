@@ -405,6 +405,7 @@ async fn index(
                     );
                 }
                 let new_vis = buffer.read().unwrap().vis(
+                    &matches,
                     &string_range,
                     &mut list.write().unwrap(),
                     &mut list_btree.write().unwrap(),
@@ -525,7 +526,7 @@ pub async fn server(
     let no_margin = matches.is_present("no-scale");
     buffer.retrieve(&prefetch_range, &mut list, &mut list_btree);
     let vis = buffer
-        .vis(&prefetch_range, &mut list, &mut list_btree)
+        .vis(&matches, &prefetch_range, &mut list, &mut list_btree)
         .unwrap();
 
     let annotation = &vis.annotation;

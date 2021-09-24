@@ -589,6 +589,7 @@ fn index2(
                         );
                     }
                     let new_vis = buffer.read().unwrap().vis(
+                        &matches,
                         &string_range,
                         &mut list.write().unwrap(),
                         &mut list_btree.write().unwrap(),
@@ -686,7 +687,7 @@ pub async fn server(
     let bind = matches.value_of("web").unwrap_or(&"0.0.0.0:4000");
     buffer.retrieve(&prefetch_range, &mut list, &mut list_btree);
     let vis = buffer
-        .vis(&prefetch_range, &mut list, &mut list_btree)
+        .vis(&matches, &prefetch_range, &mut list, &mut list_btree)
         .unwrap();
     let view_range = if matches.is_present("whole-chromosome") {
         StringRegion {

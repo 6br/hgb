@@ -248,7 +248,7 @@ impl ChromosomeBuffer {
                                 (car.1.as_bytes()[0] as char).to_ascii_uppercase(),
                             ));
                         } else if car.1.is_empty() {
-                            line.push((column.ref_pos() as u64, car.0 as u32, 'N'));
+                            // line.push((column.ref_pos() as u64, car.0 as u32, 'N'));
                         }
                     }
                     // Should we have sparse occurrence table?
@@ -430,6 +430,7 @@ impl ChromosomeBuffer {
     }
     pub fn vis(
         &self,
+        matches: &ArgMatches,
         string_range: &StringRegion,
         list: &mut Vec<(u64, bam::Record)>,
         _list_btree: &mut BTreeSet<u64>,
@@ -441,7 +442,7 @@ impl ChromosomeBuffer {
 
         let mut ann: Vec<(u64, bed::Record)> =
             self.bins.values().into_iter().cloned().flatten().collect();
-        let matches = self.matches.clone();
+        // let matches = self.matches.clone();
         let _split_only = matches.is_present("only-split-alignment");
         let sort_by_name = matches.is_present("sort-by-name");
         let packing = !matches.is_present("no-packing");
