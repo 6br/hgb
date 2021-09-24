@@ -180,8 +180,8 @@ impl ChromosomeBuffer {
                                     if (!filter
                                         || (i.calculate_end() as u64 > range.start()
                                             && range.end() > i.start() as u64))
-                                        && i.flag().no_bits(no_bits)
-                                        && i.query_len() > min_read_len
+                                    // && i.flag().no_bits(no_bits)
+                                    // && i.query_len() > min_read_len
                                     {
                                         list.push((sample_id, i));
                                     }
@@ -206,18 +206,14 @@ impl ChromosomeBuffer {
                     if let Some(freq) = snp_frequency {
                         let mut seqs = Vec::with_capacity(column.entries().len()); //vec![];
                         for entry in column.entries().iter() {
-                            let seq: Vec<_> = entry
-                                .sequence()
-                                .unwrap()
-                                .map(|nt| nt as char)
-                                .take(1)
-                                .collect();
-                            //let qual: Vec<_> = entry.qualities().unwrap().iter()
-                            //    .map(|q| (q + 33) as char).collect();
-                            //if column.ref_pos() == 8879824 {
-                            //    eprintln!("    {:?}: {:?}", entry.record(), seq);
-                            //}
-                            seqs.push(seq);
+                            let seq: Option<_> = entry.sequence();
+                            match seq {
+                                Some(a) => {
+                                    let seq: Vec<_> = a.map(|nt| nt as char).take(1).collect();
+                                    seqs.push(seq);
+                                }
+                                _ => seqs.push(vec![]),
+                            }
                         }
                         let unique_elements = seqs.iter().cloned().unique().collect_vec();
                         let mut unique_frequency = vec![];
