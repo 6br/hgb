@@ -221,7 +221,7 @@ pub fn bam_vis(
                 let viewer = reader2.fetch(&bam::bam_reader::Region::new(ref_id, start, end))?;
                 for record in viewer {
                     let record = record?;
-                    if !record.flag().no_bits(no_bits)
+                    if record.flag().no_bits(no_bits)
                         && record.query_len() > min_read_len
                         && (!full_length
                             || record.start() <= prefetch_range.start as i32
@@ -1018,7 +1018,7 @@ pub fn vis_query(
                                     if (!filter
                                         || (i.calculate_end() as u64 > range.start()
                                             && range.end() > i.start() as u64))
-                                        && !i.flag().no_bits(no_bits)
+                                        && i.flag().no_bits(no_bits)
                                         && i.query_len() > min_read_len
                                     {
                                         list.push((sample_id, i));

@@ -180,7 +180,7 @@ impl ChromosomeBuffer {
                                     if (!filter
                                         || (i.calculate_end() as u64 > range.start()
                                             && range.end() > i.start() as u64))
-                                        && !i.flag().no_bits(no_bits)
+                                        && i.flag().no_bits(no_bits)
                                         && i.query_len() > min_read_len
                                     {
                                         list.push((sample_id, i));
@@ -382,7 +382,7 @@ impl ChromosomeBuffer {
                                 if (!filter
                                     || (i.calculate_end() as u64 > range.start()
                                         && range.end() > i.start() as u64))
-                                    && !i.flag().no_bits(no_bits)
+                                    && i.flag().no_bits(no_bits)
                                     && i.query_len() > min_read_len
                                 {
                                     merged_list.push((sample_id, i));
