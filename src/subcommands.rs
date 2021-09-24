@@ -708,7 +708,7 @@ pub fn split(matches: &ArgMatches, threads: u16) {
                     };
                     if let Some(max_cov) = max_coverage {
                         if index > max_cov as usize {
-                            index = max_cov as usize;
+                            index = std::u32::MAX as usize;
                             prev_index = max_cov as usize + last_prev_index;
                         }
                     }
@@ -1623,7 +1623,7 @@ where
                         }
                         if let Some(max_cov) = max_coverage {
                             if index > max_cov as usize {
-                                index = max_cov as usize;
+                                index = std::u32::MAX as usize;
                             }
                         }
                         vis[k.2]
@@ -1698,7 +1698,7 @@ where
                         //let index =
                         if let Some(max_cov) = max_coverage {
                             if index > max_cov as usize {
-                                index = max_cov as usize;
+                                index = std::u32::MAX as usize;
                                 prev_index = max_cov as usize + last_prev_index;
                             }
                         }
