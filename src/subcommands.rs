@@ -1224,14 +1224,7 @@ where
     let split = matches.is_present("split-alignment");
     let read_per_line = matches.is_present("read-per-line");
     let read_per_two_node = matches.is_present("read-per-two-range");
-    let min_read_len = matches
-        .value_of("min-read-length")
-        .and_then(|a| a.parse::<u32>().ok())
-        .unwrap_or(0u32);
-    let no_bits = matches
-        .value_of("no-bits")
-        .and_then(|t| t.parse::<u16>().ok())
-        .unwrap_or(1796u16);
+
     let read_index = matches
         .value_of("read-index")
         .and_then(|a| a.parse::<usize>().ok());
