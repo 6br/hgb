@@ -180,8 +180,8 @@ impl ChromosomeBuffer {
                                     if (!filter
                                         || (i.calculate_end() as u64 > range.start()
                                             && range.end() > i.start() as u64))
-                                    // && i.flag().no_bits(no_bits)
-                                    // && i.query_len() > min_read_len
+                                        && i.flag().no_bits(no_bits)
+                                        && i.query_len() > min_read_len
                                     {
                                         list.push((sample_id, i));
                                     }
@@ -379,8 +379,8 @@ impl ChromosomeBuffer {
                                 if (!filter
                                     || (i.calculate_end() as u64 > range.start()
                                         && range.end() > i.start() as u64))
-                                //&& i.flag().no_bits(no_bits)
-                                //&& i.query_len() > min_read_len
+                                    && i.flag().no_bits(no_bits)
+                                    && i.query_len() > min_read_len
                                 {
                                     merged_list.push((sample_id, i));
                                 }
@@ -458,6 +458,11 @@ impl ChromosomeBuffer {
             .value_of("no-bits")
             .and_then(|t| t.parse::<u16>().ok())
             .unwrap_or(1796u16);
+        let read_name = matches
+            .value_of("read-name")
+            .and_then(|t| Some(t.to_string()))
+            .unwrap_or("".to_string());
+        let filter_by_read_name = matches.is_present("read-name");
         // Calculate coverage; it won't work on sort_by_name
         // let mut frequency = BTreeMap::new(); // Vec::with_capacity();
 
@@ -563,7 +568,11 @@ impl ChromosomeBuffer {
             }
             */
             list.iter()
-                .filter(|(_, i)| i.flag().no_bits(no_bits) && i.query_len() > min_read_len)
+                .filter(|(_, i)| {
+                    i.flag().no_bits(no_bits)
+                        && i.query_len() > min_read_len
+                        && (!filter_by_read_name || read_name == String::from_utf8_lossy(i.name()))
+                })
                 .group_by(|elt| elt.0)
                 .into_iter()
                 .for_each(|t| {
