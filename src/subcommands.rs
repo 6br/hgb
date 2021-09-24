@@ -1306,8 +1306,7 @@ where
                         unique_frequency.sort_by_key(|t| t.0);
                         unique_frequency.reverse();
                         //eprintln!("{:?} {}", unique_frequency, column.entries().len() as u32);
-                        let d: usize = unique_frequency.iter().map(|t| t.0).sum();
-                        let threshold = d as f64 * freq;
+                        let threshold = column.entries().len() as f64 * freq;
                         // let minor = d - seqs[0].0;
                         // let second_minor = d - unique_frequency[1].0;
                         let (car, _cdr) = unique_frequency.split_first().unwrap();
@@ -1322,14 +1321,16 @@ where
                                 ));
                             }
                         });*/
-                        if car.0 <= d - threshold as usize && !car.1.is_empty() {
+                        if (column.entries().len() - car.0) as f64 <= threshold && !car.1.is_empty()
+                        {
+                            // if !car.1.is_empty() {
                             line.push((
                                 column.ref_pos() as u64,
                                 car.0 as u32,
-                                car.1[0].to_ascii_uppercase(),
+                                (car.1[0] as char).to_ascii_uppercase(),
                             ));
                         } else if car.1.is_empty() {
-                            line.push((column.ref_pos() as u64, car.0 as u32, 'N'));
+                            // line.push((column.ref_pos() as u64, car.0 as u32, 'N'));
                         }
                     }
                     // Should we have sparse occurrence table?
