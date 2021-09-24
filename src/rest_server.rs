@@ -239,6 +239,13 @@ fn get_matches_from(args: Vec<String>) -> Result<ArgMatches, Error> {
             .about("Max coverage value on coverage track"),
     )
     .arg(
+        Arg::new("min-read-length")
+            .short('M')
+            .long("min-read-length")
+            .takes_value(true)
+            .about("Minimum read mapping length on coverage/alignment track"),
+    )
+    .arg(
         Arg::new("cache-dir")
             .short('d')
             .takes_value(true)
