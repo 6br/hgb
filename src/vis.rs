@@ -1094,7 +1094,7 @@ where
             //}
         }
         let mut split_frequency = vec![];
-        //let mut snp_frequency = vec![];
+        // let mut allele_frequency = vec![];
         // For each alignment:
         let mut reads = vec![];
         let (bars, texts) = {
@@ -1258,6 +1258,10 @@ where
                                     if output_translocation {
                                         println!("S\t{}\t{}\tR\t{}", range.path, end, start);
                                     }
+                                    if dump_json {
+                                        let (lt, _) = chart.as_coord_spec().translate(&(start, index));
+                                        insertions.push((lt, start, "Split-alignment".to_string()));
+                                    }
                                 }
                                 if ((is_larger && !bam.flag().is_reverse_strand())
                                     || (is_smaller && bam.flag().is_reverse_strand()))
@@ -1273,6 +1277,10 @@ where
                                     split_frequency.push((data.0, (end, approximate_one_pixel)));
                                     if output_translocation {
                                         println!("S\t{}\t{}\tR\t{}", range.path, end, start);
+                                    }
+                                    if dump_json {
+                                        let (lt, _) = chart.as_coord_spec().translate(&(end, index));
+                                        insertions.push((lt, end, "Split-alignment".to_string()));
                                     }
                                 }
                                 /*eprintln!(
@@ -1464,7 +1472,9 @@ where
                                                             entry.record_pos_nt().unwrap().1;
                                                         color = nt_color(record_nt as char, &preset_color);
                                                         //eprintln!("Mismatch: {:?}", [(prev_pixel_ref, index), (prev_ref, index + 1)]);
-                                                        //snp_frequency.push((data.0, (record_nt, start, approximate_one_pixel)));
+                                                        /*if let Some(_f) = snp_frequency {
+                                                            allele_frequency.push((data.0, (record_nt, start, approximate_one_pixel)));
+                                                        }*/
 
                                                         /*let mut bar =
                                                         Rectangle::new([(prev_ref as u64, index), (prev_ref as u64 + 1, index + 1)], color.filled());
@@ -1561,7 +1571,7 @@ where
                                                         (prev_pixel_ref as u64+1, index),
                                                         (prev_pixel_ref as u64+1, index + 1),
                                                     ],
-                                                    preset_color.pick(VisColor::InsCol).stroke_width(2),
+                                                    preset_color.pick(VisColor::InsCol).stroke_width(1),
                                                 );
                                                 bar.set_margin(1, 1, 0, 0);
                                                 bars.push(bar);

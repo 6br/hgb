@@ -114,6 +114,9 @@ impl ChromosomeBuffer {
             .value_of("min-read-length")
             .and_then(|a| a.parse::<u32>().ok())
             .unwrap_or(0u32);
+        let snp_frequency = matches
+            .value_of("snp-frequency")
+            .and_then(|a| a.parse::<f64>().ok()); 
 
         let mut chunks = BTreeMap::new();
         let mut bin_ids = BTreeSet::new();
@@ -195,6 +198,54 @@ impl ChromosomeBuffer {
                     record.flag().no_bits(1796)
                 }) {
                     let column = column.unwrap();
+                    if let Some(freq) = snp_frequency {
+                        let mut seqs = Vec::with_capacity(column.entries().len()); //vec![];
+                        for entry in column.entries().iter() {
+                            let seq: Vec<_> = entry
+                                .sequence()
+                                .unwrap()
+                                .map(|nt| nt as char)
+                                .take(1)
+                                .collect();
+                            //let qual: Vec<_> = entry.qualities().unwrap().iter()
+                            //    .map(|q| (q + 33) as char).collect();
+                            //if column.ref_pos() == 8879824 {
+                            //    eprintln!("    {:?}: {:?}", entry.record(), seq);
+                            //}
+                            seqs.push(seq);
+                        }
+                        let unique_elements = seqs.iter().cloned().unique().collect_vec();
+                        let mut unique_frequency = vec![];
+                        for unique_elem in unique_elements.iter() {
+                            unique_frequency.push((
+                                seqs.iter().filter(|&elem| elem == unique_elem).count(),
+                                unique_elem,
+                            ));
+                        }
+                        unique_frequency.sort_by_key(|t| t.0);
+                        unique_frequency.reverse();
+                        let d: usize = unique_frequency.iter().map(|t| t.0).sum();
+                        let threshold = d as f64 * freq;
+                        // let minor = d - seqs[0].0;
+                        // let second_minor = d - unique_frequency[1].0;
+                        let (_, cdr) = unique_frequency.split_first().unwrap();
+                        cdr.iter()
+                            .filter(|t| t.0 >= threshold as usize)
+                            .for_each(|t2| {
+                                if !t2.1.is_empty() {
+                                    line.push((
+                                        column.ref_pos() as u64,
+                                        t2.0 as u32,
+                                        t2.1[0].to_ascii_uppercase(),
+                                    ));
+                                }
+                            });
+                    }
+                    // Should we have sparse occurrence table?
+                    //eprintln!("{:?} {:?}",  range.path, lambda(column.ref_id() as usize).unwrap_or(&column.ref_id().to_string()));
+                    // lambda(column.ref_id() as usize).unwrap_or(&column.ref_id().to_string())
+                    // == range.path
+                    // &&
                     line.push((column.ref_pos() as u64, column.entries().len() as u32, '*'));
                 }
             });
