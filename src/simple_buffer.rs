@@ -623,63 +623,61 @@ impl ChromosomeBuffer {
                     last_prev_index = prev_index;
                 });
         } else if packing {
-            list.iter()
-                .filter(|(_, i)| i.flag().no_bits(no_bits) && i.query_len() > min_read_len)
-                .group_by(|elt| elt.0)
-                .into_iter()
-                .for_each(|t| {
-                    // let mut heap = BinaryHeap::<(i64, usize)>::new();
-                    let mut packing = vec![0u64];
-                    prev_index += 1;
-                    (t.1).for_each(|k| {
-                        let mut index =
-                            if let Some(TagValue::Int(array_view, _)) = k.1.tags().get(b"YY") {
-                                array_view as usize
-                            } else if let Some(index) = packing
-                                .iter_mut()
-                                .enumerate()
-                                .find(|(_, item)| **item < k.1.start() as u64)
-                            {
-                                //packing[index.0] = k.1.calculate_end() as u64;
-                                *index.1 = k.1.calculate_end() as u64;
-                                index.0
-                            } else {
-                                packing.push(k.1.calculate_end() as u64);
-                                prev_index += 1;
-                                packing.len() - 1
-                                //prev_index - 1
-                            }; /*
-                               let index: usize = if heap.peek() != None
-                                   && -heap.peek().unwrap().0 < k.1.start() as i64
-                               {
-                                   let hp = heap.pop().unwrap();
-                                   // let index = hp.1;
-                                   heap.push((-k.1.calculate_end() as i64, hp.1));
-                                   hp.1
-                               } else {
-                                   let index = prev_index;
-                                   prev_index += 1;
-                                   heap.push((-k.1.calculate_end() as i64, index));
-                                   index
-                               };*/
-                        //let index =
-                        if let Some(max_cov) = max_coverage {
-                            if index > max_cov as usize {
-                                index = max_cov as usize;
-                                prev_index = max_cov as usize + last_prev_index;
-                            }
-                        }
-                        index_list.push(index + last_prev_index);
-                        // eprintln!("{:?}", packing);
-                        //(index, (k.0, k.1))
-                    });
+            list.iter().group_by(|elt| elt.0).into_iter().for_each(|t| {
+                // let mut heap = BinaryHeap::<(i64, usize)>::new();
+                let mut packing = vec![0u64];
+                prev_index += 1;
+                (t.1).for_each(|k| {
+                    let mut index =
+                        if !(k.1.flag().no_bits(no_bits) && k.1.query_len() > min_read_len) {
+                            std::u32::MAX as usize
+                        } else if let Some(TagValue::Int(array_view, _)) = k.1.tags().get(b"YY") {
+                            array_view as usize
+                        } else if let Some(index) = packing
+                            .iter_mut()
+                            .enumerate()
+                            .find(|(_, item)| **item < k.1.start() as u64)
+                        {
+                            //packing[index.0] = k.1.calculate_end() as u64;
+                            *index.1 = k.1.calculate_end() as u64;
+                            index.0
+                        } else {
+                            packing.push(k.1.calculate_end() as u64);
+                            prev_index += 1;
+                            packing.len() - 1
+                            //prev_index - 1
+                        }; /*
+                           let index: usize = if heap.peek() != None
+                               && -heap.peek().unwrap().0 < k.1.start() as i64
+                           {
+                               let hp = heap.pop().unwrap();
+                               // let index = hp.1;
+                               heap.push((-k.1.calculate_end() as i64, hp.1));
+                               hp.1
+                           } else {
+                               let index = prev_index;
+                               prev_index += 1;
+                               heap.push((-k.1.calculate_end() as i64, index));
+                               index
+                           };*/
+                    //let index =
                     if let Some(max_cov) = max_coverage {
-                        prev_index = max_cov as usize + last_prev_index;
+                        if index > max_cov as usize {
+                            index = std::u32::MAX as usize;
+                            prev_index = max_cov as usize + last_prev_index;
+                        }
                     }
-                    compressed_list.push((t.0, prev_index));
-                    //eprintln!("{:?} {:?} {:?}", compressed_list, packing, index_list);
-                    last_prev_index = prev_index;
+                    index_list.push(index + last_prev_index);
+                    // eprintln!("{:?}", packing);
+                    //(index, (k.0, k.1))
                 });
+                if let Some(max_cov) = max_coverage {
+                    prev_index = max_cov as usize + last_prev_index;
+                }
+                compressed_list.push((t.0, prev_index));
+                //eprintln!("{:?} {:?} {:?}", compressed_list, packing, index_list);
+                last_prev_index = prev_index;
+            });
         } else {
             // Now does not specify the maximal length by max_coverage.
             index_list = (0..list.len()).collect();

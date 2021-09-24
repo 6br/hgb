@@ -1104,9 +1104,9 @@ where
             index_list
                 .iter()
                 .zip(list.iter())
-                .filter(|(_, data)| {
+                .filter(|(index, data)| {
                     (data.1.start() as u64) < range.end()
-                        && (data.1.calculate_end() as u64) > range.start()
+                        && (data.1.calculate_end() as u64) > range.start() && **index < std::u32::MAX as usize
                 })
                 .for_each(|(&index, data)| {
                     //chart.draw_series(index_list.into_par_iter().zip(list).map(|(index, data)| {
@@ -1780,7 +1780,7 @@ where
                             chart.draw_series(
                                 Histogram::vertical(&chart)
                                     .style(color.filled())
-                                    .margin(2)
+                                    .margin(1)
                                     .data(
                                         values
                                             .iter()
@@ -1798,7 +1798,7 @@ where
                     chart.draw_series(
                         Histogram::vertical(&chart)
                             .style(preset_color.pick(VisColor::SplCol).filled())
-                            .margin(2)
+                            .margin(1)
                             .data(
                                 split_frequency
                                     .iter()
