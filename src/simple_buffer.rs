@@ -241,7 +241,7 @@ impl ChromosomeBuffer {
                                 ));
                             }
                         });*/
-                        if car.0 <= d - threshold as usize && !car.1.is_empty() {
+                        if !car.1.is_empty() {
                             line.push((
                                 column.ref_pos() as u64,
                                 car.0 as u32,
@@ -338,7 +338,6 @@ impl ChromosomeBuffer {
                 }
             }
         }
-        //eprintln!("3");
 
         let mut merged_list = vec![];
 
