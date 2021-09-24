@@ -226,7 +226,7 @@ impl ChromosomeBuffer {
                         unique_frequency.sort_by_key(|t| t.0);
                         unique_frequency.reverse();
                         //let d: usize = unique_frequency.iter().map(|t| t.0).sum();
-                        let threshold = column.entries().len() as f64 * freq;
+                        let _threshold = column.entries().len() as f64 * freq;
                         // let minor = d - seqs[0].0;
                         // let second_minor = d - unique_frequency[1].0;
                         let (car, _cdr) = unique_frequency.split_first().unwrap();
@@ -241,8 +241,8 @@ impl ChromosomeBuffer {
                                 ));
                             }
                         });*/
-                        if (column.entries().len() - car.0) as f64 <= threshold && !car.1.is_empty()
-                        {
+                        //if (column.entries().len() - car.0) as f64 <= threshold &&
+                        if !car.1.is_empty() {
                             // if !car.1.is_empty() {
                             line.push((
                                 column.ref_pos() as u64,
