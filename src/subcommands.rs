@@ -1224,6 +1224,10 @@ where
     let split = matches.is_present("split-alignment");
     let read_per_line = matches.is_present("read-per-line");
     let read_per_two_node = matches.is_present("read-per-two-range");
+    let min_read_len = matches
+    .value_of("min-read-length")
+    .and_then(|a| a.parse::<u32>().ok())
+    .unwrap_or(0u32);
     let no_bits = matches
         .value_of("no-bits")
         .and_then(|t| t.parse::<u16>().ok())
@@ -1272,7 +1276,7 @@ where
                 let mut line =
                     Vec::with_capacity((prefetch_range.end - prefetch_range.start + 1) as usize);
                 for column in bam::Pileup::with_filter(&mut RecordIter::new(t.1), move |record| {
-                    record.flag().no_bits(no_bits.clone()) // && record.query_len() > min_read_len.clone()
+                    record.flag().no_bits(no_bits.clone()) && record.query_len() > min_read_len.clone()
                 }) {
                     let column = column.unwrap();
                     /*eprintln!(

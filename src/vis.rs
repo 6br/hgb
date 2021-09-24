@@ -716,9 +716,9 @@ where
                 .configure_mesh()
                 // We can customize the maximum number of labels allowed for each axis
                 .x_labels(*x_labels) // Default value is 10
+                .disable_x_axis()
                 .bold_line_style(RGBColor(0, 0, 0).mix(0.1))
                 .light_line_style(RGBColor(0, 0, 0).mix(0.1))
-                .disable_x_axis()
                 //.x_labels(1)
                 .x_label_offset(x_offset as u32)
                 .y_labels(1)
@@ -1732,7 +1732,7 @@ where
                     .configure_mesh()
                     // We can customize the maximum number of labels allowed for each axis
                     //.x_labels(5)
-                    // .y_labels(4)
+                    //.y_labels(4)
                     //.x_label_style(("sans-serif", x_scale / 2).into_font())
                     .y_label_style(("sans-serif", 12).into_font())
                     // We can also change the format of the label text
