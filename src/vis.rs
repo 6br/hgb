@@ -1740,7 +1740,7 @@ where
                     .draw()?;
                 if let Some(values) = frequency.get(sample_sequential_id) {
                     let color = if snp_frequency.is_some() {
-                        Palette99::pick(idx).stroke_width(2)
+                        Palette99::pick(idx).stroke_width(1)
                     } else {
                         Palette99::pick(idx).filled()
                     }; // BLUE

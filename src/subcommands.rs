@@ -50,6 +50,10 @@ pub fn bam_vis(
         .value_of("neighbor")
         .and_then(|a| a.parse::<u64>().ok())
         .unwrap_or(0u64);
+    let no_bits = matches
+        .value_of("no-bits")
+        .and_then(|t| t.parse::<u16>().ok())
+        .unwrap_or(1796u16);
     let full_length = matches.is_present("full-length");
     let separated_by_tag = matches.occurrences_of("separated-by-tag") != 0;
     let separated_by_tag_vec = matches.value_of("separated-by-tag");
@@ -217,7 +221,7 @@ pub fn bam_vis(
                 let viewer = reader2.fetch(&bam::bam_reader::Region::new(ref_id, start, end))?;
                 for record in viewer {
                     let record = record?;
-                    if !record.flag().is_secondary()
+                    if !record.flag().no_bits(no_bits)
                         && record.query_len() > min_read_len
                         && (!full_length
                             || record.start() <= prefetch_range.start as i32
@@ -870,6 +874,10 @@ pub fn vis_query(
         .value_of("neighbor")
         .and_then(|a| a.parse::<u64>().ok())
         .unwrap_or(0u64);
+    let no_bits = matches
+        .value_of("no-bits")
+        .and_then(|t| t.parse::<u16>().ok())
+        .unwrap_or(1796u16);
     if let Some(o) = matches.value_of("INPUT") {
         let mut reader: IndexedReader<BufReader<File>> =
             IndexedReader::from_path_with_additional_threads(o, threads - 1)
@@ -1010,7 +1018,7 @@ pub fn vis_query(
                                     if (!filter
                                         || (i.calculate_end() as u64 > range.start()
                                             && range.end() > i.start() as u64))
-                                        && !i.flag().is_secondary()
+                                        && !i.flag().no_bits(no_bits)
                                         && i.query_len() > min_read_len
                                     {
                                         list.push((sample_id, i));
@@ -1216,6 +1224,10 @@ where
     let split = matches.is_present("split-alignment");
     let read_per_line = matches.is_present("read-per-line");
     let read_per_two_node = matches.is_present("read-per-two-range");
+    let no_bits = matches
+        .value_of("no-bits")
+        .and_then(|t| t.parse::<u16>().ok())
+        .unwrap_or(1796u16);
     let read_index = matches
         .value_of("read-index")
         .and_then(|a| a.parse::<usize>().ok());
@@ -1256,10 +1268,11 @@ where
             let prefetch_range = &i.prefetch_range; //&vis[0].prefetch_range.clone();
 
             list.iter().group_by(|elt| elt.0).into_iter().for_each(|t| {
+                //let no_bits = matches.value_of("no-bits").and_then(|t| t.parse::<u16>().ok()).unwrap_or(1796u16);
                 let mut line =
                     Vec::with_capacity((prefetch_range.end - prefetch_range.start + 1) as usize);
-                for column in bam::Pileup::with_filter(&mut RecordIter::new(t.1), |record| {
-                    record.flag().no_bits(1796)
+                for column in bam::Pileup::with_filter(&mut RecordIter::new(t.1), move |record| {
+                    record.flag().no_bits(no_bits.clone()) // && record.query_len() > min_read_len.clone()
                 }) {
                     let column = column.unwrap();
                     /*eprintln!(
@@ -1298,18 +1311,27 @@ where
                         let threshold = d as f64 * freq;
                         // let minor = d - seqs[0].0;
                         // let second_minor = d - unique_frequency[1].0;
-                        let (_, cdr) = unique_frequency.split_first().unwrap();
-                        cdr.iter()
-                            .filter(|t| t.0 >= threshold as usize)
-                            .for_each(|t2| {
-                                if !t2.1.is_empty() {
-                                    line.push((
-                                        column.ref_pos() as u64,
-                                        t2.0 as u32,
-                                        t2.1[0].to_ascii_uppercase(),
-                                    ));
-                                }
-                            });
+                        let (car, _cdr) = unique_frequency.split_first().unwrap();
+                        /*cdr.iter()
+                        .filter(|t| t.0 >= threshold as usize)
+                        .for_each(|t2| {
+                            if !t2.1.is_empty() {
+                                line.push((
+                                    column.ref_pos() as u64,
+                                    t2.0 as u32,
+                                    t2.1[0].to_ascii_uppercase(),
+                                ));
+                            }
+                        });*/
+                        if car.0 <= d - threshold as usize && !car.1.is_empty() {
+                            line.push((
+                                column.ref_pos() as u64,
+                                car.0 as u32,
+                                car.1[0].to_ascii_uppercase(),
+                            ));
+                        } else if car.1.is_empty() {
+                            line.push((column.ref_pos() as u64, car.0 as u32, 'N'));
+                        }
                     }
                     // Should we have sparse occurrence table?
                     //eprintln!("{:?} {:?}",  range.path, lambda(column.ref_id() as usize).unwrap_or(&column.ref_id().to_string()));

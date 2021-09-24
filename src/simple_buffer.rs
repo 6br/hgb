@@ -116,7 +116,11 @@ impl ChromosomeBuffer {
             .unwrap_or(0u32);
         let snp_frequency = matches
             .value_of("snp-frequency")
-            .and_then(|a| a.parse::<f64>().ok()); 
+            .and_then(|a| a.parse::<f64>().ok());
+        let no_bits = matches
+            .value_of("no-bits")
+            .and_then(|t| t.parse::<u16>().ok())
+            .unwrap_or(1796u16);
 
         let mut chunks = BTreeMap::new();
         let mut bin_ids = BTreeSet::new();
@@ -176,7 +180,7 @@ impl ChromosomeBuffer {
                                     if (!filter
                                         || (i.calculate_end() as u64 > range.start()
                                             && range.end() > i.start() as u64))
-                                        && !i.flag().is_secondary()
+                                        && !i.flag().no_bits(no_bits)
                                         && i.query_len() > min_read_len
                                     {
                                         list.push((sample_id, i));
@@ -194,8 +198,8 @@ impl ChromosomeBuffer {
                 /*let mut line =
                 Vec::with_capacity((prefetch_range.end - prefetch_range.start + 1) as usize);*/
                 let line = self.freq.entry(t.0).or_insert_with(Vec::new);
-                for column in bam::Pileup::with_filter(&mut RecordIter::new(t.1), |record| {
-                    record.flag().no_bits(1796)
+                for column in bam::Pileup::with_filter(&mut RecordIter::new(t.1), move |record| {
+                    record.flag().no_bits(no_bits.clone()) //&& record.query_len() > min_read_len
                 }) {
                     let column = column.unwrap();
                     if let Some(freq) = snp_frequency {
@@ -228,18 +232,27 @@ impl ChromosomeBuffer {
                         let threshold = d as f64 * freq;
                         // let minor = d - seqs[0].0;
                         // let second_minor = d - unique_frequency[1].0;
-                        let (_, cdr) = unique_frequency.split_first().unwrap();
-                        cdr.iter()
-                            .filter(|t| t.0 >= threshold as usize)
-                            .for_each(|t2| {
-                                if !t2.1.is_empty() {
-                                    line.push((
-                                        column.ref_pos() as u64,
-                                        t2.0 as u32,
-                                        t2.1[0].to_ascii_uppercase(),
-                                    ));
-                                }
-                            });
+                        let (car, _cdr) = unique_frequency.split_first().unwrap();
+                        /*cdr.iter()
+                        .filter(|t| t.0 >= threshold as usize)
+                        .for_each(|t2| {
+                            if !t2.1.is_empty() {
+                                line.push((
+                                    column.ref_pos() as u64,
+                                    t2.0 as u32,
+                                    t2.1[0].to_ascii_uppercase(),
+                                ));
+                            }
+                        });*/
+                        if car.0 <= d - threshold as usize && !car.1.is_empty() {
+                            line.push((
+                                column.ref_pos() as u64,
+                                car.0 as u32,
+                                car.1[0].to_ascii_uppercase(),
+                            ));
+                        } else if car.1.is_empty() {
+                            line.push((column.ref_pos() as u64, car.0 as u32, 'N'));
+                        }
                     }
                     // Should we have sparse occurrence table?
                     //eprintln!("{:?} {:?}",  range.path, lambda(column.ref_id() as usize).unwrap_or(&column.ref_id().to_string()));
@@ -309,6 +322,10 @@ impl ChromosomeBuffer {
             .value_of("min-read-length")
             .and_then(|a| a.parse::<u32>().ok())
             .unwrap_or(0u32);
+        let no_bits = matches
+            .value_of("no-bits")
+            .and_then(|t| t.parse::<u16>().ok())
+            .unwrap_or(1796u16);
         //let mut chunks = BTreeMap::new();
         let mut chunks = vec![];
 
@@ -365,7 +382,7 @@ impl ChromosomeBuffer {
                                 if (!filter
                                     || (i.calculate_end() as u64 > range.start()
                                         && range.end() > i.start() as u64))
-                                    && !i.flag().is_secondary()
+                                    && !i.flag().no_bits(no_bits)
                                     && i.query_len() > min_read_len
                                 {
                                     merged_list.push((sample_id, i));
@@ -425,17 +442,9 @@ impl ChromosomeBuffer {
         let range = Region::convert(string_range, closure).unwrap();
         let _freq = &self.freq;
 
-        /*let mut list: Vec<(u64, bam::Record)> = self
-        .bins
-        .values()
-        .into_iter()
-        .map(|t| t.0.clone())
-        .flatten()
-        .collect();*/
         let mut ann: Vec<(u64, bed::Record)> =
             self.bins.values().into_iter().cloned().flatten().collect();
         let matches = self.matches.clone();
-        let _pileup = matches.is_present("pileup");
         let _split_only = matches.is_present("only-split-alignment");
         let sort_by_name = matches.is_present("sort-by-name");
         let packing = !matches.is_present("no-packing");
