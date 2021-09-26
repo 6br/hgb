@@ -114,9 +114,6 @@ impl ChromosomeBuffer {
             .value_of("min-read-length")
             .and_then(|a| a.parse::<u32>().ok())
             .unwrap_or(0u32);
-        let snp_frequency = matches
-            .value_of("snp-frequency")
-            .and_then(|a| a.parse::<f64>().ok());
         let no_bits = matches
             .value_of("no-bits")
             .and_then(|t| t.parse::<u16>().ok())
@@ -203,56 +200,56 @@ impl ChromosomeBuffer {
                     record.flag().no_bits(1796) //&& record.query_len() > min_read_len
                 }) {
                     let column = column.unwrap();
-                    if let Some(freq) = snp_frequency {
-                        let mut seqs: Vec<String> = Vec::with_capacity(column.entries().len()); //vec![];
-                        for entry in column.entries().iter() {
-                            let seq: Option<_> = entry.sequence();
-                            match seq {
-                                Some(a) => {
-                                    let seq: Vec<_> = a.map(|nt| nt as char).take(1).collect();
-                                    seqs.push(seq.into_iter().collect());
-                                }
-                                _ => seqs.push(String::new()),
+                    //if let Some(freq) = snp_frequency {
+                    let mut seqs: Vec<String> = Vec::with_capacity(column.entries().len()); //vec![];
+                    for entry in column.entries().iter() {
+                        let seq: Option<_> = entry.sequence();
+                        match seq {
+                            Some(a) => {
+                                let seq: Vec<_> = a.map(|nt| nt as char).take(1).collect();
+                                seqs.push(seq.into_iter().collect());
                             }
-                        }
-                        let unique_elements = seqs.iter().cloned().unique().collect_vec();
-                        let mut unique_frequency = vec![];
-                        for unique_elem in unique_elements.iter() {
-                            unique_frequency.push((
-                                seqs.iter().filter(|&elem| elem == unique_elem).count(),
-                                unique_elem,
-                            ));
-                        }
-                        unique_frequency.sort_by_key(|t| t.0);
-                        unique_frequency.reverse();
-                        //let d: usize = unique_frequency.iter().map(|t| t.0).sum();
-                        let _threshold = column.entries().len() as f64 * freq;
-                        // let minor = d - seqs[0].0;
-                        // let second_minor = d - unique_frequency[1].0;
-                        let (car, _cdr) = unique_frequency.split_first().unwrap();
-                        /*cdr.iter()
-                        .filter(|t| t.0 >= threshold as usize)
-                        .for_each(|t2| {
-                            if !t2.1.is_empty() {
-                                line.push((
-                                    column.ref_pos() as u64,
-                                    t2.0 as u32,
-                                    t2.1[0].to_ascii_uppercase(),
-                                ));
-                            }
-                        });*/
-                        //if (column.entries().len() - car.0) as f64 <= threshold &&
-                        if !car.1.is_empty() {
-                            // if !car.1.is_empty() {
-                            line.push((
-                                column.ref_pos() as u64,
-                                car.0 as u32,
-                                (car.1.as_bytes()[0] as char).to_ascii_uppercase(),
-                            ));
-                        } else if car.1.is_empty() {
-                            // line.push((column.ref_pos() as u64, car.0 as u32, 'N'));
+                            _ => seqs.push(String::new()),
                         }
                     }
+                    let unique_elements = seqs.iter().cloned().unique().collect_vec();
+                    let mut unique_frequency = vec![];
+                    for unique_elem in unique_elements.iter() {
+                        unique_frequency.push((
+                            seqs.iter().filter(|&elem| elem == unique_elem).count(),
+                            unique_elem,
+                        ));
+                    }
+                    unique_frequency.sort_by_key(|t| t.0);
+                    unique_frequency.reverse();
+                    //let d: usize = unique_frequency.iter().map(|t| t.0).sum();
+                    //let _threshold = column.entries().len() as f64 * freq;
+                    // let minor = d - seqs[0].0;
+                    // let second_minor = d - unique_frequency[1].0;
+                    let (car, _cdr) = unique_frequency.split_first().unwrap();
+                    /*cdr.iter()
+                    .filter(|t| t.0 >= threshold as usize)
+                    .for_each(|t2| {
+                        if !t2.1.is_empty() {
+                            line.push((
+                                column.ref_pos() as u64,
+                                t2.0 as u32,
+                                t2.1[0].to_ascii_uppercase(),
+                            ));
+                        }
+                    });*/
+                    //if (column.entries().len() - car.0) as f64 <= threshold &&
+                    if !car.1.is_empty() {
+                        // if !car.1.is_empty() {
+                        line.push((
+                            column.ref_pos() as u64,
+                            car.0 as u32,
+                            (car.1.as_bytes()[0] as char).to_ascii_uppercase(),
+                        ));
+                    } else if car.1.is_empty() {
+                        // line.push((column.ref_pos() as u64, car.0 as u32, 'N'));
+                    }
+                    //}
                     // Should we have sparse occurrence table?
                     //eprintln!("{:?} {:?}",  range.path, lambda(column.ref_id() as usize).unwrap_or(&column.ref_id().to_string()));
                     // lambda(column.ref_id() as usize).unwrap_or(&column.ref_id().to_string())
