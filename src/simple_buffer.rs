@@ -178,7 +178,7 @@ impl ChromosomeBuffer {
                                         || (i.calculate_end() as u64 > range.start()
                                             && range.end() > i.start() as u64))
                                         && i.flag().no_bits(no_bits)
-                                        && i.query_len() > min_read_len
+                                        && i.query_len() >= min_read_len
                                     {
                                         list.push((sample_id, i));
                                     }
@@ -197,7 +197,7 @@ impl ChromosomeBuffer {
 
                 let line = self.freq.entry(t.0).or_insert_with(Vec::new);
                 for column in bam::Pileup::with_filter(&mut RecordIter::new(t.1), |record| {
-                    record.flag().no_bits(1796) //&& record.query_len() > min_read_len
+                    record.flag().no_bits(1796) //&& record.query_len() >= min_read_len
                 }) {
                     let column = column.unwrap();
                     //if let Some(freq) = snp_frequency {
@@ -378,7 +378,7 @@ impl ChromosomeBuffer {
                                     || (i.calculate_end() as u64 > range.start()
                                         && range.end() > i.start() as u64))
                                     && i.flag().no_bits(no_bits)
-                                    && i.query_len() > min_read_len
+                                    && i.query_len() >= min_read_len
                                 {
                                     merged_list.push((sample_id, i));
                                 }
@@ -573,7 +573,7 @@ impl ChromosomeBuffer {
                     };
 
                     let mut index = if !(k.1.flag().no_bits(no_bits)
-                        && k.1.query_len() > min_read_len
+                        && k.1.query_len() >= min_read_len
                         && (!filter_by_read_name
                             || read_name == String::from_utf8_lossy(k.1.name()))
                         && (!only_split && k.1.tags().get(b"SA").is_some())
@@ -629,7 +629,7 @@ impl ChromosomeBuffer {
                 prev_index += 1;
                 (t.1).for_each(|k| {
                     let mut index = if !(k.1.flag().no_bits(no_bits)
-                        && k.1.query_len() > min_read_len
+                        && k.1.query_len() >= min_read_len
                         && (!filter_by_read_name
                             || read_name == String::from_utf8_lossy(k.1.name()))
                         && (!only_split && k.1.tags().get(b"SA").is_some())

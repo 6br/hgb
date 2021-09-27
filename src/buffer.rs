@@ -156,7 +156,7 @@ impl<'a> ChromosomeBuffer<'a> {
                                         || (i.calculate_end() as u64 > range.start()
                                             && range.end() > i.start() as u64)
                                     {
-                                        if i.flag().no_bits(1796) && i.query_len() > min_read_len
+                                        if i.flag().no_bits(1796) && i.query_len() >= min_read_len
                                         {
                                             list.push((sample_id, i));
                                         }
@@ -175,7 +175,7 @@ impl<'a> ChromosomeBuffer<'a> {
                 Vec::with_capacity((prefetch_range.end - prefetch_range.start + 1) as usize);*/
                 let line = self.freq.entry(bin_id as u64).or_insert_with(Vec::new);
                 for column in bam::Pileup::with_filter(&mut RecordIter::new(t.1), |record| {
-                    record.flag().no_bits(1796) && record.query_len() > min_read_len
+                    record.flag().no_bits(1796) && record.query_len() >= min_read_len
                 }) {
                     let column = column.unwrap();
                     /*eprintln!(

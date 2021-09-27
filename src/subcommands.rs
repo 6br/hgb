@@ -222,7 +222,7 @@ pub fn bam_vis(
                 for record in viewer {
                     let record = record?;
                     if record.flag().no_bits(no_bits)
-                        && record.query_len() > min_read_len
+                        && record.query_len() >= min_read_len
                         && (!full_length
                             || record.start() <= prefetch_range.start as i32
                                 && record.calculate_end() >= prefetch_range.end as i32)
@@ -1019,7 +1019,7 @@ pub fn vis_query(
                                         || (i.calculate_end() as u64 > range.start()
                                             && range.end() > i.start() as u64))
                                         && i.flag().no_bits(no_bits)
-                                        && i.query_len() > min_read_len
+                                        && i.query_len() >= min_read_len
                                     {
                                         list.push((sample_id, i));
                                     }
