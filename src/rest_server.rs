@@ -115,7 +115,8 @@ fn get_matches_from(args: Vec<String>) -> Result<ArgMatches, Error> {
             .takes_value(true)
             .multiple(true)
             .about("A subset of sorted bed for coverage plot (start and score fields are used)"),
-    )                .arg(Arg::new("whole-chromosome").short('W').about("Pretend as if the prefetch range is the whole chromosome"))
+    )
+    .arg(Arg::new("whole-chromosome").short('W').about("Pretend as if the prefetch range is the whole chromosome"))
     .arg(Arg::new("bed-range").short('J').takes_value(true).about("Visualize multiple region where BED file specifies"))
     .arg(Arg::new("neighbor").short('K').takes_value(true).about("Visualize specified base-pair neighbor of BED region"))
     .arg(

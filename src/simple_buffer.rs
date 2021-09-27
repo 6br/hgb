@@ -441,7 +441,8 @@ impl ChromosomeBuffer {
         let mut ann: Vec<(u64, bed::Record)> =
             self.bins.values().into_iter().cloned().flatten().collect();
         // let matches = self.matches.clone();
-        let _split_only = matches.is_present("only-split-alignment");
+        let only_split = matches.is_present("only-split-alignment");
+        let exclude_split = matches.is_present("exclude-split-alignment");
         let sort_by_name = matches.is_present("sort-by-name");
         let packing = !matches.is_present("no-packing");
         let split = matches.is_present("split-alignment");
@@ -555,16 +556,7 @@ impl ChromosomeBuffer {
             } else {
                 list.sort_by(|a, b| a.0.cmp(&b.0).then(a.1.start().cmp(&b.1.start())));
             }
-            /*
-            if split_only {
-                list = list
-                    .into_iter()
-                    .filter(|(sample_id, record)| {
-                        end_map.contains_key(&(*sample_id, record.name()))
-                    })
-                    .collect();
-            }
-            */
+
             list.iter().group_by(|elt| elt.0).into_iter().for_each(|t| {
                 // let mut heap = BinaryHeap::<(i64, usize)>::new();
                 let mut packing_vec = vec![0u64];
@@ -638,6 +630,8 @@ impl ChromosomeBuffer {
                         && k.1.query_len() > min_read_len
                         && (!filter_by_read_name
                             || read_name == String::from_utf8_lossy(k.1.name())))
+                        && (!only_split && k.1.tags().get(b"SA").is_some())
+                        && (!exclude_split && k.1.tags().get(b"SA").is_none())
                     {
                         std::u32::MAX as usize
                     } else if let Some(TagValue::Int(array_view, _)) = k.1.tags().get(b"YY") {
