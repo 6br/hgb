@@ -578,7 +578,7 @@ fn main() {
         )
         .subcommand(
             App::new("split")
-                .about("Splits a hybrid genome index (not implemented).")
+                .about("Attach y positions on each read by default view options.")
                 .arg(
                     Arg::new("output")
                         .short('o')
