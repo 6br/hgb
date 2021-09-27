@@ -20,7 +20,7 @@ use std::{
 
 #[derive(Clone, Debug)]
 pub enum Alignment {
-    Offset(Vec<Chunk>),
+    Offset(Vec<(Chunk, i32)>),
     Object(Vec<Record>),
 }
 
@@ -50,7 +50,7 @@ impl Eq for Alignment {}
 /// BAM-Compatible Alignment Record
 #[derive(Debug)]
 pub struct AlignmentBuilder {
-    alignments: Vec<Chunk>,
+    alignments: Vec<(Chunk, i32)>,
     //    reader: String,
 }
 
@@ -61,12 +61,12 @@ impl AlignmentBuilder {
             //            reader: "".to_string(),
         }
     }
-    pub fn add(&mut self, alignment: Chunk) {
+    pub fn add(&mut self, alignment: (Chunk, i32)) {
         self.alignments.push(alignment);
         //        self.reader = reader.to_string();
     }
 
-    pub fn take(self) -> Vec<Chunk> {
+    pub fn take(self) -> Vec<(Chunk, i32)> {
         self.alignments
     }
 }
@@ -100,6 +100,20 @@ impl<R: Read + Seek> Set<AlignmentBuilder, R> {
         let mut rec = Record::new();
         let mut viewer = reader.full();
         let mut prev_next_offset = 0; //viewer.parent.reader.reader.next_offset().unwrap();
+        let mut hash_map: HashMap<i32, Vec<u64, (i32, i32)>> = HashMap::new();
+
+        while let Ok(true) = viewer.read_into(&mut rec) {
+            if rec.ref_id() >= 0 {
+                let chrom_len = header.reference_len(rec.ref_id() as u64).unwrap();
+                let reference = Reference::new_from_len(chrom_len);
+                let bin = chrom
+                    .entry(rec.ref_id() as u64)
+                    .or_insert_with(|| Bins::<AlignmentBuilder>::new_from_reference(reference));
+                if rec.start() > 0 && rec.calculate_end() > 0 {
+                    list.push((0, record));
+                }
+            }
+        }
 
         while let Ok(true) = viewer.read_into(&mut rec) {
             if rec.ref_id() >= 0 {
@@ -130,8 +144,7 @@ impl<R: Read + Seek> Set<AlignmentBuilder, R> {
                     let next_offset = viewer.parent.reader.reader.next_offset().unwrap();
                     assert!(end > prev, "{} is not larger than {}", end, prev);
 
-                    // println!("{:?} {} {}", rec, prev, end);
-                    stat.add(Chunk::new(prev, end));
+                    stat.add((Chunk::new(prev, end), index));
                     //TODO() Chunks should be merged if the two chunks are neighbor.
                     if prev.block_offset() != end.block_offset()
                         && end.block_offset() != prev_next_offset
@@ -160,7 +173,9 @@ impl<R: Read + Seek> Set<AlignmentBuilder, R> {
                     .unwrap();
                 let content_offset = viewer.parent.reader.contents_offset();
                 let end = VirtualOffset::from_raw(end_offset << 16 | content_offset as u64);
-                unmapped.alignments.push(Chunk::new(prev, end));
+                unmapped
+                    .alignments
+                    .push((Chunk::new(prev, end), std::i32::MAX));
                 prev = end;
             } else {
                 // return Err(io::Error::new(InvalidData, "Reference id < -1"));
@@ -213,27 +228,30 @@ impl ColumnarSet for Alignment {
             .from_stream(stream, header)?;
         // TODO() Inject the number of threads.
         let _ = match self {
-            Alignment::Offset(data) => {
-                let mut id = 0;
-                let mut viewer = bam_reader.unwrap().chunk(data.clone());
-                let mut rec = Record::new();
-                while let Ok(true) = viewer.read_into(&mut rec) {
-                    let contents_offset = viewer.parent.reader.contents_offset();
-                    debug!(
-                        "{:?} {} {:?} {:?}",
-                        rec,
-                        contents_offset,
-                        data.get(id),
-                        data
-                    );
-                    if let Some(data_get) = data.get(id) {
-                        if contents_offset as u16 == data_get.end().contents_offset() {
+            Alignment::Offset(data_vec) => {
+                for (data, index) in data_vec {
+                    let mut id = 0;
+                    let mut viewer = bam_reader.unwrap().chunk(vec![data.clone()]);
+                    let mut rec = Record::new();
+                    while let Ok(true) = viewer.read_into(&mut rec) {
+                        let contents_offset = viewer.parent.reader.contents_offset();
+                        debug!(
+                            "{:?} {} {:?}",
+                            rec,
+                            contents_offset,
+                            //data.get(id),
+                            data
+                        );
+                        //if let Some(data_get) = data.get(id) {
+                        if contents_offset as u16 == data.end().contents_offset() {
+                            rec.tags_mut().push_num(b"YY", *index);
                             writer.write(&rec)?;
                             id += 1;
                         }
-                    } else {
-                        eprintln!("Not error: break the loop");
-                        break;
+                        //} else {
+                        //    eprintln!("Not error: break the loop");
+                        //    break;
+                        //}
                     }
                 }
             }
