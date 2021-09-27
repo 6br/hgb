@@ -105,6 +105,7 @@ impl<R: Read + Seek> Set<AlignmentBuilder, R> {
         let mut viewer = reader.full();
         let mut prev_next_offset = 0; //viewer.parent.reader.reader.next_offset().unwrap();
         let mut list = vec![];
+        let mut id = 0;
 
         while let Ok(true) = viewer.read_into(&mut rec) {
             if rec.ref_id() >= 0 {
@@ -138,7 +139,9 @@ impl<R: Read + Seek> Set<AlignmentBuilder, R> {
                         list.push((
                             rec.ref_id(),
                             (Chunk::new(prev, end), rec.start(), rec.calculate_end()),
+                            id,
                         ));
+                        id += 1;
                     } else {
                         stat.add((Chunk::new(prev, end), std::i32::MAX));
                     }
@@ -218,7 +221,11 @@ impl<R: Read + Seek> Set<AlignmentBuilder, R> {
             last_prev_index = prev_index;
         });
 
-        for ((ref_id, (chunk, start, end)), index) in list.into_iter().zip(index_list) {
+        let mut chunks_vec = list.into_iter().zip(index_list).collect_vec();
+        chunks_vec.sort_by(|a, b| a.0 .2.cmp(&b.0 .2));
+        for ((ref_id, (chunk, start, end), _), index) in chunks_vec.into_iter() {
+            //}
+            //for ((ref_id, (chunk, start, end)), index) in list.into_iter().zip(index_list) {
             let chrom_len = header.reference_len(ref_id as u64).unwrap();
             let reference = Reference::new_from_len(chrom_len);
             let bin = chrom
