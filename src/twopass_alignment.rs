@@ -280,10 +280,11 @@ impl ColumnarSet for Alignment {
         // TODO() Inject the number of threads.
         let _ = match self {
             Alignment::Offset(data_vec) => {
-                let ids = data_vec.iter().map(|t| t.1).collect_vec();
-                let data = data_vec.iter().map(|t| t.0).collect_vec();
+                //let ids = data_vec.iter().map(|t| t.1).collect_vec();
+                //let data = data_vec.iter().map(|t| t.0).collect_vec();
+                let (data, ids): (Vec<_>, Vec<_>) = data_vec.iter().cloned().unzip();
                 let mut id = 0;
-                let mut viewer = bam_reader.unwrap().chunk(data);
+                let mut viewer = bam_reader.unwrap().chunk(data.clone());
                 let mut rec = Record::new();
                 while let Ok(true) = viewer.read_into(&mut rec) {
                     let contents_offset = viewer.parent.reader.contents_offset();
