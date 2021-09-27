@@ -77,7 +77,22 @@ fn main() {
                         .about("chroms.sizes"),
                 )
                 .arg(Arg::new("header").short('z').about("Outputs only header"))
+                .arg(Arg::new("yy").short('y').about("Calculate y coordinate and attach as a YY tag"))
                 .arg(Arg::new("formatted-header").short('f').about("Outputs formatted header"))
+                .arg(
+                    Arg::new("max-coverage")
+                        .short('m')
+                        .takes_value(true)
+                        .about("Max coverage value on coverage track"),
+                )
+                .arg(
+                    Arg::new("no-bits")
+                        .short('(')
+                        .long("flag-exclude")
+                        .takes_value(true)
+                        .default_value("1796")
+                        .about("Read must have NONE of these flags"),
+                )
                 .arg(
                     Arg::new("OUTPUT")
                         .about("Sets the output file to use")

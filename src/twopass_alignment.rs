@@ -95,6 +95,7 @@ impl<R: Read + Seek> Set<AlignmentBuilder, R> {
         header: &mut Header,
         max_coverage: Option<u32>,
         no_bits: u16,
+        yy: bool,
     ) -> Self {
         let mut chrom = BTreeMap::new();
         let mut unmapped = AlignmentBuilder::new();
@@ -133,7 +134,7 @@ impl<R: Read + Seek> Set<AlignmentBuilder, R> {
                     let end = VirtualOffset::from_raw((end_offset << 16) + contents_offset as u64);
                     let next_offset = viewer.parent.reader.reader.next_offset().unwrap();
                     assert!(end > prev, "{} is not larger than {}", end, prev);
-                    if rec.flag().no_bits(no_bits) {
+                    if rec.flag().no_bits(no_bits) && yy {
                         list.push((
                             rec.ref_id(),
                             (Chunk::new(prev, end), rec.start(), rec.calculate_end()),

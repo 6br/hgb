@@ -378,7 +378,10 @@ pub fn build(matches: &ArgMatches, threads: u16) {
         .value_of("no-bits")
         .and_then(|t| t.parse::<u16>().ok())
         .unwrap_or(1796u16);
-
+    let yy = matches.is_present("yy");
+    let max_coverage = matches
+        .value_of("max-coverage")
+        .and_then(|a| a.parse::<u32>().ok());
     if let Some(o) = matches.value_of("chrom") {
         info!("Loading chromosome sizes.");
         let file = File::open(o).unwrap();
@@ -416,6 +419,7 @@ pub fn build(matches: &ArgMatches, threads: u16) {
                 &mut header,
                 max_coverage,
                 no_bits,
+                yy,
             );
             i += 1;
             records.add(set);
