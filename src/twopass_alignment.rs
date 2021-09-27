@@ -12,6 +12,7 @@ use bam::{
     RecordWriter,
 };
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
+use itertools::Itertools;
 use log::debug;
 use std::{
     collections::{BTreeMap, HashMap},
@@ -92,6 +93,8 @@ impl<R: Read + Seek> Set<AlignmentBuilder, R> {
         mut reader: bam::IndexedReader<R>,
         sample_id: u64,
         header: &mut Header,
+        max_coverage: Option<u32>,
+        no_bits: u16,
     ) -> Self {
         let mut chrom = BTreeMap::new();
         let mut unmapped = AlignmentBuilder::new();
@@ -130,8 +133,14 @@ impl<R: Read + Seek> Set<AlignmentBuilder, R> {
                     let end = VirtualOffset::from_raw((end_offset << 16) + contents_offset as u64);
                     let next_offset = viewer.parent.reader.reader.next_offset().unwrap();
                     assert!(end > prev, "{} is not larger than {}", end, prev);
-                    list.push(rec.ref_id(), (rec.start(), rec.calculate_end()));
-                    stat.add((Chunk::new(prev, end), index));
+                    if rec.flag().no_bits(no_bits) {
+                        list.push((
+                            rec.ref_id(),
+                            (Chunk::new(prev, end), rec.start(), rec.calculate_end()),
+                        ));
+                    } else {
+                        stat.add((Chunk::new(prev, end), std::i32::MAX));
+                    }
                     //TODO() Chunks should be merged if the two chunks are neighbor.
                     if prev.block_offset() != end.block_offset()
                         && end.block_offset() != prev_next_offset
@@ -168,6 +177,60 @@ impl<R: Read + Seek> Set<AlignmentBuilder, R> {
                 // return Err(io::Error::new(InvalidData, "Reference id < -1"));
                 panic!("Reference id < -1");
             }
+        }
+
+        // Sort
+        list.sort_by(|a, b| a.0.cmp(&b.0).then(a.1 .1.cmp(&b.1 .1)));
+        let mut prev_index = 0;
+        let mut last_prev_index = 0;
+        let mut index_list = Vec::with_capacity(list.len());
+        list.iter().group_by(|elt| elt.0).into_iter().for_each(|t| {
+            // let mut heap = BinaryHeap::<(i64, usize)>::new();
+            let mut packing = vec![0u64];
+            prev_index += 1;
+            (t.1).for_each(|k| {
+                let mut index = if let Some(index) = packing
+                    .iter_mut()
+                    .enumerate()
+                    .find(|(_, item)| **item < k.1 .1 as u64)
+                {
+                    //packing[index.0] = k.1.calculate_end() as u64;
+                    *index.1 = k.1 .2 as u64;
+                    index.0
+                } else {
+                    packing.push(k.1 .2 as u64);
+                    prev_index += 1;
+                    packing.len() - 1
+                    //prev_index - 1
+                };
+                if let Some(max_cov) = max_coverage {
+                    if index > max_cov as usize {
+                        index = std::u32::MAX as usize;
+                        prev_index = max_cov as usize + last_prev_index;
+                    }
+                }
+                index_list.push(index + last_prev_index);
+            });
+            if let Some(max_cov) = max_coverage {
+                prev_index = max_cov as usize + last_prev_index;
+            }
+            last_prev_index = prev_index;
+        });
+
+        for ((ref_id, (chunk, start, end)), index) in list.into_iter().zip(index_list) {
+            let chrom_len = header.reference_len(rec.ref_id() as u64).unwrap();
+            let reference = Reference::new_from_len(chrom_len);
+            let bin = chrom
+                .entry(ref_id as u64)
+                .or_insert_with(|| Bins::<AlignmentBuilder>::new_from_reference(reference));
+            let bin_id =
+                bin.reference
+                    .region_to_bin(Region::new(ref_id as u64, start as u64, end as u64));
+            let stat = bin
+                .bins
+                .entry(bin_id as u32)
+                .or_insert_with(AlignmentBuilder::new);
+            stat.add((chunk, index as i32));
         }
 
         Set::<AlignmentBuilder, R> {
@@ -217,30 +280,34 @@ impl ColumnarSet for Alignment {
         // TODO() Inject the number of threads.
         let _ = match self {
             Alignment::Offset(data_vec) => {
-                for (data, index) in data_vec {
-                    let mut id = 0;
-                    let mut viewer = bam_reader.unwrap().chunk(vec![data.clone()]);
-                    let mut rec = Record::new();
-                    while let Ok(true) = viewer.read_into(&mut rec) {
-                        let contents_offset = viewer.parent.reader.contents_offset();
-                        debug!(
-                            "{:?} {} {:?}",
-                            rec,
-                            contents_offset,
-                            //data.get(id),
-                            data
-                        );
-                        //if let Some(data_get) = data.get(id) {
-                        if contents_offset as u16 == data.end().contents_offset() {
-                            rec.tags_mut().push_num(b"YY", *index);
+                let ids = data_vec.iter().map(|t| t.1).collect_vec();
+                let data = data_vec.iter().map(|t| t.0).collect_vec();
+                let mut id = 0;
+                let mut viewer = bam_reader.unwrap().chunk(data);
+                let mut rec = Record::new();
+                while let Ok(true) = viewer.read_into(&mut rec) {
+                    let contents_offset = viewer.parent.reader.contents_offset();
+                    debug!(
+                        "{:?} {}",
+                        rec,
+                        contents_offset,
+                        //data.get(id),
+                        //data
+                    );
+                    if let Some(data_get) = data.get(id) {
+                        if contents_offset as u16 == data_get.end().contents_offset() {
+                            let index = ids[id];
+                            if index != std::i32::MAX {
+                                rec.tags_mut().push_num(b"YY", index);
+                            }
                             writer.write(&rec)?;
                             id += 1;
                         }
-                        //} else {
-                        //    eprintln!("Not error: break the loop");
-                        //    break;
-                        //}
                     }
+                    //} else {
+                    //    eprintln!("Not error: break the loop");
+                    //    break;
+                    //}
                 }
             }
             Alignment::Object(vec) => {
