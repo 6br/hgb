@@ -100,20 +100,7 @@ impl<R: Read + Seek> Set<AlignmentBuilder, R> {
         let mut rec = Record::new();
         let mut viewer = reader.full();
         let mut prev_next_offset = 0; //viewer.parent.reader.reader.next_offset().unwrap();
-        let mut hash_map: HashMap<i32, Vec<u64, (i32, i32)>> = HashMap::new();
-
-        while let Ok(true) = viewer.read_into(&mut rec) {
-            if rec.ref_id() >= 0 {
-                let chrom_len = header.reference_len(rec.ref_id() as u64).unwrap();
-                let reference = Reference::new_from_len(chrom_len);
-                let bin = chrom
-                    .entry(rec.ref_id() as u64)
-                    .or_insert_with(|| Bins::<AlignmentBuilder>::new_from_reference(reference));
-                if rec.start() > 0 && rec.calculate_end() > 0 {
-                    list.push((0, record));
-                }
-            }
-        }
+        let mut list = vec![];
 
         while let Ok(true) = viewer.read_into(&mut rec) {
             if rec.ref_id() >= 0 {
@@ -143,7 +130,7 @@ impl<R: Read + Seek> Set<AlignmentBuilder, R> {
                     let end = VirtualOffset::from_raw((end_offset << 16) + contents_offset as u64);
                     let next_offset = viewer.parent.reader.reader.next_offset().unwrap();
                     assert!(end > prev, "{} is not larger than {}", end, prev);
-
+                    list.push(rec.ref_id(), (rec.start(), rec.calculate_end()));
                     stat.add((Chunk::new(prev, end), index));
                     //TODO() Chunks should be merged if the two chunks are neighbor.
                     if prev.block_offset() != end.block_offset()
@@ -182,6 +169,7 @@ impl<R: Read + Seek> Set<AlignmentBuilder, R> {
                 panic!("Reference id < -1");
             }
         }
+
         Set::<AlignmentBuilder, R> {
             sample_id,
             chrom,
