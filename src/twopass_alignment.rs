@@ -219,7 +219,7 @@ impl<R: Read + Seek> Set<AlignmentBuilder, R> {
         });
 
         for ((ref_id, (chunk, start, end)), index) in list.into_iter().zip(index_list) {
-            let chrom_len = header.reference_len(rec.ref_id() as u64).unwrap();
+            let chrom_len = header.reference_len(ref_id as u64).unwrap();
             let reference = Reference::new_from_len(chrom_len);
             let bin = chrom
                 .entry(ref_id as u64)
