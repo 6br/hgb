@@ -1694,7 +1694,10 @@ where
                             }
                         _ => "".to_string()
                         };
-                        let read = Read{rectangle: (lt, lb, rt ,rb), read_id: String::from_utf8_lossy(&bam.name()).to_string(), start: bam.start(), end: bam.calculate_end(), insertions: insertions, strand: bam.flag().is_reverse_strand(), flag: bam.flag().0, track: data.0, mapq: bam.mapq(), query_len: bam.query_len(), sa: sastr};//bam.tags().get(b"SA").}; //, tags: tags  }
+                        let mut readable: Vec<u8> = Vec::new();
+                        bam.cigar().write_readable(&mut readable).unwrap();
+                        let readable_string = String::from_utf8_lossy(&readable);
+                        let read = Read{rectangle: (lt, lb, rt ,rb), read_id: String::from_utf8_lossy(&bam.name()).to_string(), start: bam.start(), end: bam.calculate_end(), insertions: insertions, strand: bam.flag().is_reverse_strand(), flag: bam.flag().0, track: data.0, mapq: bam.mapq(), query_len: bam.query_len(), sa: sastr, cigar: readable_string.to_string()};//bam.tags().get(b"SA").}; //, tags: tags  }
                         reads.push(read);
                     }
                 });
