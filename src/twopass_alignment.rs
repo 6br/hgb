@@ -221,9 +221,10 @@ impl<R: Read + Seek> Set<AlignmentBuilder, R> {
             last_prev_index = prev_index;
         });
 
-        let chunks_vec = list.into_iter().zip(index_list).collect_vec();
         //chunks_vec.sort_by(|a, b| a.0 .1 .0.cmp(&b.0 .1 .0));
-        for ((ref_id, (chunk, start, end), _), index) in chunks_vec.into_iter() {
+        for ((ref_id, (chunk, start, end), _), index) in
+            list.into_iter().zip(index_list).into_iter()
+        {
             //}
             //for ((ref_id, (chunk, start, end)), index) in list.into_iter().zip(index_list) {
             let chrom_len = header.reference_len(ref_id as u64).unwrap();
