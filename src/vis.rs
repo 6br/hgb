@@ -1663,7 +1663,6 @@ where
                                                 //insertion_str.push((prev_ref, entry.record_nt().unwrap() as char));
                                                 if insertion_string {
                                                     //Note that 
-                                                    
                                                     let text = Text::new(
                                                         "I".to_string(),//(bam.sequence().at(record as usize) as char).to_string(),
                                                         (prev_ref, index),
