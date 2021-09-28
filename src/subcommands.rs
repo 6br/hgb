@@ -374,7 +374,14 @@ pub fn build(matches: &ArgMatches, threads: u16) {
     let mut header = Header::new();
     let mut alignment_transfer = false;
     let output_path = matches.value_of("OUTPUT").unwrap();
-
+    let no_bits = matches
+        .value_of("no-bits")
+        .and_then(|t| t.parse::<u16>().ok())
+        .unwrap_or(1796u16);
+    let yy = matches.is_present("yy");
+    let max_coverage = matches
+        .value_of("max-coverage")
+        .and_then(|a| a.parse::<u32>().ok());
     if let Some(o) = matches.value_of("chrom") {
         info!("Loading chromosome sizes.");
         let file = File::open(o).unwrap();
@@ -406,7 +413,14 @@ pub fn build(matches: &ArgMatches, threads: u16) {
                 header.transfer(bam_header);
             }
             header.set_local_header(bam_header, bam_path, i);
-            let set = Set::<AlignmentBuilder, BufReader<File>>::new(reader2, i as u64, &mut header);
+            let set = Set::<AlignmentBuilder, BufReader<File>>::new(
+                reader2,
+                i as u64,
+                &mut header,
+                max_coverage,
+                no_bits,
+                yy,
+            );
             i += 1;
             records.add(set);
         }

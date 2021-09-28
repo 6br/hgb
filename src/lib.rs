@@ -28,6 +28,7 @@ pub mod index;
 pub mod range;
 pub mod reader;
 pub mod simple_buffer;
+//pub mod simple_bam_buffer;
 
 pub mod twopass_alignment;
 pub mod vis;
