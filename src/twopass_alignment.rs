@@ -221,8 +221,8 @@ impl<R: Read + Seek> Set<AlignmentBuilder, R> {
             last_prev_index = prev_index;
         });
 
-        let mut chunks_vec = list.into_iter().zip(index_list).collect_vec();
-        chunks_vec.sort_by(|a, b| a.0 .1 .0.cmp(&b.0 .1 .0));
+        let chunks_vec = list.into_iter().zip(index_list).collect_vec();
+        //chunks_vec.sort_by(|a, b| a.0 .1 .0.cmp(&b.0 .1 .0));
         for ((ref_id, (chunk, start, end), _), index) in chunks_vec.into_iter() {
             //}
             //for ((ref_id, (chunk, start, end)), index) in list.into_iter().zip(index_list) {
@@ -290,6 +290,8 @@ impl ColumnarSet for Alignment {
             Alignment::Offset(data_vec) => {
                 //let ids = data_vec.iter().map(|t| t.1).collect_vec();
                 //let data = data_vec.iter().map(|t| t.0).collect_vec();
+                let mut data_vec = data_vec.clone();
+                data_vec.sort_by_key(|t| t.0.start());
                 let (data, ids): (Vec<_>, Vec<_>) = data_vec.iter().cloned().unzip();
                 let mut id = 0;
                 let mut viewer = bam_reader.unwrap().chunk(data.clone());
