@@ -23,6 +23,7 @@ use twobit::TwoBitFile;
 use udon::{Udon, UdonPalette, UdonScaler, UdonUtils};
 
 const PARBASE_THRESHOLD: u64 = 5;
+const INSERTION_THRESHOLD: usize = 5;
 
 //Copied from
 trait RangeUtils
@@ -1579,8 +1580,9 @@ where
                                                 bars.push(bar);
                                                 if insertion_string {
                                                     //Note that 
+                                                    let insertion_text = if insertion_str.len() > INSERTION_THRESHOLD {format!("({})", insertion_str.len())} else {insertion_str.iter().map(|t| t.1).join("").to_string()};
                                                     let text = Text::new(
-                                                        insertion_str.iter().map(|t| t.1).join("").to_string(),
+                                                        insertion_text,
                                                         (prev_pixel_ref + 1, index),
                                                         TextStyle::from(("sans-serif", y).into_font()).color(&ins_color)
                                                     );
@@ -1661,8 +1663,9 @@ where
                                                 //insertion_str.push((prev_ref, entry.record_nt().unwrap() as char));
                                                 if insertion_string {
                                                     //Note that 
+                                                    
                                                     let text = Text::new(
-                                                        (bam.sequence().at(record as usize) as char).to_string(),
+                                                        "I".to_string(),//(bam.sequence().at(record as usize) as char).to_string(),
                                                         (prev_ref, index),
                                                         TextStyle::from(("sans-serif", y).into_font()).color(&ins_color),
                                                     );
