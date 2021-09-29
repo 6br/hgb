@@ -20,6 +20,7 @@ use ghi::range::{Format, InvertedRecordEntire, Set};
 use ghi::twopass_alignment::{Alignment, AlignmentBuilder};
 use ghi::vis::{bam_record_vis_orig, RecordIter};
 use ghi::writer::GhiWriter;
+use ghi::ChromosomeBufferTrait;
 use ghi::{
     gff, reader::IndexedReader, simple_buffer::ChromosomeBuffer, Frequency, IndexWriter, VisOrig,
 };
@@ -186,6 +187,43 @@ pub fn bam_vis(
                     > { lambda(prefetch_str) },
                 )
                 .unwrap();
+            if matches.is_present("rest") {
+                let buffer: ghi::simple_bam_buffer::ChromosomeBuffer =
+                    ghi::simple_bam_buffer::ChromosomeBuffer::new(
+                        bam::IndexedReader::build()
+                            .additional_threads(threads - 1)
+                            .from_path(bam_files[0])
+                            .unwrap(),
+                        matches.clone(),
+                    );
+                rest_server::server(
+                    matches.clone(),
+                    string_range,
+                    prefetch_range,
+                    args,
+                    buffer,
+                    threads,
+                )?;
+                return Ok(());
+            } else if matches.is_present("whole-chromosome") && matches.is_present("web") {
+                let buffer: ghi::simple_bam_buffer::ChromosomeBuffer =
+                    ghi::simple_bam_buffer::ChromosomeBuffer::new(
+                        bam::IndexedReader::build()
+                            .additional_threads(threads - 1)
+                            .from_path(bam_files[0])
+                            .unwrap(),
+                        matches.clone(),
+                    );
+                buffered_server::server(
+                    matches.clone(),
+                    string_range,
+                    prefetch_range,
+                    args,
+                    buffer,
+                    threads,
+                )?;
+                return Ok(());
+            }
             for (index, reader2) in &mut bam_readers.iter_mut().enumerate() {
                 //println!("Loading {}", bam_path);
                 // let reader = bam::BamReader::from_path(bam_path, threads).unwrap();
@@ -195,6 +233,7 @@ pub fn bam_vis(
 
                 // Here all threads can be used, but I suspect that runs double
                 //reader2.fetch()
+
                 let ref_id = reader2
                     .header()
                     .reference_id(prefetch_range.path.as_ref())

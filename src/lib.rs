@@ -27,8 +27,8 @@ pub mod index;
 //pub mod server;
 pub mod range;
 pub mod reader;
+pub mod simple_bam_buffer;
 pub mod simple_buffer;
-//pub mod simple_bam_buffer;
 
 pub mod twopass_alignment;
 pub mod vis;
@@ -37,13 +37,16 @@ pub mod writer;
 
 use bam::IndexedReader;
 use checker_index::Index;
+use clap::ArgMatches;
 use genomic_range::StringRegion;
+use index::Region;
 use io::Seek;
 use range::InvertedRecord;
 use range::{Format, Record};
 use std::io;
 use std::{
     collections::BTreeMap,
+    collections::BTreeSet,
     io::{Read, Result, Write},
     str::FromStr,
 };
@@ -51,7 +54,7 @@ use std::{
 pub type Frequency = BTreeMap<u64, Vec<(u64, u32, char)>>;
 
 /// A trait for writing records.
-pub trait ChunkWriter<R: Read + Seek> {
+pub trait ChunkWriter<R: Read + Seek + Send + Sync> {
     /// Writes a single record.
     fn write(
         &mut self,
@@ -109,7 +112,7 @@ pub trait IndexWriter {
 pub trait ColumnarSet {
     fn new() -> Self;
 
-    fn to_stream<W: Write, R: Read + Seek>(
+    fn to_stream<W: Write, R: Read + Seek + Send + Sync>(
         &self,
         stream: &mut W,
         threads: u16,
@@ -129,6 +132,45 @@ pub trait Annotation {
     fn start(&self) -> u64;
     fn end(&self) -> u64;
     fn name(&self) -> &str;
+}
+
+pub trait ChromosomeBufferTrait {
+    fn drop(&mut self);
+    fn set_ref_id(&mut self, ref_id: u64);
+
+    // This range is completely included or not?
+    fn included(&self, range: Region) -> bool;
+    fn bins(&self) -> Vec<&usize>;
+
+    fn size_limit(&self) -> bool;
+
+    fn size_limit_local(&self, bins: &BTreeSet<u64>) -> bool;
+
+    fn included_local(&self, range: Region, bins: &BTreeSet<u64>) -> bool;
+
+    fn add(&mut self, range: &StringRegion) -> (bool, Vec<(u64, bam::Record)>, BTreeSet<u64>);
+    fn included_string(&self, string_range: &StringRegion) -> bool;
+    fn included_string_local(&self, string_range: &StringRegion, bins: &BTreeSet<u64>) -> bool;
+
+    fn add_local(
+        &mut self,
+        range: &StringRegion,
+        local_bins: &mut BTreeSet<u64>,
+    ) -> (bool, Vec<(u64, bam::Record)>);
+
+    fn retrieve(
+        &mut self,
+        string_range: &StringRegion,
+        list: &mut Vec<(u64, bam::Record)>,
+        list_btree: &mut BTreeSet<u64>,
+    );
+    fn vis(
+        &self,
+        matches: &ArgMatches,
+        string_range: &StringRegion,
+        list: &mut Vec<(u64, bam::Record)>,
+        _list_btree: &mut BTreeSet<u64>,
+    ) -> Option<Vis>;
 }
 
 /// Visualization Presets

@@ -87,7 +87,7 @@ impl Bins<AlignmentBuilder> {
     }
 }
 
-impl<R: Read + Seek> Set<AlignmentBuilder, R> {
+impl<R: Read + Seek + Send + Sync> Set<AlignmentBuilder, R> {
     pub fn new(
         //mut reader: bam::BamReader<R>,
         mut reader: bam::IndexedReader<R>,
@@ -268,7 +268,7 @@ impl ColumnarSet for Alignment {
     fn new() -> Alignment {
         Alignment::Object(vec![])
     }
-    fn to_stream<W: Write, R: Read + Seek>(
+    fn to_stream<W: Write, R: Read + Seek + Send + Sync>(
         &self,
         stream: &mut W,
         threads: u16,

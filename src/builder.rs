@@ -64,7 +64,7 @@ impl InvertedRecordReference {
     }
 }
 
-impl<U: Read + Seek> Set<InvertedRecordBuilder, U> {
+impl<U: Read + Seek + Send + Sync> Set<InvertedRecordBuilder, U> {
     pub fn new<R: Read>(
         mut reader: bed::Reader<R>,
         sample_id: u64,

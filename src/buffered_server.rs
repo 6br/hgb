@@ -6,7 +6,7 @@ use actix_web::{error, middleware::Logger, web, HttpRequest, Responder, Result};
 use bam::Record;
 use clap::{App, AppSettings, Arg, ArgMatches};
 use genomic_range::StringRegion;
-use ghi::{simple_buffer::ChromosomeBuffer, vis::bam_record_vis, Vis, VisRef};
+use ghi::{vis::bam_record_vis, ChromosomeBufferTrait, Vis, VisRef};
 use itertools::Itertools;
 use rand::Rng;
 use std::time::Instant;
@@ -326,12 +326,12 @@ async fn get_js_aux(_data: web::Data<RwLock<Item>>) -> Result<NamedFile> {
     )?);
 }
 
-async fn index(
+async fn index<T: 'static + ChromosomeBufferTrait + Send + Sync>(
     item: web::Data<RwLock<Item>>,
     vis: web::Data<RwLock<Vis>>,
     list: web::Data<RwLock<Vec<(u64, Record)>>>,
     list_btree: web::Data<RwLock<BTreeSet<u64>>>,
-    buffer: web::Data<RwLock<ChromosomeBuffer>>,
+    buffer: web::Data<RwLock<T>>,
     req: HttpRequest,
 ) -> Result<NamedFile> {
     let start = Instant::now();
@@ -511,12 +511,12 @@ fn log_2(x: i64) -> u32 {
 }
 
 #[actix_rt::main]
-pub async fn server(
+pub async fn server<T: 'static + ChromosomeBufferTrait + Send + Sync>(
     matches: ArgMatches,
     range: StringRegion,
     prefetch_range: StringRegion,
     args: Vec<String>,
-    mut buffer: ChromosomeBuffer,
+    mut buffer: T,
     threads: u16,
 ) -> std::io::Result<()> {
     use actix_web::{web, HttpServer};
@@ -662,7 +662,7 @@ pub async fn server(
             .route("genome.dzi", web::get().to(get_dzi))
             .route(
                 "/{zoom:.*}/{filename:.*}_0.{format:.*}",
-                web::get().to(index),
+                web::get().to(index::<T>),
             )
             .service(actix_files::Files::new("/images", "static/images").show_files_listing())
             .wrap(Logger::default())

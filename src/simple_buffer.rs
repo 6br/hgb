@@ -1,5 +1,6 @@
 use crate::index::Region;
 use crate::range::Default;
+use crate::ChromosomeBufferTrait;
 use crate::{
     bed, range::Format, reader::IndexedReader, twopass_alignment::Alignment, vis::RecordIter, Vis,
 };
@@ -32,7 +33,8 @@ impl ChromosomeBuffer {
             reader,
         }
     }
-
+}
+impl ChromosomeBufferTrait for ChromosomeBuffer {
     // If the region is completely not overlapped,
     fn drop(&mut self) {
         eprintln!("Buffer has dropped.");
@@ -79,7 +81,7 @@ impl ChromosomeBuffer {
     }
     */
 
-    pub fn bins(&self) -> Vec<&usize> {
+    fn bins(&self) -> Vec<&usize> {
         self.bins.keys().collect::<Vec<&usize>>()
     }
 
@@ -97,7 +99,7 @@ impl ChromosomeBuffer {
         bins.iter().len() > 2000
     }
 
-    pub fn add(&mut self, range: &StringRegion) -> (bool, Vec<(u64, Record)>, BTreeSet<u64>) {
+    fn add(&mut self, range: &StringRegion) -> (bool, Vec<(u64, Record)>, BTreeSet<u64>) {
         debug!("Add: {}", range);
         let closure = |x: &str| self.reader.reference_id(x);
         let reference_name = &range.path;
@@ -264,7 +266,7 @@ impl ChromosomeBuffer {
         (reload_flag, merged_list, bin_ids)
     }
 
-    pub fn included_string(&self, string_range: &StringRegion) -> bool {
+    fn included_string(&self, string_range: &StringRegion) -> bool {
         let closure = |x: &str| self.reader.reference_id(x);
         let _reference_name = &string_range.path;
         let range = Region::convert(string_range, closure).unwrap();
@@ -290,14 +292,14 @@ impl ChromosomeBuffer {
         true
     }
 
-    pub fn included_string_local(&self, string_range: &StringRegion, bins: &BTreeSet<u64>) -> bool {
+    fn included_string_local(&self, string_range: &StringRegion, bins: &BTreeSet<u64>) -> bool {
         let closure = |x: &str| self.reader.reference_id(x);
         let _reference_name = &string_range.path;
         let range = Region::convert(string_range, closure).unwrap();
         self.included_local(range, bins)
     }
 
-    pub fn add_local(
+    fn add_local(
         &mut self,
         range: &StringRegion,
         local_bins: &mut BTreeSet<u64>,
@@ -392,7 +394,7 @@ impl ChromosomeBuffer {
         (reload_flag, merged_list)
     }
 
-    pub fn retrieve(
+    fn retrieve(
         &mut self,
         string_range: &StringRegion,
         list: &mut Vec<(u64, bam::Record)>,
@@ -426,7 +428,7 @@ impl ChromosomeBuffer {
             debug!("After load list len: {}", list.len());
         }
     }
-    pub fn vis(
+    fn vis(
         &self,
         matches: &ArgMatches,
         string_range: &StringRegion,

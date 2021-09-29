@@ -11,7 +11,7 @@ use bam::Record;
 use clap::{App, AppSettings, Arg, ArgMatches, ArgSettings, Error};
 use genomic_range::StringRegion;
 use ghi::dump::{Area, ReadTree};
-use ghi::{simple_buffer::ChromosomeBuffer, vis::bam_record_vis, Vis, VisRef};
+use ghi::{vis::bam_record_vis, ChromosomeBufferTrait, Vis, VisRef};
 use qstring::QString;
 use rand::Rng;
 use serde::Deserialize;
@@ -19,6 +19,7 @@ use std::collections::hash_map::DefaultHasher;
 use std::fs::File;
 use std::hash::{Hash, Hasher};
 use std::io::BufReader;
+use std::marker::{Send, Sync};
 use std::time::Instant;
 use std::{collections::BTreeSet, fs, sync::RwLock};
 
@@ -461,13 +462,13 @@ async fn get_read(req: HttpRequest, item: web::Data<RwLock<Item>>) -> Result<Htt
 }
 
 //
-async fn get_index(
+async fn get_index<T: 'static + ChromosomeBufferTrait>(
     req: HttpRequest,
     item: web::Data<RwLock<Item>>,
     vis: web::Data<RwLock<Vis>>,
     list: web::Data<RwLock<Vec<(u64, Record)>>>,
     list_btree: web::Data<RwLock<BTreeSet<u64>>>,
-    buffer: web::Data<RwLock<ChromosomeBuffer>>,
+    buffer: web::Data<RwLock<T>>,
     //query: web::Query<RequestBody>
 ) -> Result<NamedFile> {
     let qs = QString::from(req.query_string());
@@ -492,12 +493,12 @@ async fn get_index(
     );
 }
 
-async fn index(
+async fn index<T: 'static + ChromosomeBufferTrait>(
     item: web::Data<RwLock<Item>>,
     vis: web::Data<RwLock<Vis>>,
     list: web::Data<RwLock<Vec<(u64, Record)>>>,
     list_btree: web::Data<RwLock<BTreeSet<u64>>>,
-    buffer: web::Data<RwLock<ChromosomeBuffer>>,
+    buffer: web::Data<RwLock<T>>,
     request_body: web::Json<RequestBody>,
 ) -> Result<NamedFile> {
     let format = &request_body.format.clone();
@@ -517,12 +518,12 @@ async fn index(
     );
 }
 
-fn index2(
+fn index2<T: 'static + ChromosomeBufferTrait>(
     item: web::Data<RwLock<Item>>,
     vis: web::Data<RwLock<Vis>>,
     list: web::Data<RwLock<Vec<(u64, Record)>>>,
     list_btree: web::Data<RwLock<BTreeSet<u64>>>,
-    buffer: web::Data<RwLock<ChromosomeBuffer>>,
+    buffer: web::Data<RwLock<T>>,
     format: String,
     params: String,
     prefetch: bool,
@@ -673,12 +674,12 @@ fn index2(
 }
 
 #[actix_rt::main]
-pub async fn server(
+pub async fn server<T: 'static + ChromosomeBufferTrait + Send + Sync>(
     matches: ArgMatches,
     _range: StringRegion,
     prefetch_range: StringRegion,
     args: Vec<String>,
-    mut buffer: ChromosomeBuffer,
+    mut buffer: T,
     _threads: u16,
 ) -> std::io::Result<()> {
     use actix_web::{web, HttpServer};
@@ -735,8 +736,8 @@ pub async fn server(
             .app_data(counter.clone())
             .data(vis) //.app_data(vis.clone())
             .app_data(buffer.clone())
-            .route("/", web::post().to(index))
-            .route("/", web::get().to(get_index))
+            .route("/", web::post().to(index::<T>))
+            .route("/", web::get().to(get_index::<T>))
             .route("/json", web::get().to(get_json))
             .route("/read", web::get().to(get_read))
             .wrap(Logger::default())

@@ -112,7 +112,7 @@ impl IndexedReaderBuilder {
 
     /// Creates a new [IndexedReader](struct.IndexedReader.html) from `ghb_path`.
     /// If GHI path was not specified, the functions tries to open `{ghb_path}.ghi`.
-    pub fn from_path<P: AsRef<Path>, R: Read + Seek>(
+    pub fn from_path<P: AsRef<Path>, R: Read + Seek + Send + Sync>(
         &self,
         ghb_path: P,
     ) -> Result<IndexedReader<BufReader<File>>> {
@@ -141,7 +141,7 @@ impl IndexedReaderBuilder {
     /// Creates a new [IndexedReader](struct.IndexedReader.html) from two streams.
     /// GHB stream should support random access, while GHI stream does not need to.
     /// `check_time` and `ghi_path` values are ignored.
-    pub fn from_streams<R: Read + Seek>(
+    pub fn from_streams<R: Read + Seek + Send + Sync>(
         &self,
         bam_stream: R,
         bai_stream: R,
@@ -159,7 +159,7 @@ impl IndexedReaderBuilder {
     }
 }
 
-pub struct IndexedReader<R: Read + Seek> {
+pub struct IndexedReader<R: Read + Seek + Send + Sync> {
     //    _marker: std::marker::PhantomData<T>,
     reader: GhbReader<R>,
     index: Index,
@@ -199,7 +199,7 @@ impl IndexedReader<BufReader<File>> {
     }
 }
 
-impl<R: Read + Seek> IndexedReader<R> {
+impl<R: Read + Seek + Send + Sync> IndexedReader<R> {
     fn new(reader: GhbReader<R>, index: Index) -> Result<Self> {
         // reader.make_consecutive();
         // let _marker = std::marker::PhantomData;
@@ -341,14 +341,14 @@ impl<R: Read + Seek> IndexedReader<R> {
 /// If possible, create a single record using [Record::new](../record/struct.Record.html#method.new)
 /// and then use [read_into](../trait.RecordReader.html#method.read_into) instead of iterating,
 /// as it saves time on allocation.
-pub struct RegionViewer<'a, R: Read + Seek> {
+pub struct RegionViewer<'a, R: Read + Seek + Send + Sync> {
     parent: &'a mut IndexedReader<R>,
     // start: u64,
     // end: u64,
     predicate: Box<dyn Fn(&Record) -> bool>,
 }
 
-impl<'a, R: Read + Seek> RegionViewer<'a, R> {
+impl<'a, R: Read + Seek + Send + Sync> RegionViewer<'a, R> {
     /// Returns [header](../header/struct.Header.html).
     pub fn header(&self) -> &Header {
         self.parent.header()
@@ -360,7 +360,7 @@ impl<'a, R: Read + Seek> RegionViewer<'a, R> {
     }
 }
 
-impl<'a, R: Read + Seek> ChunkReader for RegionViewer<'a, R> {
+impl<'a, R: Read + Seek + Send + Sync> ChunkReader for RegionViewer<'a, R> {
     fn read_into(&mut self, record: &mut Record) -> Result<bool> {
         loop {
             let res = self.parent.reader.fill_from_binary(record);
@@ -381,7 +381,7 @@ impl<'a, R: Read + Seek> ChunkReader for RegionViewer<'a, R> {
 }
 
 /// Iterator over records.
-impl<'a, R: Read + Seek> Iterator for RegionViewer<'a, R> {
+impl<'a, R: Read + Seek + Send + Sync> Iterator for RegionViewer<'a, R> {
     type Item = Result<Record>;
 
     fn next(&mut self) -> Option<Self::Item> {
