@@ -215,10 +215,8 @@ impl<R: Read + Seek> Set<AlignmentBuilder, R> {
                 }
                 index_list.push(index + last_prev_index);
             });
-            if let Some(max_cov) = max_coverage {
-                prev_index = max_cov as usize + last_prev_index;
-            }
-            last_prev_index = prev_index;
+            last_prev_index = 0;
+            prev_index = 0;
         });
 
         //chunks_vec.sort_by(|a, b| a.0 .1 .0.cmp(&b.0 .1 .0));
