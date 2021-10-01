@@ -160,7 +160,7 @@ impl ChromosomeBufferTrait for ChromosomeBuffer {
                 .map(|a| a.map(|t| t.parse::<u64>().unwrap()).collect());
             let sample_id_cond = sample_ids_opt.is_some();
             let _sample_ids = sample_ids_opt.unwrap_or_default();
-            let filter = matches.is_present("filter");
+            let filter = matches.is_present("bam");
 
             let format_type_opt = matches.value_of_t::<Format>("type");
             let format_type_cond = format_type_opt.is_ok();
@@ -346,7 +346,7 @@ impl ChromosomeBufferTrait for ChromosomeBuffer {
                 .map(|a| a.map(|t| t.parse::<u64>().unwrap()).collect());
             let sample_id_cond = sample_ids_opt.is_some();
             let _sample_ids = sample_ids_opt.unwrap_or_default();
-            let filter = matches.is_present("filter");
+            let filter = matches.is_present("bam");
 
             let format_type_opt = matches.value_of_t::<Format>("type");
             let format_type_cond = format_type_opt.is_ok();
