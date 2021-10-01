@@ -140,7 +140,15 @@ impl ChromosomeBufferTrait for ChromosomeBuffer {
             } else {
                 bin_range.0 as u32
             };
-            let bam_range = bam::Region::new(range.ref_id() as u32, start, bin_range.1 as u32);
+            let end = if bin_range.1 == std::i32::MAX {
+                self.reader
+                    .header()
+                    .reference_len(range.ref_id() as u32)
+                    .unwrap()
+            } else {
+                bin_range.1 as u32
+            };
+            let bam_range = bam::Region::new(range.ref_id() as u32, start, end);
             let viewer = self
                 .reader
                 .fetch_by_bin(&bam_range, *bin_id as u32, |_| true)
@@ -320,7 +328,15 @@ impl ChromosomeBufferTrait for ChromosomeBuffer {
             } else {
                 bin_range.0 as u32
             };
-            let bam_range = bam::Region::new(range.ref_id() as u32, start, bin_range.1 as u32);
+            let end = if bin_range.1 == std::i32::MAX {
+                self.reader
+                    .header()
+                    .reference_len(range.ref_id() as u32)
+                    .unwrap()
+            } else {
+                bin_range.1 as u32
+            };
+            let bam_range = bam::Region::new(range.ref_id() as u32, start, end);
             let viewer = self
                 .reader
                 .fetch_by_bin(&bam_range, bin_id as u32, |_| true)
