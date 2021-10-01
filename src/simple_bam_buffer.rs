@@ -135,11 +135,12 @@ impl ChromosomeBufferTrait for ChromosomeBuffer {
 
         for bin_id in bin_ids.iter() {
             let bin_range = bin_to_region(*bin_id as u32);
-            let bam_range = bam::Region::new(
-                range.ref_id() as u32,
-                bin_range.0 as u32,
-                bin_range.1 as u32,
-            );
+            let start = if bin_range.0 < 0 {
+                1
+            } else {
+                bin_range.0 as u32
+            };
+            let bam_range = bam::Region::new(range.ref_id() as u32, start, bin_range.1 as u32);
             let viewer = self
                 .reader
                 .fetch_by_bin(&bam_range, *bin_id as u32, |_| true)
@@ -314,11 +315,12 @@ impl ChromosomeBufferTrait for ChromosomeBuffer {
         let mut merged_list = vec![];
         for bin_id in chunks {
             let bin_range = bin_to_region(bin_id as u32);
-            let bam_range = bam::Region::new(
-                range.ref_id() as u32,
-                bin_range.0 as u32,
-                bin_range.1 as u32,
-            );
+            let start = if bin_range.0 < 0 {
+                1
+            } else {
+                bin_range.0 as u32
+            };
+            let bam_range = bam::Region::new(range.ref_id() as u32, start, bin_range.1 as u32);
             let viewer = self
                 .reader
                 .fetch_by_bin(&bam_range, bin_id as u32, |_| true)
