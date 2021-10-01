@@ -2,7 +2,9 @@ use crate::index::Region;
 use crate::range::Default;
 use crate::ChromosomeBufferTrait;
 use crate::{bed, range::Format, vis::RecordIter, Vis};
-use bam::{index::region_to_bins, record::tags::TagValue, IndexedReader, Record};
+use bam::{
+    index::bin_to_region, index::region_to_bins, record::tags::TagValue, IndexedReader, Record,
+};
 use clap::ArgMatches;
 use genomic_range::StringRegion;
 use itertools::Itertools;
@@ -132,9 +134,15 @@ impl ChromosomeBufferTrait for ChromosomeBuffer {
         let mut merged_list = vec![];
 
         for bin_id in bin_ids.iter() {
+            let bin_range = bin_to_region(*bin_id as u32);
+            let bam_range = bam::Region::new(
+                range.ref_id() as u32,
+                bin_range.0 as u32,
+                bin_range.1 as u32,
+            );
             let viewer = self
                 .reader
-                .fetch_by_bin(&range.to_bam_record(), *bin_id as u32, |_| true)
+                .fetch_by_bin(&bam_range, *bin_id as u32, |_| true)
                 .unwrap();
             let ann = vec![];
             let mut list = vec![];
@@ -305,9 +313,15 @@ impl ChromosomeBufferTrait for ChromosomeBuffer {
 
         let mut merged_list = vec![];
         for bin_id in chunks {
+            let bin_range = bin_to_region(bin_id as u32);
+            let bam_range = bam::Region::new(
+                range.ref_id() as u32,
+                bin_range.0 as u32,
+                bin_range.1 as u32,
+            );
             let viewer = self
                 .reader
-                .fetch_by_bin(&range.to_bam_record(), bin_id, |_| true)
+                .fetch_by_bin(&bam_range, bin_id as u32, |_| true)
                 .unwrap();
             let sample_ids_opt: Option<Vec<u64>> = matches
                 .values_of("id")
