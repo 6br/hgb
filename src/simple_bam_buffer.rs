@@ -153,6 +153,7 @@ impl ChromosomeBufferTrait for ChromosomeBuffer {
                 .reader
                 .fetch_by_bin(&bam_range, *bin_id as u32, |_| true)
                 .unwrap();
+
             let ann = vec![];
             let mut list = vec![];
             let sample_ids_opt: Option<Vec<u64>> = matches
@@ -171,12 +172,7 @@ impl ChromosomeBufferTrait for ChromosomeBuffer {
                 if !sample_id_cond {
                     let i = f;
                     if !format_type_cond {
-                        if (!filter
-                            || (i.calculate_end() as u64 > range.start()
-                                && range.end() > i.start() as u64))
-                            && i.flag().no_bits(no_bits)
-                            && i.query_len() >= min_read_len
-                        {
+                        if i.flag().no_bits(no_bits) && i.query_len() >= min_read_len {
                             list.push((0, i));
                         }
                     }
@@ -357,12 +353,7 @@ impl ChromosomeBufferTrait for ChromosomeBuffer {
                 if !sample_id_cond {
                     let i = f;
                     if !format_type_cond {
-                        if (!filter
-                            || (i.calculate_end() as u64 > range.start()
-                                && range.end() > i.start() as u64))
-                            && i.flag().no_bits(no_bits)
-                            && i.query_len() >= min_read_len
-                        {
+                        if i.flag().no_bits(no_bits) && i.query_len() >= min_read_len {
                             merged_list.push((0, i));
                         }
                     }
