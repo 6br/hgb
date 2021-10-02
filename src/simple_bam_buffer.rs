@@ -132,123 +132,129 @@ impl ChromosomeBufferTrait for ChromosomeBuffer {
         }
 
         let mut merged_list = vec![];
+        let bin_ids_vec = bin_ids.iter().map(|t| *t as u32).collect_vec();
+        //for bin_id in bin_ids.iter() {
+        /*let bin_range = bin_to_region(*bin_id as u32);
+        let start = if bin_range.0 < 0 {
+            1
+        } else {
+            bin_range.0 as u32
+        };
+        let end = if bin_range.1 == std::i32::MAX {
+            self.reader
+                .header()
+                .reference_len(range.ref_id() as u32)
+                .unwrap()
+        } else {
+            bin_range.1 as u32
+        };*/
+        let start = 1;
+        let end = self
+            .reader
+            .header()
+            .reference_len(range.ref_id() as u32)
+            .unwrap();
+        let bam_range = bam::Region::new(range.ref_id() as u32, start, end);
+        let viewer = self
+            .reader
+            .fetch_by_bins(&bam_range, bin_ids_vec, |_| true)
+            .unwrap();
 
-        for bin_id in bin_ids.iter() {
-            let bin_range = bin_to_region(*bin_id as u32);
-            let start = if bin_range.0 < 0 {
-                1
-            } else {
-                bin_range.0 as u32
-            };
-            let end = if bin_range.1 == std::i32::MAX {
-                self.reader
-                    .header()
-                    .reference_len(range.ref_id() as u32)
-                    .unwrap()
-            } else {
-                bin_range.1 as u32
-            };
-            let bam_range = bam::Region::new(range.ref_id() as u32, start, end);
-            let viewer = self
-                .reader
-                .fetch_by_bin(&bam_range, *bin_id as u32, |_| true)
-                .unwrap();
+        //let ann = vec![];
+        let mut list = vec![];
+        let sample_ids_opt: Option<Vec<u64>> = matches
+            .values_of("id")
+            .map(|a| a.map(|t| t.parse::<u64>().unwrap()).collect());
+        let sample_id_cond = sample_ids_opt.is_some();
+        let _sample_ids = sample_ids_opt.unwrap_or_default();
+        let _filter = matches.is_present("filter");
 
-            let ann = vec![];
-            let mut list = vec![];
-            let sample_ids_opt: Option<Vec<u64>> = matches
-                .values_of("id")
-                .map(|a| a.map(|t| t.parse::<u64>().unwrap()).collect());
-            let sample_id_cond = sample_ids_opt.is_some();
-            let _sample_ids = sample_ids_opt.unwrap_or_default();
-            let filter = matches.is_present("filter");
+        let format_type_opt = matches.value_of_t::<Format>("type");
+        let format_type_cond = format_type_opt.is_ok();
+        let _format_type = format_type_opt.unwrap_or(Format::Default(Default {}));
 
-            let format_type_opt = matches.value_of_t::<Format>("type");
-            let format_type_cond = format_type_opt.is_ok();
-            let _format_type = format_type_opt.unwrap_or(Format::Default(Default {}));
-
-            let _ = viewer.into_iter().for_each(|t| {
-                let f = t.unwrap();
-                if !sample_id_cond {
-                    let i = f;
-                    if !format_type_cond {
-                        if i.flag().no_bits(no_bits) && i.query_len() >= min_read_len {
-                            list.push((0, i));
-                        }
+        let _ = viewer.into_iter().for_each(|t| {
+            let f = t.unwrap();
+            if !sample_id_cond {
+                let i = f;
+                if !format_type_cond {
+                    if i.flag().no_bits(no_bits) && i.query_len() >= min_read_len {
+                        list.push((0, i));
                     }
                 }
-            });
-            // Before append into BTreeMap, we need to calculate pileup.
-            list.iter().group_by(|elt| elt.0).into_iter().for_each(|t| {
-                /*let mut line =
-                Vec::with_capacity((prefetch_range.end - prefetch_range.start + 1) as usize);*/
+            }
+        });
+        // Before append into BTreeMap, we need to calculate pileup.
+        list.iter().group_by(|elt| elt.0).into_iter().for_each(|t| {
+            /*let mut line =
+            Vec::with_capacity((prefetch_range.end - prefetch_range.start + 1) as usize);*/
 
-                let line = self.freq.entry(t.0).or_insert_with(Vec::new);
-                for column in bam::Pileup::with_filter(&mut RecordIter::new(t.1), |record| {
-                    record.flag().no_bits(1796) //&& record.query_len() >= min_read_len
-                }) {
-                    let column = column.unwrap();
-                    //if let Some(freq) = snp_frequency {
-                    let mut seqs: Vec<String> = Vec::with_capacity(column.entries().len()); //vec![];
-                    for entry in column.entries().iter() {
-                        let seq: Option<_> = entry.sequence();
-                        match seq {
-                            Some(a) => {
-                                let seq: Vec<_> = a.map(|nt| nt as char).take(1).collect();
-                                seqs.push(seq.into_iter().collect());
-                            }
-                            _ => seqs.push(String::new()),
+            let line = self.freq.entry(t.0).or_insert_with(Vec::new);
+            for column in bam::Pileup::with_filter(&mut RecordIter::new(t.1), |record| {
+                record.flag().no_bits(1796) //&& record.query_len() >= min_read_len
+            }) {
+                let column = column.unwrap();
+                //if let Some(freq) = snp_frequency {
+                let mut seqs: Vec<String> = Vec::with_capacity(column.entries().len()); //vec![];
+                for entry in column.entries().iter() {
+                    let seq: Option<_> = entry.sequence();
+                    match seq {
+                        Some(a) => {
+                            let seq: Vec<_> = a.map(|nt| nt as char).take(1).collect();
+                            seqs.push(seq.into_iter().collect());
                         }
+                        _ => seqs.push(String::new()),
                     }
-                    let unique_elements = seqs.iter().cloned().unique().collect_vec();
-                    let mut unique_frequency = vec![];
-                    for unique_elem in unique_elements.iter() {
-                        unique_frequency.push((
-                            seqs.iter().filter(|&elem| elem == unique_elem).count(),
-                            unique_elem,
-                        ));
-                    }
-                    unique_frequency.sort_by_key(|t| t.0);
-                    unique_frequency.reverse();
-                    //let d: usize = unique_frequency.iter().map(|t| t.0).sum();
-                    //let _threshold = column.entries().len() as f64 * freq;
-                    // let minor = d - seqs[0].0;
-                    // let second_minor = d - unique_frequency[1].0;
-                    let (car, _cdr) = unique_frequency.split_first().unwrap();
-                    /*cdr.iter()
-                    .filter(|t| t.0 >= threshold as usize)
-                    .for_each(|t2| {
-                        if !t2.1.is_empty() {
-                            line.push((
-                                column.ref_pos() as u64,
-                                t2.0 as u32,
-                                t2.1[0].to_ascii_uppercase(),
-                            ));
-                        }
-                    });*/
-                    //if (column.entries().len() - car.0) as f64 <= threshold &&
-                    if !car.1.is_empty() {
-                        // if !car.1.is_empty() {
+                }
+                let unique_elements = seqs.iter().cloned().unique().collect_vec();
+                let mut unique_frequency = vec![];
+                for unique_elem in unique_elements.iter() {
+                    unique_frequency.push((
+                        seqs.iter().filter(|&elem| elem == unique_elem).count(),
+                        unique_elem,
+                    ));
+                }
+                unique_frequency.sort_by_key(|t| t.0);
+                unique_frequency.reverse();
+                //let d: usize = unique_frequency.iter().map(|t| t.0).sum();
+                //let _threshold = column.entries().len() as f64 * freq;
+                // let minor = d - seqs[0].0;
+                // let second_minor = d - unique_frequency[1].0;
+                let (car, _cdr) = unique_frequency.split_first().unwrap();
+                /*cdr.iter()
+                .filter(|t| t.0 >= threshold as usize)
+                .for_each(|t2| {
+                    if !t2.1.is_empty() {
                         line.push((
                             column.ref_pos() as u64,
-                            car.0 as u32,
-                            (car.1.as_bytes()[0] as char).to_ascii_uppercase(),
+                            t2.0 as u32,
+                            t2.1[0].to_ascii_uppercase(),
                         ));
-                    } else if car.1.is_empty() {
-                        // line.push((column.ref_pos() as u64, car.0 as u32, 'N'));
                     }
-                    //}
-                    // Should we have sparse occurrence table?
-                    //eprintln!("{:?} {:?}",  range.path, lambda(column.ref_id() as usize).unwrap_or(&column.ref_id().to_string()));
-                    // lambda(column.ref_id() as usize).unwrap_or(&column.ref_id().to_string())
-                    // == range.path
-                    // &&
-                    line.push((column.ref_pos() as u64, column.entries().len() as u32, '*'));
+                });*/
+                //if (column.entries().len() - car.0) as f64 <= threshold &&
+                if !car.1.is_empty() {
+                    // if !car.1.is_empty() {
+                    line.push((
+                        column.ref_pos() as u64,
+                        car.0 as u32,
+                        (car.1.as_bytes()[0] as char).to_ascii_uppercase(),
+                    ));
+                } else if car.1.is_empty() {
+                    // line.push((column.ref_pos() as u64, car.0 as u32, 'N'));
                 }
-            });
-            merged_list.extend(list);
-            self.bins.insert(*bin_id as usize, ann);
-        }
+                //}
+                // Should we have sparse occurrence table?
+                //eprintln!("{:?} {:?}",  range.path, lambda(column.ref_id() as usize).unwrap_or(&column.ref_id().to_string()));
+                // lambda(column.ref_id() as usize).unwrap_or(&column.ref_id().to_string())
+                // == range.path
+                // &&
+                line.push((column.ref_pos() as u64, column.entries().len() as u32, '*'));
+            }
+        });
+        merged_list.extend(list);
+        //    self.bins.insert(*bin_id as usize, ann);
+        //}
         (reload_flag, merged_list, bin_ids)
     }
 
@@ -311,55 +317,47 @@ impl ChromosomeBufferTrait for ChromosomeBuffer {
 
         for i in region_to_bins(range.start() as i32, range.end() as i32) {
             if !local_bins.contains(&(i as u64)) && !reload_flag {
-                chunks.push(i);
+                chunks.push(i as u32);
                 local_bins.insert(i as u64);
             }
         }
 
         let mut merged_list = vec![];
-        for bin_id in chunks {
-            let bin_range = bin_to_region(bin_id as u32);
-            let start = if bin_range.0 < 0 {
-                1
-            } else {
-                bin_range.0 as u32
-            };
-            let end = if bin_range.1 == std::i32::MAX {
-                self.reader
-                    .header()
-                    .reference_len(range.ref_id() as u32)
-                    .unwrap()
-            } else {
-                bin_range.1 as u32
-            };
-            let bam_range = bam::Region::new(range.ref_id() as u32, start, end);
-            let viewer = self
-                .reader
-                .fetch_by_bin(&bam_range, bin_id as u32, |_| true)
-                .unwrap();
-            let sample_ids_opt: Option<Vec<u64>> = matches
-                .values_of("id")
-                .map(|a| a.map(|t| t.parse::<u64>().unwrap()).collect());
-            let sample_id_cond = sample_ids_opt.is_some();
-            let _sample_ids = sample_ids_opt.unwrap_or_default();
-            let filter = matches.is_present("filter");
+        //for bin_id in chunks {
+        let start = 1;
+        let end = self
+            .reader
+            .header()
+            .reference_len(range.ref_id() as u32)
+            .unwrap();
+        let bam_range = bam::Region::new(range.ref_id() as u32, start, end);
+        let viewer = self
+            .reader
+            .fetch_by_bins(&bam_range, chunks, |_| true)
+            .unwrap();
+        let sample_ids_opt: Option<Vec<u64>> = matches
+            .values_of("id")
+            .map(|a| a.map(|t| t.parse::<u64>().unwrap()).collect());
+        let sample_id_cond = sample_ids_opt.is_some();
+        let _sample_ids = sample_ids_opt.unwrap_or_default();
+        let _filter = matches.is_present("filter");
 
-            let format_type_opt = matches.value_of_t::<Format>("type");
-            let format_type_cond = format_type_opt.is_ok();
-            let _format_type = format_type_opt.unwrap_or(Format::Default(Default {}));
+        let format_type_opt = matches.value_of_t::<Format>("type");
+        let format_type_cond = format_type_opt.is_ok();
+        let _format_type = format_type_opt.unwrap_or(Format::Default(Default {}));
 
-            let _ = viewer.into_iter().for_each(|t| {
-                let f = t.unwrap();
-                if !sample_id_cond {
-                    let i = f;
-                    if !format_type_cond {
-                        if i.flag().no_bits(no_bits) && i.query_len() >= min_read_len {
-                            merged_list.push((0, i));
-                        }
+        let _ = viewer.into_iter().for_each(|t| {
+            let f = t.unwrap();
+            if !sample_id_cond {
+                let i = f;
+                if !format_type_cond {
+                    if i.flag().no_bits(no_bits) && i.query_len() >= min_read_len {
+                        merged_list.push((0, i));
                     }
                 }
-            });
-        }
+            }
+        });
+        //}
         (reload_flag, merged_list)
     }
 
