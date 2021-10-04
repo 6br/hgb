@@ -933,7 +933,7 @@ pub fn vis_query(
         .unwrap_or(1796u16);
     if let Some(o) = matches.value_of("INPUT") {
         let mut reader: IndexedReader<BufReader<File>> =
-            IndexedReader::from_path_with_additional_threads(o, threads - 1)
+            IndexedReader::from_path_with_additional_threads(o, 1)
                 .map_err(|e| Error::new(e.kind(), format!("Failed to read GHB/GHI file: {}", e)))
                 .unwrap();
         let mut ranges: Vec<String> = vec![];
