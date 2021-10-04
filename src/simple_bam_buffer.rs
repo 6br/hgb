@@ -2,9 +2,7 @@ use crate::index::Region;
 use crate::range::Default;
 use crate::ChromosomeBufferTrait;
 use crate::{bed, range::Format, vis::RecordIter, Vis};
-use bam::{
-    index::bin_to_region, index::region_to_bins, record::tags::TagValue, IndexedReader, Record,
-};
+use bam::{index::region_to_bins, record::tags::TagValue, IndexedReader, Record};
 use clap::ArgMatches;
 use genomic_range::StringRegion;
 use itertools::Itertools;
