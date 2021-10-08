@@ -703,7 +703,7 @@ pub async fn server(
     let mut list_btree = BTreeSet::new();
     let bind = matches.value_of("web").unwrap_or(&"0.0.0.0:4000");
     let basic_auth = matches
-        .value_of("basic_auth")
+        .value_of("basic-auth")
         .and_then(|t| t.split(":").map(|a| a.to_string()).collect_tuple());
     let auth_condition = basic_auth.is_some();
     println!("{:?}", basic_auth);

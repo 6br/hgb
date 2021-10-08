@@ -393,19 +393,26 @@ fn main() {
                 .arg(
                     Arg::new("separated-by-tag")
                         .short('j')
-                        .long("separated-by-tag")
+                        .long("grouped-by-tag")
                         .takes_value(true)
                         .default_value("")
                         .setting(ArgSettings::AllowEmptyValues)
-                        .about("Separated tracks by specified tags on read alignments"),
+                        .about("Grouped tracks by specified tags on read alignments"),
                 )
                 .arg(
                     Arg::new("separated-by-tag-offset")
                         .short('k')
-                        .long("separated-by-tag-offset")
+                        .long("grouped-by-tag-offset")
                         .takes_value(true)
                         .default_value("3")
-                        .about("The maximal number of tracks by specified tags on read alignments"),
+                        .about("The maximal number of tracks by a specified tag on read alignments"),
+                )
+                .arg(
+                    Arg::new("filtered-by-tag")
+                        .short('~')
+                        .long("filtered-by-tag")
+                        .takes_value(true)
+                        .about("Filtered by a specified tag on read alignments as <tag>:<value> (e.g. HP:0)"),
                 )
                 .arg(Arg::new("x").short('x').takes_value(true).about("The width of image"))
                 .arg(Arg::new("y").short('y').takes_value(true).about("The height of each read alignment"))
