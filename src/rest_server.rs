@@ -1,17 +1,23 @@
 use actix_cors::Cors;
 use actix_files::NamedFile;
+use actix_web::dev::ServiceRequest;
 use actix_web::error::ErrorNotFound;
+use actix_web::middleware::Condition;
 use actix_web::HttpRequest;
 use actix_web::{
     http::header::{ContentDisposition, DispositionType},
     HttpResponse,
 };
 use actix_web::{middleware::Logger, web, Result};
+use actix_web_httpauth::extractors::basic::{BasicAuth, Config};
+use actix_web_httpauth::extractors::AuthenticationError;
+use actix_web_httpauth::middleware::HttpAuthentication;
 use bam::Record;
 use clap::{App, AppSettings, Arg, ArgMatches, ArgSettings, Error};
 use genomic_range::StringRegion;
 use ghi::dump::{Area, ReadTree};
 use ghi::{simple_buffer::ChromosomeBuffer, vis::bam_record_vis, Vis, VisRef};
+use itertools::Itertools;
 use qstring::QString;
 use rand::Rng;
 use serde::Deserialize;
@@ -23,20 +29,30 @@ use std::time::Instant;
 use std::{collections::BTreeSet, fs, sync::RwLock};
 
 use crate::subcommands::{bam_vis, vis_query};
+//struct Years(i64);
+type BasicAuthTuple = (String, String);
 
+#[derive(Debug)]
 struct Item {
     //vis: Vis,
     range: StringRegion,
     args: Vec<String>,
     cache_dir: String,
+    basic_auth: Option<BasicAuthTuple>,
 }
 
 impl Item {
-    fn new(range: StringRegion, args: Vec<String>, cache_dir: String) -> Self {
+    fn new(
+        range: StringRegion,
+        args: Vec<String>,
+        cache_dir: String,
+        basic_auth: Option<BasicAuthTuple>,
+    ) -> Self {
         Item {
             range,
             args,
             cache_dir,
+            basic_auth,
         }
     }
 }
@@ -686,6 +702,12 @@ pub async fn server(
     let mut list = vec![];
     let mut list_btree = BTreeSet::new();
     let bind = matches.value_of("web").unwrap_or(&"0.0.0.0:4000");
+    let basic_auth = matches
+        .value_of("basic_auth")
+        .and_then(|t| t.split(":").map(|a| a.to_string()).collect_tuple());
+    let auth_condition = basic_auth.is_some();
+    println!("{:?}", basic_auth);
+    let uds_bind = matches.value_of("unix-socket");
     buffer.retrieve(&prefetch_range, &mut list, &mut list_btree);
     let vis = buffer
         .vis(&matches, &prefetch_range, &mut list, &mut list_btree)
@@ -712,13 +734,15 @@ pub async fn server(
     println!("REST Server is running on {}", bind);
     // Create some global state prior to building the server
 
-    let counter = web::Data::new(RwLock::new(Item::new(view_range, args, cache_dir)));
+    let counter = web::Data::new(RwLock::new(Item::new(
+        view_range, args, cache_dir, basic_auth,
+    )));
     let buffer = web::Data::new(RwLock::new(buffer));
 
     let cross_origin_bool = matches.is_present("production");
 
     // https://github.com/actix/examples/blob/master/state/src/main.rs
-    HttpServer::new(move || {
+    let server = HttpServer::new(move || {
         let cross_origin = if cross_origin_bool {
             Cors::default()
         } else {
@@ -728,7 +752,8 @@ pub async fn server(
         let list = RwLock::new(list.clone());
         let list_btree = RwLock::new(list_btree.clone()); //buffer =
         let vis = RwLock::new(vis.clone());
-        //let buffer = buffer.clone();
+        let auth = HttpAuthentication::basic(basic_auth_validator);
+
         actix_web::App::new()
             .data(list)
             .data(list_btree)
@@ -741,9 +766,53 @@ pub async fn server(
             .route("/read", web::get().to(get_read))
             .wrap(Logger::default())
             .wrap(cross_origin)
-    })
-    .bind(bind)?
-    .workers(1 as usize)
-    .run()
-    .await
+            .wrap(Condition::new(auth_condition, auth))
+    });
+    if let Some(uds_bind) = uds_bind {
+        server.bind_uds(uds_bind)?.workers(1usize).run().await
+    } else {
+        server.bind(bind)?.workers(1usize).run().await
+    }
+}
+fn validate_credentials(
+    user_id: &str,
+    user_password: &str,
+    basic_auth: Option<&BasicAuthTuple>,
+) -> Result<bool, std::io::Error> {
+    if let Some(basic_auth) = basic_auth {
+        if user_id.eq(&basic_auth.0) && user_password.eq(&basic_auth.1) {
+            return Ok(true);
+        }
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::Other,
+            "Authentication failed!",
+        ));
+    } else {
+        return Ok(true);
+    }
+}
+
+async fn basic_auth_validator(
+    req: ServiceRequest,
+    credentials: BasicAuth,
+) -> Result<ServiceRequest, actix_web::Error> {
+    let config = req
+        .app_data::<Config>()
+        .map(|data| data.clone())
+        .unwrap_or_else(Default::default);
+    let item = req.app_data::<Item>().unwrap();
+    match validate_credentials(
+        credentials.user_id(),
+        credentials.password().unwrap().trim(),
+        item.basic_auth.as_ref(),
+    ) {
+        Ok(res) => {
+            if res == true {
+                Ok(req)
+            } else {
+                Err(AuthenticationError::from(config).into())
+            }
+        }
+        Err(_) => Err(AuthenticationError::from(config).into()),
+    }
 }
