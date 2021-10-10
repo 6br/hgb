@@ -326,7 +326,7 @@ fn get_matches_from(args: Vec<String>) -> Result<ArgMatches, Error> {
     .arg(
         Arg::new("read-name")
             .short(')')
-            .long("filter-by-read-name")
+            .long("filtered-by-read-name")
             .takes_value(true)
             .about("Filter by read name"),
     )

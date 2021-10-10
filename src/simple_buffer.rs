@@ -482,7 +482,7 @@ impl ChromosomeBuffer {
             .value_of("filtered-by-tag")
             .map(|a| a.split(":").collect_vec())
             .unwrap_or(vec![]);
-        let filter_by_tag = matches.is_present("filter-by-tag");
+        let filter_by_tag = matches.is_present("filtered-by-tag");
         let filter_by_read_name = matches.is_present("read-name");
         // Calculate coverage; it won't work on sort_by_name
         // let mut frequency = BTreeMap::new(); // Vec::with_capacity();
