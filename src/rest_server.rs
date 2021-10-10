@@ -706,7 +706,7 @@ pub async fn server(
         .value_of("basic-auth")
         .and_then(|t| t.split(":").map(|a| a.to_string()).collect_tuple());
     let auth_condition = basic_auth.is_some();
-    println!("{:?}", basic_auth);
+
     let uds_bind = matches.value_of("unix-socket");
     buffer.retrieve(&prefetch_range, &mut list, &mut list_btree);
     let vis = buffer
