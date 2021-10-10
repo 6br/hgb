@@ -4,6 +4,7 @@ use crate::ChromosomeBufferTrait;
 use crate::{
     bed, range::Format, reader::IndexedReader, twopass_alignment::Alignment, vis::RecordIter, Vis,
 };
+use bam::record::tags::TagViewer;
 use bam::{record::tags::TagValue, Record};
 use clap::ArgMatches;
 use genomic_range::StringRegion;
@@ -11,6 +12,7 @@ use itertools::Itertools;
 use log::debug;
 use std::{
     collections::{BTreeMap, BTreeSet, HashMap},
+    convert::TryInto,
     fs::File,
     io::BufReader,
 };
@@ -21,6 +23,21 @@ pub struct ChromosomeBuffer {
     bins: BTreeMap<usize, Vec<(u64, bed::Record)>>,
     freq: BTreeMap<u64, Vec<(u64, u32, char)>>,
     reader: IndexedReader<BufReader<File>>,
+}
+
+fn check_filter_by_tag(tags: &TagViewer, filter_by_tag: &Vec<&str>) -> bool {
+    let tag: &[u8; 2] = filter_by_tag[0]
+        .as_bytes()
+        .try_into()
+        .expect("filtered by tag with unexpected length: tag name must be two characters.");
+    let value = filter_by_tag[1];
+    match tags.get(tag) {
+        Some(TagValue::Int(tag_id, _)) => format!("{}", tag_id) == value,
+        Some(TagValue::String(s, _)) => String::from_utf8_lossy(s) == value,
+        _ => false,
+    }
+    //todo!("unimplemented");
+    //return true
 }
 
 impl ChromosomeBuffer {
@@ -463,6 +480,11 @@ impl ChromosomeBufferTrait for ChromosomeBuffer {
             .value_of("read-name")
             .and_then(|t| Some(t.to_string()))
             .unwrap_or("".to_string());
+        let filtered_by_tag = matches
+            .value_of("filtered-by-tag")
+            .map(|a| a.split(":").collect_vec())
+            .unwrap_or(vec![]);
+        let filter_by_tag = matches.is_present("filtered-by-tag");
         let filter_by_read_name = matches.is_present("read-name");
         // Calculate coverage; it won't work on sort_by_name
         // let mut frequency = BTreeMap::new(); // Vec::with_capacity();
@@ -579,6 +601,7 @@ impl ChromosomeBufferTrait for ChromosomeBuffer {
                         || (filter_by_read_name && read_name == String::from_utf8_lossy(k.1.name()))
                         || (only_split && k.1.tags().get(b"SA").is_none())
                         || (exclude_split && k.1.tags().get(b"SA").is_some())
+                        || (filter_by_tag && check_filter_by_tag(k.1.tags(), &filtered_by_tag))
                     {
                         std::u32::MAX as usize
                     } else if sort_by_name {
@@ -634,6 +657,7 @@ impl ChromosomeBufferTrait for ChromosomeBuffer {
                         || (filter_by_read_name && read_name == String::from_utf8_lossy(k.1.name()))
                         || (only_split && k.1.tags().get(b"SA").is_some())
                         || (exclude_split && k.1.tags().get(b"SA").is_none())
+                        || (filter_by_tag && check_filter_by_tag(k.1.tags(), &filtered_by_tag))
                     {
                         std::u32::MAX as usize
                     } else if let Some(TagValue::Int(array_view, _)) = k.1.tags().get(b"YY") {
