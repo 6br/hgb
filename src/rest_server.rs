@@ -332,6 +332,13 @@ fn get_matches_from(args: Vec<String>) -> Result<ArgMatches, Error> {
             .about("Filter by read name"),
     )
     .arg(
+        Arg::new("filtered-by-tag")
+            .short('~')
+            .long("filtered-by-tag")
+            .takes_value(true)
+            .about("Filtered by a specified tag on read alignments as <tag>:<value> (e.g. HP:0)"),
+    )
+    .arg(
         Arg::new("output")
             .short('o')
             .takes_value(true)
