@@ -17,14 +17,6 @@ use std::{
     io::BufReader,
 };
 
-pub struct ChromosomeBuffer {
-    ref_id: u64,
-    matches: ArgMatches,
-    bins: BTreeMap<usize, Vec<(u64, bed::Record)>>,
-    freq: BTreeMap<u64, Vec<(u64, u32, char)>>,
-    reader: IndexedReader<BufReader<File>>,
-}
-
 fn check_filter_by_tag(tags: &TagViewer, filter_by_tag: &Vec<&str>) -> bool {
     let tag: &[u8; 2] = filter_by_tag[0]
         .as_bytes()
@@ -36,8 +28,14 @@ fn check_filter_by_tag(tags: &TagViewer, filter_by_tag: &Vec<&str>) -> bool {
         Some(TagValue::String(s, _)) => String::from_utf8_lossy(s) == value,
         _ => false,
     }
-    //todo!("unimplemented");
-    //return true
+}
+
+pub struct ChromosomeBuffer {
+    ref_id: u64,
+    matches: ArgMatches,
+    bins: BTreeMap<usize, Vec<(u64, bed::Record)>>,
+    freq: BTreeMap<u64, Vec<(u64, u32, char)>>,
+    reader: IndexedReader<BufReader<File>>,
 }
 
 impl ChromosomeBuffer {
