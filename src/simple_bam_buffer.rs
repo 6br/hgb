@@ -24,7 +24,7 @@ fn check_filter_by_tag(tags: &TagViewer, filter_by_tag: &Vec<&str>) -> bool {
     match tags.get(tag) {
         Some(TagValue::Int(tag_id, _)) => format!("{}", tag_id) == value,
         Some(TagValue::String(s, _)) => String::from_utf8_lossy(s) == value,
-        _ => false,
+        _ => value.len() == 0,
     }
 }
 
