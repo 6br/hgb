@@ -22,6 +22,7 @@ pub struct Read {
     pub strand: bool,
     pub flag: u16,
     pub mapq: u8,
+    pub hp: i32,
     pub sa: String,
     pub cigar: String,
     pub insertions: Vec<(i32, u64, String)>, // Pixel, Real_pos, Ins_seq

@@ -21,7 +21,7 @@ fn check_filter_by_tag(tags: &TagViewer, filter_by_tag: &Vec<&str>) -> bool {
         .try_into()
         .expect("filtered by tag with unexpected length: tag name must be two characters.");
     let value = filter_by_tag[1];
-    match tags.get(tag) {
+    !match tags.get(tag) {
         Some(TagValue::Int(tag_id, _)) => format!("{}", tag_id) == value,
         Some(TagValue::String(s, _)) => String::from_utf8_lossy(s) == value,
         _ => value.len() == 0,
@@ -449,6 +449,7 @@ impl ChromosomeBufferTrait for ChromosomeBuffer {
             .map(|a| a.split(":").collect_vec())
             .unwrap_or(vec![]);
         let filter_by_tag = matches.is_present("filtered-by-tag");
+        eprintln!("{:?}", filtered_by_tag);
         // Calculate coverage; it won't work on sort_by_name
         // let mut frequency = BTreeMap::new(); // Vec::with_capacity();
 
