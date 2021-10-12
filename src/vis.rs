@@ -1125,7 +1125,7 @@ where
                             } else {
                                 let tag: &[u8;2] = colored_by_str.as_bytes().try_into().expect("colored by tag with unexpected length: tag name must be two characters.");
                                 if let Some(TagValue::Int(tag_id,_)) = bam.tags().get(tag) {
-                                    Palette9999::pick(tag_id as usize).mix(0.4)
+                                    Palette9999::pick(tag_id as usize).mix(0.2)
                                 } else {
                                     preset_color.pick(VisColor::DefCol).mix(0.8)
                                 }
