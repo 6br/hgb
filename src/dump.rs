@@ -1,9 +1,18 @@
 use rstar::{Envelope, Point, PointDistance, PointExt, RTree, RTreeObject, AABB};
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub enum Track {
+    TrackId(u64),
+    TrackName(String),
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Area {
     pub annotations: Vec<Annotation>,
     pub pileups: Vec<Read>,
+    pub tracks: BTreeMap<u64, String>,
 }
 /*
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -14,7 +23,7 @@ pub struct Pileup {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Read {
     pub rectangle: (i32, i32, i32, i32),
-    pub track: u64,
+    pub track: Track,
     pub read_id: String,
     pub start: i32,
     pub end: i32,
@@ -88,14 +97,26 @@ impl PointDistance for Read {
     }
 }
 
-pub struct ReadTree(RTree<Read>);
+//pub struct ReadTree(RTree<Read>);
+pub struct ReadTree {
+    read: RTree<Read>,
+    tracks: BTreeMap<u64, String>,
+}
 
 impl ReadTree {
     pub fn new(reads: Area) -> Self {
-        return ReadTree(RTree::bulk_load(reads.pileups));
+        return ReadTree {
+            read: RTree::bulk_load(reads.pileups),
+            tracks: reads.tracks,
+        };
+    }
+    fn read_convert(self, read: &mut Read) {
+        if let Track::TrackId(track) = read.track {
+            read.track = Track::TrackName(self.tracks[&track].clone());
+        }
     }
     pub fn find(self, x: i32, y: i32) -> Option<(Read, (u64, String))> {
-        let read = self.0.locate_at_point(&[x, y]);
+        let read = self.read.locate_at_point(&[x, y]);
         match read {
             Some(read) => {
                 let insertion = read.insertions.binary_search_by_key(&x, |(a, _, _)| *a);
@@ -112,7 +133,9 @@ impl ReadTree {
                         }
                     }
                 };
-                Some((read.clone(), insertions_str))
+                let mut read = read.clone();
+                self.read_convert(&mut read);
+                Some((read, insertions_str))
             }
             _ => None,
         }

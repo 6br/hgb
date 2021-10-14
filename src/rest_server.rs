@@ -146,7 +146,6 @@ fn get_matches_from(args: Vec<String>) -> Result<ArgMatches, Error> {
     .arg(Arg::new("no-scale").short('S').about("Do not show y-axis scale"))
     .arg(Arg::new("no-packing").short('p').about("Disable read packing"))
     .arg(Arg::new("no-legend").short('l').about("Hide legend"))
-    .arg(Arg::new("colored-by-name").short('n').about("Set read colors by read name"))
     .arg(
         Arg::new("colored-by-motif")
             .short('E')
@@ -170,6 +169,7 @@ fn get_matches_from(args: Vec<String>) -> Result<ArgMatches, Error> {
     )
     .arg(Arg::new("quality").short('q').about("Display reads by quality value"))
     .arg(Arg::new("colored-by-name").short('n').long("colored-by-name").about("Set read colors by read name"))
+    .arg(Arg::new("colored-by-track").short('?').long("colored-by-track").about("Set read colors by track on hgb"))
     .arg(Arg::new("read-per-line").short('1').long("read-per-line").about("Show one line one read on split-alignment mode"))
     .arg(Arg::new("read-per-two-range").short('2').long("read-per-line-two-ranges").about("Show one read per one line across two range on split-alignment mode"))
     .arg(Arg::new("x-as-range").short('9').long("x-as-input-range").about("Set X as the interval of the input range"))

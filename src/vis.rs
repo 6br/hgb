@@ -388,6 +388,7 @@ where
     let _sort_by_name = matches.is_present("sort-by-name");
     let sort_by_cigar = matches.is_present("sort-by-cigar");
     let colored_by_name = matches.is_present("colored-by-name");
+    let colored_by_track = matches.is_present("colored-by-track");
     let pileup = matches.is_present("pileup");
     let all_bases = matches.is_present("all-bases");
     let hide_alignment = matches.is_present("hide-alignment");
@@ -817,6 +818,7 @@ where
             }
         }
         let mut annotations = vec![];
+        let mut tracks = BTreeMap::new();
 
         // Draw annotation if there is bed-compatible annotation.
         annotation
@@ -996,6 +998,20 @@ where
         )?;
         */
         if compressed_list.len() > 1 {
+            if dump_json {
+                for (sample_sequential_id, sample) in compressed_list.iter() {
+                    // Check that the sum of each group is +/- 4.
+                    // assert_eq!(4, group.iter().fold(0_i32, |a, b| a + b).abs());
+                    let count = *sample; //.count();
+                    if count > 0 {
+                        let idx = *sample_sequential_id as usize;
+                        tracks.insert(
+                            *sample_sequential_id,
+                            lambda(idx).unwrap_or(&idx.to_string()).to_string(),
+                        );
+                    }
+                }
+            }
             if legend || no_margin {
                 for (sample_sequential_id, sample) in compressed_list.iter()
                 // list2.into_iter().group_by(|elt| elt.0).into_iter()
@@ -1186,7 +1202,14 @@ where
                             Rectangle::new([(start, index), (end, index + 1)], color.filled());
                         inner_bar.set_margin(3, 3, 0, 0);
                         bars.push(inner_bar);
-                    }/* else if colored_by_tag {
+                    } else if colored_by_track {
+                        let color = Palette99::pick(data.0 as usize).mix(0.8);
+                        let mut inner_bar =
+                            Rectangle::new([(start, index), (end, index + 1)], color.filled());
+                        inner_bar.set_margin(3, 3, 0, 0);
+                        bars.push(inner_bar);
+                    }
+                    /* else if colored_by_tag {
                         if let Some(colored_by_str) = colored_by_tag_vec {
                             let tag: &[u8;2] = colored_by_str.as_bytes().try_into().expect("colored by tag with unexpected length: tag name must be two characters.");
                            
@@ -1701,7 +1724,7 @@ where
                         let mut readable: Vec<u8> = Vec::new();
                         bam.cigar().write_readable(&mut readable).unwrap();
                         let readable_string = String::from_utf8_lossy(&readable);
-                        let read = Read{rectangle: (lt, lb, rt ,rb), read_id: String::from_utf8_lossy(&bam.name()).to_string(), start: bam.start(), end: bam.calculate_end(), insertions: insertions, strand: bam.flag().is_reverse_strand(), flag: bam.flag().0, track: data.0, mapq: bam.mapq(), query_len: bam.query_len(), sa: sastr, cigar: readable_string.to_string()};//bam.tags().get(b"SA").}; //, tags: tags  }
+                        let read = Read{rectangle: (lt, lb, rt ,rb), track: Track::TrackId(data.0), read_id: String::from_utf8_lossy(&bam.name()).to_string(), start: bam.start(), end: bam.calculate_end(), query_len: bam.query_len(), strand: bam.flag().is_reverse_strand(), flag: bam.flag().0, mapq: bam.mapq(), sa: sastr, cigar: readable_string.to_string(), insertions: insertions};//bam.tags().get(b"SA").}; //, tags: tags  }
                         reads.push(read);
                     }
                 });
@@ -1711,6 +1734,7 @@ where
             json.push(Area {
                 pileups: reads,
                 annotations,
+                tracks,
             });
         }
         chart.draw_series(bars)?;

@@ -356,6 +356,7 @@ fn main() {
                 .arg(Arg::new("square").short('Q').long("square").about("Set square width (overwritten)"))
                 .arg(Arg::new("quality").short('q').long("read-quality").about("Display reads by quality value"))
                 .arg(Arg::new("colored-by-name").short('n').long("colored-by-name").about("Set read colors by read name"))
+                .arg(Arg::new("colored-by-track").short('?').long("colored-by-track").about("Set read colors by track on hgb"))
                 .arg(Arg::new("read-per-line").short('1').long("read-per-line").about("Show one line one read on split-alignment mode"))
                 .arg(Arg::new("read-per-two-range").short('2').long("read-per-line-two-ranges").about("Show one read per one line across two range on split-alignment mode"))
                 .arg(Arg::new("x-as-range").short('9').long("x-as-input-range").about("Set X as the interval of the input range"))
