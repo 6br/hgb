@@ -1149,6 +1149,8 @@ where
                         } else {
                             preset_color.pick(VisColor::DefCol).mix(0.8)
                         }
+                    } else if colored_by_track {
+                        Palette9999::pick(data.0 as usize).mix(0.2)
                     } else if bam.flag().is_reverse_strand() {
                         preset_color.pick(VisColor::NegCol).mix(0.8)
                     } else {
@@ -1198,12 +1200,6 @@ where
 
                     if colored_by_name {
                         let color = Palette99::pick(name_to_num(data.1.name())).mix(0.2);
-                        let mut inner_bar =
-                            Rectangle::new([(start, index), (end, index + 1)], color.filled());
-                        inner_bar.set_margin(3, 3, 0, 0);
-                        bars.push(inner_bar);
-                    } else if colored_by_track {
-                        let color = Palette99::pick(data.0 as usize).mix(0.2);
                         let mut inner_bar =
                             Rectangle::new([(start, index), (end, index + 1)], color.filled());
                         inner_bar.set_margin(3, 3, 0, 0);
