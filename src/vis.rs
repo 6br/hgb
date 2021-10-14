@@ -1197,13 +1197,13 @@ where
                     }
 
                     if colored_by_name {
-                        let color = Palette99::pick(name_to_num(data.1.name())).mix(0.5);
+                        let color = Palette99::pick(name_to_num(data.1.name())).mix(0.2);
                         let mut inner_bar =
                             Rectangle::new([(start, index), (end, index + 1)], color.filled());
                         inner_bar.set_margin(3, 3, 0, 0);
                         bars.push(inner_bar);
                     } else if colored_by_track {
-                        let color = Palette99::pick(data.0 as usize).mix(0.5);
+                        let color = Palette99::pick(data.0 as usize).mix(0.2);
                         let mut inner_bar =
                             Rectangle::new([(start, index), (end, index + 1)], color.filled());
                         inner_bar.set_margin(3, 3, 0, 0);
