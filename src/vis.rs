@@ -442,6 +442,7 @@ where
         .value_of("y")
         .and_then(|a| a.parse::<u32>().ok())
         .unwrap_or(20u32);
+    let margin = if y > 3 { 3 } else { y - 1 };
     let freq_size = matches
         .value_of("freq-height")
         .and_then(|a| a.parse::<u32>().ok())
@@ -1202,7 +1203,7 @@ where
                         let color = Palette99::pick(name_to_num(data.1.name())).mix(0.2);
                         let mut inner_bar =
                             Rectangle::new([(start, index), (end, index + 1)], color.filled());
-                        inner_bar.set_margin(3, 3, 0, 0);
+                        inner_bar.set_margin(margin, margin, 0, 0);
                         bars.push(inner_bar);
                     }
                     /* else if colored_by_tag {
@@ -1399,7 +1400,7 @@ where
                             ],
                             color.filled(),
                         );
-                        bar.set_margin(3, 3, 0, 0);
+                        bar.set_margin(margin, margin, 0, 0);
                         bars.push(bar);
                     }
                 }
@@ -1569,15 +1570,16 @@ where
                                         }
                                         if prev_ref >= range.start() as u64 {
                                             if let Some(color) = color {
-                                                    let mut bar = Rectangle::new(
-                                                        [
-                                                            (prev_pixel_ref as u64+1, index),
-                                                            (prev_ref as u64+1, index + 1),
-                                                        ],
-                                                        color.filled(),
-                                                    );
-                                                    bar.set_margin(2, 2, 0, 0);
-                                                    bars.push(bar);
+
+                                                let mut bar = Rectangle::new(
+                                                    [
+                                                        (prev_pixel_ref as u64+1, index),
+                                                        (prev_ref as u64+1, index + 1),
+                                                    ],
+                                                    color.filled(),
+                                                );
+                                                bar.set_margin(margin, margin, 0, 0);
+                                                bars.push(bar);
                                                 /*eprintln!(
                                                 "{:?}",
                                                 [
@@ -1641,7 +1643,7 @@ where
                                                         RGBColor(qual_color, qual_color, qual_color)
                                                             .filled(),
                                                     );
-                                                    bar.set_margin(3, 3, 0, 0);
+                                                    bar.set_margin(margin, margin, 0, 0);
                                                     bars.push(bar);
                                                 }
                                             }
@@ -1660,7 +1662,7 @@ where
                                                     ],
                                                     WHITE.filled(),
                                                 );
-                                                bar.set_margin(3, 3, 0, 0);
+                                                bar.set_margin(margin, margin, 0, 0);
                                                 prev_ref = reference as u64;
                                                 bars.push(bar);
                                             }
