@@ -1576,7 +1576,7 @@ where
                                                         ],
                                                         color.filled(),
                                                     );
-                                                    bar.set_margin(3, 3, 0, 0);
+                                                    bar.set_margin(2, 2, 0, 0);
                                                     bars.push(bar);
                                                 /*eprintln!(
                                                 "{:?}",
