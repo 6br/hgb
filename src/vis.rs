@@ -1151,7 +1151,7 @@ where
                             preset_color.pick(VisColor::DefCol).mix(0.8)
                         }
                     } else if colored_by_track {
-                        Palette9999::pick(data.0 as usize).mix(0.2)
+                        Palette9999::pick(data.0 as usize).mix(0.3)
                     } else if bam.flag().is_reverse_strand() {
                         preset_color.pick(VisColor::NegCol).mix(0.8)
                     } else {
