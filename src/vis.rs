@@ -15,7 +15,6 @@ use plotters::prelude::Palette;
 use plotters::prelude::*;
 use plotters::style::text_anchor::{HPos, Pos, VPos};
 use plotters::style::RGBColor;
-// use std::cmp::min;
 use std::ops::Range;
 use std::{collections::BTreeMap, fs::File, time::Instant};
 use std::{convert::TryInto, path::PathBuf};
