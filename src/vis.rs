@@ -468,7 +468,6 @@ where
         let mut btree = BTreeMap::new();
         for i in graph.records() {
             let k = i?;
-            //btree.insert(k[0].to_string(), (k[1].parse::<u64>()?, k[2].parse::<u64>()?));
             //eprintln!("{:?}", k);
             let item = btree.entry(k[0].to_string()).or_insert_with(Vec::new);
             item.push((k[1].parse::<u64>()?, k[2].parse::<u64>()?));

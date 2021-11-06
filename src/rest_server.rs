@@ -146,13 +146,6 @@ fn get_matches_from(args: Vec<String>) -> Result<ArgMatches, Error> {
     .arg(Arg::new("no-scale").short('S').about("Do not show y-axis scale"))
     .arg(Arg::new("no-packing").short('p').about("Disable read packing"))
     .arg(Arg::new("no-legend").short('l').about("Hide legend"))
-    .arg(
-        Arg::new("colored-by-motif")
-            .short('E')
-            .takes_value(true)
-            .default_value("C:T:CG")
-            .about("Colored by specified motif (for bisulfite sequencing)"),
-    )
     .arg(Arg::new("meaningless").short('Q').about("Set square width (overwritten)"))
     .arg(Arg::new("meaningless2").short('>').about("Serve the web server with accepting any parameter"))
     .arg(Arg::new("dump-json").short('%').long("write-json").about("Dump JSON of read metadata"))
@@ -267,13 +260,6 @@ fn get_matches_from(args: Vec<String>) -> Result<ArgMatches, Error> {
             .short('d')
             .takes_value(true)
             .about("Cache directory for server (generated randomly if not specified)"),
-    )
-    .arg(
-        Arg::new("min-read-length")
-            .short('M')
-            .long("min-read-length")
-            .takes_value(true)
-            .about("Minimum read mapping length on coverage/alignment track"),
     )
     .arg(
         Arg::new("x-scale")
