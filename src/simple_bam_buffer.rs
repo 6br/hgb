@@ -69,7 +69,7 @@ impl ChromosomeBufferTrait for ChromosomeBuffer {
         let bins = self.bins.keys().collect::<Vec<_>>();
         let bins_iter = region_to_bins(range.start() as i32, range.end() as i32);
         for i in bins_iter {
-            if bins.contains(&&(i as usize)) {
+            if !bins.contains(&&(i as usize)) {
                 return false;
             }
         }
@@ -449,7 +449,7 @@ impl ChromosomeBufferTrait for ChromosomeBuffer {
             .map(|a| a.split(":").collect_vec())
             .unwrap_or(vec![]);
         let filter_by_tag = matches.is_present("filtered-by-tag");
-        eprintln!("{:?}", filtered_by_tag);
+        // eprintln!("{:?}", filtered_by_tag);
         // Calculate coverage; it won't work on sort_by_name
         // let mut frequency = BTreeMap::new(); // Vec::with_capacity();
 

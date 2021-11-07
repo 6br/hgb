@@ -179,7 +179,12 @@ where
         .unwrap_or(100u32);
     let x_as_range = matches.is_present("x-as-range");
     let dynamic_partition = matches.is_present("dynamic-partition");
-    let freq_len = vis.iter().map(|a| a.frequency.len()).max().unwrap();
+    let pileup = matches.is_present("pileup");
+    let freq_len = if pileup {
+        vis.iter().map(|a| a.frequency.len()).max().unwrap()
+    } else {
+        0
+    };
     let freq_len_ids = vis
         .iter()
         .map(|a| (a.frequency.len(), a.frequency.keys()))
