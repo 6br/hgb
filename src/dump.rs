@@ -113,7 +113,9 @@ impl ReadTree {
     }
     fn read_convert(self, read: &mut Read) {
         if let Track::TrackId(track) = read.track {
-            read.track = Track::TrackName(self.tracks[&track].clone());
+            if self.tracks.contains_key(&track) {
+                read.track = Track::TrackName(self.tracks[&track].clone());
+            }
         }
     }
     pub fn find(self, x: i32, y: i32) -> Option<(Read, (u64, String))> {
