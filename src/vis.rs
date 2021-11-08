@@ -166,6 +166,7 @@ where
     let no_margin = matches.is_present("no-scale");
     let y_area_size = if no_margin { 0 } else { 40 };
     let output = matches.value_of("output").unwrap();
+    let no_ruler = matches.is_present("no-ruler");
     let max_coverage = matches
         .value_of("max-coverage")
         .and_then(|a| a.parse::<u32>().ok());
@@ -192,6 +193,7 @@ where
         .and_then(|a| a.parse::<u32>().ok())
         .unwrap_or(20u32)
         / if freq_len > 1 { freq_len as u32 } else { 1u32 };
+    let x_area_size = if no_ruler { 0 } else { x_scale };
     let x_len = if x_as_range {
         vis.iter().map(|t| t.range.interval() as u32).sum::<u32>()
     } else {
@@ -280,8 +282,9 @@ where
                     // Set the caption of the chart
                     //.caption(format!("{}", range), ("sans-serif", 20).into_font())
                     // Set the size of the label region
-                    .x_label_area_size(x_scale)
+                    .x_label_area_size(x_area_size)
                     .y_label_area_size(y_area_size)
+                    .top_x_label_area_size(5)
                     // Finally attach a coordinate on the drawing area and make a chart context
                     .build_cartesian_2d(x_spec.clone(), 0..y_max)?;
                 chart
