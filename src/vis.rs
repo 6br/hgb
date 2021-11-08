@@ -1604,11 +1604,12 @@ where
                                                 bars.push(bar);
                                                 if insertion_string {
                                                     //Note that 
+                                                    let pos = Pos::new(HPos::Right, VPos::Center);
                                                     let insertion_text = if insertion_str.len() > INSERTION_THRESHOLD {format!("({})", insertion_str.len())} else {insertion_str.iter().map(|t| t.1).join("").to_string()};
                                                     let text = Text::new(
                                                         insertion_text,
                                                         (prev_pixel_ref + 1, index),
-                                                        TextStyle::from(("sans-serif", y).into_font()).color(&ins_color)
+                                                        TextStyle::from(("sans-serif", y).into_font()).color(&ins_color).pos(pos)
                                                     );
                                                     texts.push(text);
                                                 }
@@ -1687,10 +1688,11 @@ where
                                                 //insertion_str.push((prev_ref, entry.record_nt().unwrap() as char));
                                                 if insertion_string {
                                                     //Note that 
+                                                    let pos = Pos::new(HPos::Right, VPos::Center);
                                                     let text = Text::new(
                                                         "I".to_string(),//(bam.sequence().at(record as usize) as char).to_string(),
                                                         (prev_ref, index),
-                                                        TextStyle::from(("sans-serif", y).into_font()).color(&ins_color),
+                                                        TextStyle::from(("sans-serif", y).into_font()).color(&ins_color).pos(pos),
                                                     );
                                                     texts.push(text);
                                                     insertion_str.push((prev_ref, bam.sequence().at(record as usize) as char));
