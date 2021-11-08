@@ -3,7 +3,7 @@ use actix_files::NamedFile;
 use actix_web::http::header::{ContentDisposition, DispositionType};
 use actix_web::{error, middleware::Logger, web, HttpRequest, Responder, Result};
 use bam::Record;
-use clap::{App, AppSettings, Arg, ArgMatches};
+use clap::{App, AppSettings, Arg, ArgMatches, ArgSettings};
 use genomic_range::StringRegion;
 use ghi::{bed, vis::bam_record_vis, Vis, VisRef};
 use itertools::Itertools;
@@ -75,6 +75,7 @@ fn id_to_range(
             .arg(Arg::new("no-filter").short('f').about("Disable pre-filtering on loading BAM index (used for debugging)"))
             .arg(Arg::new("no-cigar").short('c').about("Do not show cigar string"))
             .arg(Arg::new("no-scale").short('S').about("Do not show y-axis scale"))
+            .arg(Arg::new("no-ruler").short('*').long("hide-x-scale").setting(ArgSettings::MultipleOccurrences).about("Do not show x-axis ruler"))
             .arg(Arg::new("no-packing").short('p').about("Disable read packing"))
             .arg(Arg::new("no-legend").short('l').about("Hide legend"))
             .arg(Arg::new("colored-by-name").short('n').about("Set read colors by read name"))
