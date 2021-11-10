@@ -31,7 +31,8 @@ fn check_filter_by_tag(tags: &TagViewer, filter_by_tag: &Vec<&str>) -> bool {
 pub struct ChromosomeBuffer {
     ref_id: u64,
     matches: ArgMatches,
-    bins: BTreeMap<usize, Vec<(u64, bed::Record)>>,
+    //bins: BTreeMap<usize, Vec<(u64, bed::Record)>>,
+    bins: BTreeSet<usize>, // Bam format does not have annotations.
     freq: BTreeMap<u64, Vec<(u64, u32, char)>>,
     reader: IndexedReader<BufReader<File>>,
 }
@@ -41,7 +42,7 @@ impl ChromosomeBuffer {
         ChromosomeBuffer {
             ref_id: 0,
             matches,
-            bins: BTreeMap::new(),
+            bins: BTreeSet::new(),
             freq: BTreeMap::new(),
             reader,
         }
@@ -53,7 +54,7 @@ impl ChromosomeBufferTrait for ChromosomeBuffer {
     fn drop(&mut self) {
         eprintln!("Buffer has dropped.");
         self.ref_id = 0;
-        self.bins = BTreeMap::new();
+        self.bins = BTreeSet::new();
         self.freq = BTreeMap::new();
     }
 
@@ -66,7 +67,7 @@ impl ChromosomeBufferTrait for ChromosomeBuffer {
         if range.ref_id() != self.ref_id {
             return false;
         }
-        let bins = self.bins.keys().collect::<Vec<_>>();
+        let bins = self.bins.iter().collect::<Vec<_>>();
         let bins_iter = region_to_bins(range.start() as i32, range.end() as i32);
         for i in bins_iter {
             if !bins.contains(&&(i as usize)) {
@@ -95,14 +96,14 @@ impl ChromosomeBufferTrait for ChromosomeBuffer {
     */
 
     fn bins(&self) -> Vec<&usize> {
-        self.bins.keys().collect::<Vec<&usize>>()
+        self.bins.iter().collect::<Vec<&usize>>()
     }
 
     fn size_limit(&self) -> bool {
         //std::mem::size_of(self)
         //This is a very heuristic way.
-        debug!("Current bin size: {}", self.bins.keys().len());
-        self.bins.keys().len() > 5000
+        debug!("Current bin size: {}", self.bins.iter().len());
+        self.bins.len() > 5000
     }
 
     fn size_limit_local(&self, bins: &BTreeSet<u64>) -> bool {
@@ -136,11 +137,13 @@ impl ChromosomeBufferTrait for ChromosomeBuffer {
 
         //        let mut chunks = BTreeMap::new();
         let mut bin_ids = BTreeSet::new();
+        let mut bin_ids_usize = BTreeSet::new();
 
         for i in region_to_bins(range.start() as i32, range.end() as i32) {
-            if !self.bins.contains_key(&(i as usize)) {
+            if !self.bins.contains(&(i as usize)) {
                 //                        chunks.insert(i, bin.clone().chunks_mut());
                 bin_ids.insert(i as u64);
+                bin_ids_usize.insert(i as usize);
             }
         }
 
@@ -266,8 +269,8 @@ impl ChromosomeBufferTrait for ChromosomeBuffer {
             }
         });
         merged_list.extend(list);
-        //    self.bins.insert(*bin_id as usize, ann);
-        //}
+        self.bins.extend(bin_ids_usize); //insert(*bin_id as usize, ann);
+                                         //}
         (reload_flag, merged_list, bin_ids)
     }
 
@@ -420,8 +423,8 @@ impl ChromosomeBufferTrait for ChromosomeBuffer {
         let range = Region::convert(string_range, closure).unwrap();
         let _freq = &self.freq;
 
-        let mut ann: Vec<(u64, bed::Record)> =
-            self.bins.values().into_iter().cloned().flatten().collect();
+        let mut ann: Vec<(u64, bed::Record)> = vec![];
+        // self.bins.values().into_iter().cloned().flatten().collect();
         // let matches = self.matches.clone();
         let only_split = matches.is_present("only-split-alignment");
         let exclude_split = matches.is_present("exclude-split-alignment");
