@@ -600,17 +600,17 @@ fn index2<T: 'static + ChromosomeBufferTrait>(
                             &mut list_btree.write().unwrap(),
                         );
                     }
-                    let new_vis = buffer.read().unwrap().vis(
-                        &matches,
-                        &string_range,
-                        &mut list.write().unwrap(),
-                        &mut list_btree.write().unwrap(),
-                    );
                     let endy = start.elapsed();
                     eprintln!(
                         "Fallback to reload2: {}.{:03} sec.",
                         endy.as_secs(),
                         endy.subsec_millis()
+                    );
+                    let new_vis = buffer.read().unwrap().vis(
+                        &matches,
+                        &string_range,
+                        &mut list.write().unwrap(),
+                        &mut list_btree.write().unwrap(),
                     );
                     let mut old_vis = vis.write().unwrap();
                     *old_vis = new_vis.unwrap();

@@ -293,6 +293,11 @@ impl ChromosomeBufferTrait for ChromosomeBuffer {
                 return false;
             }
         }
+        for i in self.bins.iter() {
+            if !bins.contains(&(*i as u64)) {
+                return false;
+            }
+        }
         true
     }
 
