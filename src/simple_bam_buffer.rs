@@ -420,7 +420,11 @@ impl ChromosomeBufferTrait for ChromosomeBuffer {
             } else {
                 list.extend(new_list);
             }
-            debug!("After load list len: {}", list.len());
+            debug!(
+                "After local load list len: {} ({})",
+                list.len(),
+                list_btree.len()
+            );
         }
     }
     fn vis(
