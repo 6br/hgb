@@ -690,7 +690,7 @@ pub async fn server<T: 'static + ChromosomeBufferTrait + Send + Sync>(
     prefetch_range: StringRegion,
     args: Vec<String>,
     mut buffer: T,
-    _threads: u16,
+    threads: u16,
 ) -> std::io::Result<()> {
     use actix_web::{web, HttpServer};
     // let list = buffer.add(&prefetch_range);
@@ -764,9 +764,13 @@ pub async fn server<T: 'static + ChromosomeBufferTrait + Send + Sync>(
             .wrap(Condition::new(auth_condition, auth))
     });
     if let Some(uds_bind) = uds_bind {
-        server.bind_uds(uds_bind)?.workers(1usize).run().await
+        server
+            .bind_uds(uds_bind)?
+            .workers(threads as usize)
+            .run()
+            .await
     } else {
-        server.bind(bind)?.workers(1usize).run().await
+        server.bind(bind)?.workers(threads as usize).run().await
     }
 }
 fn validate_credentials(

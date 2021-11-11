@@ -337,6 +337,13 @@ impl ChromosomeBufferTrait for ChromosomeBuffer {
                 local_bins.insert(i as u64);
             }
         }
+        // Synchronize the bins with the local bins.
+        for &bin in self.bins.iter() {
+            if !local_bins.contains(&(bin as u64)) && !reload_flag {
+                chunks.push(bin as u32);
+                local_bins.insert(bin as u64);
+            }
+        }
 
         let mut merged_list = vec![];
         //for bin_id in chunks {
