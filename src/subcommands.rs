@@ -69,12 +69,16 @@ pub fn bam_vis(
     let labels: Option<Vec<&str>> = matches.values_of("labels").map(|t| t.collect());
 
     if let Some(bam_files) = matches.values_of("bam") {
+        let additional_threads = match matches.is_present("rest") {
+            true => 0,
+            false => threads - 1,
+        };
         let mut bam_files: Vec<&str> = bam_files.collect();
         let mut bam_readers = bam_files
             .iter()
             .map(|bam_path| {
                 bam::IndexedReader::build()
-                    .additional_threads(threads - 1)
+                    .additional_threads(additional_threads)
                     .from_path(bam_path)
                     .unwrap()
             })
