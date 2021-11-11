@@ -209,7 +209,7 @@ pub fn bam_vis(
                 let buffer: ghi::simple_bam_buffer::ChromosomeBuffer =
                     ghi::simple_bam_buffer::ChromosomeBuffer::new(
                         bam::IndexedReader::build()
-                            .additional_threads(threads - 1)
+                            .additional_threads(0)
                             .from_path(bam_files[0])
                             .unwrap(),
                         matches.clone(),
