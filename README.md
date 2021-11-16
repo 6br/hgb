@@ -1,6 +1,6 @@
 # hgb
 
-[![Rust](https://github.com/6br/hgb/actions/workflows/rust.yml/badge.svg)](https://github.com/6br/hgb/actions/workflows/rust.yml)
+[![Rust](https://github.com/6br/hgb/actions/workflows/rust.yml/badge.svg)](https://github.com/6br/hgb/actions/workflows/rust.yml) [![ci](https://github.com/6br/hgb/actions/workflows/ci.yml/badge.svg)](https://github.com/6br/hgb/actions/workflows/ci.yml)
 
 A hybrid genome browser for zooming out long-read alignments
 
