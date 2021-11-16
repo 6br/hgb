@@ -1,4 +1,4 @@
-FROM rust:1.56
+FROM rustlang/rust:nightly
 
 WORKDIR /app
 
@@ -6,6 +6,6 @@ COPY . .
 
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
     --mount=type=cache,target=/app/target \
-    rustc --print target-features && cargo build --release && cp /app/target/release/hgb /app/hgb
+    cargo build --release && cp /app/target/release/hgb /app/hgb
 
 ENTRYPOINT ["/app/hgb"]
