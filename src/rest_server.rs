@@ -759,7 +759,7 @@ pub async fn server<T: 'static + ChromosomeBufferTrait + Send + Sync>(
             .route("/", web::get().to(get_index::<T>))
             .route("/json", web::get().to(get_json))
             .route("/read", web::get().to(get_read))
-            .route("/static/api", web::get().to(get_index))
+            .route("/static/api", web::get().to(get_index::<T>))
             .service(actix_files::Files::new("/static", "static").show_files_listing())
             .wrap(Logger::default())
             .wrap(cross_origin)
