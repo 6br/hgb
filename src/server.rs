@@ -116,6 +116,13 @@ fn id_to_range(
                     .about("Cache directory for server (generated randomly if not specified)"),
             )
             .arg(
+                Arg::new("static-dir")
+                    .short('.')
+                    .long("static-directory")
+                    .takes_value(true)
+                    .about("Static serve directory for server (./static is default)"),
+            )
+            .arg(
                 Arg::new("min-read-length")
                     .short('M')
                     .takes_value(true)
