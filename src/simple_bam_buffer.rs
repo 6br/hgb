@@ -336,12 +336,12 @@ impl ChromosomeBufferTrait for ChromosomeBuffer {
         //let mut chunks = BTreeMap::new();
         let mut chunks = vec![];
 
-        for i in region_to_bins(range.start() as i32, range.end() as i32) {
+        /*for i in region_to_bins(range.start() as i32, range.end() as i32) {
             if !local_bins.1.contains(&(i as u64)) {
                 chunks.push(i as u32);
                 local_bins.1.insert(i as u64);
             }
-        }
+        }*/
         // Synchronize the bins with the local bins.
         for &bin in self.bins.iter() {
             if !local_bins.1.contains(&(bin as u64)) {
@@ -420,13 +420,14 @@ impl ChromosomeBufferTrait for ChromosomeBuffer {
             } else {
                 list.extend(new_list);
             }
-            debug!(
-                "After local load list len: {} ({}:{})",
-                list.len(),
-                list_btree.0,
-                list_btree.1.len()
-            );
         }
+        debug!(
+            "Current local load list len: {} ({}:{}), global bin: {}",
+            list.len(),
+            list_btree.0,
+            list_btree.1.len(),
+            self.bins.len()
+        );
     }
     fn vis(
         &self,
