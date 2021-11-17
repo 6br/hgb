@@ -36,10 +36,10 @@ jobs:
         args: --all -- --check
     - name: Run tests
       run:  |
-        curl https://github.com/plotly/react-genome-viewer/raw/master/demo/data/index_test.bam -o ${GITHUB_WORKSPACE}/test/index_test.bam
-        curl https://github.com/plotly/react-genome-viewer/raw/master/demo/data/index_test.bam.bai -o ${GITHUB_WORKSPACE}/test/index_test.bam.bai
-        curl https://github.com/ingolia/SamTools/raw/master/samtools/test/test-in.bam -o ${GITHUB_WORKSPACE}/test/test-in.bam
-        curl https://github.com/ingolia/SamTools/raw/master/samtools/test/test-in.bam.bai -o ${GITHUB_WORKSPACE}/test/test-in.bam.bai
+        curl -L https://github.com/plotly/react-genome-viewer/raw/master/demo/data/index_test.bam -o ${GITHUB_WORKSPACE}/test/index_test.bam
+        curl -L https://github.com/plotly/react-genome-viewer/raw/master/demo/data/index_test.bam.bai -o ${GITHUB_WORKSPACE}/test/index_test.bam.bai
+        curl -L https://github.com/ingolia/SamTools/raw/master/samtools/test/test-in.bam -o ${GITHUB_WORKSPACE}/test/test-in.bam
+        curl -L https://github.com/ingolia/SamTools/raw/master/samtools/test/test-in.bam.bai -o ${GITHUB_WORKSPACE}/test/test-in.bam.bai
         ls -lh test/
         echo `pwd`
         cargo test --verbose
