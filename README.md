@@ -2,7 +2,10 @@
 
 [![Rust](https://github.com/6br/hgb/actions/workflows/rust.yml/badge.svg)](https://github.com/6br/hgb/actions/workflows/rust.yml) [![ci](https://github.com/6br/hgb/actions/workflows/ci.yml/badge.svg)](https://github.com/6br/hgb/actions/workflows/ci.yml)
 
+## See [jbrowse-plugin-hgb](https://github.com/6br/jbrowse-plugin-hgb) for interactive browser
+
 A hybrid genome browser for zooming out long-read alignments
+
 
 Screenshots in seconds.
 
