@@ -16,7 +16,7 @@ use bam::Record;
 use clap::{App, AppSettings, Arg, ArgMatches, ArgSettings, Error};
 use genomic_range::StringRegion;
 use ghi::dump::{Area, ReadTree};
-use ghi::{vis::bam_record_vis, ChromosomeBufferTrait, Vis, VisRef};
+use ghi::{vis::bam_record_vis, ChromosomeBufferTrait, ReadBuffer, Vis, VisRef};
 use itertools::Itertools;
 use qstring::QString;
 use rand::Rng;
@@ -484,7 +484,7 @@ async fn get_index<T: 'static + ChromosomeBufferTrait>(
     item: web::Data<RwLock<Item>>,
     vis: web::Data<RwLock<Vis>>,
     list: web::Data<RwLock<Vec<(u64, Record)>>>,
-    list_btree: web::Data<RwLock<BTreeSet<u64>>>,
+    list_btree: web::Data<RwLock<ReadBuffer>>,
     buffer: web::Data<RwLock<T>>,
     //query: web::Query<RequestBody>
 ) -> Result<NamedFile> {
@@ -514,7 +514,7 @@ async fn index<T: 'static + ChromosomeBufferTrait>(
     item: web::Data<RwLock<Item>>,
     vis: web::Data<RwLock<Vis>>,
     list: web::Data<RwLock<Vec<(u64, Record)>>>,
-    list_btree: web::Data<RwLock<BTreeSet<u64>>>,
+    list_btree: web::Data<RwLock<ReadBuffer>>,
     buffer: web::Data<RwLock<T>>,
     request_body: web::Json<RequestBody>,
 ) -> Result<NamedFile> {
@@ -539,7 +539,7 @@ fn index2<T: 'static + ChromosomeBufferTrait>(
     item: web::Data<RwLock<Item>>,
     vis: web::Data<RwLock<Vis>>,
     list: web::Data<RwLock<Vec<(u64, Record)>>>,
-    list_btree: web::Data<RwLock<BTreeSet<u64>>>,
+    list_btree: web::Data<RwLock<ReadBuffer>>,
     buffer: web::Data<RwLock<T>>,
     format: String,
     params: String,
@@ -702,7 +702,7 @@ pub async fn server<T: 'static + ChromosomeBufferTrait + Send + Sync>(
     use actix_web::{web, HttpServer};
     // let list = buffer.add(&prefetch_range);
     let mut list = vec![];
-    let mut list_btree = BTreeSet::new();
+    let mut list_btree = (0, BTreeSet::new());
     let bind = matches.value_of("web").unwrap_or(&"0.0.0.0:4000");
     let basic_auth = matches
         .value_of("basic-auth")
