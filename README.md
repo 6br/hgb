@@ -26,9 +26,12 @@ If you didn't install Rust/cargo, you need to install rustup.
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 ```
 
+HGB requires to use nighty version of rustc.
+
 ```bash
 git clone https://github.com/6br/hgb
 cd hgb
+rustup override set nightly
 cargo build --release
 cargo run --release -- vis --help
 ```
