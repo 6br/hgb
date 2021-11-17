@@ -6,7 +6,7 @@ use actix_web::{error, middleware::Logger, web, HttpRequest, Responder, Result};
 use bam::Record;
 use clap::{App, AppSettings, Arg, ArgMatches, ArgSettings};
 use genomic_range::StringRegion;
-use ghi::{vis::bam_record_vis, ChromosomeBufferTrait, Vis, VisRef};
+use ghi::{vis::bam_record_vis, ChromosomeBufferTrait, ReadBuffer, Vis, VisRef};
 use itertools::Itertools;
 use rand::Rng;
 use std::time::Instant;
@@ -338,7 +338,7 @@ async fn index<T: 'static + ChromosomeBufferTrait + Send + Sync>(
     item: web::Data<RwLock<Item>>,
     vis: web::Data<RwLock<Vis>>,
     list: web::Data<RwLock<Vec<(u64, Record)>>>,
-    list_btree: web::Data<RwLock<BTreeSet<u64>>>,
+    list_btree: web::Data<RwLock<ReadBuffer>>,
     buffer: web::Data<RwLock<T>>,
     req: HttpRequest,
 ) -> Result<NamedFile> {
@@ -529,7 +529,7 @@ pub async fn server<T: 'static + ChromosomeBufferTrait + Send + Sync>(
 ) -> std::io::Result<()> {
     use actix_web::{web, HttpServer};
     let mut list = vec![];
-    let mut list_btree = BTreeSet::new();
+    let mut list_btree = (0, BTreeSet::new());
     let bind = matches.value_of("web").unwrap_or(&"0.0.0.0:4000");
     let no_margin = matches.is_present("no-scale");
     buffer.retrieve(&prefetch_range, &mut list, &mut list_btree);

@@ -1,7 +1,7 @@
 use crate::index::Region;
 use crate::range::Default;
 use crate::ChromosomeBufferTrait;
-use crate::{bed, range::Format, vis::RecordIter, Vis};
+use crate::{bed, range::Format, vis::RecordIter, ReadBuffer, Vis};
 use bam::record::tags::TagViewer;
 use bam::{index::region_to_bins, record::tags::TagValue, IndexedReader, Record};
 use clap::ArgMatches;
@@ -106,14 +106,14 @@ impl ChromosomeBufferTrait for ChromosomeBuffer {
         self.bins.len() > 5000
     }
 
-    fn size_limit_local(&self, bins: &BTreeSet<u64>) -> bool {
+    fn size_limit_local(&self, bins: &ReadBuffer) -> bool {
         //std::mem::size_of(self)
         //This is a very heuristic way.
-        debug!("Current local bin size: {}", bins.iter().len());
-        bins.iter().len() > 2000
+        debug!("Current local bin size: {}", bins.1.iter().len());
+        bins.1.iter().len() > 2000
     }
 
-    fn add(&mut self, range: &StringRegion) -> (bool, Vec<(u64, Record)>, BTreeSet<u64>) {
+    fn add(&mut self, range: &StringRegion) -> (bool, Vec<(u64, Record)>, ReadBuffer) {
         debug!("Add: {}", range);
         let closure = |x: &str| self.reader.header().reference_id(x).map(|t| t as u64);
         let _reference_name = &range.path;
@@ -271,7 +271,7 @@ impl ChromosomeBufferTrait for ChromosomeBuffer {
         merged_list.extend(list);
         self.bins.extend(bin_ids_usize); //insert(*bin_id as usize, ann);
                                          //}
-        (reload_flag, merged_list, bin_ids)
+        (reload_flag, merged_list, (range.ref_id(), bin_ids))
     }
 
     fn included_string(&self, string_range: &StringRegion) -> bool {
@@ -282,26 +282,26 @@ impl ChromosomeBufferTrait for ChromosomeBuffer {
     }
 
     // This range is completely included or not?
-    fn included_local(&self, range: Region, bins: &BTreeSet<u64>) -> bool {
-        if range.ref_id() != self.ref_id {
+    fn included_local(&self, range: Region, bins: &ReadBuffer) -> bool {
+        if range.ref_id() != bins.0 {
             return false;
         }
         let bins_iter = region_to_bins(range.start() as i32, range.end() as i32);
         for i in bins_iter {
-            if !bins.contains(&(i as u64)) {
+            if !bins.1.contains(&(i as u64)) {
                 //if bins.iter().any(|t| !i.bin_disp_range().contains(t)) {
                 return false;
             }
         }
         for i in self.bins.iter() {
-            if !bins.contains(&(*i as u64)) {
+            if !bins.1.contains(&(*i as u64)) {
                 return false;
             }
         }
         true
     }
 
-    fn included_string_local(&self, string_range: &StringRegion, bins: &BTreeSet<u64>) -> bool {
+    fn included_string_local(&self, string_range: &StringRegion, bins: &ReadBuffer) -> bool {
         let closure = |x: &str| self.reader.header().reference_id(x).map(|t| t as u64);
         let _reference_name = &string_range.path;
         let range = Region::convert(string_range, closure).unwrap();
@@ -311,7 +311,7 @@ impl ChromosomeBufferTrait for ChromosomeBuffer {
     fn add_local(
         &mut self,
         range: &StringRegion,
-        local_bins: &mut BTreeSet<u64>,
+        local_bins: &mut ReadBuffer,
     ) -> (bool, Vec<(u64, Record)>) {
         debug!("Add: {}", range);
         let closure = |x: &str| self.reader.header().reference_id(x).map(|t| t as u64);
@@ -319,9 +319,9 @@ impl ChromosomeBufferTrait for ChromosomeBuffer {
         let range = Region::convert(&range, closure).unwrap();
         let mut reload_flag = false;
         // Check if overlap, and drop them if the chrom_id is different.
-        if self.size_limit_local(local_bins) {
+        if self.size_limit_local(local_bins) || range.ref_id() != local_bins.0 {
             //self.drop();
-            *local_bins = BTreeSet::new();
+            *local_bins = (range.ref_id(), BTreeSet::new());
             reload_flag = true;
         }
         let matches = self.matches.clone();
@@ -337,16 +337,16 @@ impl ChromosomeBufferTrait for ChromosomeBuffer {
         let mut chunks = vec![];
 
         for i in region_to_bins(range.start() as i32, range.end() as i32) {
-            if !local_bins.contains(&(i as u64)) && !reload_flag {
+            if !local_bins.1.contains(&(i as u64)) {
                 chunks.push(i as u32);
-                local_bins.insert(i as u64);
+                local_bins.1.insert(i as u64);
             }
         }
         // Synchronize the bins with the local bins.
         for &bin in self.bins.iter() {
-            if !local_bins.contains(&(bin as u64)) && !reload_flag {
+            if !local_bins.1.contains(&(bin as u64)) {
                 chunks.push(bin as u32);
-                local_bins.insert(bin as u64);
+                local_bins.1.insert(bin as u64);
             }
         }
 
@@ -393,7 +393,7 @@ impl ChromosomeBufferTrait for ChromosomeBuffer {
         &mut self,
         string_range: &StringRegion,
         list: &mut Vec<(u64, bam::Record)>,
-        list_btree: &mut BTreeSet<u64>,
+        list_btree: &mut ReadBuffer,
     ) {
         let closure = |x: &str| self.reader.header().reference_id(x).map(|t| t as u64);
         let _reference_name = &string_range.path;
@@ -408,7 +408,7 @@ impl ChromosomeBufferTrait for ChromosomeBuffer {
                 *list_btree = bins;
             } else {
                 list.extend(new_list);
-                list_btree.extend(bins)
+                list_btree.1.extend(bins.1)
             }
             debug!("After load list len: {}", list.len());
         }
@@ -421,9 +421,10 @@ impl ChromosomeBufferTrait for ChromosomeBuffer {
                 list.extend(new_list);
             }
             debug!(
-                "After local load list len: {} ({})",
+                "After local load list len: {} ({}:{})",
                 list.len(),
-                list_btree.len()
+                list_btree.0,
+                list_btree.1.len()
             );
         }
     }
@@ -432,7 +433,7 @@ impl ChromosomeBufferTrait for ChromosomeBuffer {
         matches: &ArgMatches,
         string_range: &StringRegion,
         list: &mut Vec<(u64, bam::Record)>,
-        _list_btree: &mut BTreeSet<u64>,
+        _list_btree: &mut ReadBuffer,
     ) -> Option<Vis> {
         let closure = |x: &str| self.reader.header().reference_id(x).map(|t| t as u64);
         let _reference_name = &string_range.path;

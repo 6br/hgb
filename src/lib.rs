@@ -52,6 +52,7 @@ use std::{
 };
 
 pub type Frequency = BTreeMap<u64, Vec<(u64, u32, char)>>;
+pub type ReadBuffer = (u64, BTreeSet<u64>);
 
 /// A trait for writing records.
 pub trait ChunkWriter<R: Read + Seek + Send + Sync> {
@@ -144,32 +145,32 @@ pub trait ChromosomeBufferTrait {
 
     fn size_limit(&self) -> bool;
 
-    fn size_limit_local(&self, bins: &BTreeSet<u64>) -> bool;
+    fn size_limit_local(&self, bins: &ReadBuffer) -> bool;
 
-    fn included_local(&self, range: Region, bins: &BTreeSet<u64>) -> bool;
+    fn included_local(&self, range: Region, bins: &ReadBuffer) -> bool;
 
-    fn add(&mut self, range: &StringRegion) -> (bool, Vec<(u64, bam::Record)>, BTreeSet<u64>);
+    fn add(&mut self, range: &StringRegion) -> (bool, Vec<(u64, bam::Record)>, ReadBuffer);
     fn included_string(&self, string_range: &StringRegion) -> bool;
-    fn included_string_local(&self, string_range: &StringRegion, bins: &BTreeSet<u64>) -> bool;
+    fn included_string_local(&self, string_range: &StringRegion, bins: &ReadBuffer) -> bool;
 
     fn add_local(
         &mut self,
         range: &StringRegion,
-        local_bins: &mut BTreeSet<u64>,
+        local_bins: &mut ReadBuffer,
     ) -> (bool, Vec<(u64, bam::Record)>);
 
     fn retrieve(
         &mut self,
         string_range: &StringRegion,
         list: &mut Vec<(u64, bam::Record)>,
-        list_btree: &mut BTreeSet<u64>,
+        list_btree: &mut ReadBuffer,
     );
     fn vis(
         &self,
         matches: &ArgMatches,
         string_range: &StringRegion,
         list: &mut Vec<(u64, bam::Record)>,
-        _list_btree: &mut BTreeSet<u64>,
+        _list_btree: &mut ReadBuffer,
     ) -> Option<Vis>;
 }
 
