@@ -51,4 +51,3 @@ jobs:
         ls -lh test/
         echo `pwd`
         cargo test --verbose
-      continue-on-error: true
