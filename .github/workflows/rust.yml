@@ -40,7 +40,7 @@ jobs:
         curl https://github.com/plotly/react-genome-viewer/raw/master/demo/data/index_test.bam.bai -o ${GITHUB_WORKSPACE}/test/index_test.bam.bai
         curl https://github.com/ingolia/SamTools/raw/master/samtools/test/test-in.bam -o ${GITHUB_WORKSPACE}/test/test-in.bam
         curl https://github.com/ingolia/SamTools/raw/master/samtools/test/test-in.bam.bai -o ${GITHUB_WORKSPACE}/test/test-in.bam.bai
-        ls test/
+        ls -lh test/
         echo `pwd`
         cargo test --verbose
       continue-on-error: true
