@@ -75,11 +75,17 @@ impl GhbWriterBuilder {
 /// Writes records in GHB format.
 ///
 /// Can be created as
-/// ```ignore
+/// ```
+/// use ghi::binary::GhbWriter;
+/// use ghi::header::Header;
+/// let header = Header::new();
 /// let writer = GhbWriter::from_path("out.ghb", header).unwrap();
 /// ```
 /// or using a [builder](struct.GhbWriterBuilder.html)
-/// ```ignore
+/// ```
+/// use ghi::binary::GhbWriter;
+/// use ghi::header::Header;
+/// let header = Header::new();
 /// let writer = GhbWriter::build()
 ///     .write_header(false)
 ///     .from_path("out.ghb", header).unwrap();

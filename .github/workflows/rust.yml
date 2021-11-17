@@ -28,6 +28,14 @@ jobs:
         toolchain: ${{ matrix.rust }}
         override: true
         components: rustfmt, clippy
+    - name: initialize
+      if: matrix.os == 'ubuntu-latest'
+      run: |
+        sudo apt-get install samtools
+    - name: initialize
+      if: matrix.os == 'macos-latest'
+      run: |
+        brew install samtools
     - name: Build
       run: cargo build --verbose
     - uses: actions-rs/cargo@v1

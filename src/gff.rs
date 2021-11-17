@@ -12,7 +12,7 @@
 //! # Example
 //!
 //! ```
-//! use bio::io::gff;
+//! use ghi::gff;
 //! use std::io;
 //! let reader = gff::Reader::new(io::stdin(), gff::GffType::GFF3);
 //! ```
