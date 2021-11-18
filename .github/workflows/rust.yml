@@ -51,3 +51,18 @@ jobs:
         ls -lh test/
         echo `pwd`
         cargo test --verbose
+    - name: Build
+      run: cargo build --features bam-mt --verbose
+    - uses: actions-rs/cargo@v1
+      with:
+        command: fmt
+        args: --all -- --check
+    - name: Run tests
+      run:  |
+        curl -L https://github.com/plotly/react-genome-viewer/raw/master/demo/data/index_test.bam -o ${GITHUB_WORKSPACE}/test/index_test.bam
+        curl -L https://github.com/plotly/react-genome-viewer/raw/master/demo/data/index_test.bam.bai -o ${GITHUB_WORKSPACE}/test/index_test.bam.bai
+        curl -L https://github.com/ingolia/SamTools/raw/master/samtools/test/test-in.bam -o ${GITHUB_WORKSPACE}/test/test-in.bam
+        curl -L https://github.com/ingolia/SamTools/raw/master/samtools/test/test-in.bam.bai -o ${GITHUB_WORKSPACE}/test/test-in.bam.bai
+        ls -lh test/
+        echo `pwd`
+        cargo test --verbose
