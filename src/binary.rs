@@ -75,11 +75,17 @@ impl GhbWriterBuilder {
 /// Writes records in GHB format.
 ///
 /// Can be created as
-/// ```ignore
+/// ```
+/// use ghi::binary::GhbWriter;
+/// use ghi::header::Header;
+/// let header = Header::new();
 /// let writer = GhbWriter::from_path("out.ghb", header).unwrap();
 /// ```
 /// or using a [builder](struct.GhbWriterBuilder.html)
-/// ```ignore
+/// ```
+/// use ghi::binary::GhbWriter;
+/// use ghi::header::Header;
+/// let header = Header::new();
 /// let writer = GhbWriter::build()
 ///     .write_header(false)
 ///     .from_path("out.ghb", header).unwrap();
@@ -129,7 +135,7 @@ impl<W: Write> GhbWriter<W> {
     }
 }
 
-impl<W: Write + Seek, R: Read + Seek> ChunkWriter<R> for GhbWriter<W> {
+impl<W: Write + Seek, R: Read + Seek + Send + Sync> ChunkWriter<R> for GhbWriter<W> {
     /// Writes a single record in GHB format.
     fn write(
         &mut self,
@@ -193,7 +199,7 @@ impl<W: Write + Seek> InvertedRecordWriter for GhbWriter<W> {
 /// You can use [RecordReader](../trait.RecordReader.html) trait to read records without excess
 /// allocation.
 /// See: https://stackoverflow.com/questions/54791718/whats-the-difference-between-a-traits-generic-type-and-a-generic-associated-ty/54792178
-pub struct GhbReader<R: Read + Seek> {
+pub struct GhbReader<R: Read + Seek + Send + Sync> {
     // _marker: std::marker::PhantomData<fn() -> T>, // https://in-neuro.hatenablog.com/entry/2019/01/22/220639
     stream: R,
     header: Header,
@@ -216,7 +222,7 @@ impl GhbReader<BufReader<File>> {
     }
 }
 
-impl<R: Read + Seek> GhbReader<R> {
+impl<R: Read + Seek + Send + Sync> GhbReader<R> {
     /// Opens GHB reader from a buffered stream.
     pub fn from_stream(mut stream: R, header: Header, additional_threads: u16) -> Result<Self> {
         // let header = Header::from_bam(&mut stream)?;

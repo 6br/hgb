@@ -8,7 +8,7 @@
 //! # Example
 //!
 //! ```
-//! use crate::bed;
+//! use ghi::bed;
 //! let example = b"1\t5\t5000\tname1\t0.5";
 //! let mut reader = bed::Reader::new(&example[..]);
 //! let mut writer = bed::Writer::new(vec![]);
@@ -233,9 +233,8 @@ impl<'a> From<&'a Record> for annot::contig::Contig<String, strand::Strand> {
     /// Returns a `Contig` annotation for the BED record.
     ///
     /// ```
-    /// # extern crate ghb;
     /// # extern crate bio_types;
-    /// use ghb::bed;
+    /// use ghi::bed;
     /// use bio_types::strand::Strand;
     /// use bio_types::annot::contig::Contig;
     /// # use std::error::Error;
@@ -310,12 +309,11 @@ where
 /// the overall start & end (columns 1 and 2) for the start and
 /// end of the "thick" region (columns 7 and 8).
 /// ```
-/// # extern crate bio;
 /// # extern crate bio_types;
 /// use bio_types::strand::ReqStrand;
 /// use bio_types::annot::AnnotError;
 /// use bio_types::annot::spliced::{Spliced,SplicingError};
-/// use bio::io::bed;
+/// use ghi::bed;
 /// # fn try_main() -> Result<(), Box<SplicingError>> {
 /// let tad3 = Spliced::with_lengths_starts("chrXII".to_owned(), 765265,
 ///                                         &vec![808,52,109], &vec![0,864,984],

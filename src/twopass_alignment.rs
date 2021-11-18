@@ -87,7 +87,7 @@ impl Bins<AlignmentBuilder> {
     }
 }
 
-impl<R: Read + Seek> Set<AlignmentBuilder, R> {
+impl<R: Read + Seek + Send + Sync> Set<AlignmentBuilder, R> {
     pub fn new(
         //mut reader: bam::BamReader<R>,
         mut reader: bam::IndexedReader<R>,
@@ -268,7 +268,7 @@ impl ColumnarSet for Alignment {
     fn new() -> Alignment {
         Alignment::Object(vec![])
     }
-    fn to_stream<W: Write, R: Read + Seek>(
+    fn to_stream<W: Write, R: Read + Seek + Send + Sync>(
         &self,
         stream: &mut W,
         threads: u16,
@@ -389,11 +389,25 @@ mod tests {
         header.transfer(bam_header);
         header.set_local_header(bam_header, bam_path, 0);
         {
-            let set = Set::<AlignmentBuilder, BufReader<File>>::new(reader2, 0_u64, &mut header);
+            let set = Set::<AlignmentBuilder, BufReader<File>>::new(
+                reader2,
+                0_u64,
+                &mut header,
+                None,
+                0,
+                false,
+            );
             let bam_path2 = "./test/test-in.bam";
             let reader = bam::IndexedReader::from_path(bam_path2).unwrap();
             let set2: Set<AlignmentBuilder, BufReader<File>> =
-                Set::<AlignmentBuilder, BufReader<File>>::new(reader, 1_u64, &mut header);
+                Set::<AlignmentBuilder, BufReader<File>>::new(
+                    reader,
+                    1_u64,
+                    &mut header,
+                    None,
+                    0,
+                    false,
+                );
 
             assert_eq!(None, header.reference_id("1"));
             assert_eq!(Some(1), header.reference_id("chr1"));
@@ -435,7 +449,14 @@ mod tests {
         header.transfer(bam_header);
         header.set_local_header(bam_header, bam_path, 0);
         {
-            let set = Set::<AlignmentBuilder, BufReader<File>>::new(reader2, 0_u64, &mut header);
+            let set = Set::<AlignmentBuilder, BufReader<File>>::new(
+                reader2,
+                0_u64,
+                &mut header,
+                None,
+                0,
+                false,
+            );
 
             let example =
                 b"chr2\t16382\t16385\tbin4682\t20\t-\nchr2\t16388\t31768\tbin4683\t20\t-\n";

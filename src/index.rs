@@ -33,6 +33,10 @@ impl Region {
         Region { ref_id, start, end }
     }
 
+    pub fn to_bam_record(&self) -> bam::Region {
+        bam::Region::new(self.ref_id as u32, self.start as u32, self.end as u32)
+    }
+
     pub fn convert<F>(
         path: &StringRegion,
         to_id: F,

@@ -20,6 +20,7 @@ use ghi::range::{Format, InvertedRecordEntire, Set};
 use ghi::twopass_alignment::{Alignment, AlignmentBuilder};
 use ghi::vis::{bam_record_vis_orig, RecordIter};
 use ghi::writer::GhiWriter;
+use ghi::ChromosomeBufferTrait;
 use ghi::{
     gff, reader::IndexedReader, simple_buffer::ChromosomeBuffer, Frequency, IndexWriter, VisOrig,
 };
@@ -68,12 +69,16 @@ pub fn bam_vis(
     let labels: Option<Vec<&str>> = matches.values_of("labels").map(|t| t.collect());
 
     if let Some(bam_files) = matches.values_of("bam") {
+        let additional_threads = match matches.is_present("rest") {
+            true => 0,
+            false => threads - 1,
+        };
         let mut bam_files: Vec<&str> = bam_files.collect();
         let mut bam_readers = bam_files
             .iter()
             .map(|bam_path| {
                 bam::IndexedReader::build()
-                    .additional_threads(threads - 1)
+                    .additional_threads(additional_threads)
                     .from_path(bam_path)
                     .unwrap()
             })
@@ -186,6 +191,43 @@ pub fn bam_vis(
                     > { lambda(prefetch_str) },
                 )
                 .unwrap();
+            if matches.is_present("rest") {
+                let buffer: ghi::simple_bam_buffer::ChromosomeBuffer =
+                    ghi::simple_bam_buffer::ChromosomeBuffer::new(
+                        bam::IndexedReader::build()
+                            .additional_threads(0)
+                            .from_path(bam_files[0])
+                            .unwrap(),
+                        matches.clone(),
+                    );
+                rest_server::server(
+                    matches.clone(),
+                    string_range,
+                    prefetch_range,
+                    args,
+                    buffer,
+                    threads,
+                )?;
+                return Ok(());
+            } else if matches.is_present("whole-chromosome") && matches.is_present("web") {
+                let buffer: ghi::simple_bam_buffer::ChromosomeBuffer =
+                    ghi::simple_bam_buffer::ChromosomeBuffer::new(
+                        bam::IndexedReader::build()
+                            .additional_threads(0)
+                            .from_path(bam_files[0])
+                            .unwrap(),
+                        matches.clone(),
+                    );
+                buffered_server::server(
+                    matches.clone(),
+                    string_range,
+                    prefetch_range,
+                    args,
+                    buffer,
+                    threads,
+                )?;
+                return Ok(());
+            }
             for (index, reader2) in &mut bam_readers.iter_mut().enumerate() {
                 //println!("Loading {}", bam_path);
                 // let reader = bam::BamReader::from_path(bam_path, threads).unwrap();
@@ -195,6 +237,7 @@ pub fn bam_vis(
 
                 // Here all threads can be used, but I suspect that runs double
                 //reader2.fetch()
+
                 let ref_id = reader2
                     .header()
                     .reference_id(prefetch_range.path.as_ref())
@@ -865,7 +908,7 @@ pub fn bench_query(matches: &ArgMatches, _args: Vec<String>, threads: u16) {
 
                 let mut buffer: ChromosomeBuffer = ChromosomeBuffer::new(reader, matches.clone());
                 let mut list = vec![];
-                let mut list_btree = BTreeSet::new();
+                let mut list_btree = (0, BTreeSet::new());
                 buffer.retrieve(&string_range, &mut list, &mut list_btree);
                 let new_vis = buffer.vis(&matches, &string_range, &mut list, &mut list_btree);
                 println!("{}", new_vis.unwrap().prefetch_max);
@@ -894,7 +937,7 @@ pub fn vis_query(
         .unwrap_or(1796u16);
     if let Some(o) = matches.value_of("INPUT") {
         let mut reader: IndexedReader<BufReader<File>> =
-            IndexedReader::from_path_with_additional_threads(o, threads - 1)
+            IndexedReader::from_path_with_additional_threads(o, 1)
                 .map_err(|e| Error::new(e.kind(), format!("Failed to read GHB/GHI file: {}", e)))
                 .unwrap();
         let mut ranges: Vec<String> = vec![];

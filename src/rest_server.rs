@@ -16,7 +16,7 @@ use bam::Record;
 use clap::{App, AppSettings, Arg, ArgMatches, ArgSettings, Error};
 use genomic_range::StringRegion;
 use ghi::dump::{Area, ReadTree};
-use ghi::{simple_buffer::ChromosomeBuffer, vis::bam_record_vis, Vis, VisRef};
+use ghi::{vis::bam_record_vis, ChromosomeBufferTrait, ReadBuffer, Vis, VisRef};
 use itertools::Itertools;
 use qstring::QString;
 use rand::Rng;
@@ -25,6 +25,7 @@ use std::collections::hash_map::DefaultHasher;
 use std::fs::File;
 use std::hash::{Hash, Hasher};
 use std::io::BufReader;
+use std::marker::{Send, Sync};
 use std::time::Instant;
 use std::{collections::BTreeSet, fs, sync::RwLock};
 
@@ -144,6 +145,7 @@ fn get_matches_from(args: Vec<String>) -> Result<ArgMatches, Error> {
     .arg(Arg::new("no-filter").short('f').about("Disable pre-filtering on loading BAM index (used for debugging)"))
     .arg(Arg::new("no-cigar").short('c').about("Do not show cigar string"))
     .arg(Arg::new("no-scale").short('S').about("Do not show y-axis scale"))
+    .arg(Arg::new("no-ruler").short('*').long("hide-x-scale").setting(ArgSettings::MultipleOccurrences).about("Do not show x-axis ruler"))
     .arg(Arg::new("no-packing").short('p').about("Disable read packing"))
     .arg(Arg::new("no-legend").short('l').about("Hide legend"))
     .arg(Arg::new("meaningless").short('Q').about("Set square width (overwritten)"))
@@ -477,13 +479,13 @@ async fn get_read(req: HttpRequest, item: web::Data<RwLock<Item>>) -> Result<Htt
 }
 
 //
-async fn get_index(
+async fn get_index<T: 'static + ChromosomeBufferTrait>(
     req: HttpRequest,
     item: web::Data<RwLock<Item>>,
     vis: web::Data<RwLock<Vis>>,
     list: web::Data<RwLock<Vec<(u64, Record)>>>,
-    list_btree: web::Data<RwLock<BTreeSet<u64>>>,
-    buffer: web::Data<RwLock<ChromosomeBuffer>>,
+    list_btree: web::Data<RwLock<ReadBuffer>>,
+    buffer: web::Data<RwLock<T>>,
     //query: web::Query<RequestBody>
 ) -> Result<NamedFile> {
     let qs = QString::from(req.query_string());
@@ -508,12 +510,12 @@ async fn get_index(
     );
 }
 
-async fn index(
+async fn index<T: 'static + ChromosomeBufferTrait>(
     item: web::Data<RwLock<Item>>,
     vis: web::Data<RwLock<Vis>>,
     list: web::Data<RwLock<Vec<(u64, Record)>>>,
-    list_btree: web::Data<RwLock<BTreeSet<u64>>>,
-    buffer: web::Data<RwLock<ChromosomeBuffer>>,
+    list_btree: web::Data<RwLock<ReadBuffer>>,
+    buffer: web::Data<RwLock<T>>,
     request_body: web::Json<RequestBody>,
 ) -> Result<NamedFile> {
     let format = &request_body.format.clone();
@@ -533,12 +535,12 @@ async fn index(
     );
 }
 
-fn index2(
+fn index2<T: 'static + ChromosomeBufferTrait>(
     item: web::Data<RwLock<Item>>,
     vis: web::Data<RwLock<Vis>>,
     list: web::Data<RwLock<Vec<(u64, Record)>>>,
-    list_btree: web::Data<RwLock<BTreeSet<u64>>>,
-    buffer: web::Data<RwLock<ChromosomeBuffer>>,
+    list_btree: web::Data<RwLock<ReadBuffer>>,
+    buffer: web::Data<RwLock<T>>,
     format: String,
     params: String,
     prefetch: bool,
@@ -605,17 +607,17 @@ fn index2(
                             &mut list_btree.write().unwrap(),
                         );
                     }
-                    let new_vis = buffer.read().unwrap().vis(
-                        &matches,
-                        &string_range,
-                        &mut list.write().unwrap(),
-                        &mut list_btree.write().unwrap(),
-                    );
                     let endy = start.elapsed();
                     eprintln!(
                         "Fallback to reload2: {}.{:03} sec.",
                         endy.as_secs(),
                         endy.subsec_millis()
+                    );
+                    let new_vis = buffer.read().unwrap().vis(
+                        &matches,
+                        &string_range,
+                        &mut list.write().unwrap(),
+                        &mut list_btree.write().unwrap(),
                     );
                     let mut old_vis = vis.write().unwrap();
                     *old_vis = new_vis.unwrap();
@@ -689,18 +691,18 @@ fn index2(
 }
 
 #[actix_rt::main]
-pub async fn server(
+pub async fn server<T: 'static + ChromosomeBufferTrait + Send + Sync>(
     matches: ArgMatches,
     _range: StringRegion,
     prefetch_range: StringRegion,
     args: Vec<String>,
-    mut buffer: ChromosomeBuffer,
-    _threads: u16,
+    mut buffer: T,
+    threads: u16,
 ) -> std::io::Result<()> {
     use actix_web::{web, HttpServer};
     // let list = buffer.add(&prefetch_range);
     let mut list = vec![];
-    let mut list_btree = BTreeSet::new();
+    let mut list_btree = (0, BTreeSet::new());
     let bind = matches.value_of("web").unwrap_or(&"0.0.0.0:4000");
     let basic_auth = matches
         .value_of("basic-auth")
@@ -764,20 +766,28 @@ pub async fn server(
             .app_data(counter.clone())
             .data(vis) //.app_data(vis.clone())
             .app_data(buffer.clone())
-            .route("/", web::post().to(index))
-            .route("/", web::get().to(get_index))
+            .route("/", web::post().to(index::<T>))
+            .route("/", web::get().to(get_index::<T>))
             .route("/json", web::get().to(get_json))
             .route("/read", web::get().to(get_read))
-            .route("/static/api", web::get().to(get_index))
-            .service(actix_files::Files::new("/static", static_dir.clone()).show_files_listing())
+            .route("/static/api/json", web::get().to(get_json))
+            .route("/static/api/read", web::get().to(get_read))
+            .route("/static/api", web::get().to(get_index::<T>))
+            .service(
+                actix_files::Files::new("/static", static_dir.clone()).index_file("index.html"),
+            )
             .wrap(Logger::default())
             .wrap(cross_origin)
             .wrap(Condition::new(auth_condition, auth))
     });
     if let Some(uds_bind) = uds_bind {
-        server.bind_uds(uds_bind)?.workers(1usize).run().await
+        server
+            .bind_uds(uds_bind)?
+            .workers(threads as usize)
+            .run()
+            .await
     } else {
-        server.bind(bind)?.workers(1usize).run().await
+        server.bind(bind)?.workers(threads as usize).run().await
     }
 }
 fn validate_credentials(

@@ -97,7 +97,7 @@ impl Record {
     }
 
     /// Writes a record in binary format.
-    pub fn to_stream<W: Write, R: Read + Seek>(
+    pub fn to_stream<W: Write, R: Read + Seek + Send + Sync>(
         &self,
         stream: &mut W,
         threads: u16,
@@ -152,7 +152,7 @@ impl Record {
     }
 
     /// Fills the record from a `stream` of uncompressed BAM contents.
-    pub(crate) fn fill_from_bam<R: Read + Seek>(
+    pub(crate) fn fill_from_bam<R: Read + Seek + Send + Sync>(
         &mut self,
         stream: &mut R,
         threads: u16,
@@ -200,14 +200,14 @@ pub struct Bins<T> {
 
 /// Set is a data structure for storing entire inverted data structure typed T.
 /// #[derive(Clone)]
-pub struct Set<T, R: Read + Seek> {
+pub struct Set<T, R: Read + Seek + Send + Sync> {
     pub sample_id: u64,
     pub chrom: BTreeMap<u64, Bins<T>>, // Mutex?
     pub unmapped: T,
     pub bam_reader: Option<IndexedReader<R>>,
 }
 
-pub struct InvertedRecordEntire<R: Read + Seek> {
+pub struct InvertedRecordEntire<R: Read + Seek + Send + Sync> {
     chrom: Vec<InvertedRecordChromosome>, // Mutex?
     unmapped: Vec<Record>,
     chrom_table: Chromosome,
@@ -215,7 +215,7 @@ pub struct InvertedRecordEntire<R: Read + Seek> {
     bam_reader: BTreeMap<u64, IndexedReader<R>>,
 }
 
-impl<R: Read + Seek> InvertedRecordEntire<R> {
+impl<R: Read + Seek + Send + Sync> InvertedRecordEntire<R> {
     pub fn new() -> InvertedRecordEntire<R> {
         InvertedRecordEntire {
             chrom: vec![],
@@ -368,7 +368,7 @@ impl ColumnarSet for Default {
     fn new() -> Self {
         Default {}
     }
-    fn to_stream<W: Write, R: Read + Seek>(
+    fn to_stream<W: Write, R: Read + Seek + Send + Sync>(
         &self,
         _stream: &mut W,
         _threads: u16,
@@ -434,7 +434,7 @@ impl ColumnarSet for InvertedRecord {
         Ok(0)
     }
 
-    fn to_stream<W: Write, R: Read + Seek>(
+    fn to_stream<W: Write, R: Read + Seek + Send + Sync>(
         &self,
         stream: &mut W,
         _threads: u16,

@@ -31,6 +31,7 @@ pub struct Read {
     pub strand: bool,
     pub flag: u16,
     pub mapq: u8,
+    pub hp: i32,
     pub sa: String,
     pub cigar: String,
     pub insertions: Vec<(i32, u64, String)>, // Pixel, Real_pos, Ins_seq
@@ -112,7 +113,9 @@ impl ReadTree {
     }
     fn read_convert(self, read: &mut Read) {
         if let Track::TrackId(track) = read.track {
-            read.track = Track::TrackName(self.tracks[&track].clone());
+            if self.tracks.contains_key(&track) {
+                read.track = Track::TrackName(self.tracks[&track].clone());
+            }
         }
     }
     pub fn find(self, x: i32, y: i32) -> Option<(Read, (u64, String))> {

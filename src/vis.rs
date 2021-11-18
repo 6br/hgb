@@ -165,6 +165,7 @@ where
     let no_margin = matches.is_present("no-scale");
     let y_area_size = if no_margin { 0 } else { 40 };
     let output = matches.value_of("output").unwrap();
+    let no_ruler = matches.is_present("no-ruler");
     let max_coverage = matches
         .value_of("max-coverage")
         .and_then(|a| a.parse::<u32>().ok());
@@ -191,6 +192,7 @@ where
         .and_then(|a| a.parse::<u32>().ok())
         .unwrap_or(20u32)
         / if freq_len > 1 { freq_len as u32 } else { 1u32 };
+    let x_area_size = if no_ruler { 0 } else { x_scale };
     let x_len = if x_as_range {
         vis.iter().map(|t| t.range.interval() as u32).sum::<u32>()
     } else {
@@ -279,8 +281,9 @@ where
                     // Set the caption of the chart
                     //.caption(format!("{}", range), ("sans-serif", 20).into_font())
                     // Set the size of the label region
-                    .x_label_area_size(x_scale)
+                    .x_label_area_size(x_area_size)
                     .y_label_area_size(y_area_size)
+                    .top_x_label_area_size(5)
                     // Finally attach a coordinate on the drawing area and make a chart context
                     .build_cartesian_2d(x_spec.clone(), 0..y_max)?;
                 chart
@@ -1140,7 +1143,7 @@ where
                             } else {
                                 let tag: &[u8;2] = colored_by_str.as_bytes().try_into().expect("colored by tag with unexpected length: tag name must be two characters.");
                                 if let Some(TagValue::Int(tag_id,_)) = bam.tags().get(tag) {
-                                    Palette9999::pick(tag_id as usize).mix(0.4)
+                                    Palette9999::pick(tag_id as usize).mix(0.2)
                                 } else {
                                     preset_color.pick(VisColor::DefCol).mix(0.8)
                                 }
@@ -1599,11 +1602,12 @@ where
                                                 bars.push(bar);
                                                 if insertion_string {
                                                     //Note that 
+                                                    let pos = Pos::new(HPos::Right, VPos::Bottom);
                                                     let insertion_text = if insertion_str.len() > INSERTION_THRESHOLD {format!("({})", insertion_str.len())} else {insertion_str.iter().map(|t| t.1).join("").to_string()};
                                                     let text = Text::new(
                                                         insertion_text,
                                                         (prev_pixel_ref + 1, index),
-                                                        TextStyle::from(("sans-serif", y).into_font()).color(&ins_color)
+                                                        TextStyle::from(("sans-serif", y).into_font()).color(&ins_color).pos(pos)
                                                     );
                                                     texts.push(text);
                                                 }
@@ -1682,10 +1686,11 @@ where
                                                 //insertion_str.push((prev_ref, entry.record_nt().unwrap() as char));
                                                 if insertion_string {
                                                     //Note that 
+                                                    let pos = Pos::new(HPos::Right, VPos::Bottom);
                                                     let text = Text::new(
                                                         "I".to_string(),//(bam.sequence().at(record as usize) as char).to_string(),
                                                         (prev_ref, index),
-                                                        TextStyle::from(("sans-serif", y).into_font()).color(&ins_color),
+                                                        TextStyle::from(("sans-serif", y).into_font()).color(&ins_color).pos(pos),
                                                     );
                                                     texts.push(text);
                                                     insertion_str.push((prev_ref, bam.sequence().at(record as usize) as char));
@@ -1720,7 +1725,14 @@ where
                         let mut readable: Vec<u8> = Vec::new();
                         bam.cigar().write_readable(&mut readable).unwrap();
                         let readable_string = String::from_utf8_lossy(&readable);
-                        let read = Read{rectangle: (lt, lb, rt ,rb), track: Track::TrackId(data.0), read_id: String::from_utf8_lossy(&bam.name()).to_string(), start: bam.start(), end: bam.calculate_end(), query_len: bam.query_len(), strand: bam.flag().is_reverse_strand(), flag: bam.flag().0, mapq: bam.mapq(), sa: sastr, cigar: readable_string.to_string(), insertions: insertions};//bam.tags().get(b"SA").}; //, tags: tags  }
+                        let hp = match bam.tags().get(b"HP") {
+                            Some(TagValue::Int(i, _)) => {
+                                 i as i32
+                            }
+                        _ => 0
+                        };
+
+                        let read = Read{rectangle: (lt, lb, rt ,rb), track: Track::TrackId(data.0), read_id: String::from_utf8_lossy(&bam.name()).to_string(), start: bam.start(), end: bam.calculate_end(), query_len: bam.query_len(), strand: bam.flag().is_reverse_strand(), flag: bam.flag().0, mapq: bam.mapq(), sa: sastr, cigar: readable_string.to_string(), insertions: insertions, hp: hp};//bam.tags().get(b"SA").}; //, tags: tags  }
                         reads.push(read);
                     }
                 });
