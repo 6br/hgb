@@ -1,6 +1,6 @@
 [package]
 name = "hgb"
-version = "0.3.0"
+version = "0.3.1"
 authors = ["6br <tfdvrt@gmail.com>"]
 edition = "2018"
 
