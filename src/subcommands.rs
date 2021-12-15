@@ -262,6 +262,7 @@ pub fn bam_vis(
                     prefetch_range.end as u32
                 };
                 let viewer = reader2.fetch(&bam::bam_reader::Region::new(ref_id, start, end))?;
+                let mut count = 0;
                 for record in viewer {
                     let record = record?;
                     if record.flag().no_bits(no_bits)
@@ -270,6 +271,10 @@ pub fn bam_vis(
                             || record.start() <= prefetch_range.start as i32
                                 && record.calculate_end() >= prefetch_range.end as i32)
                     {
+                        if count % 1000 == 0 {
+                            debug!("Reads loaded: {}", count);
+                        }
+                        count += 1;
                         let idx = if separated_by_tag {
                             if let Some(colored_by_str) = separated_by_tag_vec {
                                 if colored_by_str.is_empty() {
@@ -296,6 +301,7 @@ pub fn bam_vis(
                         list.push((idx as u64, record));
                     }
                 }
+                debug!("Reads loaded: {}", count);
             }
             //    (string_range, prefetch_range)
             //};
