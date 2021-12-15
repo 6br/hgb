@@ -263,13 +263,15 @@ pub fn bam_vis(
                 };
                 let viewer = reader2.fetch(&bam::bam_reader::Region::new(ref_id, start, end))?;
                 let mut count = 0;
+                let mut total = 0;
                 for record in viewer {
                     let record = record?;
+                    total += 1;
                     if record.flag().no_bits(no_bits)
                         && record.query_len() >= min_read_len
                         && (!full_length
-                            || record.start() <= prefetch_range.start as i32
-                                && record.calculate_end() >= prefetch_range.end as i32)
+                            || (record.start() <= prefetch_range.start as i32
+                                && record.calculate_end() >= prefetch_range.end as i32))
                     {
                         if count % 1000 == 0 {
                             debug!("Reads loaded: {}", count);
@@ -301,7 +303,10 @@ pub fn bam_vis(
                         list.push((idx as u64, record));
                     }
                 }
-                debug!("Reads loaded: {}", count);
+                debug!(
+                    "Reads loaded: {} of {} ({}, {})",
+                    count, total, no_bits, min_read_len
+                );
             }
             //    (string_range, prefetch_range)
             //};
