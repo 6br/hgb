@@ -482,8 +482,8 @@ where
     };
     let axis_count = axis.len();
 
-    let end0 = start.elapsed();
-    eprintln!("{}.{:03} sec.", end0.as_secs(), end0.subsec_millis());
+    //let end0 = start.elapsed();
+    //eprintln!("{}.{:03} sec.", end0.as_secs(), end0.subsec_millis());
 
     //let annotation_count = annotation.iter().unique_by(|s| s.0).count(); // annotation.len();
     let annotation_count = vis
@@ -1119,6 +1119,7 @@ where
         let ins_color = preset_color.pick(VisColor::InsCol);
         let (bars, texts) = {
             //list.into_iter().enumerate().map(|(index, data)| {
+            debug!("Processing reads...");
             let mut bars = vec![];
             let mut texts = vec![];
             index_list
@@ -1736,6 +1737,7 @@ where
                         reads.push(read);
                     }
                 });
+            debug!("Reads are processed");
             (bars, texts)
         };
         if dump_json {
@@ -1749,7 +1751,7 @@ where
         chart.draw_series(texts)?;
         //let dump = {reads: [], annotation: };
         let end1 = start.elapsed();
-        eprintln!("{}.{:03} sec.", end1.as_secs(), end1.subsec_millis());
+        debug!("{}.{:03} sec.", end1.as_secs(), end1.subsec_millis());
 
         if freq_len > 0 {
             let coverages = coverage.split_evenly((freq_len, 1));
@@ -1880,7 +1882,7 @@ where
                 .draw()?;
         }
         let end2 = start.elapsed();
-        eprintln!("{}.{:03} sec.", end2.as_secs(), end2.subsec_millis());
+        debug!("{}.{:03} sec.", end2.as_secs(), end2.subsec_millis());
     }
 
     if dump_json {
