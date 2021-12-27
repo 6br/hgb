@@ -1,10 +1,13 @@
-name: ci
+name: docker_build
 
 on:
   push:
     branches:
       - 'master'
       - 'buffer_trait'
+
+env:
+  CARGO_TERM_COLOR: always
 
 jobs:
   docker:
