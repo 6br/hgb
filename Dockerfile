@@ -8,7 +8,7 @@ ENV RUSTUP_HOME=/usr/local/rustup \
 
 RUN set -eux; \
     \
-    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -y; \
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y; \
     chmod -R a+w $RUSTUP_HOME $CARGO_HOME;
 
 WORKDIR /app
