@@ -3,15 +3,12 @@ FROM nginxinc/nginx-unprivileged
 ENV RUSTUP_HOME=/usr/local/rustup \
     CARGO_HOME=/usr/local/cargo \
     PATH=/usr/local/cargo/bin:$PATH \
-    RUSTFLAGS="-C target-feature=-avx2"
+    RUSTFLAGS="-C target-feature=-avx2" \
+    RUSTUP_TOOLCHAIN="nightly"
 
 RUN set -eux; \
     \
-    url="https://static.rust-lang.org/rustup/dist/x86_64-unknown-linux-gnu/rustup-init"; \
-    wget "$url"; \
-    chmod +x rustup-init; \
-    ./rustup-init -y --no-modify-path --default-toolchain nightly; \
-    rm rustup-init; \
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh; \
     chmod -R a+w $RUSTUP_HOME $CARGO_HOME;
 
 WORKDIR /app
