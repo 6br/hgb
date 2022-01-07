@@ -1,15 +1,10 @@
 FROM nginxinc/nginx-unprivileged
 
-ENV RUSTUP_HOME=/usr/local/rustup \
-    CARGO_HOME=/usr/local/cargo \
-    PATH=/usr/local/cargo/bin:$PATH \
-    RUSTFLAGS="-C target-feature=-avx2" \
-    RUSTUP_TOOLCHAIN="nightly"
+ENV RUSTUP_TOOLCHAIN="nightly"
 
 RUN set -eux; \
     \
-    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y; \
-    chmod -R a+w $RUSTUP_HOME $CARGO_HOME;
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 
 WORKDIR /app
 
