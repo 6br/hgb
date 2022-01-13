@@ -33,27 +33,20 @@ use crate::subcommands::{bam_vis, vis_query};
 //struct Years(i64);
 type BasicAuthTuple = (String, String);
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct Item {
     //vis: Vis,
     range: StringRegion,
     args: Vec<String>,
     cache_dir: String,
-    basic_auth: Option<BasicAuthTuple>,
 }
 
 impl Item {
-    fn new(
-        range: StringRegion,
-        args: Vec<String>,
-        cache_dir: String,
-        basic_auth: Option<BasicAuthTuple>,
-    ) -> Self {
+    fn new(range: StringRegion, args: Vec<String>, cache_dir: String) -> Self {
         Item {
             range,
             args,
             cache_dir,
-            basic_auth,
         }
     }
 }
@@ -704,7 +697,7 @@ pub async fn server<T: 'static + ChromosomeBufferTrait + Send + Sync>(
     let mut list = vec![];
     let mut list_btree = (0, BTreeSet::new());
     let bind = matches.value_of("web").unwrap_or(&"0.0.0.0:4000");
-    let basic_auth = matches
+    let basic_auth: Option<(String, String)> = matches
         .value_of("basic-auth")
         .and_then(|t| t.split(":").map(|a| a.to_string()).collect_tuple());
     let auth_condition = basic_auth.is_some();
@@ -740,9 +733,7 @@ pub async fn server<T: 'static + ChromosomeBufferTrait + Send + Sync>(
     println!("REST Server is running on {}", bind);
     // Create some global state prior to building the server
 
-    let counter = web::Data::new(RwLock::new(Item::new(
-        view_range, args, cache_dir, basic_auth,
-    )));
+    let counter = web::Data::new(RwLock::new(Item::new(view_range, args, cache_dir)));
     let buffer = web::Data::new(RwLock::new(buffer));
 
     let cross_origin_bool = matches.is_present("production");
@@ -764,6 +755,7 @@ pub async fn server<T: 'static + ChromosomeBufferTrait + Send + Sync>(
             .data(list)
             .data(list_btree)
             .app_data(counter.clone())
+            .app_data(basic_auth.clone())
             .data(vis) //.app_data(vis.clone())
             .app_data(buffer.clone())
             .route("/", web::post().to(index::<T>))
@@ -793,7 +785,7 @@ pub async fn server<T: 'static + ChromosomeBufferTrait + Send + Sync>(
 fn validate_credentials(
     user_id: &str,
     user_password: &str,
-    basic_auth: Option<&BasicAuthTuple>,
+    basic_auth: &Option<BasicAuthTuple>,
 ) -> Result<bool, std::io::Error> {
     if let Some(basic_auth) = basic_auth {
         if user_id.eq(&basic_auth.0) && user_password.eq(&basic_auth.1) {
@@ -816,11 +808,11 @@ async fn basic_auth_validator(
         .app_data::<Config>()
         .map(|data| data.clone())
         .unwrap_or_else(Default::default);
-    let item = req.app_data::<Item>().unwrap();
+    let item = req.app_data::<Option<BasicAuthTuple>>().unwrap();
     match validate_credentials(
         credentials.user_id(),
         credentials.password().unwrap().trim(),
-        item.basic_auth.as_ref(),
+        item,
     ) {
         Ok(res) => {
             if res == true {
