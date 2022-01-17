@@ -1615,7 +1615,7 @@ where
                                                 if dump_json {
                                                     insertion_str.iter().group_by(|elt| elt.0).into_iter().for_each(|(ge0, group)| {
                                                         let (lt, _) = chart.as_coord_spec().translate(&(ge0+1, index));
-                                                        insertions.push((lt, ge0, group.map(|t| t.1).join("").to_string()));
+                                                        insertions.push((lt, ge0, group.map(|t| t.1).join("")));
                                                     }
                                                     );
                                                     // push(lt, prev_ref, ins);
@@ -1705,7 +1705,7 @@ where
                                 if dump_json {
                                     insertion_str.iter().group_by(|elt| elt.0).into_iter().for_each(|(ge0, group)| {
                                         let (lt, _) = chart.as_coord_spec().translate(&(ge0, index));
-                                        insertions.push((lt, ge0, group.map(|t| t.1).join("").to_string()));
+                                        insertions.push((lt, ge0, group.map(|t| t.1).join("")));
                                     }
                                     );
                                     // push(lt, prev_ref, ins);
@@ -1733,7 +1733,7 @@ where
                         _ => 0
                         };
 
-                        let read = Read{rectangle: (lt, lb, rt ,rb), track: Track::TrackId(data.0), read_id: String::from_utf8_lossy(&bam.name()).to_string(), start: bam.start(), end: bam.calculate_end(), query_len: bam.query_len(), strand: bam.flag().is_reverse_strand(), flag: bam.flag().0, mapq: bam.mapq(), sa: sastr, cigar: readable_string.to_string(), insertions: insertions, hp: hp};//bam.tags().get(b"SA").}; //, tags: tags  }
+                        let read = Read{rectangle: (lt, lb, rt ,rb), track: Track::TrackId(data.0), read_id: String::from_utf8_lossy(&bam.name()).to_string(), start: bam.start(), end: bam.calculate_end(), query_len: bam.query_len(), strand: bam.flag().is_reverse_strand(), flag: bam.flag().0, mapq: bam.mapq(), sa: sastr, cigar: readable_string.to_string(), insertions, hp};//bam.tags().get(b"SA").}; //, tags: tags  }
                         reads.push(read);
                     }
                 });

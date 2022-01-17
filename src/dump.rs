@@ -106,10 +106,10 @@ pub struct ReadTree {
 
 impl ReadTree {
     pub fn new(reads: Area) -> Self {
-        return ReadTree {
+        ReadTree {
             read: RTree::bulk_load(reads.pileups),
             tracks: reads.tracks,
-        };
+        }
     }
     fn read_convert(self, read: &mut Read) {
         if let Track::TrackId(track) = read.track {

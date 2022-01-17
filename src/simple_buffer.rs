@@ -27,7 +27,7 @@ fn check_filter_by_tag(tags: &TagViewer, filter_by_tag: &Vec<&str>) -> bool {
     match tags.get(tag) {
         Some(TagValue::Int(tag_id, _)) => format!("{}", tag_id) == value,
         Some(TagValue::String(s, _)) => String::from_utf8_lossy(s) == value,
-        _ => value.len() == 0,
+        _ => value.is_empty(),
     }
 }
 
@@ -477,12 +477,12 @@ impl ChromosomeBufferTrait for ChromosomeBuffer {
             .unwrap_or(1796u16);
         let read_name = matches
             .value_of("read-name")
-            .and_then(|t| Some(t.to_string()))
+            .map(|t| t.to_string())
             .unwrap_or("".to_string());
         let filtered_by_tag = matches
             .value_of("filtered-by-tag")
-            .map(|a| a.split(":").collect_vec())
-            .unwrap_or(vec![]);
+            .map(|a| a.split(':').collect_vec())
+            .unwrap_or_default();
         let filter_by_tag = matches.is_present("filtered-by-tag");
         let filter_by_read_name = matches.is_present("read-name");
         // Calculate coverage; it won't work on sort_by_name

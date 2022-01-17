@@ -427,12 +427,12 @@ async fn get_json(
     let data = item.read().unwrap();
     let cache_dir = &data.cache_dir;
     let path_string = format!("{}/{}.json", cache_dir, hash);
-    match NamedFile::open(path_string.clone()) {
+    match NamedFile::open(path_string) {
         Ok(file) => Ok(file.set_content_disposition(ContentDisposition {
             disposition: DispositionType::Attachment,
             parameters: vec![],
         })),
-        _ => Err(ErrorNotFound(format!("No JSON File Available"))),
+        _ => Err(ErrorNotFound("No JSON File Available".to_string())),
     }
 }
 
@@ -440,21 +440,12 @@ async fn get_read(req: HttpRequest, item: web::Data<RwLock<Item>>) -> Result<Htt
     let qs = QString::from(req.query_string());
     let format = qs.get("format").unwrap().clone(); // &query.format.clone();
     let params = qs.get("params").unwrap().clone();
-    let x = qs
-        .get("x")
-        .and_then(|t| t.parse::<i32>().ok())
-        .unwrap()
-        .clone();
-    let y = qs
-        .get("y")
-        .and_then(|t| t.parse::<i32>().ok())
-        .unwrap()
-        .clone();
+    let x = qs.get("x").and_then(|t| t.parse::<i32>().ok()).unwrap();
+    let y = qs.get("y").and_then(|t| t.parse::<i32>().ok()).unwrap();
     let index = qs
         .get("index")
         .and_then(|t| t.parse::<usize>().ok())
-        .unwrap_or(0)
-        .clone();
+        .unwrap_or(0);
     let prefetch = qs.get("params").is_some();
     let hash: u64 = calculate_hash(&RequestBody {
         format: format.to_string(),
@@ -464,7 +455,7 @@ async fn get_read(req: HttpRequest, item: web::Data<RwLock<Item>>) -> Result<Htt
     let data = item.read().unwrap();
     let cache_dir = &data.cache_dir;
     let path_string = format!("{}/{}.json", cache_dir, hash);
-    match File::open(path_string.clone()) {
+    match File::open(path_string) {
         Ok(file) => {
             let reader = BufReader::new(file);
 
@@ -474,7 +465,7 @@ async fn get_read(req: HttpRequest, item: web::Data<RwLock<Item>>) -> Result<Htt
 
             Ok(HttpResponse::Ok().json(read))
         }
-        _ => Err(ErrorNotFound(format!("No JSON File Available"))),
+        _ => Err(ErrorNotFound("No JSON File Available".to_string())),
     }
 }
 
@@ -575,12 +566,11 @@ fn index2<T: 'static + ChromosomeBufferTrait>(
                 );
 
                 let (matches, string_range) =
-                    id_to_range(&data.range, args, params.to_string(), path_string.clone())
-                        .map_err(|t| {
-                            HttpResponse::BadRequest().json(ResponseBody {
-                                message: format!("parameter error: {}", t), //String::from("parameter error: " + t.description()),
-                            })
-                        })?;
+                    id_to_range(&data.range, args, params, path_string.clone()).map_err(|t| {
+                        HttpResponse::BadRequest().json(ResponseBody {
+                            message: format!("parameter error: {}", t), //String::from("parameter error: " + t.description()),
+                        })
+                    })?;
                 let end2 = start.elapsed();
                 eprintln!(
                     "id_to_range: {}.{:03} sec.",
@@ -664,13 +654,11 @@ fn index2<T: 'static + ChromosomeBufferTrait>(
             } else {
                 //Visualization for unprefetch data.
                 let (matches, args) =
-                    id_to_range_ab_initio(params.to_string(), path_string.clone()).map_err(
-                        |t| {
-                            HttpResponse::BadRequest().json(ResponseBody {
-                                message: format!("parameter error: {}", t), //String::from("parameter error: " + t.description()),
-                            })
-                        },
-                    )?;
+                    id_to_range_ab_initio(params, path_string.clone()).map_err(|t| {
+                        HttpResponse::BadRequest().json(ResponseBody {
+                            message: format!("parameter error: {}", t), //String::from("parameter error: " + t.description()),
+                        })
+                    })?;
                 let threads = matches
                     .value_of("threads")
                     .and_then(|t| t.parse::<u16>().ok())
@@ -706,7 +694,7 @@ pub async fn server<T: 'static + ChromosomeBufferTrait + Send + Sync>(
     let bind = matches.value_of("web").unwrap_or(&"0.0.0.0:4000");
     let basic_auth: Option<(String, String)> = matches
         .value_of("basic-auth")
-        .and_then(|t| t.split(":").map(|a| a.to_string()).collect_tuple());
+        .and_then(|t| t.split(':').map(|a| a.to_string()).collect_tuple());
     let auth_condition = basic_auth.is_some();
 
     let uds_bind = matches.value_of("unix-socket");
@@ -798,12 +786,12 @@ fn validate_credentials(
         if user_id.eq(&basic_auth.0) && user_password.eq(&basic_auth.1) {
             return Ok(true);
         }
-        return Err(std::io::Error::new(
+        Err(std::io::Error::new(
             std::io::ErrorKind::Other,
             "Authentication failed!",
-        ));
+        ))
     } else {
-        return Ok(true);
+        Ok(true)
     }
 }
 
@@ -813,7 +801,7 @@ async fn basic_auth_validator(
 ) -> Result<ServiceRequest, actix_web::Error> {
     let config = req
         .app_data::<Config>()
-        .map(|data| data.clone())
+        .cloned()
         .unwrap_or_else(Default::default);
     let item = req.app_data::<Option<BasicAuthTuple>>().unwrap();
     match validate_credentials(
@@ -822,7 +810,7 @@ async fn basic_auth_validator(
         item,
     ) {
         Ok(res) => {
-            if res == true {
+            if res {
                 Ok(req)
             } else {
                 Err(AuthenticationError::from(config).into())
