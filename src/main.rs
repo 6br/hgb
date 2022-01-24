@@ -621,7 +621,7 @@ fn main() {
                 ),
         )
         .subcommand(
-            App::new("split")
+            App::new("precalc")
                 .about("Attach y positions on each read by default view options.")
                 .arg(
                     Arg::new("output")
@@ -662,7 +662,7 @@ fn main() {
         }
     } else if let Some(ref matches) = matches.subcommand_matches("decompose") {
         decompose(matches, threads);
-    } else if let Some(ref matches) = matches.subcommand_matches("split") {
+    } else if let Some(ref matches) = matches.subcommand_matches("precalc") {
         split(matches, threads);
     } else if let Some(ref matches) = matches.subcommand_matches("bin") {
         bin(matches, threads);
