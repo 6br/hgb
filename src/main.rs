@@ -27,7 +27,7 @@ fn main() {
         .setting(AppSettings::UnifiedHelpMessage)
         .setting(AppSettings::ArgRequiredElseHelp)
         .setting(AppSettings::ColoredHelp)
-        .version("0.1")
+        .version("0.3")
         .author("6br. ")
         .about(
             "Command-line visualization tool for read alignment, ranged annotation and frequency.",
@@ -621,7 +621,7 @@ fn main() {
                 ),
         )
         .subcommand(
-            App::new("precalc")
+            App::new("precomp")
                 .about("Attach y positions on each read by default view options.")
                 .arg(
                     Arg::new("output")
@@ -662,7 +662,7 @@ fn main() {
         }
     } else if let Some(ref matches) = matches.subcommand_matches("decompose") {
         decompose(matches, threads);
-    } else if let Some(ref matches) = matches.subcommand_matches("precalc") {
+    } else if let Some(ref matches) = matches.subcommand_matches("precomp") {
         split(matches, threads);
     } else if let Some(ref matches) = matches.subcommand_matches("bin") {
         bin(matches, threads);
