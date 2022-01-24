@@ -10,6 +10,7 @@ extern crate byteorder;
 extern crate enum_map;
 extern crate regex;
 extern crate serde_json;
+extern crate st_bam;
 extern crate twobit;
 
 //pub mod alignment;

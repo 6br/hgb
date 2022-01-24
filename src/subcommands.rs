@@ -2,6 +2,7 @@ use bam::{self, record::tags::TagValue};
 use bam::{Record, RecordWriter};
 use clap::ArgMatches;
 use genomic_range::StringRegion;
+use st_bam;
 
 #[cfg(feature = "web")]
 use crate::buffered_server;
@@ -194,7 +195,7 @@ pub fn bam_vis(
             if matches.is_present("rest") {
                 let buffer: ghi::simple_bam_buffer::ChromosomeBuffer =
                     ghi::simple_bam_buffer::ChromosomeBuffer::new(
-                        bam::IndexedReader::build()
+                        st_bam::IndexedReader::build()
                             .additional_threads(0)
                             .from_path(bam_files[0])
                             .unwrap(),
@@ -212,7 +213,7 @@ pub fn bam_vis(
             } else if matches.is_present("whole-chromosome") && matches.is_present("web") {
                 let buffer: ghi::simple_bam_buffer::ChromosomeBuffer =
                     ghi::simple_bam_buffer::ChromosomeBuffer::new(
-                        bam::IndexedReader::build()
+                        st_bam::IndexedReader::build()
                             .additional_threads(0)
                             .from_path(bam_files[0])
                             .unwrap(),
