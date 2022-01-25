@@ -8,6 +8,7 @@ extern crate bam;
 extern crate bitpacking;
 extern crate byteorder;
 extern crate enum_map;
+extern crate mt_bam;
 extern crate regex;
 extern crate serde_json;
 extern crate twobit;
