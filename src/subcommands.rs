@@ -1,5 +1,5 @@
 use bam::Record;
-use bam::{self, record::tags::TagValue};
+use bam::{self, record::tags::TagValue, RecordWriter};
 use clap::ArgMatches;
 use genomic_range::StringRegion;
 use mt_bam;
