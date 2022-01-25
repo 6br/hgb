@@ -2,7 +2,7 @@ use bam::{self, record::tags::TagValue};
 use bam::{Record, RecordWriter};
 use clap::ArgMatches;
 use genomic_range::StringRegion;
-use st_bam;
+use mt_bam;
 
 #[cfg(feature = "web")]
 use crate::buffered_server;
