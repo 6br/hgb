@@ -4,16 +4,16 @@ use crate::{
     index::Region,
     range::{Bins, Set},
 };
-use bam::bgzip::ReadBgzip;
-use bam::record::Record;
-use bam::RecordReader;
-use bam::{
-    index::{Chunk, VirtualOffset},
-    RecordWriter,
-};
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use itertools::Itertools;
 use log::debug;
+use mt_bam::bgzip::ReadBgzip;
+use mt_bam::record::Record;
+use mt_bam::RecordReader;
+use mt_bam::{
+    index::{Chunk, VirtualOffset},
+    RecordWriter,
+};
 use std::{
     collections::{BTreeMap, HashMap},
     io::{Read, Result, Seek, Write},
@@ -90,7 +90,7 @@ impl Bins<AlignmentBuilder> {
 impl<R: Read + Seek + Send + Sync> Set<AlignmentBuilder, R> {
     pub fn new(
         //mut reader: bam::BamReader<R>,
-        mut reader: bam::IndexedReader<R>,
+        mut reader: mt_bam::IndexedReader<R>,
         sample_id: u64,
         header: &mut Header,
         max_coverage: Option<u32>,
@@ -272,7 +272,7 @@ impl ColumnarSet for Alignment {
         &self,
         stream: &mut W,
         threads: u16,
-        bam_reader: Option<&mut bam::IndexedReader<R>>,
+        bam_reader: Option<&mut mt_bam::IndexedReader<R>>,
     ) -> Result<()> {
         let len = match self {
             Alignment::Offset(vec) => vec.len(),
@@ -368,7 +368,7 @@ mod tests {
     use crate::writer::GhiWriter;
     use crate::IndexWriter;
     use crate::{builder::InvertedRecordBuilder, twopass_alignment::Set};
-    use bam::record::Record;
+    use mt_bam::record::Record;
     use std::{
         fs::File,
         io::{BufRead, BufReader, Write},
@@ -381,7 +381,7 @@ mod tests {
     fn two_bam_works() {
         let bam_path = "./test/index_test.bam";
         // let reader = bam::BamReader::from_path(bam_path, 4).unwrap();
-        let reader2 = bam::IndexedReader::from_path(bam_path).unwrap();
+        let reader2 = mt_bam::IndexedReader::from_path(bam_path).unwrap();
         // println!("{}", reader2.index());
 
         let bam_header = reader2.header();
@@ -398,7 +398,7 @@ mod tests {
                 false,
             );
             let bam_path2 = "./test/test-in.bam";
-            let reader = bam::IndexedReader::from_path(bam_path2).unwrap();
+            let reader = mt_bam::IndexedReader::from_path(bam_path2).unwrap();
             let set2: Set<AlignmentBuilder, BufReader<File>> =
                 Set::<AlignmentBuilder, BufReader<File>>::new(
                     reader,
@@ -441,7 +441,7 @@ mod tests {
     fn bam_works() {
         let bam_path = "./test/index_test.bam";
         // let reader = bam::BamReader::from_path(bam_path, 4).unwrap();
-        let reader2 = bam::IndexedReader::from_path(bam_path).unwrap();
+        let reader2 = mt_bam::IndexedReader::from_path(bam_path).unwrap();
         // println!("{}", reader2.index());
 
         let bam_header = reader2.header();

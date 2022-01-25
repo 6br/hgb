@@ -2,12 +2,12 @@ use crate::index::Region;
 use crate::range::Default;
 use crate::ChromosomeBufferTrait;
 use crate::{bed, range::Format, vis::RecordIter, ReadBuffer, Vis};
+use bam::record::tags::TagViewer;
+use bam::{index::region_to_bins, record::tags::TagValue, IndexedReader, Record};
 use clap::ArgMatches;
 use genomic_range::StringRegion;
 use itertools::Itertools;
 use log::debug;
-use st_bam::record::tags::TagViewer;
-use st_bam::{index::region_to_bins, record::tags::TagValue, IndexedReader, Record};
 use std::{
     collections::{BTreeMap, BTreeSet, HashMap},
     convert::TryInto,

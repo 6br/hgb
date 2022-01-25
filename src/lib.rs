@@ -8,9 +8,9 @@ extern crate bam;
 extern crate bitpacking;
 extern crate byteorder;
 extern crate enum_map;
+extern crate mt_bam;
 extern crate regex;
 extern crate serde_json;
-extern crate st_bam;
 extern crate twobit;
 
 //pub mod alignment;
@@ -36,12 +36,12 @@ pub mod vis;
 //pub mod vis_orig;
 pub mod writer;
 
-use bam::IndexedReader;
 use checker_index::Index;
 use clap::ArgMatches;
 use genomic_range::StringRegion;
 use index::Region;
 use io::Seek;
+use mt_bam::IndexedReader;
 use range::InvertedRecord;
 use range::{Format, Record};
 use std::io;

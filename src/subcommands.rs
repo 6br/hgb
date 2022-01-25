@@ -195,7 +195,7 @@ pub fn bam_vis(
             if matches.is_present("rest") {
                 let buffer: ghi::simple_bam_buffer::ChromosomeBuffer =
                     ghi::simple_bam_buffer::ChromosomeBuffer::new(
-                        st_bam::IndexedReader::build()
+                        bam::IndexedReader::build()
                             .additional_threads(0)
                             .from_path(bam_files[0])
                             .unwrap(),
@@ -213,7 +213,7 @@ pub fn bam_vis(
             } else if matches.is_present("whole-chromosome") && matches.is_present("web") {
                 let buffer: ghi::simple_bam_buffer::ChromosomeBuffer =
                     ghi::simple_bam_buffer::ChromosomeBuffer::new(
-                        st_bam::IndexedReader::build()
+                        bam::IndexedReader::build()
                             .additional_threads(0)
                             .from_path(bam_files[0])
                             .unwrap(),
@@ -458,7 +458,7 @@ pub fn build(matches: &ArgMatches, threads: u16) {
         for bam_path in bam_files.iter() {
             println!("Loading {}", bam_path);
             // let reader = bam::BamReader::from_path(bam_path, threads).unwrap();
-            let reader2 = bam::IndexedReader::build()
+            let reader2 = mt_bam::IndexedReader::build()
                 .additional_threads(threads - 1)
                 .from_path(bam_path)
                 .unwrap();
@@ -686,7 +686,7 @@ pub fn decompose(matches: &ArgMatches, _threads: u16) {
 pub fn split(matches: &ArgMatches, threads: u16) {
     if let Some(bam_path) = matches.value_of("INPUT") {
         //todo!("Implement a web server using actix-web.");
-        let mut reader2 = bam::IndexedReader::build()
+        let mut reader2 = mt_bam::IndexedReader::build()
             .additional_threads(threads - 1)
             .from_path(bam_path)
             .unwrap();
