@@ -458,7 +458,7 @@ pub fn build(matches: &ArgMatches, threads: u16) {
         for bam_path in bam_files.iter() {
             println!("Loading {}", bam_path);
             // let reader = bam::BamReader::from_path(bam_path, threads).unwrap();
-            let reader2 = mt_bam::IndexedReader::build()
+            let reader2 = bam::IndexedReader::build()
                 .additional_threads(threads - 1)
                 .from_path(bam_path)
                 .unwrap();
@@ -725,7 +725,7 @@ pub fn split(matches: &ArgMatches, threads: u16) {
             .and_then(|a| a.parse::<u8>().ok())
             .unwrap_or(6u8);
         let header = bam_header;
-        let mut writer = bam::bam_writer::BamWriterBuilder::new()
+        let mut writer = mt_bam::bam_writer::BamWriterBuilder::new()
             .additional_threads(threads - 1)
             .compression_level(clevel)
             .write_header(true)
@@ -739,7 +739,7 @@ pub fn split(matches: &ArgMatches, threads: u16) {
         //for _record in viewer {}
         for (id, len) in header.clone().reference_lengths().iter().enumerate() {
             let viewer = reader2
-                .fetch(&bam::Region::new(id as u32, 1, *len))
+                .fetch(&mt_bam::Region::new(id as u32, 1, *len))
                 .unwrap();
             let mut list = vec![];
             for record in viewer {
