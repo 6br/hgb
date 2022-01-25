@@ -4,9 +4,9 @@ use crate::{
     index::Region,
     range::{Bins, Set},
 };
-use bam::record::Record;
-use bam::RecordReader;
-use bam::RecordWriter;
+use mt_bam::record::Record;
+use mt_bam::RecordReader;
+use mt_bam::RecordWriter;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use std::{
     collections::{BTreeMap, HashMap},
