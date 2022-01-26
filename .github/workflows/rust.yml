@@ -55,7 +55,7 @@ jobs:
         echo `pwd`
         cargo test --verbose
     - name: Build
-      run: cargo build --features bam-mt --verbose
+      run: cargo build --no-default-features --verbose
     - uses: actions-rs/cargo@v1
       with:
         command: fmt
