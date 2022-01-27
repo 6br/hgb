@@ -6,9 +6,9 @@ use mt_bam;
 use mt_bam::RecordWriter as MtRecordWriter;
 
 #[cfg(feature = "web")]
-use crate::buffered_server;
+use crate::buffered_server::server as buffered_server;
 #[cfg(feature = "web")]
-use crate::rest_server;
+use crate::rest_server::rest_server;
 #[cfg(feature = "web")]
 use crate::server::server;
 
@@ -202,7 +202,7 @@ pub fn bam_vis(
                             .unwrap(),
                         matches.clone(),
                     );
-                rest_server::server(
+                rest_server(
                     matches.clone(),
                     string_range,
                     prefetch_range,
@@ -220,7 +220,7 @@ pub fn bam_vis(
                             .unwrap(),
                         matches.clone(),
                     );
-                buffered_server::server(
+                buffered_server(
                     matches.clone(),
                     string_range,
                     prefetch_range,
@@ -1011,7 +1011,7 @@ pub fn vis_query(
             let viewer = reader.fetch(&range).unwrap();
             if matches.is_present("rest") {
                 let buffer: ChromosomeBuffer = ChromosomeBuffer::new(reader, matches.clone());
-                rest_server::server(
+                rest_server(
                     matches.clone(),
                     string_range,
                     prefetch_range,
@@ -1022,7 +1022,7 @@ pub fn vis_query(
                 return Ok(());
             } else if matches.is_present("whole-chromosome") && matches.is_present("web") {
                 let buffer: ChromosomeBuffer = ChromosomeBuffer::new(reader, matches.clone());
-                buffered_server::server(
+                buffered_server(
                     matches.clone(),
                     string_range,
                     prefetch_range,
@@ -1950,6 +1950,30 @@ fn server(
     index_list: Vec<usize>,
     prev_index: usize,
     supplementary_list: Vec<(Vec<u8>, usize, usize, i32, i32)>,
+    threads: u16,
+) -> std::io::Result<()> {
+    unimplemented!("Please add web as a feature.")
+}
+
+#[cfg(not(feature = "web"))]
+fn rest_server(
+    matches: ArgMatches,
+    _range: StringRegion,
+    prefetch_range: StringRegion,
+    args: Vec<String>,
+    mut buffer: T,
+    threads: u16,
+) -> std::io::Result<()> {
+    unimplemented!("Please add web as a feature.")
+}
+
+#[cfg(not(feature = "web"))]
+fn buffered_server(
+    matches: ArgMatches,
+    _range: StringRegion,
+    prefetch_range: StringRegion,
+    args: Vec<String>,
+    mut buffer: T,
     threads: u16,
 ) -> std::io::Result<()> {
     unimplemented!("Please add web as a feature.")

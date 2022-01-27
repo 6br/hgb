@@ -679,7 +679,7 @@ fn index2<T: 'static + ChromosomeBufferTrait>(
 }
 
 #[actix_rt::main]
-pub async fn server<T: 'static + ChromosomeBufferTrait + Send + Sync>(
+pub async fn rest_server<T: 'static + ChromosomeBufferTrait + Send + Sync>(
     matches: ArgMatches,
     _range: StringRegion,
     prefetch_range: StringRegion,
