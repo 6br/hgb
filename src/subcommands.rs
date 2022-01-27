@@ -1943,7 +1943,13 @@ fn server(
     range: StringRegion,
     prefetch_range: StringRegion,
     args: Vec<String>,
-    mut buffer: ChromosomeBuffer,
+    list: Vec<(u64, Record)>,
+    annotation: Vec<(u64, bed::Record)>,
+    freq: BTreeMap<u64, Vec<(u64, u32, char)>>,
+    compressed_list: Vec<(u64, usize)>,
+    index_list: Vec<usize>,
+    prev_index: usize,
+    supplementary_list: Vec<(Vec<u8>, usize, usize, i32, i32)>,
     threads: u16,
 ) -> std::io::Result<()> {
     unimplemented!("Please add web as a feature.")

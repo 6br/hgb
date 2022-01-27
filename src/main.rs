@@ -1,5 +1,6 @@
 extern crate log;
 #[macro_use]
+#[cfg(feature = "web")]
 extern crate serde_derive;
 #[cfg(feature = "web")]
 pub mod buffered_server;
