@@ -1956,7 +1956,7 @@ fn server(
 }
 
 #[cfg(not(feature = "web"))]
-fn rest_server(
+fn rest_server<T: 'static + ChromosomeBufferTrait + Send + Sync>(
     matches: ArgMatches,
     _range: StringRegion,
     prefetch_range: StringRegion,
@@ -1968,7 +1968,7 @@ fn rest_server(
 }
 
 #[cfg(not(feature = "web"))]
-fn buffered_server(
+fn buffered_server<T: 'static + ChromosomeBufferTrait + Send + Sync>(
     matches: ArgMatches,
     _range: StringRegion,
     prefetch_range: StringRegion,
