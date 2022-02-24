@@ -26,8 +26,8 @@ mt_bam = { git = "https://github.com/6br/bam", branch = "master", package = "bam
 csv = "1.1.6"
 bitpacking = "0.8.4"
 byteorder = "1.4.3"
-enum-map = "1.1.1"
-enum-map-derive = "0.6.0"
+enum-map = "2.0.2"
+enum-map-derive = "0.8.0"
 env_logger = "0.9.0"
 flate2 = "1.0.22"
 genomic_range = { git = "https://github.com/6br/genomic_range", rev = "cba2b1c" }
@@ -43,10 +43,10 @@ rand = "0.8.4"
 rayon = "1.5.1"
 regex = "1.5.4"
 rstar = { git = "https://github.com/6br/rstar" }
-serde = "1.0.110"
-serde_json = "1.0.60"
-serde_derive = { version = "1.0.117", optional = true }
-serde_yaml = "0.8.14"
+serde = "1.0.136"
+serde_json = "1.0.79"
+serde_derive = { version = "1.0.136", optional = true }
+serde_yaml = "0.8.23"
 twobit = "0.2.0"
 udon = { git = "https://github.com/ocxtal/udon", rev = "eeb5ad8" }
 vbyte = { git = "https://github.com/6br/vbyte" }
