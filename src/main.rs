@@ -30,61 +30,61 @@ fn main() {
         .setting(AppSettings::ColoredHelp)
         .version("0.3")
         .author("6br. ")
-        .about(
+        .help(
             "Command-line visualization tool for read alignment, ranged annotation and frequency.",
         )
         .arg(
             Arg::new("verbose")
                 .short('v')
-                .multiple(true)
-                .about("Sets the level of verbosity"),
+                .multiple_occurrences(true)
+                .help("Sets the level of verbosity"),
         )
         .arg(
             Arg::new("threads")
                 .short('t')
                 .default_value("1")
-                .about("Sets the number of threads"),
+                .help("Sets the number of threads"),
         )
         .subcommand(
             App::new("build")
                 .setting(AppSettings::ArgRequiredElseHelp)
                 .setting(AppSettings::ColoredHelp)
-                .about("Constructs hybrid genome index from bam/bed files")
+                .help("Constructs hybrid genome index from bam/bed files")
                 .arg(
                     Arg::new("bam")
                         .short('a')
                         .takes_value(true)
-                        .multiple(true)
-                        .about("sorted bam"),
+                        .multiple_occurrences(true)
+                        .help("sorted bam"),
                 )
                 .arg(
                     Arg::new("bed")
                         .short('b')
                         .takes_value(true)
-                        .multiple(true)
-                        .about("sorted bed"),
+                        .multiple_occurrences(true)
+                        .help("sorted bed"),
                 )
                 .arg(
                     Arg::new("gff3")
                         .short('g')
                         .takes_value(true)
-                        .multiple(true)
-                        .about("sorted gff3"),
+                        .multiple_occurrences(true)
+                        .help("sorted gff3"),
                 )
                 .arg(
                     Arg::new("chrom")
                         .short('c')
                         .takes_value(true)
-                        .about("chroms.sizes"),
+                        .help("chroms.sizes"),
                 )
-                .arg(Arg::new("header").short('z').about("Outputs only header"))
-                .arg(Arg::new("yy").short('y').about("Calculate y coordinate and attach as a YY tag"))
-                .arg(Arg::new("formatted-header").short('f').about("Outputs formatted header"))
+                .arg(Arg::new("header").short('z').help("Outputs only header"))
+                .arg(Arg::new("yy").short('y').help("Calculate y coordinate and attach as a YY tag"))
+                .arg(Arg::new("formatted-header").short('f').help("Outputs formatted header"))
                 .arg(
                     Arg::new("max-coverage")
                         .short('m')
                         .takes_value(true)
-                        .about("Max coverage value on coverage track"),
+                        .help("Max coverage value on coverage track"),
                 )
                 .arg(
                     Arg::new("no-bits")
@@ -92,42 +92,42 @@ fn main() {
                         .long("flag-exclude")
                         .takes_value(true)
                         .default_value("1796")
-                        .about("Read must have NONE of these flags"),
+                        .help("Read must have NONE of these flags"),
                 )
                 .arg(
                     Arg::new("OUTPUT")
-                        .about("Sets the output file to use")
+                        .help("Sets the output file to use")
                         .takes_value(true)
                         .required(true)
                         .index(1),
                 ), /*.arg(Arg::new("gff")
                    .short('g')
-                   .multiple(true)
-                   .about("sorted gff"))*/
+                   .multiple_occurrences(true)
+                   .help("sorted gff"))*/
         )
         .subcommand(
             App::new("query")
                 .setting(AppSettings::ArgRequiredElseHelp)
                 .setting(AppSettings::ColoredHelp)
-                .about("Extracts bam/bed from hybrid genome index with ranged query")
+                .help("Extracts bam/bed from hybrid genome index with ranged query")
                 .arg(
                     Arg::new("range")
                         .short('r')
                         .takes_value(true)
-                        .multiple(true)
-                        .about("sorted bam"),
+                        .multiple_occurrences(true)
+                        .help("sorted bam"),
                 )
                 .arg(
                     Arg::new("bed")
                         .short('L')
                         .takes_value(true)
-                        .about("sorted bam"),
+                        .help("sorted bam"),
                 )
                 .arg(
                     Arg::new("compression")
                         .short('c')
                         .takes_value(true)
-                        .about("compression level"),
+                        .help("compression level"),
                 )
                 .arg(
                     Arg::new("type")
@@ -135,46 +135,46 @@ fn main() {
                         .takes_value(true)
                         // .default_value("default")
                         .possible_values(&["alignment", "range", "default"])
-                        .about("annotation type to fetch"),
+                        .help("annotation type to fetch"),
                 )
                 .arg(
                     Arg::new("id")
                         .short('i')
                         .takes_value(true)
-                        .multiple(true)
-                        .about("annotation sample to fetch"),
+                        .multiple_occurrences(true)
+                        .help("annotation sample to fetch"),
                 )
-                .arg(Arg::new("filter").short('f').about("Pre-filter"))
-                .arg(Arg::new("binary").short('b').about("Binary"))
-                .arg(Arg::new("bench").short('B').about("For benchmarking"))
+                .arg(Arg::new("filter").short('f').help("Pre-filter"))
+                .arg(Arg::new("binary").short('b').help("Binary"))
+                .arg(Arg::new("bench").short('B').help("For benchmarking"))
                 .arg(
                     Arg::new("output")
                         .short('o')
                         .takes_value(true)
-                        .about("Output format"),
+                        .help("Output format"),
                 )
                 .arg(
                     Arg::new("INPUT")
-                        .about("Sets the input file to use")
+                        .help("Sets the input file to use")
                         .required(true)
                         .index(1),
                 ),
         )
         .subcommand(
             App::new("decompose")
-                .about("Extracts an entire bam/bed from a hybrid genome index. (*) used for debugging")
+                .help("Extracts an entire bam/bed from a hybrid genome index. (*) used for debugging")
                 .arg(
                     Arg::new("id")
                         .short('i')
                         .takes_value(true)
-                        //            .multiple(true)
-                        .about("annotation sample to fetch (alignment | annotation)"),
+                        //            .multiple_occurrences(true)
+                        .help("annotation sample to fetch (alignment | annotation)"),
                 )
-                .arg(Arg::new("header").short('z').about("Outputs only header"))
-                .arg(Arg::new("formatted-header").short('f').about("Outputs formatted header"))
+                .arg(Arg::new("header").short('z').help("Outputs only header"))
+                .arg(Arg::new("formatted-header").short('f').help("Outputs formatted header"))
                 .arg(
                     Arg::new("INPUT")
-                        .about("Sets the input file to use")
+                        .help("Sets the input file to use")
                         .required(true)
                         .index(1),
                 )
@@ -182,21 +182,21 @@ fn main() {
                     Arg::new("output")
                         .short('o')
                         .takes_value(true)
-                        .about("Output format"),
+                        .help("Output format"),
                 ),
         )
         .subcommand(
             App::new("bin")
-                .about("Extracts bam/bed from a hybrid genome index. (*) used for debugging")
+                .help("Extracts bam/bed from a hybrid genome index. (*) used for debugging")
                 .arg(
                     Arg::new("id")
                         .short('i')
                         .takes_value(true)
-                        .about("annotation sample to fetch (alignment | annotation)"),
+                        .help("annotation sample to fetch (alignment | annotation)"),
                 )
                 .arg(
                     Arg::new("INPUT")
-                        .about("Sets the input file to use")
+                        .help("Sets the input file to use")
                         .required(true)
                         .index(1),
                 )
@@ -204,79 +204,79 @@ fn main() {
                     Arg::new("bin")
                         .short('b')
                         .takes_value(true)
-                        //            .multiple(true)
-                        .about("annotation sample to fetch (alignment | annotation)"),
+                        //            .multiple_occurrences(true)
+                        .help("annotation sample to fetch (alignment | annotation)"),
                 )
                 .arg(
                     Arg::new("start")
                         .short('s')
                         .takes_value(true)
-                        //            .multiple(true)
-                        .about("annotation sample to fetch (alignment | annotation)"),
+                        //            .multiple_occurrences(true)
+                        .help("annotation sample to fetch (alignment | annotation)"),
                 )
                 .arg(
                     Arg::new("end")
                         .short('e')
                         .takes_value(true)
-                        //            .multiple(true)
-                        .about("annotation sample to fetch (alignment | annotation)"),
+                        //            .multiple_occurrences(true)
+                        .help("annotation sample to fetch (alignment | annotation)"),
                 )
                 .arg(
                     Arg::new("ref_id")
                         .short('c')
                         .takes_value(true)
-                        //            .multiple(true)
-                        .about("annotation sample to fetch (alignment | annotation)"),
+                        //            .multiple_occurrences(true)
+                        .help("annotation sample to fetch (alignment | annotation)"),
                 )
                 .arg(
                     Arg::new("range")
                         .short('r')
                         .takes_value(true)
-                        .multiple(true)
-                        .about("sorted bam"),
+                        .multiple_occurrences(true)
+                        .help("sorted bam"),
                 )
                 .arg(
                     Arg::new("layer")
                         .short('l')
                         .takes_value(true)
-                        .about("sorted bam"),
+                        .help("sorted bam"),
                 )
                 .arg(
                     Arg::new("output")
                         .short('o')
                         .takes_value(true)
-                        .about("Output format"),
+                        .help("Output format"),
                 ),
         )
         .subcommand(
             App::new("server")
-                .about("Starts the web server. (*) used for debugging")
-                .arg(Arg::new("host").short('i').about("host"))
-                .arg(Arg::new("port").short('p').about("port"))
-                .arg(Arg::new("web").short('w').about("bind host and port"))
+                .help("Starts the web server. (*) used for debugging")
+                .arg(Arg::new("host").short('i').help("host"))
+                .arg(Arg::new("port").short('p').help("port"))
+                .arg(Arg::new("web").short('w').help("bind host and port"))
                 .arg(
                     Arg::new("range")
                         .short('r')
                         .takes_value(true)
-                        .multiple(true)
-                        .about("sorted bam"),
+                        .multiple_occurrences(true)
+                        .help("sorted bam"),
                 )
                 .arg(
                     Arg::new("max-coverage")
                         .short('m')
                         .takes_value(true)
-                        .about("Max coverage value on coverage track"),
+                        .help("Max coverage value on coverage track"),
                 )
                 .arg(
                     Arg::new("bam")
                         .short('a')
                         .takes_value(true)
-                        .multiple(true)
-                        .about("sorted bam"),
+                        .multiple_occurrences(true)
+                        .help("sorted bam"),
                 )
                 .arg(
                     Arg::new("INPUT")
-                        .about("Sets the input file to use")
+                        .help("Sets the input file to use")
                         .required(true)
                         .index(1),
                 ),
@@ -285,23 +285,23 @@ fn main() {
             App::new("vis")
                 .setting(AppSettings::ArgRequiredElseHelp)
                 .setting(AppSettings::ColoredHelp)
-                .about("Visualizes genomic data e.g. alignments and annotations")
+                .help("Visualizes genomic data e.g. alignments and annotations")
                 .arg(
                     Arg::new("range")
                         .short('r')
                         .long("range")
                         .takes_value(true)
-                        .multiple(true)
+                        .multiple_occurrences(true)
                         .required(true)
-                        .about("Genomic range to visualize. Format is chr:from-to"),
+                        .help("Genomic range to visualize. Format is chr:from-to"),
                 )
                 .arg(
                     Arg::new("prefetch-range")
                         .long("prefetch-range")
                         .short('R')
                         .takes_value(true)
-                        .multiple(true)
-                        .about("Genomic range to pre-fetch. Optional. The same order as range option. Format is chr:from-to"),
+                        .multiple_occurrences(true)
+                        .help("Genomic range to pre-fetch. Optional. The same order as range option. Format is chr:from-to"),
                 )
                 .arg(
                     Arg::new("type")
@@ -310,7 +310,7 @@ fn main() {
                         .takes_value(true)
                         // .default_value("default")
                         .possible_values(&["alignment", "range", "default"])
-                        .about("The type of GHB data structure to display (used for debugging)"),
+                        .help("The type of GHB data structure to display (used for debugging)"),
                 )
                 .arg(
                     Arg::new("preset")
@@ -319,61 +319,61 @@ fn main() {
                         //.takes_value(true)
                         // .empty_values(true)
                         // .default_value("auto")
-                        //.setting(ArgSettings::AllowEmptyValues)
+                        //
                         .possible_values(&["","auto", "base", "gene", "chrom", "sv", "qual"])
-                        .about("Preset (always overwrites other options) ['auto', 'base', 'gene', 'chrom', 'sv', 'qual']"),
+                        .help("Preset (always overwrites other options) ['auto', 'base', 'gene', 'chrom', 'sv', 'qual']"),
                 )
                 .arg(
                     Arg::new("preset-color")
                         .short('#')
                         .long("preset-color")
                         .possible_values(&["", "hgb", "igv", "jbrowse"])
-                        .about("Preset color scheme ['igv', 'hgb', 'jbrowse'] (default is hgb"),
+                        .help("Preset color scheme ['igv', 'hgb', 'jbrowse'] (default is hgb"),
                 )
                 .arg(
                     Arg::new("id")
                         .short('i')
                         .long("id")
                         .takes_value(true)
-                        .multiple(true)
-                        .about("Indices on GHB data structure to display (used for debugging)"),
+                        .multiple_occurrences(true)
+                        .help("Indices on GHB data structure to display (used for debugging)"),
                 )
                 .arg(
                     Arg::new("frequency")
                         .short('F')
                         .long("frequency")
                         .takes_value(true)
-                        .multiple(true)
-                        .about("A subset of sorted bed for coverage plot (start and score fields are used)"),
+                        .multiple_occurrences(true)
+                        .help("A subset of sorted bed for coverage plot (start and score fields are used)"),
                 )
-                .arg(Arg::new("bed-range").short('J').long("bed-range").takes_value(true).about("Visualize multiple region where BED file specifies"))
-                .arg(Arg::new("neighbor").short('K').long("bed-neighbor-bases").takes_value(true).about("Visualize specified base-pair neighbor of BED region"))
-                .arg(Arg::new("no-filter").short('f').long("disable-read-prefilter").about("Disable pre-filtering on loading BAM index (used for debugging)"))
-                .arg(Arg::new("no-cigar").short('c').long("hide-cigar").about("Do not show cigar string"))
-                .arg(Arg::new("no-scale").short('S').long("hide-y-scale").about("Do not show y-axis scale and legends"))
-                .arg(Arg::new("no-ruler").short('*').long("hide-x-scale").setting(ArgSettings::MultipleOccurrences).about("Do not show x-axis ruler"))
-                .arg(Arg::new("no-packing").short('p').long("disable-read-packing").about("Disable read packing"))
-                .arg(Arg::new("no-legend").short('l').long("hide-legend").about("Hide legend"))
-                .arg(Arg::new("square").short('Q').long("square").about("Set square width (overwritten)"))
-                .arg(Arg::new("quality").short('q').long("read-quality").about("Display reads colored by quality value"))
-                .arg(Arg::new("colored-by-name").short('n').long("colored-by-name").about("Set read colors by read name"))
-                .arg(Arg::new("colored-by-track").short('?').long("colored-by-track").about("Set read colors by track on hgb"))
-                .arg(Arg::new("read-per-line").short('1').long("read-per-line").about("Show one line one read on split-alignment mode"))
-                .arg(Arg::new("read-per-two-range").short('2').long("read-per-line-two-ranges").about("Show one read per one line across two range on split-alignment mode"))
-                .arg(Arg::new("x-as-range").short('9').long("x-as-input-range").about("Set X as the interval of the input range"))
+                .arg(Arg::new("bed-range").short('J').long("bed-range").takes_value(true).help("Visualize multiple region where BED file specifies"))
+                .arg(Arg::new("neighbor").short('K').long("bed-neighbor-bases").takes_value(true).help("Visualize specified base-pair neighbor of BED region"))
+                .arg(Arg::new("no-filter").short('f').long("disable-read-prefilter").help("Disable pre-filtering on loading BAM index (used for debugging)"))
+                .arg(Arg::new("no-cigar").short('c').long("hide-cigar").help("Do not show cigar string"))
+                .arg(Arg::new("no-scale").short('S').long("hide-y-scale").help("Do not show y-axis scale and legends"))
+                .arg(Arg::new("no-ruler").short('*').long("hide-x-scale").setting(ArgSettings::MultipleOccurrences).help("Do not show x-axis ruler"))
+                .arg(Arg::new("no-packing").short('p').long("disable-read-packing").help("Disable read packing"))
+                .arg(Arg::new("no-legend").short('l').long("hide-legend").help("Hide legend"))
+                .arg(Arg::new("square").short('Q').long("square").help("Set square width (overwritten)"))
+                .arg(Arg::new("quality").short('q').long("read-quality").help("Display reads colored by quality value"))
+                .arg(Arg::new("colored-by-name").short('n').long("colored-by-name").help("Set read colors by read name"))
+                .arg(Arg::new("colored-by-track").short('?').long("colored-by-track").help("Set read colors by track on hgb"))
+                .arg(Arg::new("read-per-line").short('1').long("read-per-line").help("Show one line one read on split-alignment mode"))
+                .arg(Arg::new("read-per-two-range").short('2').long("read-per-line-two-ranges").help("Show one read per one line across two range on split-alignment mode"))
+                .arg(Arg::new("x-as-range").short('9').long("x-as-input-range").help("Set X as the interval of the input range"))
                 .arg(
                     Arg::new("range-index")
                         .short('8')
                         .long("range-index")
                         .takes_value(true)
-                        .about("Choose a range index to visualize when multiple ranges are specified."),
+                        .help("Choose a range index to visualize when multiple ranges are specified."),
                 )
                 .arg(
                     Arg::new("read-index")
                         .short('_')
                         .long("read-index")
                         .takes_value(true)
-                        .about("Choose a read index to visualize of a single input file."),
+                        .help("Choose a read index to visualize of a single input file."),
                 )
                 .arg(
                     Arg::new("colored-by-motif")
@@ -381,7 +381,7 @@ fn main() {
                         .long("colored-by-motif")
                         .takes_value(true)
                         .default_value("C:T:CG")
-                        .about("Colored by specified motif (for bisulfite sequencing)"),
+                        .help("Colored by specified motif (for bisulfite sequencing)"),
                 )
                 .arg(
                     Arg::new("colored-by-tag")
@@ -389,8 +389,8 @@ fn main() {
                         .long("colored-by-tag")
                         .takes_value(true)
                         .default_value("")
-                        .setting(ArgSettings::AllowEmptyValues)
-                        .about("Colored by specified tags on read alignments"),
+                        
+                        .help("Colored by specified tags on read alignments"),
                 )
                 .arg(
                     Arg::new("separated-by-tag")
@@ -398,8 +398,8 @@ fn main() {
                         .long("grouped-by-tag")
                         .takes_value(true)
                         .default_value("")
-                        .setting(ArgSettings::AllowEmptyValues)
-                        .about("Grouped tracks by specified tags on read alignments"),
+                        
+                        .help("Grouped tracks by specified tags on read alignments"),
                 )
                 .arg(
                     Arg::new("separated-by-tag-offset")
@@ -407,167 +407,167 @@ fn main() {
                         .long("grouped-by-tag-offset")
                         .takes_value(true)
                         .default_value("3")
-                        .about("The maximal number of tracks by a specified tag on read alignments"),
+                        .help("The maximal number of tracks by a specified tag on read alignments"),
                 )
                 .arg(
                     Arg::new("filtered-by-tag")
                         .short('~')
                         .long("filtered-by-tag")
                         .takes_value(true)
-                        .about("Filtered by a specified tag on read alignments as <tag>:<value> (e.g. HP:0)"),
+                        .help("Filtered by a specified tag on read alignments as <tag>:<value> (e.g. HP:0)"),
                 )
-                .arg(Arg::new("x").short('x').takes_value(true).about("The width of image"))
-                .arg(Arg::new("y").short('y').takes_value(true).about("The height of each read alignment"))
-                .arg(Arg::new("web").short('w').takes_value(true).long("web-server").about("Serve the web server "))
-                .arg(Arg::new("whole-chromosome").short('W').long("whole-chromosome").about("Pretend as if the prefetch range is the whole chromosome"))
-                .arg(Arg::new("rest").short('>').long("rest-server").about("Serve the web server with accepting any parameter"))
-                .arg(Arg::new("production").short('$').long("serve-as-production").about("Serve the web server on production mode (no cross-origin request is allowed)"))
-                .arg(Arg::new("dump-json").short('%').long("write-json").about("Dump JSON of read metadata"))
-                .arg(Arg::new("adjust-y").short('&').long("not-adjust-y").about("Do not adjust y on server mode"))
-                .arg(Arg::new("ref-column").short('!').long("2bit").takes_value(true).about("Show the base colors of reference genome (input must be 2bit format)"))
-                .arg(Arg::new("insertion-string").short('{').long("show-insertion-sequence").about("Show the insertion sequence along with insertion callets"))
+                .arg(Arg::new("x").short('x').takes_value(true).help("The width of image"))
+                .arg(Arg::new("y").short('y').takes_value(true).help("The height of each read alignment"))
+                .arg(Arg::new("web").short('w').takes_value(true).long("web-server").help("Serve the web server "))
+                .arg(Arg::new("whole-chromosome").short('W').long("whole-chromosome").help("Pretend as if the prefetch range is the whole chromosome"))
+                .arg(Arg::new("rest").short('>').long("rest-server").help("Serve the web server with accepting any parameter"))
+                .arg(Arg::new("production").short('$').long("serve-as-production").help("Serve the web server on production mode (no cross-origin request is allowed)"))
+                .arg(Arg::new("dump-json").short('%').long("write-json").help("Dump JSON of read metadata"))
+                .arg(Arg::new("adjust-y").short('&').long("not-adjust-y").help("Do not adjust y on server mode"))
+                .arg(Arg::new("ref-column").short('!').long("2bit").takes_value(true).help("Show the base colors of reference genome (input must be 2bit format)"))
+                .arg(Arg::new("insertion-string").short('{').long("show-insertion-sequence").help("Show the insertion sequence along with insertion callets"))
                 .arg(
                     Arg::new("labels")
                         .short('}')
                         .long("labels")
                         .takes_value(true)
-                        .multiple(true)
-                        .about("Labels displayed on legend"),
+                        .multiple_occurrences(true)
+                        .help("Labels displayed on legend"),
                 )
-                .arg(Arg::new("dynamic-partition").short('D').long("dynamic-range-partition").about("Divide multiple genomic range with dynamic width"))
+                .arg(Arg::new("dynamic-partition").short('D').long("dynamic-range-partition").help("Divide multiple genomic range with dynamic width"))
                 .arg(
                     Arg::new("format")
                         .short('O')
                         .long("output-format")
                         .takes_value(true)
-                        .about("Output format (automatically detected; optionally used for server mode)"),
+                        .help("Output format (automatically detected; optionally used for server mode)"),
                 )
                 .arg(
                     Arg::new("show-read-id")
                         .short('H')
                         .long("show-read-ids")
-                        .about("Write a read id on the beginning of each read"),
+                        .help("Write a read id on the beginning of each read"),
                 )
                 .arg(
                     Arg::new("no-bold-line")
                         .short('7')
                         .long("no-bold-line")
-                        .about("Plot without bold line"),
+                        .help("Plot without bold line"),
                 )
                 .arg(
                     Arg::new("snp-frequency")
                         .short('V')
                         .long("heterozygous-frequency")
                         .takes_value(true)
-                        .about("The portion of heterozygous allele frequency to display on each coverage track"),
+                        .help("The portion of heterozygous allele frequency to display on each coverage track"),
                 )
                 .arg(
                     Arg::new("zoom-range")
                         .short('Z')
                         .long("zoom-range")
                         .takes_value(true)
-                        .about("Permitted zoom range on web server mode"),
+                        .help("Permitted zoom range on web server mode"),
                 )
                 .arg(
                     Arg::new("freq-height")
                         .short('Y')
                         .long("y-scale")
                         .takes_value(true)
-                        .about("The height of each coverage track"),
+                        .help("The height of each coverage track"),
                 )
                 .arg(
                     Arg::new("max-coverage")
                         .short('m')
                         .long("max-coverage")
                         .takes_value(true)
-                        .about("Maximum coverage value on coverage track"),
+                        .help("Maximum coverage value on coverage track"),
                 )
                 .arg(
                     Arg::new("cache-dir")
                         .short('d')
                         .long("cache-directory")
                         .takes_value(true)
-                        .about("Cache directory for server (generated randomly if not specified)"),
+                        .help("Cache directory for server (generated randomly if not specified)"),
                 )
                 .arg(
                     Arg::new("static-dir")
                         .short('.')
                         .long("static-directory")
                         .takes_value(true)
-                        .about("Static serve directory for server (./static is default)"),
+                        .help("Static serve directory for server (./static is default)"),
                 )
                 .arg(
                     Arg::new("min-read-length")
                         .short('M')
                         .long("min-read-length")
                         .takes_value(true)
-                        .about("Minimum read mapping length on coverage/alignment track"),
+                        .help("Minimum read mapping length on coverage/alignment track"),
                 )
                 .arg(
                     Arg::new("x-scale")
                         .short('X')
                         .long("x-scale")
                         .takes_value(true)
-                        .about("Size of x-scale legend"),
+                        .help("Size of x-scale legend"),
                 )
-                .arg(Arg::new("split-alignment").short('s').long("align-reads-horizontally").about("Display split alignments in the same line"))
-                .arg(Arg::new("only-split-alignment").short('u').long("only-split-alignments").about("Display only split alignments or mate-paired reads on alignment track"))
-                .arg(Arg::new("exclude-split-alignment").short('3').long("only-full-length-alignments").about("Display only NOT split alignments or mate-paired reads on alignment track"))
-                .arg(Arg::new("full-length").short('4').long("full-length-reads").about("Display only full-length match reads against prefetch range."))
-                .arg(Arg::new("udon").short('U').long("udon").about("Colored by udon library"))
+                .arg(Arg::new("split-alignment").short('s').long("align-reads-horizontally").help("Display split alignments in the same line"))
+                .arg(Arg::new("only-split-alignment").short('u').long("only-split-alignments").help("Display only split alignments or mate-paired reads on alignment track"))
+                .arg(Arg::new("exclude-split-alignment").short('3').long("only-full-length-alignments").help("Display only NOT split alignments or mate-paired reads on alignment track"))
+                .arg(Arg::new("full-length").short('4').long("full-length-reads").help("Display only full-length match reads against prefetch range."))
+                .arg(Arg::new("udon").short('U').long("udon").help("Colored by udon library"))
                 .arg(
                     Arg::new("sort-by-name")
                         .short('N')
                         .long("sort-by-name")
-                        .about("Sort alignments by read id (for split-alignment visualization)"),
+                        .help("Sort alignments by read id (for split-alignment visualization)"),
                 )
                 .arg(
                     Arg::new("sort-by-cigar")
                         .short('C')
                         .long("show-split-alignment-line")
-                        .about("Display each split-alignment connection as a colored line"),
+                        .help("Display each split-alignment connection as a colored line"),
                 )
-                .arg(Arg::new("no-insertion").short('I').long("hide-insertion").about("Hide insertion callets on read alignments"))
-                .arg(Arg::new("no-deletion").short('+').long("hide-deletion").about("Hide deletion callets on read alignments"))
+                .arg(Arg::new("no-insertion").short('I').long("hide-insertion").help("Hide insertion callets on read alignments"))
+                .arg(Arg::new("no-deletion").short('+').long("hide-deletion").help("Hide deletion callets on read alignments"))
                 .arg(
                     Arg::new("hide-alignment")
                         .short('A')
                         .long("only-coverage-plot")
-                        .about("Hide read alignments (display only coverage; for chromosome scale view)"),
+                        .help("Hide read alignments (display only coverage; for chromosome scale view)"),
                 )
-                .arg(Arg::new("all-bases").short('B').long("all-bases").about("Show all nucleotides by color"))
+                .arg(Arg::new("all-bases").short('B').long("all-bases").help("Show all nucleotides by color"))
                 .arg(
                     Arg::new("pileup")
                         .short('P')
                         .long("coverage-plot")
-                        .about("Show pileup and coverage plot"),
+                        .help("Show pileup and coverage plot"),
                 )
-                .arg(Arg::new("only-translocation").short('T').long("show-translocation-callets").about("Show callets on ends of read alignments if the read contains translocation split-alignment"))
-                .arg(Arg::new("with-caption").short('<').long("caption").takes_value(true).setting(ArgSettings::AllowEmptyValues)
-                .default_value("").about("Show caption on the top of chart"))
-                .arg(Arg::new("end-split-callets").short('e').long("show-split-alignment-callets").about("Show callets on ends of read alignments if the read contains split-alignment"))
-                .arg(Arg::new("output-translocation").short('5').long("write-split-alignment").about("Write a list of translocation split-alignment to stdout"))
-                .arg(Arg::new("translocation-target").short('6').long("translocation-target-chromosome").takes_value(true).about("Set a translocation target chromosome"))
+                .arg(Arg::new("only-translocation").short('T').long("show-translocation-callets").help("Show callets on ends of read alignments if the read contains translocation split-alignment"))
+                .arg(Arg::new("with-caption").short('<').long("caption").takes_value(true)
+                .default_value("").help("Show caption on the top of chart"))
+                .arg(Arg::new("end-split-callets").short('e').long("show-split-alignment-callets").help("Show callets on ends of read alignments if the read contains split-alignment"))
+                .arg(Arg::new("output-translocation").short('5').long("write-split-alignment").help("Write a list of translocation split-alignment to stdout"))
+                .arg(Arg::new("translocation-target").short('6').long("translocation-target-chromosome").takes_value(true).help("Set a translocation target chromosome"))
                 .arg(
                     Arg::new("graph")
                         .short('G')
                         .long("graph")
                         .takes_value(true)
-                        .about("[Input] Graph genome coordinates tsv (tab-separated, generated by vg view -N command)"),
+                        .help("[Input] Graph genome coordinates tsv (tab-separated, generated by vg view -N command)"),
                 )
                 .arg(
                     Arg::new("basic-auth")
                         .short('[')
                         .long("basic-auth")
                         .takes_value(true)
-                        .about("Basic authentication on web server (username:password)"),
+                        .help("Basic authentication on web server (username:password)"),
                 )
                 .arg(
                     Arg::new("unix-socket")
                         .short(']')
                         .long("unix-socket")
                         .takes_value(true)
-                        .about("Serve the web server on unix socket"),
+                        .help("Serve the web server on unix socket"),
                 )
                 .arg(
                     Arg::new("no-bits")
@@ -575,69 +575,69 @@ fn main() {
                         .long("flag-exclude")
                         .takes_value(true)
                         .default_value("1796")
-                        .about("Read must have NONE of these flags"),
+                        .help("Read must have NONE of these flags"),
                 )
                 .arg(
                     Arg::new("read-name")
                         .short(')')
                         .long("filtered-by-read-name")
                         .takes_value(true)
-                        .about("Filter by read name"),
+                        .help("Filter by read name"),
                 )
                 .arg(
                     Arg::new("output")
                         .short('o')
                         .long("output")
                         .takes_value(true)
-                        .about("[Output] image file (prefixed as .bmp / .png)"),
+                        .help("[Output] image file (prefixed as .bmp / .png)"),
                 )
                 .arg(
                     Arg::new("bed")
                         .short('L')
                         .long("bed")
-                        .multiple(true)
+                        .multiple_occurrences(true)
                         .takes_value(true)
-                        .about("[Input] A subset of sorted bed to display as annotation track"),
+                        .help("[Input] A subset of sorted bed to display as annotation track"),
                 )
                 .arg(
                     Arg::new("bam")
                         .short('a')
                         .long("bam")
                         .takes_value(true)
-                        .multiple(true)
-                        .about("[Input] Sorted BAM to display read alignment track"),
+                        .multiple_occurrences(true)
+                        .help("[Input] Sorted BAM to display read alignment track"),
                 )
                 .arg(
                     Arg::new("gff3")
                         .short('g')
                         .long("gff3")
                         .takes_value(true)
-                        .multiple(true)
-                        .about("[Input] A subset of sorted gff3 to display as annotation track"),
+                        .multiple_occurrences(true)
+                        .help("[Input] A subset of sorted gff3 to display as annotation track"),
                 )
                 .arg(
                     Arg::new("INPUT")
-                        .about("(Optional) GHB format to display both alignment and annotation tracks")
+                        .help("(Optional) GHB format to display both alignment and annotation tracks")
                         .index(1),
                 ),
         )
         .subcommand(
             App::new("precomp")
-                .about("Attach y positions on each read by default view options.")
+                .help("Attach y positions on each read by default view options.")
                 .arg(
                     Arg::new("output")
                         .short('o')
                         .takes_value(true)
-                        .about("Output format"),
+                        .help("Output format"),
                 )
                 .arg(
                     Arg::new("INPUT")
-                        .about("Sets the input file to use")
+                        .help("Sets the input file to use")
                         .required(true)
                         .index(1),
                 )
-                .arg(Arg::new("header").short('z').about("Outputs only header"))
-                .arg(Arg::new("formatted-header").short('f').about("Outputs formatted header")),
+                .arg(Arg::new("header").short('z').help("Outputs only header"))
+                .arg(Arg::new("formatted-header").short('f').help("Outputs formatted header")),
         );
     let matches = app.get_matches();
     let args: Vec<String> = env::args().collect();

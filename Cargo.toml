@@ -23,36 +23,36 @@ actix-web-httpauth = "0.5.1"
 bio-types = { git = "https://github.com/6br/rust-bio-types", branch= "alignment_fix" }
 bam = { git = "https://github.com/6br/bam", rev = "fff8669" }
 mt_bam = { git = "https://github.com/6br/bam", branch = "master", package = "bam" }
-csv = "1.1.5"
-bitpacking = "0.8.2"
-byteorder = "1.3.4"
+csv = "1.1.6"
+bitpacking = "0.8.4"
+byteorder = "1.4.3"
 enum-map = "1.1.1"
 enum-map-derive = "0.6.0"
 env_logger = "0.9.0"
-flate2 = "1.0.19"
+flate2 = "1.0.22"
 genomic_range = { git = "https://github.com/6br/genomic_range", rev = "cba2b1c" }
 itertools = "0.10.1"
-libflate = "1.0.0"
+libflate = "1.1.2"
 log = "0.4.11"
-multimap = "0.8.2"
+multimap = "0.8.3"
 num-format = "0.4.0"
 numpress = "1.1.0"
 plotters = { version = "0.3.1", default-features = false, features = ["svg_backend", "line_series", "bitmap_encoder", "ttf", "histogram", "bitmap_backend"] }
 qstring = "0.7.2"
 rand = "0.8.4"
-rayon = "1.4.0"
-regex = "1.3.7"
+rayon = "1.5.1"
+regex = "1.5.4"
 rstar = { git = "https://github.com/6br/rstar" }
 serde = "1.0.110"
 serde_json = "1.0.60"
 serde_derive = { version = "1.0.117", optional = true }
 serde_yaml = "0.8.14"
-twobit = "0.1.1"
+twobit = "0.2.0"
 udon = { git = "https://github.com/ocxtal/udon", rev = "eeb5ad8" }
 vbyte = { git = "https://github.com/6br/vbyte" }
 
 [dependencies.clap]
-version = "= 3.0.0-beta.2"
+version = "= 3.1.2"
 default-features = false
 
 # Cherry-pick the features you'd like to use

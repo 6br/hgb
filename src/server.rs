@@ -21,20 +21,20 @@ fn id_to_range(
 ) -> (ArgMatches, StringRegion) {
     let app = App::new("vis")
             .setting(AppSettings::AllArgsOverrideSelf)
-            .about("Visualize GHB and other genomic data")
+            .help("Visualize GHB and other genomic data")
             .arg(
                 Arg::new("range")
                     .short('r')
                     .takes_value(true)
-                    .multiple(true)
-                    .about("Genomic range to visualize. Format is chr:from-to."),
+                    .multiple_occurrences(true)
+                    .help("Genomic range to visualize. Format is chr:from-to."),
             )
             .arg(
                 Arg::new("prefetch-range")
                     .short('R')
                     .takes_value(true)
-                    .multiple(true)
-                    .about("Genomic range to pre-fetch. Optional. The same order as range option. Format is chr:from-to."),
+                    .multiple_occurrences(true)
+                    .help("Genomic range to pre-fetch. Optional. The same order as range option. Format is chr:from-to."),
             )
             .arg(
                 Arg::new("type")
@@ -42,7 +42,7 @@ fn id_to_range(
                     .takes_value(true)
                     // .default_value("default")
                     .possible_values(&["alignment", "range", "default"])
-                    .about("The type of GHB data structure to display (used for debugging.)"),
+                    .help("The type of GHB data structure to display (used for debugging.)"),
             )
             .arg(
                 Arg::new("preset")
@@ -50,166 +50,166 @@ fn id_to_range(
                     //.takes_value(true)
                     // .empty_values(true)
                     // .default_value("auto")
-                    //.setting(ArgSettings::AllowEmptyValues)
+                    //
                     .possible_values(&["","auto", "base", "gene", "chrom", "sv", "qual"])
-                    .about("Preset (always overwrites other options) ['auto', 'base', 'gene', 'chrom', 'sv', 'qual']"),
+                    .help("Preset (always overwrites other options) ['auto', 'base', 'gene', 'chrom', 'sv', 'qual']"),
             )
             .arg(
                 Arg::new("id")
                     .short('i')
                     .takes_value(true)
-                    .multiple(true)
-                    .about("Indices on GHB data structure to display (used for debugging.)"),
+                    .multiple_occurrences(true)
+                    .help("Indices on GHB data structure to display (used for debugging.)"),
             )
             .arg(
                 Arg::new("frequency")
                     .short('F')
                     .takes_value(true)
-                    .multiple(true)
-                    .about("A subset of sorted bed for coverage plot (start and score fields are used)"),
+                    .multiple_occurrences(true)
+                    .help("A subset of sorted bed for coverage plot (start and score fields are used)"),
             )
-            .arg(Arg::new("bed-range").short('J').takes_value(true).about("Visualize multiple region where BED file specifies"))
-            .arg(Arg::new("neighbor").short('K').takes_value(true).about("Visualize specified base-pair neighbor of BED region"))
-            .arg(Arg::new("whole-chromosome").short('W').about("Pretend as if the prefetch range is the whole chromosome"))
-            .arg(Arg::new("adjust-y").short('&').about("Do not adjust y on server mode"))
-            .arg(Arg::new("no-filter").short('f').about("Disable pre-filtering on loading BAM index (used for debugging)"))
-            .arg(Arg::new("no-cigar").short('c').about("Do not show cigar string"))
-            .arg(Arg::new("no-scale").short('S').about("Do not show y-axis scale"))
-            .arg(Arg::new("no-ruler").short('*').long("hide-x-scale").setting(ArgSettings::MultipleOccurrences).about("Do not show x-axis ruler"))
-            .arg(Arg::new("no-packing").short('p').about("Disable read packing"))
-            .arg(Arg::new("no-legend").short('l').about("Hide legend"))
-            .arg(Arg::new("colored-by-name").short('n').about("Set read colors by read name"))
+            .arg(Arg::new("bed-range").short('J').takes_value(true).help("Visualize multiple region where BED file specifies"))
+            .arg(Arg::new("neighbor").short('K').takes_value(true).help("Visualize specified base-pair neighbor of BED region"))
+            .arg(Arg::new("whole-chromosome").short('W').help("Pretend as if the prefetch range is the whole chromosome"))
+            .arg(Arg::new("adjust-y").short('&').help("Do not adjust y on server mode"))
+            .arg(Arg::new("no-filter").short('f').help("Disable pre-filtering on loading BAM index (used for debugging)"))
+            .arg(Arg::new("no-cigar").short('c').help("Do not show cigar string"))
+            .arg(Arg::new("no-scale").short('S').help("Do not show y-axis scale"))
+            .arg(Arg::new("no-ruler").short('*').long("hide-x-scale").setting(ArgSettings::MultipleOccurrences).help("Do not show x-axis ruler"))
+            .arg(Arg::new("no-packing").short('p').help("Disable read packing"))
+            .arg(Arg::new("no-legend").short('l').help("Hide legend"))
+            .arg(Arg::new("colored-by-name").short('n').help("Set read colors by read name"))
             .arg(
                 Arg::new("colored-by-motif")
                     .short('E')
                     .takes_value(true)
                     .default_value("C:T:CG")
-                    .about("Colored by specified motif (for bisulfite sequencing)"),
+                    .help("Colored by specified motif (for bisulfite sequencing)"),
             )
-            .arg(Arg::new("meaningless").short('Q').about("Set square width (overwritten)"))
-            .arg(Arg::new("quality").short('q').about("Display reads by quality value"))
-            .arg(Arg::new("x").short('x').takes_value(true).about("The width of image"))
-            .arg(Arg::new("y").short('y').takes_value(true).about("The height of each read alignment"))
-            .arg(Arg::new("web").short('w').takes_value(true).about("Serve the web server"))
-            .arg(Arg::new("end-split-callets").short('e').about("Show callets on ends of read alignments if the read contains split-alignment"))
+            .arg(Arg::new("meaningless").short('Q').help("Set square width (overwritten)"))
+            .arg(Arg::new("quality").short('q').help("Display reads by quality value"))
+            .arg(Arg::new("x").short('x').takes_value(true).help("The width of image"))
+            .arg(Arg::new("y").short('y').takes_value(true).help("The height of each read alignment"))
+            .arg(Arg::new("web").short('w').takes_value(true).help("Serve the web server"))
+            .arg(Arg::new("end-split-callets").short('e').help("Show callets on ends of read alignments if the read contains split-alignment"))
             .arg(
                 Arg::new("freq-height")
                     .short('Y')
                     .takes_value(true)
-                    .about("The height of each coverage track"),
+                    .help("The height of each coverage track"),
             )
             .arg(
                 Arg::new("snp-frequency")
                     .short('V')
                     .takes_value(true)
-                    .about("The portion of SNP frequency to display on each coverage track"),
+                    .help("The portion of SNP frequency to display on each coverage track"),
             )
             .arg(
                 Arg::new("max-coverage")
                     .short('m')
                     .takes_value(true)
-                    .about("Max coverage value on coverage track"),
+                    .help("Max coverage value on coverage track"),
             )
             .arg(
                 Arg::new("cache-dir")
                     .short('d')
                     .takes_value(true)
-                    .about("Cache directory for server (generated randomly if not specified)"),
+                    .help("Cache directory for server (generated randomly if not specified)"),
             )
             .arg(
                 Arg::new("static-dir")
                     .short('.')
                     .long("static-directory")
                     .takes_value(true)
-                    .about("Static serve directory for server (./static is default)"),
+                    .help("Static serve directory for server (./static is default)"),
             )
             .arg(
                 Arg::new("min-read-length")
                     .short('M')
                     .takes_value(true)
-                    .about("Minimum read length on coverage/alignment track"),
+                    .help("Minimum read length on coverage/alignment track"),
             )
             .arg(
                 Arg::new("x-scale")
                     .short('X')
                     .takes_value(true)
-                    .about("Size of x-scale legend"),
+                    .help("Size of x-scale legend"),
             )
-            .arg(Arg::new("split-alignment").short('s').about("Display split alignments in the same "))
-            .arg(Arg::new("only-split-alignment").short('u').about("Display only split alignments or mate-paired reads on alignment track"))
-            .arg(Arg::new("udon").short('U').about("Colored by udon library"))
+            .arg(Arg::new("split-alignment").short('s').help("Display split alignments in the same "))
+            .arg(Arg::new("only-split-alignment").short('u').help("Display only split alignments or mate-paired reads on alignment track"))
+            .arg(Arg::new("udon").short('U').help("Colored by udon library"))
             .arg(
                 Arg::new("sort-by-name")
                     .short('N')
-                    .about("Sort alignments by read id (for split-alignment visualization)"),
+                    .help("Sort alignments by read id (for split-alignment visualization)"),
             )
             .arg(
                 Arg::new("sort-by-cigar")
                     .short('C')
-                    .about("Display each split-alignment connection as a colored line"),
+                    .help("Display each split-alignment connection as a colored line"),
             )
-            .arg(Arg::new("no-insertion").short('I').about("Hide insertion callets on read alignments"))
+            .arg(Arg::new("no-insertion").short('I').help("Hide insertion callets on read alignments"))
             .arg(
                 Arg::new("hide-alignment")
                     .short('A')
-                    .about("Hide read alignments (display only coverage; for chromosome scale view)"),
+                    .help("Hide read alignments (display only coverage; for chromosome scale view)"),
             )
-            .arg(Arg::new("all-bases").short('B').about("Show all nucleotides by color"))
+            .arg(Arg::new("all-bases").short('B').help("Show all nucleotides by color"))
             .arg(
                 Arg::new("pileup")
                     .short('P')
-                    .about("Show pileup as coverage plot"),
+                    .help("Show pileup as coverage plot"),
             )
-            .arg(Arg::new("only-translocation").short('T').about("Show callets on ends of read alignments if the read contains translocation split-alignment"))
+            .arg(Arg::new("only-translocation").short('T').help("Show callets on ends of read alignments if the read contains translocation split-alignment"))
             .arg(
                 Arg::new("graph")
                     .short('G')
                     .takes_value(true)
-                    .about("[Input] Graph genome coordinates tsv (tab-separated, generated by vg view -N command)"),
+                    .help("[Input] Graph genome coordinates tsv (tab-separated, generated by vg view -N command)"),
             )
             .arg(
                 Arg::new("basic-auth")
                     .short('[')
                     .long("basic-auth")
                     .takes_value(true)
-                    .about("Basic authentication on web server (username:password)"),
+                    .help("Basic authentication on web server (username:password)"),
             )
             .arg(
                 Arg::new("output")
                     .short('o')
                     .takes_value(true)
-                    .about("[Output] image file (prefixed as .bmp / .png)"),
+                    .help("[Output] image file (prefixed as .bmp / .png)"),
             )
             .arg(
                 Arg::new("bed")
                     .short('L')
-                    .multiple(true)
+                    .multiple_occurrences(true)
                     .takes_value(true)
-                    .about("[Input] A subset of sorted bed to display as annotation track"),
+                    .help("[Input] A subset of sorted bed to display as annotation track"),
             )
             .arg(
                 Arg::new("format")
                     .short('O')
                     .takes_value(true)
-                    .about("Output format (automatically detected; optionally used for server mode)"),
+                    .help("Output format (automatically detected; optionally used for server mode)"),
             )
             .arg(
                 Arg::new("bam")
                     .short('a')
                     .takes_value(true)
-                    .multiple(true)
-                    .about("[Input] Sorted BAM to display read alignment track"),
+                    .multiple_occurrences(true)
+                    .help("[Input] Sorted BAM to display read alignment track"),
             )
             .arg(
                 Arg::new("gff3")
                     .short('g')
                     .takes_value(true)
-                    .multiple(true)
-                    .about("[Input] A subset of sorted gff3 to display as annotation track"),
+                    .multiple_occurrences(true)
+                    .help("[Input] A subset of sorted gff3 to display as annotation track"),
             )
             .arg(
                 Arg::new("INPUT")
-                    .about("(Optional) GHB format to display both alignment and annotation tracks")
+                    .help("(Optional) GHB format to display both alignment and annotation tracks")
                     .index(1),
             );
     // let prefetch_max = 25000000; // prefetch_range.end() - prefetch_range.start();
@@ -499,7 +499,7 @@ pub struct Size {
 pub struct Param {
     x_scale: u32,
     max_y: u32,
-    prefetch_max: u64,
+    _prefetch_max: u64,
     criteria: u64,
     max_zoom: u32,
     min_zoom: u32,
@@ -601,7 +601,7 @@ pub async fn server(
     let params = Param {
         x_scale,
         max_y: x,
-        prefetch_max: all,
+        _prefetch_max: all,
         max_zoom,
         min_zoom,
         criteria: diff,

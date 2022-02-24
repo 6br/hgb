@@ -224,7 +224,7 @@ where
 
     let root = BitMapBackend::new(output, (x, freq_size)).into_drawing_area();
     root.fill(&WHITE)?;
-    let root = root.margin(0, 0, 0, 0);
+    let root = root.margin(0u32, 0u32, 0u32, 0u32);
 
     let areas = if !dynamic_partition {
         root.split_evenly((1, vis.len()))
@@ -571,7 +571,7 @@ where
     let root = BitMapBackend::new(output, (x_len, y_len)).into_drawing_area();
     let approximate_one_pixel = 1; //((range.end() - range.start()) / x as u64) as u32;
     root.fill(&WHITE)?;
-    let root = root.margin(0, 0, 0, 0);
+    let root = root.margin(0u32, 0u32, 0u32, 0u32);
     let mut json = vec![];
 
     let areas = if !dynamic_partition {
@@ -594,7 +594,7 @@ where
     //let areas_len = vis.len();
 
     for (index, area) in areas.iter().enumerate() {
-        let area = area.margin(0, 0, 0, 0);
+        let area = area.margin(0u32, 0u32, 0u32, 0u32);
         let vis = &vis[index];
         let range = &vis.range;
         let frequency = &vis.frequency;
@@ -787,11 +787,11 @@ where
 
             let pixels_per_column = opt_len as f64 / window.len() as f64;
 
-            let enable_softmask = false;
-            let tb_nosoft = TwoBitFile::open(twobit, enable_softmask).unwrap();
+            let _enable_softmask = false;
+            let mut tb_nosoft = TwoBitFile::open(twobit).unwrap();
 
             if let Ok(seq) =
-                tb_nosoft.sequence(&range.path, range.start as usize, range.end as usize)
+                tb_nosoft.read_sequence(&range.path, range.start as usize..range.end as usize)
             {
                 let mut pos = range.start;
                 let mut bars = vec![];
@@ -1771,9 +1771,9 @@ where
                     // Set the caption of the chart
                     //.caption(format!("{}", range), ("sans-serif", 20).into_font())
                     // Set the size of the label region
-                    .x_label_area_size(0)
-                    .top_x_label_area_size(5)
-                    .y_label_area_size(y_area_size)
+                    .x_label_area_size(0u32)
+                    .top_x_label_area_size(5u32)
+                    .y_label_area_size(y_area_size as u32)
                     // Finally attach a coordinate on the drawing area and make a chart context
                     .build_cartesian_2d(x_spec.clone(), 0..y_max)?;
                 chart
@@ -1867,7 +1867,7 @@ where
                             .configure_series_labels()
                             .background_style(&WHITE.mix(0.8))
                             .border_style(&BLACK)
-                            .label_font(("sans-serif", 20))
+                            .label_font(("sans-serif", 20i32))
                             .draw()?;
                     }
                 }
