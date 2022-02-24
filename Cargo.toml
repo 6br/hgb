@@ -52,7 +52,7 @@ udon = { git = "https://github.com/ocxtal/udon", rev = "eeb5ad8" }
 vbyte = { git = "https://github.com/6br/vbyte" }
 
 [dependencies.clap]
-version = "= 3.0.14"
+version = "= 3.1.2"
 default-features = false
 
 # Cherry-pick the features you'd like to use

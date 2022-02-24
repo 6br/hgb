@@ -14,7 +14,7 @@ pub mod server;
 
 pub mod subcommands;
 
-use clap::{App, AppSettings, Arg, ArgSettings};
+use clap::{Command, Arg};
 
 use std::env;
 use subcommands::*;
@@ -22,10 +22,11 @@ use subcommands::*;
 fn main() {
     //    env::set_var("RUST_LOG", "actix_web=info");
     env_logger::init();
-    let app = App::new("A hybrid genomic data visualization tool")
+    let app = Command::new("A hybrid genomic data visualization tool")
         // .setting(AppSettings::ArgsNegateSubcommands)
-        .setting(AppSettings::SubcommandRequiredElseHelp)
-        .setting(AppSettings::ArgRequiredElseHelp)
+        .arg_required_else_help(true)
+        .subcommand_required(true)
+        .arg_required_else_help(true)
         .version("0.3")
         .author("6br. ")
         .about(
@@ -44,8 +45,8 @@ fn main() {
                 .help("Sets the number of threads"),
         )
         .subcommand(
-            App::new("build")
-                .setting(AppSettings::ArgRequiredElseHelp)
+            Command::new("build")
+                .arg_required_else_help(true)
                 .about("Constructs hybrid genome index from bam/bed files")
                 .arg(
                     Arg::new("bam")
@@ -103,8 +104,8 @@ fn main() {
                    .help("sorted gff"))*/
         )
         .subcommand(
-            App::new("query")
-                .setting(AppSettings::ArgRequiredElseHelp)
+            Command::new("query")
+                .arg_required_else_help(true)
                 .about("Extracts bam/bed from hybrid genome index with ranged query")
                 .arg(
                     Arg::new("range")
@@ -157,7 +158,7 @@ fn main() {
                 ),
         )
         .subcommand(
-            App::new("decompose")
+            Command::new("decompose")
                 .about("Extracts an entire bam/bed from a hybrid genome index. (*) used for debugging")
                 .arg(
                     Arg::new("id")
@@ -182,7 +183,7 @@ fn main() {
                 ),
         )
         .subcommand(
-            App::new("bin")
+            Command::new("bin")
                 .about("Extracts bam/bed from a hybrid genome index. (*) used for debugging")
                 .arg(
                     Arg::new("id")
@@ -245,7 +246,7 @@ fn main() {
                 ),
         )
         .subcommand(
-            App::new("server")
+            Command::new("server")
                 .about("Starts the web server. (*) used for debugging")
                 .arg(Arg::new("host").short('i').help("host"))
                 .arg(Arg::new("port").short('p').help("port"))
@@ -278,8 +279,8 @@ fn main() {
                 ),
         )
         .subcommand(
-            App::new("vis")
-                .setting(AppSettings::ArgRequiredElseHelp)
+            Command::new("vis")
+                .arg_required_else_help(true)
                 .about("Visualizes genomic data e.g. alignments and annotations")
                 .arg(
                     Arg::new("range")
@@ -346,7 +347,7 @@ fn main() {
                 .arg(Arg::new("no-filter").short('f').long("disable-read-prefilter").help("Disable pre-filtering on loading BAM index (used for debugging)"))
                 .arg(Arg::new("no-cigar").short('c').long("hide-cigar").help("Do not show cigar string"))
                 .arg(Arg::new("no-scale").short('S').long("hide-y-scale").help("Do not show y-axis scale and legends"))
-                .arg(Arg::new("no-ruler").short('*').long("hide-x-scale").setting(ArgSettings::MultipleOccurrences).help("Do not show x-axis ruler"))
+                .arg(Arg::new("no-ruler").short('*').long("hide-x-scale").multiple_occurrences(true).help("Do not show x-axis ruler"))
                 .arg(Arg::new("no-packing").short('p').long("disable-read-packing").help("Disable read packing"))
                 .arg(Arg::new("no-legend").short('l').long("hide-legend").help("Hide legend"))
                 .arg(Arg::new("square").short('Q').long("square").help("Set square width (overwritten)"))
@@ -617,7 +618,7 @@ fn main() {
                 ),
         )
         .subcommand(
-            App::new("precomp")
+            Command::new("precomp")
                 .about("Attach y positions on each read by default view options.")
                 .arg(
                     Arg::new("output")

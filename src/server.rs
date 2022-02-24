@@ -3,7 +3,7 @@ use actix_files::NamedFile;
 use actix_web::http::header::{ContentDisposition, DispositionType};
 use actix_web::{error, middleware::Logger, web, HttpRequest, Responder, Result};
 use bam::Record;
-use clap::{App, AppSettings, Arg, ArgMatches, ArgSettings};
+use clap::{Command, Arg, ArgMatches};
 use genomic_range::StringRegion;
 use ghi::{bed, vis::bam_record_vis, Vis, VisRef};
 use itertools::Itertools;
@@ -19,8 +19,8 @@ fn id_to_range(
     param: &Param,
     path_string: String,
 ) -> (ArgMatches, StringRegion) {
-    let app = App::new("vis")
-            .setting(AppSettings::AllArgsOverrideSelf)
+    let app = Command::new("vis")
+            .args_override_self(true)
             .about("Visualize GHB and other genomic data")
             .arg(
                 Arg::new("range")
@@ -75,7 +75,7 @@ fn id_to_range(
             .arg(Arg::new("no-filter").short('f').help("Disable pre-filtering on loading BAM index (used for debugging)"))
             .arg(Arg::new("no-cigar").short('c').help("Do not show cigar string"))
             .arg(Arg::new("no-scale").short('S').help("Do not show y-axis scale"))
-            .arg(Arg::new("no-ruler").short('*').long("hide-x-scale").setting(ArgSettings::MultipleOccurrences).help("Do not show x-axis ruler"))
+            .arg(Arg::new("no-ruler").short('*').long("hide-x-scale").multiple_occurrences(true).help("Do not show x-axis ruler"))
             .arg(Arg::new("no-packing").short('p').help("Disable read packing"))
             .arg(Arg::new("no-legend").short('l').help("Hide legend"))
             .arg(Arg::new("colored-by-name").short('n').help("Set read colors by read name"))

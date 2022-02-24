@@ -13,7 +13,7 @@ use actix_web_httpauth::extractors::basic::{BasicAuth, Config};
 use actix_web_httpauth::extractors::AuthenticationError;
 use actix_web_httpauth::middleware::HttpAuthentication;
 use bam::Record;
-use clap::{App, AppSettings, Arg, ArgMatches, ArgSettings, Error};
+use clap::{Command, Arg, ArgMatches, Error};
 use genomic_range::StringRegion;
 use ghi::dump::{Area, ReadTree};
 use ghi::{vis::bam_record_vis, ChromosomeBufferTrait, ReadBuffer, Vis, VisRef};
@@ -70,8 +70,8 @@ fn calculate_hash<T: Hash>(t: &T) -> u64 {
 }
 
 fn get_matches_from(args: Vec<String>) -> Result<ArgMatches, Error> {
-    let app = App::new("vis")
-    .setting(AppSettings::AllArgsOverrideSelf)
+    let app = Command::new("vis")
+    .args_override_self(true)
     .about("Visualize GHB and other genomic data")
     .arg(
         Arg::new("range")
@@ -138,7 +138,7 @@ fn get_matches_from(args: Vec<String>) -> Result<ArgMatches, Error> {
     .arg(Arg::new("no-filter").short('f').help("Disable pre-filtering on loading BAM index (used for debugging)"))
     .arg(Arg::new("no-cigar").short('c').help("Do not show cigar string"))
     .arg(Arg::new("no-scale").short('S').help("Do not show y-axis scale"))
-    .arg(Arg::new("no-ruler").short('*').long("hide-x-scale").setting(ArgSettings::MultipleOccurrences).help("Do not show x-axis ruler"))
+    .arg(Arg::new("no-ruler").short('*').long("hide-x-scale").multiple_occurrences(true).help("Do not show x-axis ruler"))
     .arg(Arg::new("no-packing").short('p').help("Disable read packing"))
     .arg(Arg::new("no-legend").short('l').help("Hide legend"))
     .arg(Arg::new("meaningless").short('Q').help("Set square width (overwritten)"))
