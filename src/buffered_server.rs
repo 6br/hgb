@@ -22,7 +22,7 @@ fn id_to_range(
 ) -> (ArgMatches, StringRegion) {
     let app = App::new("vis")
             .setting(AppSettings::AllArgsOverrideSelf)
-            .help("Visualize GHB and other genomic data")
+            .about("Visualize GHB and other genomic data")
             .arg(
                 Arg::new("range")
                     .short('r')

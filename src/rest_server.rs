@@ -72,7 +72,7 @@ fn calculate_hash<T: Hash>(t: &T) -> u64 {
 fn get_matches_from(args: Vec<String>) -> Result<ArgMatches, Error> {
     let app = App::new("vis")
     .setting(AppSettings::AllArgsOverrideSelf)
-    .help("Visualize GHB and other genomic data")
+    .about("Visualize GHB and other genomic data")
     .arg(
         Arg::new("range")
             .short('r')

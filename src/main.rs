@@ -25,12 +25,10 @@ fn main() {
     let app = App::new("A hybrid genomic data visualization tool")
         // .setting(AppSettings::ArgsNegateSubcommands)
         .setting(AppSettings::SubcommandRequiredElseHelp)
-        .setting(AppSettings::UnifiedHelpMessage)
         .setting(AppSettings::ArgRequiredElseHelp)
-        .setting(AppSettings::ColoredHelp)
         .version("0.3")
         .author("6br. ")
-        .help(
+        .about(
             "Command-line visualization tool for read alignment, ranged annotation and frequency.",
         )
         .arg(
@@ -48,8 +46,7 @@ fn main() {
         .subcommand(
             App::new("build")
                 .setting(AppSettings::ArgRequiredElseHelp)
-                .setting(AppSettings::ColoredHelp)
-                .help("Constructs hybrid genome index from bam/bed files")
+                .about("Constructs hybrid genome index from bam/bed files")
                 .arg(
                     Arg::new("bam")
                         .short('a')
@@ -108,8 +105,7 @@ fn main() {
         .subcommand(
             App::new("query")
                 .setting(AppSettings::ArgRequiredElseHelp)
-                .setting(AppSettings::ColoredHelp)
-                .help("Extracts bam/bed from hybrid genome index with ranged query")
+                .about("Extracts bam/bed from hybrid genome index with ranged query")
                 .arg(
                     Arg::new("range")
                         .short('r')
@@ -162,7 +158,7 @@ fn main() {
         )
         .subcommand(
             App::new("decompose")
-                .help("Extracts an entire bam/bed from a hybrid genome index. (*) used for debugging")
+                .about("Extracts an entire bam/bed from a hybrid genome index. (*) used for debugging")
                 .arg(
                     Arg::new("id")
                         .short('i')
@@ -187,7 +183,7 @@ fn main() {
         )
         .subcommand(
             App::new("bin")
-                .help("Extracts bam/bed from a hybrid genome index. (*) used for debugging")
+                .about("Extracts bam/bed from a hybrid genome index. (*) used for debugging")
                 .arg(
                     Arg::new("id")
                         .short('i')
@@ -250,7 +246,7 @@ fn main() {
         )
         .subcommand(
             App::new("server")
-                .help("Starts the web server. (*) used for debugging")
+                .about("Starts the web server. (*) used for debugging")
                 .arg(Arg::new("host").short('i').help("host"))
                 .arg(Arg::new("port").short('p').help("port"))
                 .arg(Arg::new("web").short('w').help("bind host and port"))
@@ -284,8 +280,7 @@ fn main() {
         .subcommand(
             App::new("vis")
                 .setting(AppSettings::ArgRequiredElseHelp)
-                .setting(AppSettings::ColoredHelp)
-                .help("Visualizes genomic data e.g. alignments and annotations")
+                .about("Visualizes genomic data e.g. alignments and annotations")
                 .arg(
                     Arg::new("range")
                         .short('r')
@@ -623,7 +618,7 @@ fn main() {
         )
         .subcommand(
             App::new("precomp")
-                .help("Attach y positions on each read by default view options.")
+                .about("Attach y positions on each read by default view options.")
                 .arg(
                     Arg::new("output")
                         .short('o')
