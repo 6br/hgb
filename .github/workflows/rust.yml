@@ -3,9 +3,13 @@ name: daily
 on:
   schedule:
     - cron: "0 0 * * *"
+  push: 
+    branches:
+      "master"
 
 env:
   CARGO_TERM_COLOR: always
+  RUSTFLAGS: "-C link-arg=-fuse-ld=lld"
 
 jobs:
   build:
