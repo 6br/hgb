@@ -37,6 +37,7 @@ jobs:
       if: matrix.os == 'ubuntu-latest'
       run: |
         sudo apt-get update
+        sudo apt-get upgrade
         sudo apt-get install samtools lld -y
         export RUSTFLAGS="-C link-arg=-fuse-ld=lld"
     - name: initialize
