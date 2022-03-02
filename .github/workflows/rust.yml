@@ -9,7 +9,6 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  RUSTFLAGS: "-C link-arg=-fuse-ld=lld"
 
 jobs:
   build:
@@ -39,11 +38,11 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install samtools lld -y
+        export RUSTFLAGS="-C link-arg=-fuse-ld=lld"
     - name: initialize
       if: matrix.os == 'macos-latest'
       run: |
         brew install samtools
-        brew install llvm
     - name: Build
       run: cargo build --verbose
     - uses: actions-rs/cargo@v1
