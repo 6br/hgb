@@ -3,6 +3,9 @@ name: daily
 on:
   schedule:
     - cron: "0 0 * * *"
+  push: 
+    branches:
+      "master"
 
 env:
   CARGO_TERM_COLOR: always
@@ -34,7 +37,9 @@ jobs:
       if: matrix.os == 'ubuntu-latest'
       run: |
         sudo apt-get update
-        sudo apt-get install samtools -y
+        sudo apt-get upgrade
+        sudo apt-get install samtools lld -y
+        export RUSTFLAGS="-C link-arg=-fuse-ld=lld"
     - name: initialize
       if: matrix.os == 'macos-latest'
       run: |
