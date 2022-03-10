@@ -504,7 +504,7 @@ impl Item {
 pub struct Param {
     x_scale: u32,
     max_y: u32,
-    prefetch_max: u64,
+    _prefetch_max: u64,
     criteria: u64,
     max_zoom: u32,
     min_zoom: u32,
@@ -630,7 +630,7 @@ pub async fn server<T: 'static + ChromosomeBufferTrait + Send + Sync>(
     let params = Param {
         x_scale,
         max_y: x,
-        prefetch_max: all,
+        _prefetch_max: all,
         max_zoom,
         min_zoom,
         criteria: diff,
