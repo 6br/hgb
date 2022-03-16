@@ -24,7 +24,7 @@ jobs:
           - beta
           - nightly-2022-02-27
           - nightly
-        os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-18.04, macos-latest]
 
     steps:
     - uses: actions/checkout@v2
