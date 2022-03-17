@@ -22,9 +22,8 @@ jobs:
         rust:
           - stable
           - beta
-          - nightly-2022-02-27
           - nightly
-        os: [ubuntu-18.04, macos-latest]
+        os: [ubuntu-latest, macos-latest]
 
     steps:
     - uses: actions/checkout@v2
