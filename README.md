@@ -233,6 +233,8 @@ cargo run --release -- vis -a test/input1.bam -o fig/output22.png -r chr1:93234-
 
 ![large](fig/large.png)
 
+![jupyter](fig/jupyter.png)
+
 ## Author
 
 6br
