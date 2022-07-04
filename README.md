@@ -29,7 +29,7 @@ If you didn't install Rust/cargo, you need to install rustup.
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 ```
 
-HGB requires to use nighty version of rustc.
+Library dependencies are the same as [amethyst](https://github.com/amethyst/amethyst/blob/main/README.md). In addition, HGB requires to use nighty version of rustc.
 
 ```bash
 git clone https://github.com/6br/hgb
