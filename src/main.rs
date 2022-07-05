@@ -416,9 +416,10 @@ fn main() {
                         .takes_value(true)
                         .about("Filtered by a specified tag on read alignments as <tag>:<value> (e.g. HP:0)"),
                 )
+                .arg(Arg::new("border-height").short('^').takes_value(true).about("The height of border between samples"))
                 .arg(Arg::new("x").short('x').takes_value(true).about("The width of image"))
                 .arg(Arg::new("y").short('y').takes_value(true).about("The height of each read alignment"))
-                .arg(Arg::new("web").short('w').takes_value(true).long("web-server").about("Serve the web server "))
+                .arg(Arg::new("web").short('w').takes_value(true).long("web-server").about("Serve the web server"))
                 .arg(Arg::new("whole-chromosome").short('W').long("whole-chromosome").about("Pretend as if the prefetch range is the whole chromosome"))
                 .arg(Arg::new("rest").short('>').long("rest-server").about("Serve the web server with accepting any parameter"))
                 .arg(Arg::new("production").short('$').long("serve-as-production").about("Serve the web server on production mode (no cross-origin request is allowed)"))
