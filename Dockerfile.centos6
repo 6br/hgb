@@ -1,6 +1,6 @@
 FROM sweetvishnya/centos6.9-build
 
-RUN yum install -y pkgconfig gcc openssl-devel alsa-lib-devel make gcc-c++ freetype-devel expat-devel libxcb-devel libX11-devel
+RUN yum install -y pkgconfig gcc openssl-devel alsa-lib-devel make gcc-c++ freetype-devel expat-devel libxcb-devel libX11-devel && rm -rf /var/cache/yum/* && yum clean all
 
 RUN cd $HOME && wget https://github.com/Kitware/CMake/releases/download/v3.24.0-rc2/cmake-3.24.0-rc2-linux-x86_64.tar.gz && tar xzvf cmake-3.24.0-rc2-linux-x86_64.tar.gz
 

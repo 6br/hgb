@@ -48,7 +48,7 @@ jobs:
         id: docker_build
         uses: docker/build-push-action@v2
         with:
-          dockerfile: Dockerfile.centos6
+          file: Dockerfile.centos6
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
