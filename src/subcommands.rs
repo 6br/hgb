@@ -1780,13 +1780,13 @@ where
                     if let Some(max_cov) = max_coverage {
                         prev_index = max_cov as usize + last_prev_index;
                     }
-                    //compressed_list.push((t.0, prev_index));
+                    compressed_list.push((t.0, prev_index));
                     //eprintln!("{:?} {:?} {:?}", compressed_list, packing, index_list);
                     last_prev_index = prev_index;
                     //(t.0, ((t.1).0, (t.1).1))
                     // .collect::<&(u64, Record)>(). // collect::<Vec<(usize, (u64, Record))>>
                 });
-            let mut tmp_interval = 0;
+            /*let mut tmp_interval = 0;
             new_list.iter().group_by(|elt| elt.0).into_iter().for_each(
                 |(sample_sequential_id, sample)| {
                     let mut count = sample.count();
@@ -1799,7 +1799,7 @@ where
                     // compressed_list.insert(sample_sequential_id, prev_index);
                     compressed_list.push((sample_sequential_id, tmp_interval));
                 },
-            )
+            )*/
         } else {
             eprintln!("Not packing, not split; multi samples are not supported.");
             // Now does not specify the maximal length by max_coverage.

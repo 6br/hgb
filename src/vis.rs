@@ -444,6 +444,10 @@ where
         .value_of("y")
         .and_then(|a| a.parse::<u32>().ok())
         .unwrap_or(20u32);
+    let border_height = matches
+        .value_of("border-height")
+        .and_then(|a| a.parse::<u32>().ok())
+        .unwrap_or(y / 4 * 3);
     let margin = if y > 3 { 3 } else { y - 1 };
     let freq_size = matches
         .value_of("freq-height")
@@ -1026,7 +1030,7 @@ where
                         // let idx = sample.next().0;
                         let chart = chart.draw_series(LineSeries::new(
                             vec![(range.start(), count), (range.end(), count)],
-                            Palette99::pick(idx).stroke_width(y / 4 * 3),
+                            Palette99::pick(idx).stroke_width(border_height),
                         ))?;
                         if !no_margin {
                             chart
