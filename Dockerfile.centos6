@@ -7,8 +7,9 @@ RUN cd $HOME && wget https://github.com/Kitware/CMake/releases/download/v3.24.0-
 RUN echo 'export PATH=$HOME/cmake-3.24.0-rc2-linux-x86_64/bin/:$PATH' >> ~/.bashrc && \
     . ~/.bashrc
 
-WORKDIR /hgb
-COPY . .
-RUN /root/.cargo/bin/cargo build --release
+WORKDIR /app
+COPY . /hgb/
 
-ENTRYPOINT ["/hgb/target/release/hgb"]                                        
+RUN /root/.cargo/bin/cargo build --release && mv /hgb/target/release/hgb /app/hgb && rm -rf /hgb
+
+ENTRYPOINT ["/app/hgb"]                                        
