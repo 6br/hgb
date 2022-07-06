@@ -10,6 +10,6 @@ RUN echo 'export PATH=$HOME/cmake-3.24.0-rc2-linux-x86_64/bin/:$PATH' >> ~/.bash
 WORKDIR /app
 COPY . /hgb/
 
-RUN /root/.cargo/bin/cargo build --release && mv /hgb/target/release/hgb /app/hgb && rm -rf /hgb
+RUN cd /hgb && /root/.cargo/bin/cargo build --release && mv /hgb/target/release/hgb /app/hgb && cd / &&  rm -rf /hgb
 
 ENTRYPOINT ["/app/hgb"]                                        
