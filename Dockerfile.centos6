@@ -2,10 +2,13 @@ FROM sweetvishnya/centos6.9-build
 
 RUN yum install -y pkgconfig gcc openssl-devel alsa-lib-devel make gcc-c++ freetype-devel expat-devel libxcb-devel libX11-devel fontconfig fontconfig-devel
 
-RUN cd $HOME && wget https://github.com/Kitware/CMake/releases/download/v3.24.0-rc2/cmake-3.24.0-rc2-linux-x86_64.tar.gz && tar xzvf cmake-3.24.0-rc2-linux-x86_64.tar.gz
+RUN cd $HOME && wget https://github.com/Kitware/CMake/releases/download/v3.24.0-rc2/cmake-3.24.0-rc2-linux-x86_64.tar.gz && tar xzf cmake-3.24.0-rc2-linux-x86_64.tar.gz
 
 RUN echo 'export PATH=$HOME/cmake-3.24.0-rc2-linux-x86_64/bin/:$PATH' >> ~/.bashrc && \
-    . ~/.bashrc && rustup self update && rustup update
+    . ~/.bashrc 
+
+RUN curl https://sh.rustup.rs -o rustup.sh && chmod +x rustup.sh && \
+    ./rustup.sh -y && rm rustup.sh
 
 WORKDIR /app
 COPY . /hgb/
