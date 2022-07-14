@@ -792,10 +792,11 @@ where
             let pixels_per_column = opt_len as f64 / window.len() as f64;
 
             let enable_softmask = false;
-            let tb_nosoft = TwoBitFile::open(twobit, enable_softmask).unwrap();
+            let tb = TwoBitFile::open(twobit).unwrap();
+            let mut tb_nosoft = tb.enable_softmask(enable_softmask);
 
             if let Ok(seq) =
-                tb_nosoft.sequence(&range.path, range.start as usize, range.end as usize)
+                tb_nosoft.read_sequence(&range.path, range.start as usize..range.end as usize)
             {
                 let mut pos = range.start;
                 let mut bars = vec![];
