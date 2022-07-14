@@ -3,6 +3,7 @@ Cargo.lock
 *.ghb
 *.ghi
 *.log
+*.python-version
 
 *.png
 *.bam
@@ -12,3 +13,4 @@ Cargo.lock
 *.old
 *.zip
 *.gtf
+*.pdf
