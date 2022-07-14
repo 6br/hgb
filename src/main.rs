@@ -285,7 +285,7 @@ fn main() {
             App::new("vis")
                 .setting(AppSettings::ArgRequiredElseHelp)
                 .setting(AppSettings::ColoredHelp)
-                .about("Visualizes genomic data e.g. alignments and annotations")
+                .about("Visualizes genomic data, e.g. read alignments and annotations")
                 .arg(
                     Arg::new("range")
                         .short('r')
@@ -301,7 +301,7 @@ fn main() {
                         .short('R')
                         .takes_value(true)
                         .multiple(true)
-                        .about("Genomic range to pre-fetch. Optional. The same order as range option. Format is chr:from-to"),
+                        .about("(Optional) Genomic range to pre-fetch. The same order as range option. Format is chr:from-to"),
                 )
                 .arg(
                     Arg::new("type")
@@ -344,36 +344,36 @@ fn main() {
                         .long("frequency")
                         .takes_value(true)
                         .multiple(true)
-                        .about("A subset of sorted bed for coverage plot (start and score fields are used)"),
+                        .about("[Input] A subset of sorted bed for coverage plot (start and score fields are used)"),
                 )
-                .arg(Arg::new("bed-range").short('J').long("bed-range").takes_value(true).about("Visualize multiple region where BED file specifies"))
-                .arg(Arg::new("neighbor").short('K').long("bed-neighbor-bases").takes_value(true).about("Visualize specified base-pair neighbor of BED region"))
-                .arg(Arg::new("no-filter").short('f').long("disable-read-prefilter").about("Disable pre-filtering on loading BAM index (used for debugging)"))
+                .arg(Arg::new("bed-range").short('J').long("bed-range").takes_value(true).about("BED file to specify multiple regions to display"))
+                .arg(Arg::new("neighbor").short('K').long("bed-neighbor-bases").takes_value(true).about("Visualizes specified base-pair neighbor of BED region"))
+                .arg(Arg::new("no-filter").short('f').long("disable-read-prefilter").about("Disables pre-filtering on loading BAM index (used for debugging)"))
                 .arg(Arg::new("no-cigar").short('c').long("hide-cigar").about("Do not show cigar string"))
                 .arg(Arg::new("no-scale").short('S').long("hide-y-scale").about("Do not show y-axis scale and legends"))
                 .arg(Arg::new("no-ruler").short('*').long("hide-x-scale").setting(ArgSettings::MultipleOccurrences).about("Do not show x-axis ruler"))
-                .arg(Arg::new("no-packing").short('p').long("disable-read-packing").about("Disable read packing"))
-                .arg(Arg::new("no-legend").short('l').long("hide-legend").about("Hide legend"))
-                .arg(Arg::new("square").short('Q').long("square").about("Set square width (overwritten)"))
-                .arg(Arg::new("quality").short('q').long("read-quality").about("Display reads colored by quality value"))
-                .arg(Arg::new("colored-by-name").short('n').long("colored-by-name").about("Set read colors by read name"))
-                .arg(Arg::new("colored-by-track").short('?').long("colored-by-track").about("Set read colors by track on hgb"))
-                .arg(Arg::new("read-per-line").short('1').long("read-per-line").about("Show one line one read on split-alignment mode"))
-                .arg(Arg::new("read-per-two-range").short('2').long("read-per-line-two-ranges").about("Show one read per one line across two range on split-alignment mode"))
-                .arg(Arg::new("x-as-range").short('9').long("x-as-input-range").about("Set X as the interval of the input range"))
+                .arg(Arg::new("no-packing").short('p').long("disable-read-packing").about("Disables read packing"))
+                .arg(Arg::new("no-legend").short('l').long("hide-legend").about("Hides legend"))
+                .arg(Arg::new("square").short('Q').long("square").about("Sets width as the same as height to generate s square image (overwritten)"))
+                .arg(Arg::new("quality").short('q').long("read-quality").about("Displays reads colored by quality value"))
+                .arg(Arg::new("colored-by-name").short('n').long("colored-by-name").about("Sets read colors by read name"))
+                .arg(Arg::new("colored-by-track").short('?').long("colored-by-track").about("Sets read colors by track on hgb"))
+                .arg(Arg::new("read-per-line").short('1').long("read-per-line").about("Shows a read per line on split-alignment mode"))
+                .arg(Arg::new("read-per-two-range").short('2').long("read-per-line-two-ranges").about("Shows a read per line across two ranges on split-alignment mode"))
+                .arg(Arg::new("x-as-range").short('9').long("input-range-is-width").about("Sets the genomic interval of the input range as width pixels instead of x parameter"))
                 .arg(
                     Arg::new("range-index")
                         .short('8')
                         .long("range-index")
                         .takes_value(true)
-                        .about("Choose a range index to visualize when multiple ranges are specified."),
+                        .about("Range index to visualize when multiple ranges are specified"),
                 )
                 .arg(
                     Arg::new("read-index")
                         .short('_')
                         .long("read-index")
                         .takes_value(true)
-                        .about("Choose a read index to visualize of a single input file."),
+                        .about("Read index to visualize of a single input file"),
                 )
                 .arg(
                     Arg::new("colored-by-motif")
@@ -381,7 +381,7 @@ fn main() {
                         .long("colored-by-motif")
                         .takes_value(true)
                         .default_value("C:T:CG")
-                        .about("Colored by specified motif (for bisulfite sequencing)"),
+                        .about("Sequence motif to be colored (for bisulfite sequencing)"),
                 )
                 .arg(
                     Arg::new("colored-by-tag")
@@ -390,7 +390,7 @@ fn main() {
                         .takes_value(true)
                         .default_value("")
                         .setting(ArgSettings::AllowEmptyValues)
-                        .about("Colored by specified tags on read alignments"),
+                        .about("Tags on read alignments to be colored"),
                 )
                 .arg(
                     Arg::new("separated-by-tag")
@@ -399,7 +399,7 @@ fn main() {
                         .takes_value(true)
                         .default_value("")
                         .setting(ArgSettings::AllowEmptyValues)
-                        .about("Grouped tracks by specified tags on read alignments"),
+                        .about("Tracks are grouped by specified tags on read alignments"),
                 )
                 .arg(
                     Arg::new("separated-by-tag-offset")
@@ -414,19 +414,19 @@ fn main() {
                         .short('~')
                         .long("filtered-by-tag")
                         .takes_value(true)
-                        .about("Filtered by a specified tag on read alignments as <tag>:<value> (e.g. HP:0)"),
+                        .about("Tag on read alignments as <tag>:<value> to be filtered by (e.g. HP:0)"),
                 )
                 .arg(Arg::new("border-height").short('^').takes_value(true).about("The height of border between samples"))
                 .arg(Arg::new("x").short('x').takes_value(true).about("The width of image"))
                 .arg(Arg::new("y").short('y').takes_value(true).about("The height of each read alignment"))
-                .arg(Arg::new("web").short('w').takes_value(true).long("web-server").about("Serve the web server"))
-                .arg(Arg::new("whole-chromosome").short('W').long("whole-chromosome").about("Pretend as if the prefetch range is the whole chromosome"))
-                .arg(Arg::new("rest").short('>').long("rest-server").about("Serve the web server with accepting any parameter"))
-                .arg(Arg::new("production").short('$').long("serve-as-production").about("Serve the web server on production mode (no cross-origin request is allowed)"))
-                .arg(Arg::new("dump-json").short('%').long("write-json").about("Dump JSON of read metadata"))
-                .arg(Arg::new("adjust-y").short('&').long("not-adjust-y").about("Do not adjust y on server mode"))
-                .arg(Arg::new("ref-column").short('!').long("2bit").takes_value(true).about("Show the base colors of reference genome (input must be 2bit format)"))
-                .arg(Arg::new("insertion-string").short('{').long("show-insertion-sequence").about("Show the insertion sequence along with insertion callets"))
+                .arg(Arg::new("web").short('w').takes_value(true).long("web-server").about("Web server mode running on TCP socket (host:port)"))
+                .arg(Arg::new("whole-chromosome").short('W').long("whole-chromosome").about("Pretends as if the prefetch range is the whole chromosome"))
+                .arg(Arg::new("rest").short('>').long("rest-server").about("Serves a web server that accepts any parameters"))
+                .arg(Arg::new("production").short('$').long("serve-as-production").about("Serves a web server on production mode (no cross-origin request is allowed)"))
+                .arg(Arg::new("dump-json").short('%').long("write-json").about("Dumps JSON of read metadata"))
+                .arg(Arg::new("adjust-y").short('&').long("not-adjust-y").about("Do not adjust y parameter on server mode"))
+                .arg(Arg::new("ref-column").short('!').long("2bit").takes_value(true).about("[Input] 2 bit file of reference genome to display the base colors of reference genome"))
+                .arg(Arg::new("insertion-string").short('{').long("show-insertion-sequence").about("Shows insertion sequences along with insertion symbols"))
                 .arg(
                     Arg::new("labels")
                         .short('}')
@@ -435,7 +435,7 @@ fn main() {
                         .multiple(true)
                         .about("Labels displayed on legend"),
                 )
-                .arg(Arg::new("dynamic-partition").short('D').long("dynamic-range-partition").about("Divide multiple genomic range with dynamic width"))
+                .arg(Arg::new("dynamic-partition").short('D').long("dynamic-range-partition").about("Divides multiple genomic ranges of fields with dynamic width"))
                 .arg(
                     Arg::new("format")
                         .short('O')
@@ -447,13 +447,13 @@ fn main() {
                     Arg::new("show-read-id")
                         .short('H')
                         .long("show-read-ids")
-                        .about("Write a read id on the beginning of each read"),
+                        .about("Writes a read id on the beginning of each read"),
                 )
                 .arg(
                     Arg::new("no-bold-line")
                         .short('7')
                         .long("no-bold-line")
-                        .about("Plot without bold line"),
+                        .about("Draws a mesh without bold lines"),
                 )
                 .arg(
                     Arg::new("snp-frequency")
@@ -467,7 +467,7 @@ fn main() {
                         .short('Z')
                         .long("zoom-range")
                         .takes_value(true)
-                        .about("Permitted zoom range on web server mode"),
+                        .about("Maximum zoom level of DZI format on web server mode"),
                 )
                 .arg(
                     Arg::new("freq-height")
@@ -488,14 +488,15 @@ fn main() {
                         .short('d')
                         .long("cache-directory")
                         .takes_value(true)
-                        .about("Cache directory for server (generated randomly if not specified)"),
+                        .about("Cache directory for web server (generated randomly if not specified)"),
                 )
                 .arg(
                     Arg::new("static-dir")
                         .short('.')
                         .long("static-directory")
+                        .default_value("./static")
                         .takes_value(true)
-                        .about("Static serve directory for server (./static is default)"),
+                        .about("Static serve directory for web server")
                 )
                 .arg(
                     Arg::new("min-read-length")
@@ -509,46 +510,46 @@ fn main() {
                         .short('X')
                         .long("x-scale")
                         .takes_value(true)
-                        .about("Size of x-scale legend"),
+                        .about("Size of legends on x-scale"),
                 )
-                .arg(Arg::new("split-alignment").short('s').long("align-reads-horizontally").about("Display split alignments in the same line"))
-                .arg(Arg::new("only-split-alignment").short('u').long("only-split-alignments").about("Display only split alignments or mate-paired reads on alignment track"))
-                .arg(Arg::new("exclude-split-alignment").short('3').long("only-full-length-alignments").about("Display only NOT split alignments or mate-paired reads on alignment track"))
-                .arg(Arg::new("full-length").short('4').long("full-length-reads").about("Display only full-length match reads against prefetch range."))
-                .arg(Arg::new("udon").short('U').long("udon").about("Colored by udon library"))
+                .arg(Arg::new("split-alignment").short('s').long("align-reads-horizontally").about("Displays split alignments in the same line"))
+                .arg(Arg::new("only-split-alignment").short('u').long("only-split-alignments").about("Displays only split alignments or mate-paired reads on alignment track"))
+                .arg(Arg::new("exclude-split-alignment").short('3').long("only-full-length-alignments").about("Displays only NOT split alignments or mate-paired reads on alignment track"))
+                .arg(Arg::new("full-length").short('4').long("full-length-reads").about("Displays only full-length match reads against prefetch range"))
+                .arg(Arg::new("udon").short('U').long("udon").about("Colors by udon library"))
                 .arg(
                     Arg::new("sort-by-name")
                         .short('N')
                         .long("sort-by-name")
-                        .about("Sort alignments by read id (for split-alignment visualization)"),
+                        .about("Sorts alignments by read id (for split-alignment visualization)"),
                 )
                 .arg(
                     Arg::new("sort-by-cigar")
                         .short('C')
                         .long("show-split-alignment-line")
-                        .about("Display each split-alignment connection as a colored line"),
+                        .about("Displays each split-alignment connection as a colored line"),
                 )
-                .arg(Arg::new("no-insertion").short('I').long("hide-insertion").about("Hide insertion callets on read alignments"))
-                .arg(Arg::new("no-deletion").short('+').long("hide-deletion").about("Hide deletion callets on read alignments"))
+                .arg(Arg::new("no-insertion").short('I').long("hide-insertion").about("Hides insertion symbols on read alignments"))
+                .arg(Arg::new("no-deletion").short('+').long("hide-deletion").about("Hides deletion symbols on read alignments"))
                 .arg(
                     Arg::new("hide-alignment")
                         .short('A')
                         .long("only-coverage-plot")
-                        .about("Hide read alignments (display only coverage; for chromosome scale view)"),
+                        .about("Hides read alignments (display only coverage; for chromosome scale view)"),
                 )
-                .arg(Arg::new("all-bases").short('B').long("all-bases").about("Show all nucleotides by color"))
+                .arg(Arg::new("all-bases").short('B').long("all-bases").about("Shows all nucleotides with color"))
                 .arg(
                     Arg::new("pileup")
                         .short('P')
                         .long("coverage-plot")
-                        .about("Show pileup and coverage plot"),
+                        .about("Shows both pileup and coverage plot"),
                 )
-                .arg(Arg::new("only-translocation").short('T').long("show-translocation-callets").about("Show callets on ends of read alignments if the read contains translocation split-alignment"))
+                .arg(Arg::new("only-translocation").short('T').long("show-translocation-callets").about("Shows symbols on ends of read alignments if the read contains translocational split-alignment"))
                 .arg(Arg::new("with-caption").short('<').long("caption").takes_value(true).setting(ArgSettings::AllowEmptyValues)
-                .default_value("").about("Show caption on the top of chart"))
-                .arg(Arg::new("end-split-callets").short('e').long("show-split-alignment-callets").about("Show callets on ends of read alignments if the read contains split-alignment"))
-                .arg(Arg::new("output-translocation").short('5').long("write-split-alignment").about("Write a list of translocation split-alignment to stdout"))
-                .arg(Arg::new("translocation-target").short('6').long("translocation-target-chromosome").takes_value(true).about("Set a translocation target chromosome"))
+                .default_value("").about("Caption on the top of chart"))
+                .arg(Arg::new("end-split-callets").short('e').long("show-split-alignment-callets").about("Shows symbols on ends of read alignments if the read contains split-alignment"))
+                .arg(Arg::new("output-translocation").short('5').long("write-split-alignment").about("Writes a list of translocation split-alignment to stdout"))
+                .arg(Arg::new("translocation-target").short('6').long("translocation-target-chromosome").takes_value(true).about("Target chromosome on writing a list of translocation"))
                 .arg(
                     Arg::new("graph")
                         .short('G')
@@ -568,7 +569,7 @@ fn main() {
                         .short(']')
                         .long("unix-socket")
                         .takes_value(true)
-                        .about("Serve the web server on unix socket"),
+                        .about("Web server mode running on unix socket"),
                 )
                 .arg(
                     Arg::new("no-bits")
@@ -583,14 +584,14 @@ fn main() {
                         .short(')')
                         .long("filtered-by-read-name")
                         .takes_value(true)
-                        .about("Filter by read name"),
+                        .about("Read name to filter by"),
                 )
                 .arg(
                     Arg::new("output")
                         .short('o')
                         .long("output")
                         .takes_value(true)
-                        .about("[Output] image file (prefixed as .bmp / .png)"),
+                        .about("[Output] Image file (prefixed as .bmp / .png)"),
                 )
                 .arg(
                     Arg::new("bed")

@@ -46,7 +46,9 @@ jobs:
       run: |
         brew install samtools
     - name: Build
-      run: cargo build --verbose
+      run: |
+        cargo update
+        cargo build --verbose
     - uses: actions-rs/cargo@v1
       with:
         command: fmt
