@@ -1,0 +1,1 @@
+pandoc ./figures_latex.md -V geometry:landscape -o additional_files_1.pdf
