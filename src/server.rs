@@ -642,7 +642,7 @@ pub async fn server(
         };
 
         actix_web::App::new()
-            .data(())
+            .app_data(())
             .app_data(web::Data::new(RwLock::new(list.clone())))
             .app_data(counter.clone())
             .route("/", web::get().to(get_index))
