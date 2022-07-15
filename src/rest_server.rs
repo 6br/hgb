@@ -746,11 +746,11 @@ pub async fn rest_server<T: 'static + ChromosomeBufferTrait + Send + Sync>(
         let auth = HttpAuthentication::basic(basic_auth_validator);
 
         actix_web::App::new()
-            .app_data(list)
-            .app_data(list_btree)
+            .app_data(web::Data::new(list))
+            .app_data(web::Data::new(list_btree))
             .app_data(counter.clone())
             .app_data(basic_auth.clone())
-            .app_data(vis) //.app_data(vis.clone())
+            .app_data(web::Data::new(vis)) //.app_data(vis.clone())
             .app_data(buffer.clone())
             .route("/", web::post().to(index::<T>))
             .route("/", web::get().to(get_index::<T>))

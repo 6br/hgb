@@ -664,10 +664,10 @@ pub async fn server<T: 'static + ChromosomeBufferTrait + Send + Sync>(
         let vis = RwLock::new(vis.clone());
 
         actix_web::App::new()
-            .app_data(list)
-            .app_data(list_btree) /*.app_data(web::Data::new(RwLock::new(list.clone()))).*/
+            .app_data(web::Data::new(list))
+            .app_data(web::Data::new(list_btree)) /*.app_data(web::Data::new(RwLock::new(list.clone()))).*/
             .app_data(counter.clone())
-            .app_data(vis) //.app_data(vis.clone())
+            .app_data(web::Data::new(vis)) //.app_data(vis.clone())
             .app_data(buffer.clone())
             .route("/", web::get().to(get_index))
             .route("openseadragon.min.js", web::get().to(get_js))
