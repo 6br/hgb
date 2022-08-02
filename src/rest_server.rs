@@ -1,7 +1,7 @@
 use actix_cors::Cors;
 use actix_files::NamedFile;
 use actix_web::dev::ServiceRequest;
-use actix_web::error::ErrorNotFound;
+use actix_web::error::{ErrorBadRequest, ErrorNotFound};
 use actix_web::middleware::Condition;
 use actix_web::HttpRequest;
 use actix_web::{
@@ -20,7 +20,6 @@ use ghi::{vis::bam_record_vis, ChromosomeBufferTrait, ReadBuffer, Vis, VisRef};
 use itertools::Itertools;
 use qstring::QString;
 use rand::Rng;
-use serde::Deserialize;
 use std::collections::hash_map::DefaultHasher;
 use std::fs::File;
 use std::hash::{Hash, Hasher};
@@ -567,9 +566,9 @@ fn index2<T: 'static + ChromosomeBufferTrait>(
 
                 let (matches, string_range) =
                     id_to_range(&data.range, args, params, path_string.clone()).map_err(|t| {
-                        HttpResponse::BadRequest().json(ResponseBody {
-                            message: format!("parameter error: {}", t), //String::from("parameter error: " + t.description()),
-                        })
+                        ErrorBadRequest(
+                            format!("parameter error: {}", t), //String::from("parameter error: " + t.description()),
+                        )
                     })?;
                 let end2 = start.elapsed();
                 eprintln!(
@@ -655,9 +654,9 @@ fn index2<T: 'static + ChromosomeBufferTrait>(
                 //Visualization for unprefetch data.
                 let (matches, args) =
                     id_to_range_ab_initio(params, path_string.clone()).map_err(|t| {
-                        HttpResponse::BadRequest().json(ResponseBody {
-                            message: format!("parameter error: {}", t), //String::from("parameter error: " + t.description()),
-                        })
+                        ErrorBadRequest(
+                            format!("parameter error: {}", t), //String::from("parameter error: " + t.description()),
+                        )
                     })?;
                 let threads = matches
                     .value_of("threads")
@@ -747,11 +746,11 @@ pub async fn rest_server<T: 'static + ChromosomeBufferTrait + Send + Sync>(
         let auth = HttpAuthentication::basic(basic_auth_validator);
 
         actix_web::App::new()
-            .data(list)
-            .data(list_btree)
+            .app_data(web::Data::new(list))
+            .app_data(web::Data::new(list_btree))
             .app_data(counter.clone())
             .app_data(basic_auth.clone())
-            .data(vis) //.app_data(vis.clone())
+            .app_data(web::Data::new(vis)) //.app_data(vis.clone())
             .app_data(buffer.clone())
             .route("/", web::post().to(index::<T>))
             .route("/", web::get().to(get_index::<T>))
