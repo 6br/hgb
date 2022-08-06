@@ -797,7 +797,7 @@ fn validate_credentials(
 async fn basic_auth_validator(
     req: ServiceRequest,
     credentials: BasicAuth,
-) -> Result<ServiceRequest, actix_web::Error> {
+) -> Result<ServiceRequest, (actix_web::Error, ServiceRequest)> {
     let config = req
         .app_data::<Config>()
         .cloned()
@@ -812,9 +812,9 @@ async fn basic_auth_validator(
             if res {
                 Ok(req)
             } else {
-                Err(AuthenticationError::from(config).into())
+                Err((AuthenticationError::from(config).into(), req))
             }
         }
-        Err(_) => Err(AuthenticationError::from(config).into()),
+        Err(_) => Err((AuthenticationError::from(config).into(), req)),
     }
 }
